@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  projectsOwned Project[] @relation("ProjectOwner")
+  projectAccess ProjectAccess[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members ProjectAccess[]
+  content Content[]
+  assets  Asset[]
+
+  @@map("projects")
+}
+
+model ProjectAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("project_access")
+}
+
+model Content {
+  id        String      @id @default(uuid())
+  projectId String
+  type      ContentType
+  data      Json
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relationships
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aiAnalysis AIAnalysis?
+
+  @@map("content")
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  projectId String
+  url       String
+  fileType  String
+  size      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("assets")
+}
+
+model AIAnalysis {
+  id        String   @id @default(uuid())
+  contentId String   @unique
+  tags      String[]
+  summary   String?
+  altText   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@map("ai_analysis")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum ContentType {
+  TEXT
+  IMAGE
+  VIDEO
+  CODE
+  LINK
+  EMBED
+}
