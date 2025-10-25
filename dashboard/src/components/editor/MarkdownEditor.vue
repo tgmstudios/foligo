@@ -96,13 +96,13 @@
 
     <!-- Editor/Preview -->
     <div class="flex h-96">
-      <!-- CodeMirror Editor -->
-      <div v-if="!showPreview" class="flex-1">
+      <!-- Editor -->
+      <div v-show="!showPreview" class="flex-1">
         <div ref="editorContainer" class="w-full h-full"></div>
       </div>
 
       <!-- Preview -->
-      <div v-else class="flex-1 p-4 bg-white overflow-y-auto">
+      <div v-show="showPreview" class="flex-1 p-4 bg-white overflow-y-auto">
         <div v-if="localContent.trim()" v-html="renderedMarkdown" class="prose prose-sm max-w-none"></div>
         <div v-else class="text-gray-500 italic">No content to preview</div>
       </div>
@@ -111,7 +111,7 @@
     <!-- Footer -->
     <div class="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
       <div class="text-xs text-gray-500">
-        Use Markdown syntax for formatting • CodeMirror powered
+        Use Markdown syntax for formatting • Monaco Editor powered
       </div>
       <div class="flex items-center space-x-2">
         <button
@@ -162,6 +162,14 @@ watch(() => props.modelValue, (newValue) => {
   }
 })
 
+// Watch for preview mode changes to handle editor layout
+watch(showPreview, async (newValue) => {
+  if (!newValue && editor && editor.layout) {
+    await nextTick()
+    editor.layout()
+  }
+})
+
 // Computed properties
 const wordCount = computed(() => {
   return localContent.value.trim().split(/\s+/).filter(word => word.length > 0).length
@@ -195,6 +203,17 @@ const handleInput = () => {
 }
 
 const handleSave = () => {
+  // Ensure we have the latest content from the editor
+  if (editor && editor.getValue) {
+    localContent.value = editor.getValue()
+  } else {
+    // Fallback to textarea
+    const textarea = editorContainer.value?.querySelector('textarea') as HTMLTextAreaElement
+    if (textarea) {
+      localContent.value = textarea.value
+    }
+  }
+  
   emit('save', localContent.value)
 }
 
@@ -204,116 +223,118 @@ const handleCancel = () => {
 
 const togglePreview = () => {
   showPreview.value = !showPreview.value
+  
+  // If switching back to edit mode, trigger Monaco to resize
+  if (!showPreview.value && editor && editor.layout) {
+    nextTick(() => {
+      editor.layout()
+    })
+  }
 }
 
 const insertMarkdown = (before: string, after: string = '') => {
   if (!editor) return
 
-  const selection = editor.state.selection
-  const selectedText = editor.state.doc.sliceString(selection.main.from, selection.main.to)
-  const newText = before + selectedText + after
-  
-  editor.dispatch({
-    changes: {
-      from: selection.main.from,
-      to: selection.main.to,
-      insert: newText
-    },
-    selection: {
-      anchor: selection.main.from + before.length + selectedText.length
-    }
-  })
+  // Check if we're using Monaco Editor or textarea fallback
+  if (editor.getValue) {
+    // Monaco Editor
+    const selection = editor.getSelection()
+    const selectedText = editor.getModel()?.getValueInRange(selection) || ''
+    const newText = before + selectedText + after
+    
+    editor.executeEdits('insert-markdown', [{
+      range: selection,
+      text: newText,
+      forceMoveMarkers: true
+    }])
 
-  localContent.value = editor.state.doc.toString()
-  emit('update:modelValue', localContent.value)
+    // Move cursor to end of inserted text
+    const newPosition = {
+      lineNumber: selection.startLineNumber,
+      column: selection.startColumn + before.length + selectedText.length
+    }
+    editor.setPosition(newPosition)
+    editor.focus()
+
+    localContent.value = editor.getValue()
+    emit('update:modelValue', localContent.value)
+  } else {
+    // Textarea fallback
+    const textarea = editorContainer.value?.querySelector('textarea') as HTMLTextAreaElement
+    if (textarea) {
+      insertMarkdownTextarea(textarea, before, after)
+    }
+  }
 }
 
 const updateEditorContent = (content: string) => {
   if (!editor) return
   
-  editor.dispatch({
-    changes: {
-      from: 0,
-      to: editor.state.doc.length,
-      insert: content
+  if (editor.setValue) {
+    // Monaco Editor
+    editor.setValue(content)
+  } else {
+    // Textarea fallback
+    const textarea = editorContainer.value?.querySelector('textarea') as HTMLTextAreaElement
+    if (textarea) {
+      textarea.value = content
     }
-  })
+  }
   localContent.value = content
 }
 
 const initializeCodeMirror = async () => {
-  if (!editorContainer.value) return
+  if (!editorContainer.value || editor) return
 
   try {
-    // Dynamic import to avoid build issues
-    const { EditorView } = await import('@codemirror/view')
-    const { EditorState } = await import('@codemirror/state')
-    const { basicSetup } = await import('@codemirror/basic-setup')
-    const { markdown } = await import('@codemirror/lang-markdown')
+    // Use Monaco Editor loader for proper initialization
+    const { default: loader } = await import('@monaco-editor/loader')
+    
+    // Initialize Monaco
+    const monaco = await loader.init()
+    
+    editor = monaco.editor.create(editorContainer.value, {
+      value: localContent.value,
+      language: 'markdown',
+      theme: 'vs-light',
+      fontSize: 14,
+      fontFamily: "'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+      wordWrap: 'on',
+      lineNumbers: 'off',
+      folding: false,
+      lineDecorationsWidth: 0,
+      lineNumbersMinChars: 0,
+      padding: { top: 16, bottom: 16, left: 16, right: 16 }
+    })
 
-    editor = new EditorView({
-      state: EditorState.create({
-        doc: localContent.value,
-        extensions: [
-          basicSetup,
-          markdown(),
-          EditorView.theme({
-            '&': {
-              fontSize: '14px',
-              fontFamily: "'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"
-            },
-            '.cm-content': {
-              padding: '16px',
-              minHeight: '100%'
-            },
-            '.cm-focused': {
-              outline: 'none'
-            },
-            '.cm-editor': {
-              height: '100%'
-            },
-            '.cm-scroller': {
-              fontFamily: "'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace"
-            }
-          }),
-          EditorView.updateListener.of((update: any) => {
-            if (update.docChanged) {
-              localContent.value = update.state.doc.toString()
-              emit('update:modelValue', localContent.value)
-            }
-          }),
-          EditorView.domEventHandlers({
-            keydown: (event: KeyboardEvent, view: any) => {
-              if (event.ctrlKey || event.metaKey) {
-                switch (event.key) {
-                  case 's':
-                    event.preventDefault()
-                    handleSave()
-                    return true
-                  case 'b':
-                    event.preventDefault()
-                    insertMarkdown('**', '**')
-                    return true
-                  case 'i':
-                    event.preventDefault()
-                    insertMarkdown('*', '*')
-                    return true
-                  case 'k':
-                    event.preventDefault()
-                    insertMarkdown('[', '](url)')
-                    return true
-                }
-              }
-              return false
-            }
-          })
-        ]
-      }),
-      parent: editorContainer.value
+    // Listen for content changes
+    editor.onDidChangeModelContent(() => {
+      localContent.value = editor.getValue()
+      emit('update:modelValue', localContent.value)
+    })
+
+    // Handle keyboard shortcuts
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      handleSave()
+    })
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => {
+      insertMarkdown('**', '**')
+    })
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () => {
+      insertMarkdown('*', '*')
+    })
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
+      insertMarkdown('[', '](url)')
     })
 
   } catch (error) {
-    console.error('Failed to initialize CodeMirror:', error)
+    console.error('Failed to initialize Monaco Editor:', error)
     fallbackToTextarea()
   }
 }
@@ -334,7 +355,48 @@ const fallbackToTextarea = () => {
       localContent.value = (e.target as HTMLTextAreaElement).value
       emit('update:modelValue', localContent.value)
     })
+
+    // Add keyboard shortcuts for textarea
+    textarea.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault()
+            handleSave()
+            break
+          case 'b':
+            e.preventDefault()
+            insertMarkdownTextarea(textarea, '**', '**')
+            break
+          case 'i':
+            e.preventDefault()
+            insertMarkdownTextarea(textarea, '*', '*')
+            break
+          case 'k':
+            e.preventDefault()
+            insertMarkdownTextarea(textarea, '[', '](url)')
+            break
+        }
+      }
+    })
   }
+}
+
+const insertMarkdownTextarea = (textarea: HTMLTextAreaElement, before: string, after: string = '') => {
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selectedText = textarea.value.substring(start, end)
+  const newText = before + selectedText + after
+  
+  textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end)
+  
+  // Set cursor position
+  const newCursorPos = start + before.length + selectedText.length
+  textarea.setSelectionRange(newCursorPos, newCursorPos)
+  textarea.focus()
+  
+  localContent.value = textarea.value
+  emit('update:modelValue', localContent.value)
 }
 
 // Lifecycle
@@ -345,7 +407,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (editor) {
-    editor.destroy()
+    if (editor.dispose) {
+      // Monaco Editor
+      editor.dispose()
+    }
+    // Textarea doesn't need cleanup
   }
 })
 </script>

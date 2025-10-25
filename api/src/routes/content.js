@@ -190,6 +190,17 @@ router.get('/projects/:projectId/content', authorizeProjectAccess('VIEWER'), asy
         orderBy: { order: 'asc' }
       });
 
+      console.log(`Content query for project ${projectId}:`, {
+        projectId,
+        contentCount: content.length,
+        content: content.map(c => ({
+          id: c.id,
+          title: c.title,
+          contentType: c.contentType,
+          type: c.type
+        }))
+      });
+
       // Cache content data for 15 minutes
       await cache.set(cacheKey, content, 900);
     }
@@ -404,6 +415,145 @@ router.put('/content/:id', [
     res.status(500).json({
       error: 'Content Update Failed',
       message: 'Unable to update content block'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/content/{id}/fields:
+ *   put:
+ *     summary: Update content fields (title, content, slug, excerpt, metadata)
+ *     tags: [CMS Content]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Content ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               slug:
+ *                 type: string
+ *               excerpt:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               metadata:
+ *                 type: object
+ *               isPublished:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Content fields updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Content'
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Content not found
+ */
+router.put('/content/:id/fields', [
+  body('title').optional().trim().isLength({ min: 1 }).withMessage('Title cannot be empty'),
+  body('slug').optional().trim().matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
+  body('excerpt').optional().trim(),
+  body('content').optional().trim(),
+  body('metadata').optional().isObject(),
+  body('isPublished').optional().isBoolean()
+], async (req, res) => {
+  try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid input data',
+        details: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { title, slug, excerpt, content, metadata, isPublished } = req.body;
+
+    // Get content with project info to check permissions
+    const existingContent = await prisma.content.findUnique({
+      where: { id },
+      include: {
+        project: {
+          include: {
+            owner: true,
+            members: {
+              where: { userId }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingContent) {
+      return res.status(404).json({
+        error: 'Content Not Found',
+        message: 'The requested content does not exist'
+      });
+    }
+
+    // Check access permissions
+    const isOwner = existingContent.project.ownerId === userId;
+    const memberAccess = existingContent.project.members[0];
+    const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
+
+    if (!canEdit) {
+      return res.status(403).json({
+        error: 'Access Denied',
+        message: 'You do not have permission to edit this content'
+      });
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (slug !== undefined) updateData.slug = slug;
+    if (excerpt !== undefined) updateData.excerpt = excerpt;
+    if (content !== undefined) updateData.content = content;
+    if (metadata !== undefined) updateData.metadata = metadata;
+    if (isPublished !== undefined) updateData.isPublished = isPublished;
+
+    // Update content
+    const updatedContent = await prisma.content.update({
+      where: { id },
+      data: updateData,
+      include: {
+        aiAnalysis: true
+      }
+    });
+
+    // Clear project and content caches
+    await cache.del(`project:${existingContent.projectId}`);
+    await cache.del(`project:${existingContent.projectId}:content`);
+    await cache.del(`content:${id}`);
+
+    res.json(updatedContent);
+  } catch (error) {
+    console.error('Update content fields error:', error);
+    res.status(500).json({
+      error: 'Content Update Failed',
+      message: 'Unable to update content fields'
     });
   }
 });

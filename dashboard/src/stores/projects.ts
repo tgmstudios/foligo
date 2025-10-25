@@ -141,6 +141,22 @@ export const useProjectStore = defineStore('projects', () => {
       isLoading.value = true
       const response = await api.get('/projects')
       projects.value = [...response.data.ownedProjects, ...response.data.memberProjects]
+      
+      // Also fetch content for each project using the dedicated content endpoint
+      for (const project of projects.value) {
+        try {
+          const contentResponse = await api.get(`/projects/${project.id}/content`)
+          if (project.content) {
+            project.content = contentResponse.data
+          } else {
+            project.content = contentResponse.data
+          }
+          console.log(`Fetched content for project ${project.name}:`, contentResponse.data.length, 'items')
+        } catch (error) {
+          console.error(`Failed to fetch content for project ${project.name}:`, error)
+        }
+      }
+      
       return response.data
     } catch (error: any) {
       const message = error.response?.data?.message || 'Failed to fetch projects'
@@ -412,7 +428,7 @@ export const useProjectStore = defineStore('projects', () => {
 
   async function updateContent(contentId: string, contentData: Partial<Content>) {
     try {
-      const response = await api.put(`/content/${contentId}`, contentData)
+      const response = await api.put(`/content/${contentId}/fields`, contentData)
       
       // Update content in projects array
       projects.value.forEach(project => {

@@ -160,7 +160,7 @@
         
         <MarkdownEditor
           v-model="editForm.content"
-          @save="saveContent"
+          @save="handleMarkdownSave"
           @cancel="goBack"
         />
       </div>
@@ -228,6 +228,13 @@ const loadContent = async () => {
     console.error('Failed to load content:', error)
     router.push('/projects')
   }
+}
+
+const handleMarkdownSave = async (contentValue: string) => {
+  // Update the form content with the value from the editor
+  editForm.content = contentValue
+  // Then save the content
+  await saveContent()
 }
 
 const saveContent = async () => {

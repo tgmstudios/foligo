@@ -111,7 +111,7 @@
           <div class="flex items-start flex-1">
             <div class="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
               <span class="text-sm font-medium text-gray-600">
-                {{ getContentIcon(content.type) }}
+                {{ getContentIcon(content.contentType) }}
               </span>
             </div>
             <div class="flex-1 min-w-0">
@@ -127,7 +127,7 @@
                   {{ content.isPublished ? 'Published' : 'Draft' }}
                 </span>
               </div>
-              <p class="text-sm text-gray-600 mb-2">{{ content.type }} • {{ getProjectName(content.projectId) }}</p>
+              <p class="text-sm text-gray-600 mb-2">{{ content.contentType }} • {{ getProjectName(content.projectId) }}</p>
               <p v-if="content.excerpt" class="text-sm text-gray-700 line-clamp-2">{{ content.excerpt }}</p>
               <div class="flex items-center text-xs text-gray-500 mt-2">
                 <span>{{ formatDate(content.updatedAt) }}</span>
@@ -216,7 +216,7 @@ const filteredContent = computed(() => {
 
   // Filter by content type
   if (selectedContentType.value) {
-    content = content.filter(c => c.type === selectedContentType.value)
+    content = content.filter(c => c.contentType === selectedContentType.value)
   }
 
   // Filter by search query
@@ -233,8 +233,8 @@ const filteredContent = computed(() => {
   return content.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 })
 
-const getContentIcon = (type: string) => {
-  switch (type) {
+const getContentIcon = (contentType: string) => {
+  switch (contentType) {
     case 'PROJECT':
       return '🚀'
     case 'BLOG':

@@ -267,6 +267,14 @@ router.get('/', async (req, res) => {
         orderBy: { updatedAt: 'desc' }
       });
 
+      console.log('Owned projects query result:', ownedProjects.map(p => ({
+        id: p.id,
+        name: p.name,
+        contentCount: p._count.content,
+        contentArrayLength: p.content.length,
+        content: p.content
+      })));
+
       // Get projects where user is a member
       const memberProjects = await prisma.project.findMany({
         where: {
