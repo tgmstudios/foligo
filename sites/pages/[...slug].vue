@@ -22,49 +22,17 @@
       </Head>
 
       <!-- Layout Switch -->
-      <DefaultLayout 
-        v-if="layoutComponent === 'DefaultLayout'"
+      <component 
+        :is="layoutComponent" 
         :site-data="siteData"
         :route="route"
       />
-      <GridLayout 
-        v-else-if="layoutComponent === 'GridLayout'"
-        :site-data="siteData"
-        :route="route"
-      />
-      <ListLayout 
-        v-else-if="layoutComponent === 'ListLayout'"
-        :site-data="siteData"
-        :route="route"
-      />
-      <MasonryLayout 
-        v-else-if="layoutComponent === 'MasonryLayout'"
-        :site-data="siteData"
-        :route="route"
-      />
-      <div v-else class="min-h-screen flex items-center justify-center">
-        <div class="text-center">
-          <h1 class="text-2xl font-bold text-gray-900 mb-4">Layout Error</h1>
-          <p class="text-gray-600">Unknown layout component: {{ layoutComponent }}</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fallback State -->
-    <div v-else class="min-h-screen flex items-center justify-center">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">No Site Data</h1>
-        <p class="text-gray-600">Unable to load site data.</p>
-        <button @click="loadSiteData" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Retry
-        </button>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { siteApi } from '~/utils/siteApi'
 import { useSubdomain } from '~/composables/useSubdomain'
 
@@ -72,11 +40,6 @@ import { useSubdomain } from '~/composables/useSubdomain'
 const route = useRoute()
 const config = useRuntimeConfig()
 const { extractSubdomain } = useSubdomain()
-
-// Debug variables
-const isDev = process.dev || process.env.NODE_ENV === 'development'
-const hostname = ref('')
-const subdomain = ref('')
 
 // Extract subdomain from hostname
 const getSubdomain = () => {
@@ -89,31 +52,25 @@ const getSubdomain = () => {
     host = headers.host || headers['x-forwarded-host'] || ''
   }
   
-  hostname.value = host
-  console.log('Extracting subdomain from hostname:', host)
+  console.log('Server-side subdomain extraction:', { host, extracted: extractSubdomain() })
   
   if (!host) {
-    console.log('No hostname found')
     return null
   }
   
   // Development fallback - if we're on localhost, use 'test' as subdomain
   if (host === 'localhost' || host === '127.0.0.1' || host.includes('localhost')) {
     console.log('Development mode detected, using test subdomain')
-    subdomain.value = 'test'
     return 'test'
   }
   
-  const extracted = extractSubdomain()
-  subdomain.value = extracted
-  console.log('Subdomain extraction result:', { host, extracted })
-  return extracted
+  return extractSubdomain()
 }
 
 // Fetch site data based on subdomain
 const { data: siteData, pending, error, refresh } = await useFetch(() => {
   const extractedSubdomain = getSubdomain()
-  console.log('Building API URL with subdomain:', extractedSubdomain)
+  console.log('API request - subdomain:', extractedSubdomain)
   
   if (!extractedSubdomain) {
     throw createError({
@@ -123,7 +80,7 @@ const { data: siteData, pending, error, refresh } = await useFetch(() => {
   }
   
   const url = `/api/site/${extractedSubdomain}`
-  console.log('Final API URL:', url)
+  console.log('API request URL:', url)
   return url
 }, {
   key: 'site-data',
@@ -154,48 +111,55 @@ const siteStyles = computed(() => {
   }
 })
 
-// Layout component based on site config
+// Layout component based on route and site config
 const layoutComponent = computed(() => {
-  if (!siteData.value?.siteConfig) {
-    return 'DefaultLayout'
-  }
+  if (!siteData.value?.siteConfig) return 'DefaultLayout'
   
   const config = siteData.value.siteConfig
-  const content = siteData.value.content
+  const path = route.path
+  const slug = route.params.slug
   
-  // Check if there's any content
-  const hasContent = content?.projects?.length || content?.blogs?.length || content?.experiences?.length || content?.other?.length
-  
-  // If no content, use DefaultLayout for better empty state handling
-  if (!hasContent) {
+  // Determine layout based on route
+  if (path === '/' || path === '' || !slug || slug.length === 0) {
+    // Home page layout
+    switch (config.indexLayout) {
+      case 'grid':
+        return 'GridLayout'
+      case 'list':
+        return 'ListLayout'
+      case 'masonry':
+        return 'MasonryLayout'
+      default:
+        return 'GridLayout'
+    }
+  } else if (slug[0] === 'projects') {
+    // Projects archive page
+    return 'ProjectsArchive'
+  } else if (slug[0] === 'blog') {
+    // Blog archive page
+    return 'BlogArchive'
+  } else if (slug[0] === 'blog' || slug[0] === 'project' || slug[0] === 'experience') {
+    // Single content page layout
+    switch (config.singleLayout) {
+      case 'wide':
+        return 'WideLayout'
+      case 'minimal':
+        return 'MinimalLayout'
+      case 'standard':
+      default:
+        return 'StandardLayout'
+    }
+  } else {
+    // Default layout for other pages
     return 'DefaultLayout'
   }
-  
-  // Home page layout
-  switch (config.indexLayout) {
-    case 'grid':
-      return 'GridLayout'
-    case 'list':
-      return 'ListLayout'
-    case 'masonry':
-      return 'MasonryLayout'
-    default:
-      return 'DefaultLayout'
-  }
 })
-
-// Manual retry function
-const loadSiteData = () => {
-  refresh()
-}
 
 // Handle client-side navigation
 onMounted(() => {
   if (process.client) {
-    console.log('Component mounted, refreshing data...')
     // Refresh data when navigating to different subdomains
     const handleRouteChange = () => {
-      console.log('Route changed, refreshing data...')
       refresh()
     }
     

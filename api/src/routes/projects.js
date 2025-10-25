@@ -457,15 +457,20 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
  *         description: Project ID
  *     requestBody:
  *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               name:
+     *                 type: string
+     *               description:
+     *                 type: string
+     *               subdomain:
+     *                 type: string
+     *                 pattern: '^[a-z0-9-]+$'
+     *                 minLength: 3
+     *                 maxLength: 50
  *     responses:
  *       200:
  *         description: Project updated successfully
@@ -482,7 +487,8 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
  */
 router.put('/:id', [
   body('name').optional().trim().isLength({ min: 1 }),
-  body('description').optional().trim()
+  body('description').optional().trim(),
+  body('subdomain').optional().trim().isLength({ min: 3, max: 50 }).matches(/^[a-z0-9-]+$/).withMessage('Subdomain must be 3-50 characters, lowercase letters, numbers, and hyphens only')
 ], authorizeProjectAccess('ADMIN'), async (req, res) => {
   try {
     // Check validation errors
@@ -496,12 +502,34 @@ router.put('/:id', [
     }
 
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, subdomain } = req.body;
+
+    // Check if subdomain is already taken (if provided and different from current)
+    if (subdomain) {
+      const currentProject = await prisma.project.findUnique({
+        where: { id },
+        select: { subdomain: true }
+      });
+      
+      // Only check if subdomain is different from current
+      if (currentProject && currentProject.subdomain !== subdomain) {
+        const existingProject = await prisma.project.findUnique({
+          where: { subdomain }
+        });
+        if (existingProject) {
+          return res.status(409).json({
+            error: 'Subdomain already taken',
+            message: 'This subdomain is already in use'
+          });
+        }
+      }
+    }
 
     // Update project
     const updateData = {};
     if (name) updateData.name = name;
     if (description !== undefined) updateData.description = description;
+    if (subdomain !== undefined) updateData.subdomain = subdomain;
 
     const project = await prisma.project.update({
       where: { id },

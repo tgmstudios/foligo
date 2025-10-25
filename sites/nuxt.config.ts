@@ -8,18 +8,30 @@ export default defineNuxtConfig({
     port: 80,
     host: '0.0.0.0'
   },
-  css: ['~/assets/css/main.css'],
   modules: ['@nuxtjs/tailwindcss'],
   components: {
     dirs: ['~/components']
   },
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: 'https://api.foligo.tech'
+    }
+  },
   app: {
     head: {
-      title: 'Alex Chen - Modern Minimalist Portfolio',
+      title: 'Foligo - Portfolio Generator',
       meta: [
-        { name: 'description', content: 'Modern minimalist portfolio showcasing clean design and innovative solutions' },
+        { name: 'description', content: 'Dynamic portfolio sites powered by Foligo' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
       ]
+    }
+  },
+  // Enable SSR for dynamic content
+  ssr: true,
+  // Handle all routes dynamically
+  nitro: {
+    experimental: {
+      wasm: true
     }
   }
 })

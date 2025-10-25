@@ -107,6 +107,7 @@ export interface CreateProjectData {
 export interface UpdateProjectData {
   name?: string
   description?: string
+  subdomain?: string
 }
 
 export const useProjectStore = defineStore('projects', () => {

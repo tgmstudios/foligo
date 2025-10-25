@@ -34,7 +34,8 @@ app.use(cors({
     process.env.FRONTEND_URL || 'http://localhost:3001',
     'https://foligo.tech',
     'https://www.foligo.tech',
-    'https://app.foligo.tech'
+    'https://app.foligo.tech',
+    /^https:\/\/.*\.foligo\.tech$/
   ],
   credentials: true
 }));
@@ -106,15 +107,25 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Custom middleware to exclude site routes from authentication
+const authenticateTokenExceptSite = (req, res, next) => {
+  // Skip authentication for site routes
+  if (req.path.startsWith('/site')) {
+    return next();
+  }
+  // Apply authentication for all other routes
+  return authenticateToken(req, res, next);
+};
+
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/site', siteRoutes); // Public site routes (no auth required)
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
-app.use('/api', authenticateToken, contentRoutes);
+app.use('/api', authenticateTokenExceptSite, contentRoutes); // Use custom middleware
 app.use('/api/ai', authenticateToken, aiRoutes);
 app.use('/api/upload', authenticateToken, uploadRoutes);
-app.use('/api/site', siteRoutes); // Public site routes (no auth required)
 
 // Error handling middleware
 app.use(errorHandler);
