@@ -133,6 +133,8 @@ router.post('/register', [
         id: true,
         email: true,
         name: true,
+        hasCompletedOnboarding: true,
+        isAdmin: true,
         createdAt: true,
         updatedAt: true
       }
@@ -243,6 +245,8 @@ router.post('/login', [
       id: user.id,
       email: user.email,
       name: user.name,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+      isAdmin: user.isAdmin,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -308,6 +312,8 @@ router.get('/me', async (req, res) => {
           id: true,
           email: true,
           name: true,
+          hasCompletedOnboarding: true,
+          isAdmin: true,
           createdAt: true,
           updatedAt: true
         }

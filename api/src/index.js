@@ -14,6 +14,7 @@ const projectAccessRoutes = require('./routes/projectAccess');
 const contentRoutes = require('./routes/content');
 const aiRoutes = require('./routes/ai');
 const uploadRoutes = require('./routes/upload');
+const siteRoutes = require('./routes/site');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -86,6 +87,14 @@ const swaggerOptions = {
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// Serve Swagger JSON
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Serve Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check endpoint
@@ -102,9 +111,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
-app.use('/api/content', authenticateToken, contentRoutes);
+app.use('/api', authenticateToken, contentRoutes);
 app.use('/api/ai', authenticateToken, aiRoutes);
 app.use('/api/upload', authenticateToken, uploadRoutes);
+app.use('/api/site', siteRoutes); // Public site routes (no auth required)
 
 // Error handling middleware
 app.use(errorHandler);

@@ -6,6 +6,7 @@ import 'vue-toastification/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import './assets/css/main.css'
+import { useAuthStore } from './stores/auth'
 
 const app = createApp(App)
 
@@ -31,5 +32,9 @@ app.use(Toast, {
   icon: true,
   rtl: false,
 })
+
+// Initialize authentication on app startup
+const authStore = useAuthStore()
+authStore.initializeAuth()
 
 app.mount('#app')

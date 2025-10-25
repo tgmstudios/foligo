@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50">
     <!-- Sidebar -->
     <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out"
-         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0">
+         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
       <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
         <div class="flex items-center">
           <div class="flex-shrink-0">
@@ -33,7 +33,9 @@
             class="sidebar-item"
             :class="$route.name === item.routeName ? 'sidebar-item-active' : 'sidebar-item-inactive'"
           >
-            <component :is="item.icon" class="mr-3 h-5 w-5" />
+            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+            </svg>
             {{ item.name }}
           </router-link>
         </div>
@@ -65,13 +67,6 @@
         
         <!-- User Menu Dropdown -->
         <div v-if="showUserMenu" class="absolute bottom-16 left-4 right-4 bg-white rounded-md shadow-lg border border-gray-200 py-1">
-          <router-link
-            to="/settings"
-            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            @click="showUserMenu = false"
-          >
-            Settings
-          </router-link>
           <button
             @click="handleLogout"
             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -104,6 +99,27 @@
               </svg>
             </button>
             <h2 class="ml-2 text-lg font-semibold text-gray-900">{{ pageTitle }}</h2>
+          </div>
+          
+          <!-- Project Selector -->
+          <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2">
+              <label class="text-sm font-medium text-gray-700">Project:</label>
+              <select
+                v-model="selectedProjectId"
+                @change="onProjectChange"
+                class="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
+              >
+                <option value="">All Projects</option>
+                <option
+                  v-for="project in projects"
+                  :key="project.id"
+                  :value="project.id"
+                >
+                  {{ project.name }}
+                </option>
+              </select>
+            </div>
           </div>
           
           <div class="flex items-center space-x-4">
@@ -143,49 +159,63 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useProjectStore } from '@/stores/projects'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const projectStore = useProjectStore()
 
 const sidebarOpen = ref(false)
 const showUserMenu = ref(false)
+const selectedProjectId = ref('')
 
 const navigation = [
   {
     name: 'Dashboard',
     href: '/',
     routeName: 'dashboard',
-    icon: 'svg'
+    icon: 'DashboardIcon'
+  },
+  {
+    name: 'Content',
+    href: '/content',
+    routeName: 'content',
+    icon: 'ContentIcon'
   },
   {
     name: 'Projects',
     href: '/projects',
     routeName: 'projects',
-    icon: 'svg'
+    icon: 'ProjectsIcon'
   },
   {
     name: 'Analytics',
     href: '/analytics',
     routeName: 'analytics',
-    icon: 'svg'
-  },
-  {
-    name: 'Users',
-    href: '/users',
-    routeName: 'users',
-    icon: 'svg'
-  },
-  {
-    name: 'Settings',
-    href: '/settings',
-    routeName: 'settings',
-    icon: 'svg'
+    icon: 'AnalyticsIcon'
   }
 ]
+
+const projects = computed(() => projectStore.projects)
+
+const selectedProject = computed(() => {
+  if (!selectedProjectId.value) return null
+  return projectStore.projects.find(p => p.id === selectedProjectId.value)
+})
+
+const onProjectChange = () => {
+  // Store the selected project ID globally for easy access
+  ;(window as any).selectedProjectId = selectedProjectId.value
+  
+  // Emit event for child components to listen to
+  window.dispatchEvent(new CustomEvent('project-changed', { 
+    detail: { projectId: selectedProjectId.value, project: selectedProject.value }
+  }))
+}
 
 const pageTitle = computed(() => {
   const routeNames: Record<string, string> = {
@@ -206,11 +236,18 @@ const handleLogout = async () => {
 }
 
 // Close sidebar on route change (mobile)
-const stopWatcher = route.watch(() => {
+watch(route, () => {
   sidebarOpen.value = false
 })
 
-onUnmounted(() => {
-  stopWatcher()
+// Load projects on mount
+onMounted(() => {
+  projectStore.fetchProjects().then(() => {
+    // Auto-select first project if none is selected
+    if (!selectedProjectId.value && projectStore.projects.length > 0) {
+      selectedProjectId.value = projectStore.projects[0].id
+      onProjectChange()
+    }
+  })
 })
 </script>

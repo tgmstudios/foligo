@@ -54,9 +54,14 @@ const router = express.Router();
  *         description: Access denied
  */
 router.post('/projects/:projectId/content', [
-  body('type').isIn(['TEXT', 'IMAGE', 'VIDEO', 'CODE', 'LINK', 'EMBED']),
-  body('data').isObject(),
-  body('order').optional().isInt({ min: 0 })
+  body('contentType').isIn(['PROJECT', 'BLOG', 'EXPERIENCE']),
+  body('title').trim().isLength({ min: 1 }).withMessage('Title is required'),
+  body('slug').optional().trim().matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
+  body('excerpt').optional().trim(),
+  body('content').trim().isLength({ min: 1 }).withMessage('Content is required'),
+  body('metadata').optional().isObject(),
+  body('order').optional().isInt({ min: 0 }),
+  body('isPublished').optional().isBoolean()
 ], authorizeProjectAccess('EDITOR'), async (req, res) => {
   try {
     // Check validation errors
@@ -70,7 +75,28 @@ router.post('/projects/:projectId/content', [
     }
 
     const { projectId } = req.params;
-    const { type, data, order } = req.body;
+    const { contentType, title, slug, excerpt, content, metadata, order, isPublished } = req.body;
+
+    // Generate slug if not provided
+    let contentSlug = slug;
+    if (!contentSlug && title) {
+      contentSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim('-');
+    }
+
+    // Check if slug is unique
+    if (contentSlug) {
+      const existingContent = await prisma.content.findFirst({
+        where: { slug: contentSlug }
+      });
+      if (existingContent) {
+        contentSlug = `${contentSlug}-${Date.now()}`;
+      }
+    }
 
     // If no order specified, get the next order number
     let contentOrder = order;
@@ -83,13 +109,19 @@ router.post('/projects/:projectId/content', [
       contentOrder = lastContent ? lastContent.order + 1 : 0;
     }
 
-    // Create content block
-    const content = await prisma.content.create({
+    // Create content
+    const newContent = await prisma.content.create({
       data: {
         projectId,
-        type,
-        data,
-        order: contentOrder
+        type: contentType, // Use contentType as the main type
+        contentType,
+        title,
+        slug: contentSlug,
+        excerpt,
+        content, // Markdown content
+        metadata: metadata || {},
+        order: contentOrder,
+        isPublished: isPublished || false
       },
       include: {
         aiAnalysis: true
@@ -100,12 +132,12 @@ router.post('/projects/:projectId/content', [
     await cache.del(`project:${projectId}`);
     await cache.delPattern(`project:${projectId}:content*`);
 
-    res.status(201).json(content);
+    res.status(201).json(newContent);
   } catch (error) {
     console.error('Create content error:', error);
     res.status(500).json({
       error: 'Content Creation Failed',
-      message: 'Unable to create content block'
+      message: 'Unable to create content'
     });
   }
 });
@@ -200,7 +232,7 @@ router.get('/projects/:projectId/content', authorizeProjectAccess('VIEWER'), asy
  *       404:
  *         description: Content not found
  */
-router.get('/:id', async (req, res) => {
+router.get('/content/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -293,7 +325,7 @@ router.get('/:id', async (req, res) => {
  *       404:
  *         description: Content not found
  */
-router.put('/:id', [
+router.put('/content/:id', [
   body('type').optional().isIn(['TEXT', 'IMAGE', 'VIDEO', 'CODE', 'LINK', 'EMBED']),
   body('data').optional().isObject(),
   body('order').optional().isInt({ min: 0 })
@@ -400,7 +432,7 @@ router.put('/:id', [
  *       404:
  *         description: Content not found
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/content/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -501,7 +533,7 @@ router.delete('/:id', async (req, res) => {
  *       404:
  *         description: Content not found
  */
-router.put('/:id/reorder', [
+router.put('/content/:id/reorder', [
   body('newOrder').isInt({ min: 0 })
 ], async (req, res) => {
   try {

@@ -2,12 +2,15 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import api from '@/services/api'
+import { useAuthStore } from './auth'
 
 export interface Project {
   id: string
   name: string
   description?: string
   ownerId: string
+  subdomain?: string
+  isPublished: boolean
   createdAt: string
   updatedAt: string
   owner?: {
@@ -18,11 +21,32 @@ export interface Project {
   members?: ProjectMember[]
   content?: Content[]
   assets?: Asset[]
+  siteConfig?: SiteConfig
   _count?: {
     content: number
     members: number
     assets: number
   }
+}
+
+export interface SiteConfig {
+  id: string
+  projectId: string
+  siteName?: string
+  siteDescription?: string
+  primaryColor: string
+  secondaryColor: string
+  accentColor: string
+  backgroundColor: string
+  textColor: string
+  indexLayout: string
+  archiveLayout: string
+  singleLayout: string
+  metaTitle?: string
+  metaDescription?: string
+  favicon?: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface ProjectMember {
@@ -40,9 +64,15 @@ export interface ProjectMember {
 export interface Content {
   id: string
   projectId: string
-  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'CODE' | 'LINK' | 'EMBED'
-  data: any
+  type: 'PROJECT' | 'BLOG' | 'EXPERIENCE'
+  contentType: string
+  title: string
+  slug?: string
+  excerpt?: string
+  content: string // Markdown content
+  metadata?: any // Additional metadata (tags, categories, etc.)
   order: number
+  isPublished: boolean
   createdAt: string
   updatedAt: string
   aiAnalysis?: AIAnalysis
@@ -71,6 +101,7 @@ export interface Asset {
 export interface CreateProjectData {
   name: string
   description?: string
+  subdomain?: string
 }
 
 export interface UpdateProjectData {
@@ -271,6 +302,169 @@ export const useProjectStore = defineStore('projects', () => {
     currentProject.value = project
   }
 
+  async function fetchSiteConfig(projectId: string) {
+    try {
+      const response = await api.get(`/projects/${projectId}/site-config`)
+      return response.data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to fetch site configuration'
+      toast.error(message)
+      throw error
+    }
+  }
+
+  async function updateSiteConfig(projectId: string, config: Partial<SiteConfig>) {
+    try {
+      const response = await api.put(`/projects/${projectId}/site-config`, config)
+      
+      // Update project in array
+      const index = projects.value.findIndex(p => p.id === projectId)
+      if (index !== -1) {
+        projects.value[index].siteConfig = response.data
+      }
+      
+      // Update current project if it's the same
+      if (currentProject.value?.id === projectId) {
+        currentProject.value.siteConfig = response.data
+      }
+      
+      toast.success('Site configuration updated successfully')
+      return response.data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to update site configuration'
+      toast.error(message)
+      throw error
+    }
+  }
+
+  async function publishProject(projectId: string, isPublished: boolean) {
+    try {
+      const response = await api.post(`/projects/${projectId}/publish`, { isPublished })
+      
+      // Update project in array
+      const index = projects.value.findIndex(p => p.id === projectId)
+      if (index !== -1) {
+        projects.value[index].isPublished = isPublished
+      }
+      
+      // Update current project if it's the same
+      if (currentProject.value?.id === projectId) {
+        currentProject.value.isPublished = isPublished
+      }
+      
+      toast.success(response.data.message)
+      return response.data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to update publish status'
+      toast.error(message)
+      throw error
+    }
+  }
+
+  async function createContent(projectId: string, contentData: {
+    contentType: 'PROJECT' | 'BLOG' | 'EXPERIENCE'
+    title: string
+    slug?: string
+    excerpt?: string
+    content: string
+    metadata?: any
+    isPublished?: boolean
+  }) {
+    try {
+      console.log('Creating content for project:', projectId)
+      console.log('Content data:', contentData)
+      console.log('Auth token:', localStorage.getItem('auth_token'))
+      console.log('Available projects:', projects.value.map(p => ({ id: p.id, name: p.name, ownerId: p.ownerId })))
+      console.log('Current project:', currentProject.value)
+      
+      // Check if project exists and user has access
+      const project = projects.value.find(p => p.id === projectId)
+      if (!project) {
+        throw new Error(`Project ${projectId} not found`)
+      }
+      
+      const response = await api.post(`/projects/${projectId}/content`, contentData)
+      
+      // Update project content
+      const index = projects.value.findIndex(p => p.id === projectId)
+      if (index !== -1 && projects.value[index].content) {
+        projects.value[index].content!.push(response.data)
+      }
+      
+      // Update current project if it's the same
+      if (currentProject.value?.id === projectId && currentProject.value.content) {
+        currentProject.value.content.push(response.data)
+      }
+      
+      toast.success('Content created successfully')
+      return response.data
+    } catch (error: any) {
+      console.error('Create content error:', error)
+      console.error('Error response:', error.response)
+      console.error('Error status:', error.response?.status)
+      console.error('Error data:', error.response?.data)
+      
+      const message = error.response?.data?.message || 'Failed to create content'
+      toast.error(message)
+      throw error
+    }
+  }
+
+  async function updateContent(contentId: string, contentData: Partial<Content>) {
+    try {
+      const response = await api.put(`/content/${contentId}`, contentData)
+      
+      // Update content in projects array
+      projects.value.forEach(project => {
+        if (project.content) {
+          const contentIndex = project.content.findIndex(c => c.id === contentId)
+          if (contentIndex !== -1) {
+            project.content[contentIndex] = response.data
+          }
+        }
+      })
+      
+      // Update current project if it has this content
+      if (currentProject.value?.content) {
+        const contentIndex = currentProject.value.content.findIndex(c => c.id === contentId)
+        if (contentIndex !== -1) {
+          currentProject.value.content[contentIndex] = response.data
+        }
+      }
+      
+      toast.success('Content updated successfully')
+      return response.data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to update content'
+      toast.error(message)
+      throw error
+    }
+  }
+
+  async function deleteContent(contentId: string) {
+    try {
+      await api.delete(`/content/${contentId}`)
+      
+      // Remove content from projects array
+      projects.value.forEach(project => {
+        if (project.content) {
+          project.content = project.content.filter(c => c.id !== contentId)
+        }
+      })
+      
+      // Remove from current project if it has this content
+      if (currentProject.value?.content) {
+        currentProject.value.content = currentProject.value.content.filter(c => c.id !== contentId)
+      }
+      
+      toast.success('Content deleted successfully')
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to delete content'
+      toast.error(message)
+      throw error
+    }
+  }
+
   return {
     // State
     projects,
@@ -293,9 +487,13 @@ export const useProjectStore = defineStore('projects', () => {
     addProjectMember,
     removeProjectMember,
     updateMemberRole,
-    setCurrentProject
+    setCurrentProject,
+    fetchSiteConfig,
+    updateSiteConfig,
+    publishProject,
+    createContent,
+    updateContent,
+    deleteContent
   }
 })
 
-// Import auth store for type checking
-import { useAuthStore } from './auth'

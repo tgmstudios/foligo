@@ -298,4 +298,96 @@ router.get('/me/projects', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/users/me:
+ *   put:
+ *     summary: Update current user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               hasCompletedOnboarding:
+ *                 type: boolean
+ *               isAdmin:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.put('/me', [
+  body('name').optional().trim().isLength({ min: 1 }),
+  body('hasCompletedOnboarding').optional().isBoolean(),
+  body('isAdmin').optional().isBoolean()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid input data',
+        details: errors.array()
+      });
+    }
+
+    const userId = req.user.id;
+    const updateData = req.body;
+
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        error: 'No Data Provided',
+        message: 'At least one field must be provided for update'
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        hasCompletedOnboarding: true,
+        isAdmin: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    // Clear user cache
+    await cache.del(`user:${userId}`);
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      error: 'Profile Update Failed',
+      message: 'Unable to update profile'
+    });
+  }
+});
+
 module.exports = router;

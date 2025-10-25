@@ -145,13 +145,16 @@ export const useAuthStore = defineStore('auth', () => {
         // Set axios header
         api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
         
-        // Fetch user profile
+        // Fetch user profile to verify token is still valid
         await fetchUserProfile()
+        console.log('Auth initialized successfully')
       } catch (error) {
         // Token is invalid, clear it
-        console.error('Invalid token, clearing auth state')
+        console.error('Invalid token, clearing auth state:', error)
         logout()
       }
+    } else {
+      console.log('No token found, user not authenticated')
     }
   }
 
@@ -162,6 +165,22 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       toast.error('Failed to complete onboarding')
       throw error
+    }
+  }
+
+  async function checkAuthStatus() {
+    if (!token.value) {
+      return false
+    }
+    
+    try {
+      // Verify token is still valid by fetching user profile
+      await fetchUserProfile()
+      return true
+    } catch (error) {
+      console.error('Token validation failed:', error)
+      logout()
+      return false
     }
   }
 
@@ -182,6 +201,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserProfile,
     updateProfile,
     initializeAuth,
-    completeOnboarding
+    completeOnboarding,
+    checkAuthStatus
   }
 })

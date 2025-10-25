@@ -9,6 +9,9 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  css: {
+    postcss: './postcss.config.js',
+  },
   server: {
     port: 80,
     host: true,
@@ -19,13 +22,6 @@ export default defineConfig({
       'app.foligo.tech',
       'dashboard.foligo.tech'
     ],
-    proxy: {
-      '/api': {
-        target: 'http://localhost:80',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   },
   build: {
     outDir: 'dist',

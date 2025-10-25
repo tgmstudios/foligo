@@ -15,6 +15,8 @@ model User {
   email         String   @unique
   password      String
   name          String
+  hasCompletedOnboarding Boolean @default(false)
+  isAdmin       Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -30,8 +32,13 @@ model Project {
   name        String
   description String?
   ownerId     String
+  subdomain   String?  @unique // e.g., "my-portfolio" for my-portfolio.foligo.tech
+  isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Site Configuration
+  siteConfig SiteConfig?
 
   // Relationships
   owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -59,13 +66,19 @@ model ProjectAccess {
 }
 
 model Content {
-  id        String      @id @default(uuid())
-  projectId String
-  type      ContentType
-  data      Json
-  order     Int         @default(0)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id          String      @id @default(uuid())
+  projectId   String
+  type        ContentType
+  contentType String      @default("BLOG") // PROJECT, BLOG, EXPERIENCE
+  title       String
+  slug        String?     @unique
+  excerpt     String?
+  content     String      // Markdown content
+  metadata    Json?       // Additional metadata (tags, categories, etc.)
+  order       Int         @default(0)
+  isPublished Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // Relationships
   project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -87,6 +100,41 @@ model Asset {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("assets")
+}
+
+model SiteConfig {
+  id        String   @id @default(uuid())
+  projectId String   @unique
+  siteName  String?
+  siteDescription String?
+  
+  // Layout Configuration
+  layoutConfig Json // Store layout preferences
+  
+  // Color Scheme
+  primaryColor   String @default("#3B82F6")
+  secondaryColor String @default("#1E40AF")
+  accentColor    String @default("#F59E0B")
+  backgroundColor String @default("#FFFFFF")
+  textColor       String @default("#1F2937")
+  
+  // Page Layouts
+  indexLayout    String @default("grid") // grid, list, masonry
+  archiveLayout  String @default("list") // grid, list, masonry
+  singleLayout   String @default("standard") // standard, wide, minimal
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  favicon         String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("site_config")
 }
 
 model AIAnalysis {
@@ -111,10 +159,7 @@ enum Role {
 }
 
 enum ContentType {
-  TEXT
-  IMAGE
-  VIDEO
-  CODE
-  LINK
-  EMBED
+  PROJECT
+  BLOG
+  EXPERIENCE
 }

@@ -12,6 +12,7 @@ import ProjectDetailView from '@/views/projects/ProjectDetailView.vue'
 import ContentEditorView from '@/views/content/ContentEditorView.vue'
 import UsersView from '@/views/users/UsersView.vue'
 import SettingsView from '@/views/settings/SettingsView.vue'
+import ContentManagementView from '@/views/content/ContentManagementView.vue'
 import AnalyticsView from '@/views/analytics/AnalyticsView.vue'
 
 const router = createRouter({
@@ -46,6 +47,11 @@ const router = createRouter({
           component: DashboardView
         },
         {
+          path: 'content',
+          name: 'content',
+          component: ContentManagementView
+        },
+        {
           path: 'projects',
           name: 'projects',
           component: ProjectsView
@@ -56,12 +62,12 @@ const router = createRouter({
           component: ProjectDetailView,
           props: true
         },
-        {
-          path: 'projects/:id/edit',
-          name: 'content-editor',
-          component: ContentEditorView,
-          props: true
-        },
+            {
+              path: 'projects/:projectId/content/:id/edit',
+              name: 'content-editor',
+              component: ContentEditorView,
+              props: true
+            },
         {
           path: 'users',
           name: 'users',
@@ -92,6 +98,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   
+  // Wait for auth initialization if we have a token but no user
+  if (authStore.token && !authStore.user) {
+    try {
+      await authStore.initializeAuth()
+    } catch (error) {
+      console.error('Auth initialization failed:', error)
+    }
+  }
+  
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
@@ -104,9 +119,15 @@ router.beforeEach(async (to, from, next) => {
     return
   }
   
-  // Check if user needs onboarding
-  if (to.meta.requiresOnboarding && authStore.user && !authStore.user.hasCompletedOnboarding) {
+  // Check if user needs onboarding (but not if already on onboarding page)
+  if (to.meta.requiresOnboarding && authStore.user && !authStore.user.hasCompletedOnboarding && to.name !== 'onboarding') {
     next('/onboarding')
+    return
+  }
+  
+  // If user has completed onboarding and tries to access onboarding page, redirect to dashboard
+  if (to.name === 'onboarding' && authStore.user && authStore.user.hasCompletedOnboarding) {
+    next('/')
     return
   }
   
