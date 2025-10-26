@@ -19,7 +19,7 @@ export default defineConfig({
       'localhost',
       'foligo.tech',
       'www.foligo.tech',
-      'app.foligo.tech',
+      'foligo.tech',
       'dashboard.foligo.tech'
     ],
   },

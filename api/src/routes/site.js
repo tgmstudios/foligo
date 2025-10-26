@@ -135,6 +135,14 @@ router.get('/:subdomain', async (req, res) => {
       other: project.content.filter(c => !['PROJECT', 'BLOG', 'EXPERIENCE'].includes(c.contentType))
     };
 
+    // Debug: Log the siteConfig being returned
+    console.log('Site Config Data:', {
+      hasSiteConfig: !!project.siteConfig,
+      profileImage: project.siteConfig?.profileImage,
+      profileName: project.siteConfig?.profileName,
+      profileBio: project.siteConfig?.profileBio
+    });
+
     res.json({
       project: {
         id: project.id,
@@ -146,6 +154,9 @@ router.get('/:subdomain', async (req, res) => {
       siteConfig: project.siteConfig || {
         siteName: project.name,
         siteDescription: project.description,
+        profileName: project.name,
+        profileBio: project.description,
+        profileImage: null,
         primaryColor: '#3B82F6',
         secondaryColor: '#1E40AF',
         accentColor: '#F59E0B',

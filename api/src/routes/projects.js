@@ -408,6 +408,7 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
             }
           },
           assets: true,
+          siteConfig: true,
           _count: {
             select: {
               content: true,
@@ -427,6 +428,52 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
 
       // Cache project data for 15 minutes
       await cache.set(cacheKey, project, 900);
+    } else {
+      // If we got data from cache but it doesn't have siteConfig, fetch fresh data
+      if (!project.siteConfig) {
+        project = await prisma.project.findUnique({
+          where: { id },
+          include: {
+            owner: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true
+                  }
+                }
+              }
+            },
+            content: {
+              orderBy: { order: 'asc' },
+              include: {
+                aiAnalysis: true
+              }
+            },
+            assets: true,
+            siteConfig: true,
+            _count: {
+              select: {
+                content: true,
+                members: true,
+                assets: true
+              }
+            }
+          }
+        });
+        
+        if (project) {
+          await cache.set(cacheKey, project, 900);
+        }
+      }
     }
 
     res.json(project);

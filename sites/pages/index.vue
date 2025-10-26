@@ -1,10 +1,10 @@
 <template>
   <div>
     <!-- Loading State -->
-    <div v-if="pending" class="min-h-screen flex items-center justify-center">
+    <div v-if="pending" class="min-h-screen bg-slate-900 flex items-center justify-center">
       <div class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p class="text-gray-600">Loading site...</p>
+        <p class="text-slate-300">Loading site...</p>
       </div>
     </div>
 
@@ -13,17 +13,14 @@
 
     <!-- Site Content -->
     <div v-else-if="siteData" class="min-h-screen" :style="siteStyles">
-      <!-- Dynamic Head -->
-      <Head>
-        <Title>{{ siteData.siteConfig.metaTitle || siteData.project.name }}</Title>
-        <Meta name="description" :content="siteData.siteConfig.metaDescription || siteData.project.description" />
-        <Meta name="theme-color" :content="siteData.siteConfig.primaryColor" />
-        <Link v-if="siteData.siteConfig.favicon" rel="icon" :href="siteData.siteConfig.favicon" />
-      </Head>
 
       <!-- Layout Switch -->
+      <PortfolioLayout 
+        v-if="layoutComponent === 'PortfolioLayout'"
+        :site-data="siteData"
+      />
       <DefaultLayout 
-        v-if="layoutComponent === 'DefaultLayout'"
+        v-else-if="layoutComponent === 'DefaultLayout'"
         :site-data="siteData"
         :route="route"
       />
@@ -42,19 +39,19 @@
         :site-data="siteData"
         :route="route"
       />
-      <div v-else class="min-h-screen flex items-center justify-center">
+      <div v-else class="min-h-screen bg-slate-900 flex items-center justify-center">
         <div class="text-center">
-          <h1 class="text-2xl font-bold text-gray-900 mb-4">Layout Error</h1>
-          <p class="text-gray-600">Unknown layout component: {{ layoutComponent }}</p>
+          <h1 class="text-2xl font-bold text-white mb-4">Layout Error</h1>
+          <p class="text-slate-300">Unknown layout component: {{ layoutComponent }}</p>
         </div>
       </div>
     </div>
 
     <!-- Fallback State -->
-    <div v-else class="min-h-screen flex items-center justify-center">
+    <div v-else class="min-h-screen bg-slate-900 flex items-center justify-center">
       <div class="text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">No Site Data</h1>
-        <p class="text-gray-600">Unable to load site data.</p>
+        <h1 class="text-2xl font-bold text-white mb-4">No Site Data</h1>
+        <p class="text-slate-300">Unable to load site data.</p>
         <button @click="loadSiteData" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
           Retry
         </button>
@@ -64,7 +61,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watchEffect } from 'vue'
 import { siteApi } from '~/utils/siteApi'
 import { useSubdomain } from '~/composables/useSubdomain'
 
@@ -110,6 +107,13 @@ const getSubdomain = () => {
   return extracted
 }
 
+// Apply dark mode to HTML element
+useHead({
+  htmlAttrs: {
+    class: 'dark'
+  }
+})
+
 // Fetch site data based on subdomain
 const { data: siteData, pending, error, refresh } = await useFetch(() => {
   const extractedSubdomain = getSubdomain()
@@ -135,6 +139,20 @@ const { data: siteData, pending, error, refresh } = await useFetch(() => {
   },
   onResponseError({ response }) {
     console.error('Response error:', response.status, response.statusText)
+  }
+})
+
+// Update meta tags when siteData is available
+watchEffect(() => {
+  if (siteData.value) {
+    useHead({
+      title: siteData.value.siteConfig?.metaTitle || siteData.value.project?.name || 'Portfolio',
+      meta: [
+        { name: 'description', content: siteData.value.siteConfig?.metaDescription || siteData.value.project?.description || '' },
+        { name: 'theme-color', content: siteData.value.siteConfig?.primaryColor || '#3B82F6' }
+      ],
+      link: siteData.value.siteConfig?.favicon ? [{ rel: 'icon', href: siteData.value.siteConfig.favicon }] : []
+    })
   }
 })
 
@@ -171,8 +189,10 @@ const layoutComponent = computed(() => {
     return 'DefaultLayout'
   }
   
-  // Home page layout
+  // Home page layout - default to PortfolioLayout for better UX
   switch (config.indexLayout) {
+    case 'portfolio':
+      return 'PortfolioLayout'
     case 'grid':
       return 'GridLayout'
     case 'list':
@@ -180,7 +200,7 @@ const layoutComponent = computed(() => {
     case 'masonry':
       return 'MasonryLayout'
     default:
-      return 'DefaultLayout'
+      return 'PortfolioLayout' // Default to portfolio layout
   }
 })
 
