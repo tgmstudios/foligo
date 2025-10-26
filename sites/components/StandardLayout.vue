@@ -1,90 +1,56 @@
 <template>
-  <div class="min-h-screen bg-white">
+  <div class="min-h-screen bg-slate-900 text-slate-100">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-3xl font-bold" :style="{ color: siteData.siteConfig.primaryColor }">
-              {{ siteData.siteConfig.siteName || siteData.project.name }}
-            </h1>
-          </div>
-          <nav class="hidden md:flex space-x-8">
-            <NuxtLink to="/" class="text-gray-700 hover:text-gray-900">Home</NuxtLink>
-            <NuxtLink to="/projects" class="text-gray-700 hover:text-gray-900">Projects</NuxtLink>
-            <NuxtLink to="/blog" class="text-gray-700 hover:text-gray-900">Blog</NuxtLink>
-            <NuxtLink to="/experience" class="text-gray-700 hover:text-gray-900">Experience</NuxtLink>
-            <NuxtLink to="/contact" class="text-gray-700 hover:text-gray-900">Contact</NuxtLink>
-          </nav>
-        </div>
-      </div>
-    </header>
-
-    <!-- Debug Info (only in development) -->
-    <div v-if="isDev" class="fixed bottom-4 right-4 bg-blue-100 p-4 rounded-lg text-xs z-50 max-w-md">
-      <h3 class="font-bold mb-2">StandardLayout Debug:</h3>
-      <p>Content Data: {{ props.contentData ? 'Received' : 'Not received' }}</p>
-      <p>Title: {{ props.contentData?.title || 'N/A' }}</p>
-      <p>Content Type: {{ props.contentData?.contentType || 'N/A' }}</p>
-      <p>Has Content: {{ props.contentData?.content ? 'Yes' : 'No' }}</p>
-    </div>
+    <CommonHeader 
+      :site-name="siteData.siteConfig.siteName || siteData.project.name"
+      :site-description="siteData.siteConfig.siteDescription || ''"
+    />
 
     <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <!-- Content -->
       <article class="prose prose-lg max-w-none">
         <header class="mb-8">
-          <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ props.contentData.title }}</h1>
-          <div class="flex items-center text-sm text-gray-500 mb-6">
-            <span>{{ new Date(props.contentData.createdAt).toLocaleDateString() }}</span>
+          <h1 class="text-4xl font-bold text-white mb-4">{{ props.contentData.title || 'Untitled' }}</h1>
+          <div class="flex items-center text-sm text-slate-400 mb-6">
+            <span>{{ props.contentData.createdAt ? new Date(props.contentData.createdAt).toLocaleDateString() : 'No date' }}</span>
             <span class="mx-2">•</span>
-            <span class="capitalize">{{ props.contentData.contentType.toLowerCase() }}</span>
+            <span class="capitalize">{{ props.contentData.contentType?.toLowerCase() || 'post' }}</span>
           </div>
-          <p v-if="props.contentData.excerpt" class="text-xl text-gray-600">{{ props.contentData.excerpt }}</p>
+          <p v-if="props.contentData.excerpt" class="text-xl text-slate-200">{{ cleanExcerpt }}</p>
         </header>
 
         <!-- Content Body -->
         <div class="content-body" v-html="renderedContent"></div>
-
-        <!-- Metadata -->
-        <div v-if="props.contentData.metadata" class="mt-8 pt-8 border-t border-gray-200">
-          <h3 class="text-lg font-semibold mb-4">Details</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div v-for="(value, key) in props.contentData.metadata" :key="key" class="flex">
-              <span class="font-medium text-gray-700 capitalize w-24">{{ key }}:</span>
-              <span class="text-gray-600">{{ value }}</span>
-            </div>
-          </div>
-        </div>
       </article>
 
       <!-- Navigation -->
-      <div class="mt-12 pt-8 border-t border-gray-200">
+      <div class="mt-12 pt-8 border-t border-slate-700">
         <div class="flex justify-between">
           <NuxtLink 
-            to="/"
-            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            to="/blog"
+            class="inline-flex items-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white"
           >
-            ← Back to Home
+            ← Back to Blog
           </NuxtLink>
           <NuxtLink 
-            to="/contact"
+            to="/"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white hover:opacity-90 transition-opacity"
             :style="{ backgroundColor: siteData.siteConfig.primaryColor }"
           >
-            Get In Touch
+            Home →
           </NuxtLink>
         </div>
       </div>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-50 mt-16">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <footer class="bg-slate-900 border-t border-slate-700 mt-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="text-center">
-          <p class="text-gray-600">
+          <p class="text-slate-400">
             © {{ new Date().getFullYear() }} {{ siteData.siteConfig.siteName || siteData.project.name }}. 
-            Powered by <a href="https://foligo.tech" class="text-blue-600 hover:text-blue-800">Foligo</a>.
+            Powered by <a href="https://foligo.tech" class="text-blue-400 hover:text-blue-300">Foligo</a>.
           </p>
         </div>
       </div>
@@ -94,11 +60,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { siteApi } from '~/utils/siteApi'
 import { renderMarkdown } from '~/utils/markdownRenderer'
-
-// Debug variables
-const isDev = process.dev || process.env.NODE_ENV === 'development'
 
 const props = defineProps({
   siteData: {
@@ -113,6 +75,18 @@ const props = defineProps({
     type: Object,
     required: true
   }
+})
+
+// Clean excerpt from markdown
+const cleanExcerpt = computed(() => {
+  if (!props.contentData?.excerpt) return ''
+  return props.contentData.excerpt
+    .replace(/^#+\s+/gim, '') // Remove headers
+    .replace(/\*\*(.*?)\*\*/gim, '$1') // Remove bold
+    .replace(/\*(.*?)\*/gim, '$1') // Remove italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/gim, '$1') // Remove links
+    .replace(/`([^`]+)`/gim, '$1') // Remove inline code
+    .trim()
 })
 
 // Render markdown content
@@ -138,6 +112,12 @@ const renderedContent = computed(() => {
 
 .content-body {
   line-height: 1.7;
+  color: #e2e8f0 !important; /* text-slate-200 */
+}
+
+/* Override any dark text colors */
+.content-body > * {
+  color: #e2e8f0 !important;
 }
 
 .content-body h1,
@@ -151,18 +131,50 @@ const renderedContent = computed(() => {
   font-weight: 600;
 }
 
+.content-body h1 {
+  color: #ffffff !important;
+}
+
+.content-body h2 {
+  color: #f1f5f9 !important; /* text-slate-100 */
+}
+
+.content-body h3 {
+  color: #f8fafc !important; /* text-slate-50 */
+}
+
 .content-body p {
   margin-bottom: 1.5rem;
+  color: #e2e8f0 !important; /* text-slate-200 */
+}
+
+.content-body a {
+  color: #60a5fa !important; /* text-blue-400 */
+}
+
+.content-body a:hover {
+  color: #93c5fd !important; /* text-blue-300 */
 }
 
 .content-body ul,
 .content-body ol {
   margin-bottom: 1.5rem;
   padding-left: 1.5rem;
+  color: #e2e8f0 !important; /* text-slate-200 */
 }
 
 .content-body li {
   margin-bottom: 0.5rem;
+  color: #e2e8f0 !important; /* text-slate-200 */
+}
+
+.content-body strong {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.content-body em {
+  color: #cbd5e1 !important; /* text-slate-300 */
 }
 
 .content-body blockquote {
@@ -170,18 +182,20 @@ const renderedContent = computed(() => {
   padding-left: 1rem;
   margin: 2rem 0;
   font-style: italic;
-  color: #6b7280;
+  color: #cbd5e1; /* text-slate-300 */
 }
 
 .content-body code {
-  background-color: #f3f4f6;
+  background-color: #1e293b !important; /* bg-slate-800 */
+  color: #93c5fd !important; /* text-blue-300 */
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
 }
 
 .content-body pre {
-  background-color: #f3f4f6;
+  background-color: #1e293b !important; /* bg-slate-800 */
+  border: 1px solid #334155 !important; /* border-slate-700 */
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -189,7 +203,15 @@ const renderedContent = computed(() => {
 }
 
 .content-body pre code {
-  background-color: transparent;
+  background-color: transparent !important;
   padding: 0;
+  color: #f8fafc !important; /* text-slate-50 */
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* Override default text color for non-specialized elements */
+.content-body p {
+  color: #e2e8f0 !important;
 }
 </style>
