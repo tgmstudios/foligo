@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum FoligoAPI {
+private enum FoligoAPI {
     static let baseURL = URL(string: "https://api.foligo.tech")!
 
     static func createProject(name: String, description: String?, authToken: String) async throws -> ProjectResponse {
@@ -64,7 +64,7 @@ enum FoligoAPI {
     }
 }
 
-struct ProjectResponse: Codable {
+struct ProjectResponse: Decodable {
     let id: String
     let name: String
     let description: String?

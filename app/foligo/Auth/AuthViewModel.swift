@@ -19,15 +19,17 @@ struct LoginRequest: Encodable {
     let password: String
 }
 
-struct AuthResponse: Decodable, Hashable {
+struct AuthResponse: Decodable {
     let user: User
     let token: String
 }
 
-struct User: Decodable, Hashable {
-    let id: String
+struct User: Codable {
+    let id: UUID
     let email: String
     let name: String
+    let createdAt: Date
+    let updatedAt: Date
 }
 
 // For decoding server errors
