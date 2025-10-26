@@ -1,0 +1,395 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>!!! JASON SELSLEY'S K00L W3B P@GE !!!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- This style block contains all the bad-design-magic -->
+  <style>
+    body {
+      /* A nice, relaxing, tiled brick wall background. */
+      background-image: url('https://www.publicdomainpictures.net/pictures/20000/velka/red-brick-wall.jpg');
+      background-size: 200px;
+      font-family: "Comic Sans MS", "Comic Sans", cursive;
+      color: #FFFF00; /* Bright yellow text for maximum readability */
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ADD THE "X" OVERLAY HERE */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      /* Create two thick, semi-transparent red lines */
+      background: 
+        linear-gradient(to top right, 
+          transparent 49.5%, 
+          rgba(255, 0, 0, 0.6) 49.5%, 
+          rgba(255, 0, 0, 0.6) 50.5%, 
+          transparent 50.5%
+        ),
+        linear-gradient(to top left, 
+          transparent 49.5%, 
+          rgba(255, 0, 0, 0.6) 49.5%, 
+          rgba(255, 0, 0, 0.6) 50.5%, 
+          transparent 50.5%
+        );
+      z-index: 9998; /* Below the CTA, above everything else */
+      pointer-events: none; /* Lets you click "through" it */
+    }
+
+    /* We must center everything. It is the law. */
+    .content-wrapper {
+      width: 900px; /* Fixed width, baby. Mobile users love to zoom. */
+      margin-left: auto;
+      margin-right: auto;
+      background-color: rgba(0, 0, 128, 0.8); /* 80% opaque navy blue background */
+      border: 10px ridge #FF00FF; /* A tasteful magenta ridge border */
+      padding: 15px;
+    }
+
+    h1 {
+      font-family: "Impact", "Arial Black", sans-serif;
+      font-size: 72px;
+      color: #00FF00; /* Lime green */
+      text-shadow: 4px 4px #FF0000; /* Red drop shadow */
+      letter-spacing: 5px;
+      text-align: center;
+    }
+
+    h2 {
+      font-family: "Papyrus", fantasy;
+      font-size: 36px;
+      color: #00FFFF; /* Cyan */
+      text-decoration: underline;
+      font-weight: bold;
+    }
+    
+    h3 {
+      font-family: "Courier New", monospace;
+      font-size: 24px;
+      color: #FFFFFF; /* White */
+      background-color: #FF0000; /* Red background */
+      padding: 5px;
+      display: inline-block;
+    }
+
+    a {
+      color: #FF69B4; /* Hot Pink links */
+      font-weight: bold;
+      /* Blinking links are essential */
+      animation: link-blinker 0.8s linear infinite;
+    }
+    
+    a:hover {
+      color: #FFFF00; /* Yellow on hover */
+      background-color: #000000; /* Black background on hover */
+    }
+
+    @keyframes link-blinker {
+      50% {
+        opacity: 0.2;
+      }
+    }
+
+    /* The <blink> tag is gone, but its spirit lives on */
+    .blinking-header {
+      animation: text-blinker 1.2s linear infinite;
+    }
+    
+    @keyframes text-blinker {
+      50% {
+        opacity: 0;
+      }
+    }
+
+    ul {
+      list-style-type: square; /* Classy square bullets */
+      color: #FFFFFF; /* White list items */
+    }
+    
+    li {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    /* Tables for layout? No. Tables for data, but let's make them ugly. */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 5px;
+      border: 5px dashed #00FF00; /* Lime green dashed border */
+    }
+    
+    th {
+      background-color: #FF00FF; /* Magenta header */
+      color: #000000; /* Black text */
+      font-family: "Times New Roman", serif;
+      font-size: 20px;
+      border: 3px solid #FFFF00; /* Yellow border */
+      padding: 10px;
+    }
+    
+    td {
+      background-color: #C0C0C0; /* Silver */
+      color: #000080; /* Navy text */
+      font-family: "Arial", sans-serif;
+      border: 2px dotted #000000; /* Black dotted border */
+      padding: 8px;
+    }
+    
+    .skills-box {
+      border: 10px groove #FF6600; /* Orange groove border */
+      background-color: #000000;
+      color: #FFFFFF;
+      padding: 20px;
+      font-family: "Times New Roman", serif;
+      font-size: 16px;
+      /* Just a big wall of text. */
+      line-height: 1.5;
+    }
+    
+    .spinning-gif {
+      width: 30px;
+      height: 30px;
+      vertical-align: middle; /* Align with text */
+    }
+    
+    .construction-gif {
+      width: 150px;
+      display: block;
+      margin: 10px auto;
+    }
+    
+    .footer-text {
+      font-size: 14px;
+      color: #C0C0C0; /* Silver */
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    /* --- ADD FOLIGO CTA STYLES HERE --- */
+    #foligo-cta {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      
+      /* CLEAN DESIGN TO CONTRAST THE MESS */
+      background-color: #FFFFFF;
+      color: #222222;
+      /* Using a system font stack for a "sane" look */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", sans-serif;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      width: 90%;
+      max-width: 500px;
+      border: 2px solid #000;
+    }
+    
+    #foligo-cta h2 {
+      /* Override shitty h2 styles */
+      font-family: inherit;
+      font-size: 24px;
+      color: #000000;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 0;
+      text-shadow: none; /* Remove red shadow */
+      letter-spacing: normal; /* Fix spacing */
+      text-align: center; /* Ensure center */
+    }
+    
+    #foligo-cta p {
+      font-size: 16px;
+      color: #444444;
+      margin-bottom: 20px;
+    }
+    
+    /* We need to style the button inside the CTA separately */
+    #foligo-cta a, #foligo-cta a.foligo-button {
+      /* Override shitty 'a' styles */
+      font-family: inherit;
+      background-color: #007BFF; /* A nice, professional blue */
+      color: #FFFFFF;
+      padding: 12px 20px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 16px;
+      animation: none; /* Turn off blinking */
+      opacity: 1; /* Ensure it's not blinking */
+      transition: background-color 0.2s ease;
+      display: inline-block; /* Make it a nice button */
+    }
+    
+    #foligo-cta a:hover, #foligo-cta a.foligo-button:hover {
+      background-color: #0056b3;
+      color: #FFFFFF; /* Override hover */
+    }
+    /* --- END FOLIGO CTA STYLES --- */
+
+  </style>
+</head>
+
+<body>
+  <!-- The glorious marquee. A must-have. -->
+  <marquee behavior="scroll" direction="left" scrollamount="10" style="background-color: #000000; color: #FFFF00; font-size: 24px; font-weight: bold; padding: 10px; border-bottom: 5px solid #FF0000;">
+    *** WELCOME TO THE COOLEST SITE ON THE WORLD WIDE WEB ==> JASON SELSLEY'S PERSONAL PAGE <== CHECK OUT MY L33T SKILLZ ***
+  </marquee>
+
+  <!-- Center tag is deprecated, which makes it perfect. -->
+  <center>
+    <div class="content-wrapper">
+
+      <h1>JASON SELSLEY</h1>
+
+      <p style="font-size: 20px; color: #FFFFFF;">
+        <img src="https://gifdb.com/images/high/animated-spinning-email-icon-2k4f6gmkb1s6x4n5.gif" 
+             alt="spinning email icon" 
+             class="spinning-gif"
+             onerror="this.src='https://placehold.co/30x30/ff0000/ffffff?text=EMAIL'">
+        Email Me: <a href="mailto:jsels1717@gmail.com">jsels1717@gmail.com</a>
+        &nbsp; | &nbsp;
+        Cell: 215-292-2802
+        &nbsp; | &nbsp;
+        <a href="https://www.linkedin.com/in/jasonselsley/">My LinkedIn (Click It!)</a>
+      </p>
+
+      <hr style="height: 5px; background-color: #FFFF00;">
+
+      <!-- Education Section -->
+      <h2 class="blinking-header">MY EDUCATION</h2>
+      <font face="Arial" color="white" size="5">
+        <b>The Pennsylvania State University</b>
+      </font>
+      <br>
+      <font face="Arial" color="#C0C0C0" size="4">
+        B.S Enterprise Technology Integration, Minor Supply Chain and Information Systems (May 2026)
+      </font>
+      <ul>
+        <li>Major GPA: 4.0/4.0, Cum GPA: 3.77/4.0</li>
+        <li>Dean's List, 2022-2025</li>
+        <li>Club Rowing, 2024-2025</li>
+        <li>Omega Chi Sigma STEM Professional Fraternity. 2024-2025</li>
+        <li>Student Technology Board Member, 2023-2025</li>
+        <li>Competitive Cyber Security Organization (CCSO) Technology Chair, 2025</li>
+      </ul>
+
+      <!-- Work Experience Section -->
+      <h2>WORK EXPERIENCE (I HAVE A JOB)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Position</th>
+            <th>What I Did</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Johnson and Johnson</td>
+            <td>Clinical Supply Chain Intern</td>
+            <td>Developed apps, led AI/ML initiative, mentored interns, visualized user feedback.</td>
+          </tr>
+          <tr>
+            <td>Johnson and Johnson</td>
+            <td>Co-Op, Vein to Vein Supply Chain CAR-T</td>
+            <td>Reduced shipping costs 50% (Yellow Belt!), managed patient treatment orders, automated stuff.</td>
+          </tr>
+          <tr>
+            <td>Applied Research Laboratory at Penn State</td>
+            <td>IT Project Management Intern</td>
+            <td>Applied analytics, created new device pickup system, upgraded 3000+ devices.</td>
+          </tr>
+          <tr>
+            <td>Penn State University</td>
+            <td>Maker In Residence</td>
+            <td>Consulted on 3D modeling/Arduino/robotics, maintained 35+ 3D printers.</td>
+          </tr>
+          <tr>
+            <td>Best Buy</td>
+            <td>Customer Experience Specialist</td>
+            <td>Highest customer satisfaction, sold computers, supported mobile and checkout.</td>
+          </tr>
+          <tr>
+            <td>Hatboro Horsham School District</td>
+            <td>Technology Assistant</td>
+            <td>Managed laptop imaging, provided tech support, deployed over 4000 laptops.</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- Projects Section -->
+      <h2><span class="blinking-header">MY L33T PROJECTS</span></h2>
+      
+      <h3>HackPSU Hackathons (I win a lot)</h3>
+      <ul>
+        <li>Spring 2024: 2nd Place Grand Prize Winner</li>
+        <li>Fall 2023: 1st Place Grand Prize Winner, Nittany AI Challenge 1st Place, Most Creative Use of GitHub</li>
+        <li>Spring 2023: 1st Place Grand Prize Winner, Social Impact 1st Place</li>
+        <li>Fall 2022: 1st Place, Nittany AI Challenge 1st Place, M&T Challenge Best Hack 1st Place, Fidelity Best Accessibility Hack 1st Place</li>
+        <li><b>Notable projects:</b> Perfect Portion, Meet & Eat, Club Circle, Campus Calendar, EyeCook</li>
+      </ul>
+      
+      <h3>DIY Home Server & Self-Hosting Lab</h3>
+      <p style="color: #FFFFFF; font-size: 18px;">
+        Designed and managed a home server running 30+ Docker containers for media streaming (Jellyfin), private cloud (ownCloud), smart home automation (Home Assistant), privacy tools, and AI workloads (Ollama). Hands-on with Docker, Portainer, Nginx Proxy Manager, and more.
+      </p>
+      <img src="https://gifdb.com/images/high/under-construction-animated-sign-9wxgv8kgyqf4whl9.gif"
+           alt="under construction"
+           class="construction-gif"
+           onerror="this.src='https://placehold.co/150x120/FFFF00/000000?text=SITE+IS+BEING+BUILT'">
+
+      <!-- Skills Section -->
+      <h2>ALL THE STUFF I KNOW</h2>
+      <div class="skills-box">
+        <b>Programming:</b> C++, Java, Python, SQL, C#, HTML, JavaScript, Bootstrap, Advanced Linux
+        <br><br>
+        <b>Software:</b> SAP, Jira, Atlas, Salesforce, Microsoft Office Suite (advanced Excel), Windows Server
+        <br><br>
+        <b>Containerization & DevOps:</b> Docker, Portainer, CI/CD Automation, System Monitoring, Reverse Proxy Management (Nginx Proxy Manager), Dynamic DNS, n8n
+        <br><br>
+        <b>Hardware:</b> 3D CAD (Inventor), 3D Printing, Arduino, Raspberry Pi, Soldering, ESP32
+        <br><br>
+        <b>Other:</b> Lean Six Sigma Yellow Belt, Project Management, Business Analysis
+      </div>
+
+      <!-- Footer -->
+      <div class="footer-text">
+        <p>You are visitor number:</p>
+        <img src="https://gifdb.com/images/high/retro-web-hit-counter-002-v6ga2g4pp9y2w92y.gif" 
+             alt="hit counter"
+             onerror="this.src='https://placehold.co/100x50/0000FF/FFFFFF?text=99999+HITS'">
+        <p>Last Updated: 10/26/1998</p>
+        <p>&copy; 2025 Jason Selsley. All rights reserved. (Or are they?)</p>
+        <img src="https://placehold.co/88x31/C0C0C0/000000?text=Made+With+Notepad" alt="Made with Notepad">
+      </div>
+
+    </div>
+  </center>
+  
+  <!-- This is the new CTA block -->
+  <div id="foligo-cta">
+    <h2>This is... not good.</h2>
+    <p>Worried your portfolio looks like this? <br> <strong>Foligo can fix this.</strong></p>
+    <!-- The href is a placeholder, update if you have a real link -->
+    <a href="http://157.245.10.125/" class="foligo-button">Build a REAL Portfolio with Foligo!</a>
+  </div>
+
+  <!-- Another marquee, because why not? -->
+  <marquee behavior="scroll" direction="right" scrollamount="8" style="background-color: #000000; color: #FFFF00; font-size: 24px; font-weight: bold; padding: 10px; border-top: 5px solid #FF0000;">
+    THANKS FOR VISITING! ==> E-MAIL ME FOR A JOB! <== THIS SITE IS BEST VIEWED ON NETSCAPE NAVIGATOR 4.0 AT 800x600 RESOLUTION
+  </marquee>
+</body>
+</html>
+
+
+
