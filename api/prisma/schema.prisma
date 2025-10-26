@@ -108,6 +108,14 @@ model SiteConfig {
   siteName  String?
   siteDescription String?
   
+  // Portfolio Profile
+  profileName     String?  // Person's name
+  profileBio      String?  // Brief bio/description
+  profileImage    String?  // Profile picture URL
+  
+  // Social Links
+  socialLinks      Json?   // Store social media links
+  
   // Layout Configuration
   layoutConfig Json // Store layout preferences
   
