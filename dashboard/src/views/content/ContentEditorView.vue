@@ -277,7 +277,7 @@
               <div class="grid grid-cols-2 gap-3">
                 <button
                   @click="selectAIMode('text')"
-                  class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all"
+                  class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
                 >
                   <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -286,16 +286,16 @@
                   <p class="text-xs text-gray-600 mt-1">Type responses</p>
                 </button>
                 
-                <button
-                  @click="selectAIMode('voice')"
-                  class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all"
-                >
-                  <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="relative p-4 border-2 border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed opacity-60">
+                  <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
-                  <h5 class="text-xs font-medium text-gray-900">Voice</h5>
-                  <p class="text-xs text-gray-600 mt-1">Speak responses</p>
-                </button>
+                  <h5 class="text-xs font-medium text-gray-500">Voice</h5>
+                  <p class="text-xs text-gray-500 mt-1">Not supported yet</p>
+                  <div class="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-lg">
+                    <p class="text-xs text-gray-600 font-medium px-2 py-1 bg-white rounded shadow border">Editing with voice isn't supported yet</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

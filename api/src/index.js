@@ -14,6 +14,7 @@ const projectAccessRoutes = require('./routes/projectAccess');
 const contentRoutes = require('./routes/content');
 const aiRoutes = require('./routes/ai');
 const aiContentRoutes = require('./routes/ai-content');
+const voiceWebhookRoutes = require('./routes/voice-webhook');
 const uploadRoutes = require('./routes/upload');
 const siteRoutes = require('./routes/site');
 
@@ -121,6 +122,9 @@ const authenticateTokenExceptSite = (req, res, next) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/site', siteRoutes); // Public site routes (no auth required)
+app.use('/api/ai/voice-webhook', voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
+
+// All other routes require authentication
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);

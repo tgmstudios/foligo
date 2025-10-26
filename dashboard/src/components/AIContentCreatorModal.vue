@@ -120,21 +120,28 @@
             </div>
           </div>
 
-          <!-- Voice Mode Indicator -->
+          <!-- Voice Mode ConvAI Widget -->
           <div v-if="selectedInteractionMode === 'voice' && modeSelected && !sessionDone" class="mb-4">
-            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-              <svg class="w-12 h-12 text-purple-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-              <p class="text-sm text-purple-900 font-medium">Voice Mode</p>
-              <p class="text-xs text-purple-700 mt-1">Voice interaction is coming soon. Please use text mode for now.</p>
+            <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-4">
+              <div class="flex items-center space-x-3 mb-3">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                <h4 class="text-lg font-semibold text-gray-900">Voice Assistant</h4>
+              </div>
+              <p class="text-sm text-gray-600 mb-4">Speak with our AI assistant to create your content:</p>
+              
+              <!-- ElevenLabs ConvAI Widget -->
+              <elevenlabs-convai 
+                agent-id="agent_1301k8emq0nzfwmbyta7254adhpv"
+                :dynamic-variables="voiceVariables"
+              ></elevenlabs-convai>
             </div>
           </div>
 
-          <!-- Input -->
-          <div class="flex items-center space-x-3">
+          <!-- Input (only show in text mode) -->
+          <div v-if="selectedInteractionMode === 'text'" class="flex items-center space-x-3">
             <input
-              v-if="selectedInteractionMode === 'text'"
               v-model="currentMessage"
               @keyup.enter="sendMessage"
               :disabled="!canRespond"
@@ -142,11 +149,7 @@
               placeholder="Type your message..."
               class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
             />
-            <div v-else class="flex-1 px-4 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
-              Voice input (coming soon)
-            </div>
             <button
-              v-if="selectedInteractionMode === 'text'"
               @click="sendMessage"
               :disabled="!canRespond || !currentMessage.trim()"
               class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -196,6 +199,15 @@ const selectedInteractionMode = ref<'text' | 'voice'>('text')
 
 const canRespond = computed(() => !isTyping.value && !sessionDone.value && modeSelected.value && selectedInteractionMode.value === 'text')
 
+const voiceVariables = computed(() => {
+  const projectId = (window as any).selectedProjectId || ''
+  const contentType = props.contentType || 'BLOG'
+  return JSON.stringify({
+    user_project_id: projectId,
+    content_type: contentType
+  })
+})
+
 const open = () => {
   isOpen.value = true
   modeSelected.value = false
@@ -215,10 +227,15 @@ const close = () => {
   sessionDone.value = false
 }
 
-const selectMode = (mode: 'text' | 'voice') => {
+const selectMode = async (mode: 'text' | 'voice') => {
   selectedInteractionMode.value = mode
   modeSelected.value = true
-  initializeSession()
+  
+  if (mode === 'voice') {
+    await startVoiceSession()
+  } else {
+    initializeSession()
+  }
 }
 
 const initializeSession = async () => {
@@ -325,6 +342,30 @@ const sendMessage = async () => {
   }
 }
 
+const startVoiceSession = async () => {
+  // Get the project ID from the global store
+  const projectId = (window as any).selectedProjectId
+  
+  if (!projectId) {
+    alert('Please select a project first')
+    close()
+    return
+  }
+  
+  // Store the session info so we can pick up the webhook response
+  ;(window as any).activeVoiceSession = {
+    projectId,
+    contentType: props.contentType || 'BLOG',
+    callback: (data: any) => {
+      emit('content-generated', data)
+      close()
+    }
+  }
+  
+  // The voice mode UI will show the phone number - don't close the modal
+  // User can close it themselves after calling
+}
+
 const generateFinalContent = async () => {
   isLoading.value = true
   loadingMessage.value = 'Generating your content...'
@@ -351,6 +392,7 @@ const generateFinalContent = async () => {
     isLoading.value = false
   }
 }
+
 
 // Expose open and close methods
 defineExpose({ open, close })
