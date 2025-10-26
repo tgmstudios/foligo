@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CEFECD5E2EAE7F1D003E04CB /* Markdownosaur in Frameworks */ = {isa = PBXBuildFile; productRef = CEFECD5D2EAE7F1D003E04CB /* Markdownosaur */; };
+		CE3B96312EAE9239008E01E3 /* Markdownosaur in Frameworks */ = {isa = PBXBuildFile; productRef = CE3B96302EAE9239008E01E3 /* Markdownosaur */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CEFECD5E2EAE7F1D003E04CB /* Markdownosaur in Frameworks */,
+				CE3B96312EAE9239008E01E3 /* Markdownosaur in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +70,7 @@
 			);
 			name = foligo;
 			packageProductDependencies = (
-				CEFECD5D2EAE7F1D003E04CB /* Markdownosaur */,
+				CE3B96302EAE9239008E01E3 /* Markdownosaur */,
 			);
 			productName = foligo;
 			productReference = CE7D37102EAD52A4003BE33D /* foligo.app */;
@@ -101,7 +101,7 @@
 			mainGroup = CE7D37072EAD52A4003BE33D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				CEFECD5C2EAE7F1D003E04CB /* XCRemoteSwiftPackageReference "Markdownosaur" */,
+				CE3B962F2EAE9239008E01E3 /* XCRemoteSwiftPackageReference "Markdownosaur" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CE7D37112EAD52A4003BE33D /* Products */;
@@ -343,7 +343,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		CEFECD5C2EAE7F1D003E04CB /* XCRemoteSwiftPackageReference "Markdownosaur" */ = {
+		CE3B962F2EAE9239008E01E3 /* XCRemoteSwiftPackageReference "Markdownosaur" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/christianselig/Markdownosaur";
 			requirement = {
@@ -354,9 +354,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		CEFECD5D2EAE7F1D003E04CB /* Markdownosaur */ = {
+		CE3B96302EAE9239008E01E3 /* Markdownosaur */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = CEFECD5C2EAE7F1D003E04CB /* XCRemoteSwiftPackageReference "Markdownosaur" */;
+			package = CE3B962F2EAE9239008E01E3 /* XCRemoteSwiftPackageReference "Markdownosaur" */;
 			productName = Markdownosaur;
 		};
 /* End XCSwiftPackageProductDependency section */
