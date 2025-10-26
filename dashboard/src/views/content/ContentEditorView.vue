@@ -4,8 +4,8 @@
     <div class="mb-8">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Edit Content</h1>
-          <p class="text-gray-600 mt-1">{{ content?.title }}</p>
+          <h1 class="text-2xl font-bold text-white">Edit Content</h1>
+          <p class="text-gray-400 mt-1">{{ content?.title }}</p>
         </div>
         <div class="flex items-center space-x-3">
           <button
@@ -13,8 +13,8 @@
             :class="[
               'px-4 py-2 rounded-md text-sm font-medium transition-colors',
               content?.isPublished
-                ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             ]"
           >
             {{ content?.isPublished ? 'Published' : 'Draft' }}
@@ -35,7 +35,7 @@
       <div class="lg:col-span-3 space-y-6">
         <!-- Content Details -->
         <div class="card p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Content Details</h3>
+          <h3 class="text-lg font-medium text-white mb-4">Content Details</h3>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -51,7 +51,7 @@
             <div>
               <label class="label">Slug</label>
               <div class="flex">
-                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-700 text-gray-400 text-sm">
                   {{ project?.subdomain }}.foligo.tech/
                 </span>
                 <input
@@ -76,7 +76,7 @@
 
           <!-- Metadata Fields -->
           <div v-if="content.type === 'PROJECT'" class="mt-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">Project Details</h4>
+            <h4 class="text-sm font-medium text-gray-300 mb-3">Project Details</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="label">Technologies</label>
@@ -100,7 +100,7 @@
           </div>
 
           <div v-if="content.type === 'EXPERIENCE'" class="mt-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">Experience Details</h4>
+            <h4 class="text-sm font-medium text-gray-300 mb-3">Experience Details</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="label">Company</label>
@@ -140,7 +140,7 @@
           </div>
 
           <div v-if="content.type === 'BLOG'" class="mt-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">Blog Details</h4>
+            <h4 class="text-sm font-medium text-gray-300 mb-3">Blog Details</h4>
             <div>
               <label class="label">Tags</label>
               <input
@@ -155,9 +155,9 @@
 
         <!-- Markdown Editor -->
         <div class="card">
-          <div class="p-6 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Content</h3>
-            <p class="text-sm text-gray-600 mt-1">Write your content in Markdown</p>
+          <div class="p-6 border-b border-gray-600">
+            <h3 class="text-lg font-medium text-white">Content</h3>
+            <p class="text-sm text-gray-400 mt-1">Write your content in Markdown</p>
           </div>
           
           <MarkdownEditor
@@ -178,14 +178,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
-            <h3 class="text-lg font-medium text-gray-900">AI Content Assistant</h3>
-            <p class="text-sm text-gray-600">Let's create amazing {{ content.type.toLowerCase() }} content together</p>
+            <h3 class="text-lg font-medium text-white">AI Content Assistant</h3>
+            <p class="text-sm text-gray-400">Let's create amazing {{ content.type.toLowerCase() }} content together</p>
           </div>
 
           <!-- AI Chat Interface -->
           <div v-if="aiPhase !== 'start' && !isGeneratingAI" class="space-y-4">
             <!-- Chat Messages -->
-            <div class="h-64 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-3 bg-gray-50">
+            <div class="h-64 overflow-y-auto border border-gray-600 rounded-lg p-3 space-y-3 bg-gray-800">
               <div
                 v-for="message in aiMessages"
                 :key="message.id"
@@ -199,7 +199,7 @@
                     'max-w-xs px-3 py-2 rounded-lg text-sm',
                     message.role === 'user'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-900 border border-gray-200'
+                      : 'bg-gray-800 text-white border border-gray-600'
                   ]"
                 >
                   <p>{{ message.content }}</p>
@@ -208,7 +208,7 @@
               
               <!-- Typing Indicator -->
               <div v-if="isAITyping" class="flex justify-start">
-                <div class="bg-white text-gray-900 max-w-xs px-3 py-2 rounded-lg border border-gray-200">
+                <div class="bg-gray-800 text-white max-w-xs px-3 py-2 rounded-lg border border-gray-600">
                   <div class="flex space-x-1">
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -220,12 +220,12 @@
 
             <!-- Voice Mode Indicator -->
             <div v-if="aiInteractionMode === 'voice'" class="mb-2">
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                <svg class="w-8 h-8 text-blue-600 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="bg-blue-500/20 border border-blue-500/50 rounded-lg p-3 text-center">
+                <svg class="w-8 h-8 text-blue-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
-                <p class="text-xs text-blue-900 font-medium">Voice Mode</p>
-                <p class="text-xs text-blue-700">Voice interaction is coming soon. Please use text mode.</p>
+                <p class="text-xs text-blue-300 font-medium">Voice Mode</p>
+                <p class="text-xs text-blue-400">Voice interaction is coming soon. Please use text mode.</p>
               </div>
             </div>
 
@@ -237,10 +237,10 @@
                 @keypress.enter="sendAIMessage"
                 type="text"
                 placeholder="Type your response..."
-                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                class="flex-1 px-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 :disabled="isAITyping"
               />
-              <div v-else class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+              <div v-else class="flex-1 px-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-800 text-gray-400">
                 Voice input (coming soon)
               </div>
               <button
@@ -263,37 +263,37 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </div>
-              <h4 class="text-lg font-medium text-gray-900 mb-2">Generating Your Content</h4>
-              <p class="text-sm text-gray-600">This may take a minute...</p>
+              <h4 class="text-lg font-medium text-white mb-2">Generating Your Content</h4>
+              <p class="text-sm text-gray-400">This may take a minute...</p>
             </div>
           </div>
 
           <!-- Mode Selection -->
           <div v-if="aiPhase === 'start' && !aiInteractionMode" class="space-y-4">
             <div class="text-center py-4">
-              <h4 class="text-sm font-medium text-gray-900 mb-3">Choose interaction mode</h4>
-              <p class="text-xs text-gray-600 mb-4">How would you like to interact with the AI assistant?</p>
+              <h4 class="text-sm font-medium text-white mb-3">Choose interaction mode</h4>
+              <p class="text-xs text-gray-400 mb-4">How would you like to interact with the AI assistant?</p>
               
               <div class="grid grid-cols-2 gap-3">
                 <button
                   @click="selectAIMode('text')"
-                  class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
+                  class="p-4 border-2 border-gray-600 rounded-lg hover:border-blue-600 hover:bg-blue-500/20 transition-all cursor-pointer"
                 >
-                  <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <h5 class="text-xs font-medium text-gray-900">Text</h5>
-                  <p class="text-xs text-gray-600 mt-1">Type responses</p>
+                  <h5 class="text-xs font-medium text-white">Text</h5>
+                  <p class="text-xs text-gray-400 mt-1">Type responses</p>
                 </button>
                 
-                <div class="relative p-4 border-2 border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed opacity-60">
-                  <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="relative p-4 border-2 border-gray-600 rounded-lg bg-gray-800 cursor-not-allowed opacity-60">
+                  <svg class="w-8 h-8 text-gray-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                   <h5 class="text-xs font-medium text-gray-500">Voice</h5>
                   <p class="text-xs text-gray-500 mt-1">Not supported yet</p>
-                  <div class="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-lg">
-                    <p class="text-xs text-gray-600 font-medium px-2 py-1 bg-white rounded shadow border">Editing with voice isn't supported yet</p>
+                  <div class="absolute inset-0 flex items-center justify-center bg-gray-900/75 rounded-lg">
+                    <p class="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-900 rounded shadow border border-gray-600">Editing with voice isn't supported yet</p>
                   </div>
                 </div>
               </div>
@@ -316,25 +316,25 @@
 
         <!-- Content Stats -->
         <div class="card p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Content Stats</h3>
+          <h3 class="text-lg font-medium text-white mb-4">Content Stats</h3>
           <div class="space-y-3">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Words</span>
-              <span class="font-medium">{{ wordCount }}</span>
+              <span class="text-gray-400">Words</span>
+              <span class="font-medium text-white">{{ wordCount }}</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Characters</span>
-              <span class="font-medium">{{ characterCount }}</span>
+              <span class="text-gray-400">Characters</span>
+              <span class="font-medium text-white">{{ characterCount }}</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Status</span>
-              <span :class="content.isPublished ? 'text-green-600' : 'text-gray-600'" class="font-medium">
+              <span class="text-gray-400">Status</span>
+              <span :class="content.isPublished ? 'text-green-400' : 'text-amber-400'" class="font-medium">
                 {{ content.isPublished ? 'Published' : 'Draft' }}
               </span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Last Updated</span>
-              <span class="font-medium">{{ formatDate(content.updatedAt) }}</span>
+              <span class="text-gray-400">Last Updated</span>
+              <span class="font-medium text-white">{{ formatDate(content.updatedAt) }}</span>
             </div>
           </div>
         </div>
@@ -342,20 +342,20 @@
     </div>
 
     <div v-else class="text-center py-12">
-      <div class="text-gray-500">Loading content...</div>
+      <div class="text-gray-400">Loading content...</div>
     </div>
 
     <!-- AI Generated Content Modal -->
     <div v-if="generatedAIContent" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="denyAIContent"></div>
+        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="denyAIContent"></div>
         
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
           <!-- Header -->
           <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-6 pb-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
                   <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
@@ -371,17 +371,17 @@
           </div>
 
           <!-- Content Display -->
-          <div class="bg-white px-6 py-4">
-            <div class="border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
-              <div class="prose prose-sm max-w-none" v-html="renderedAIContent"></div>
+          <div class="bg-gray-800 px-6 py-4">
+            <div class="border border-gray-600 rounded-lg p-4 max-h-96 overflow-y-auto bg-gray-900">
+              <div class="prose prose-sm max-w-none ai-content-preview" v-html="renderedAIContent"></div>
             </div>
           </div>
 
           <!-- Footer Actions -->
-          <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+          <div class="bg-gray-800 px-6 py-4 flex justify-end space-x-3">
             <button
               @click="denyAIContent"
-              class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-800"
             >
               Deny
             </button>
@@ -549,7 +549,7 @@ const generateAIContent = async () => {
 }
 
 const sendAIMessage = async () => {
-  if (!currentAIMessage.value.trim() || isAITyping.value || sessionDone.value) return
+  if (!currentAIMessage.value.trim() || isAITyping.value) return
   
   const userMessage = {
     id: Date.now().toString(),
@@ -704,3 +704,134 @@ onMounted(() => {
   loadContent()
 })
 </script>
+
+<style scoped>
+.ai-content-preview {
+  @apply text-white;
+}
+
+:deep(.ai-content-preview) {
+  color: white !important;
+}
+
+:deep(.ai-content-preview h1),
+:deep(.ai-content-preview h1 *),
+.ai-content-preview h1,
+.ai-content-preview h1 * {
+  @apply text-2xl font-bold mb-4;
+  color: white !important;
+}
+
+:deep(.ai-content-preview h2),
+:deep(.ai-content-preview h2 *),
+.ai-content-preview h2,
+.ai-content-preview h2 * {
+  @apply text-xl font-semibold mb-3;
+  color: white !important;
+}
+
+:deep(.ai-content-preview h3),
+:deep(.ai-content-preview h3 *),
+.ai-content-preview h3,
+.ai-content-preview h3 * {
+  @apply text-lg font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.ai-content-preview h4),
+:deep(.ai-content-preview h4 *),
+.ai-content-preview h4,
+.ai-content-preview h4 * {
+  @apply text-base font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.ai-content-preview h5),
+:deep(.ai-content-preview h5 *),
+.ai-content-preview h5,
+.ai-content-preview h5 * {
+  @apply text-sm font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.ai-content-preview h6),
+:deep(.ai-content-preview h6 *),
+.ai-content-preview h6,
+.ai-content-preview h6 * {
+  @apply text-sm font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.ai-content-preview p),
+:deep(.ai-content-preview p *),
+.ai-content-preview p,
+.ai-content-preview p * {
+  @apply mb-4;
+  color: white !important;
+}
+
+:deep(.ai-content-preview strong),
+:deep(.ai-content-preview strong *),
+.ai-content-preview strong,
+.ai-content-preview strong * {
+  @apply font-bold;
+  color: white !important;
+}
+
+.ai-content-preview em {
+  @apply italic text-gray-200;
+}
+
+.ai-content-preview strong em,
+.ai-content-preview em strong {
+  @apply font-bold italic text-white;
+}
+
+.ai-content-preview code {
+  @apply bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-100 border border-gray-700;
+}
+
+.ai-content-preview pre {
+  @apply bg-gray-800 p-4 rounded overflow-x-auto border border-gray-700;
+}
+
+.ai-content-preview pre code {
+  @apply bg-transparent p-0 border-0 text-gray-100;
+}
+
+.ai-content-preview a {
+  @apply text-blue-400 hover:text-blue-300 underline;
+}
+
+.ai-content-preview ul, .ai-content-preview ol {
+  @apply text-white mb-4 list-disc list-outside ml-6;
+}
+
+.ai-content-preview ol {
+  @apply list-decimal;
+}
+
+.ai-content-preview li {
+  @apply mb-1 text-white;
+}
+
+.ai-content-preview blockquote {
+  @apply border-l-4 border-blue-500 pl-4 italic text-white my-4 bg-gray-900/50 py-2;
+}
+
+.ai-content-preview hr {
+  @apply border-gray-600 my-6;
+}
+
+.ai-content-preview table {
+  @apply w-full mb-4 border-collapse;
+}
+
+.ai-content-preview th {
+  @apply bg-gray-800 border border-gray-700 px-4 py-2 text-left font-semibold text-white;
+}
+
+.ai-content-preview td {
+  @apply border border-gray-700 px-4 py-2 text-white;
+}
+</style>

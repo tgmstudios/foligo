@@ -1,21 +1,21 @@
 <template>
   <div class="markdown-editor">
     <!-- Toolbar -->
-    <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+    <div class="flex items-center justify-between p-4 border-b border-gray-600 bg-gray-800">
       <div class="flex items-center space-x-2">
         <button
           @click="togglePreview"
           :class="[
             'px-3 py-1 text-sm rounded-md transition-colors',
-            showPreview ? 'bg-primary-100 text-primary-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            showPreview ? 'bg-primary-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
           ]"
         >
           {{ showPreview ? 'Edit' : 'Preview' }}
         </button>
-        <div class="text-sm text-gray-500">
+        <div class="text-sm text-gray-400">
           {{ wordCount }} words
         </div>
-        <div class="text-sm text-gray-500">
+        <div class="text-sm text-gray-400">
           {{ characterCount }} characters
         </div>
       </div>
@@ -23,70 +23,70 @@
       <div class="flex items-center space-x-2">
         <button
           @click="insertMarkdown('**', '**')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Bold (Ctrl+B)"
         >
           <strong>B</strong>
         </button>
         <button
           @click="insertMarkdown('*', '*')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Italic (Ctrl+I)"
         >
           <em>I</em>
         </button>
         <button
           @click="insertMarkdown('[', '](url)')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Link (Ctrl+K)"
         >
           🔗
         </button>
         <button
           @click="insertMarkdown('```\n', '\n```')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Code Block"
         >
           &lt;/&gt;
         </button>
         <button
           @click="insertMarkdown('# ', '')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Heading 1"
         >
           H1
         </button>
         <button
           @click="insertMarkdown('## ', '')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Heading 2"
         >
           H2
         </button>
         <button
           @click="insertMarkdown('- ', '')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Bullet List"
         >
           •
         </button>
         <button
           @click="insertMarkdown('1. ', '')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Numbered List"
         >
           1.
         </button>
         <button
           @click="insertMarkdown('> ', '')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Quote"
         >
           "
         </button>
         <button
           @click="insertMarkdown('---\n', '')"
-          class="p-1 text-gray-600 hover:text-gray-800"
+          class="p-1 text-gray-400 hover:text-gray-200"
           title="Horizontal Rule"
         >
           ─
@@ -102,21 +102,21 @@
       </div>
 
       <!-- Preview -->
-      <div v-show="showPreview" class="flex-1 p-4 bg-white overflow-y-auto">
+      <div v-show="showPreview" class="flex-1 p-4 bg-gray-800 overflow-y-auto">
         <div v-if="localContent.trim()" v-html="renderedMarkdown" class="prose prose-sm max-w-none"></div>
-        <div v-else class="text-gray-500 italic">No content to preview</div>
+        <div v-else class="text-gray-400 italic">No content to preview</div>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
-      <div class="text-xs text-gray-500">
+    <div class="flex items-center justify-between p-4 border-t border-gray-600 bg-gray-800">
+      <div class="text-xs text-gray-400">
         Use Markdown syntax for formatting • Monaco Editor powered
       </div>
       <div class="flex items-center space-x-2">
         <button
           @click="handleCancel"
-          class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+          class="px-3 py-1 text-sm text-gray-400 hover:text-gray-200"
         >
           Cancel
         </button>
@@ -296,7 +296,7 @@ const initializeCodeMirror = async () => {
     editor = monaco.editor.create(editorContainer.value, {
       value: localContent.value,
       language: 'markdown',
-      theme: 'vs-light',
+      theme: 'vs-dark',
       fontSize: 14,
       fontFamily: "'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
       minimap: { enabled: false },
@@ -344,7 +344,7 @@ const fallbackToTextarea = () => {
   
   editorContainer.value.innerHTML = `
     <textarea 
-      class="w-full h-full p-4 border-0 resize-none focus:outline-none font-mono text-sm leading-relaxed bg-gray-50"
+      class="w-full h-full p-4 border-0 resize-none focus:outline-none font-mono text-sm leading-relaxed bg-gray-900 text-gray-100 placeholder-gray-500"
       placeholder="${props.placeholder || 'Start writing your markdown content...'}"
     >${localContent.value}</textarea>
   `
@@ -418,59 +418,137 @@ onUnmounted(() => {
 
 <style scoped>
 .markdown-editor {
-  @apply border border-gray-300 rounded-lg overflow-hidden;
+  @apply border border-gray-600 rounded-lg overflow-hidden;
 }
 
+:deep(.prose),
 .prose {
-  @apply text-gray-900;
+  color: white !important;
 }
 
-.prose h1 {
-  @apply text-2xl font-bold text-gray-900 mb-4;
+:deep(.prose h1),
+:deep(.prose h1 *),
+.prose h1,
+.prose h1 * {
+  @apply text-2xl font-bold mb-4;
+  color: white !important;
 }
 
-.prose h2 {
-  @apply text-xl font-semibold text-gray-900 mb-3;
+:deep(.prose h2),
+:deep(.prose h2 *),
+.prose h2,
+.prose h2 * {
+  @apply text-xl font-semibold mb-3;
+  color: white !important;
 }
 
-.prose h3 {
-  @apply text-lg font-medium text-gray-900 mb-2;
+:deep(.prose h3),
+:deep(.prose h3 *),
+.prose h3,
+.prose h3 * {
+  @apply text-lg font-medium mb-2;
+  color: white !important;
 }
 
-.prose strong {
-  @apply font-semibold;
+:deep(.prose h4),
+:deep(.prose h4 *),
+.prose h4,
+.prose h4 * {
+  @apply text-base font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.prose h5),
+:deep(.prose h5 *),
+.prose h5,
+.prose h5 * {
+  @apply text-sm font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.prose h6),
+:deep(.prose h6 *),
+.prose h6,
+.prose h6 * {
+  @apply text-sm font-medium mb-2;
+  color: white !important;
+}
+
+:deep(.prose p),
+:deep(.prose p *),
+.prose p,
+.prose p * {
+  @apply mb-4;
+  color: white !important;
+}
+
+:deep(.prose strong),
+:deep(.prose strong *),
+.prose strong,
+.prose strong * {
+  @apply font-bold;
+  color: white !important;
 }
 
 .prose em {
-  @apply italic;
+  @apply italic text-gray-200;
+}
+
+.prose strong em,
+.prose em strong {
+  @apply font-bold italic text-white;
 }
 
 .prose code {
-  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono;
+  @apply bg-gray-900 px-1.5 py-0.5 rounded text-sm font-mono text-gray-100 border border-gray-700;
 }
 
 .prose pre {
-  @apply bg-gray-100 p-3 rounded overflow-x-auto;
+  @apply bg-gray-900 p-4 rounded overflow-x-auto border border-gray-700;
 }
 
 .prose pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 border-0 text-gray-100;
 }
 
 .prose a {
-  @apply text-primary-600 hover:text-primary-700 underline;
+  @apply text-blue-400 hover:text-blue-300 underline;
+}
+
+.prose ul, .prose ol {
+  @apply text-white mb-4;
 }
 
 .prose li {
-  @apply list-disc list-inside mb-1;
+  @apply list-disc list-outside ml-6 mb-1 text-white;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
 }
 
 .prose blockquote {
-  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600;
+  @apply border-l-4 border-blue-500 pl-4 italic text-white my-4 bg-gray-900/50 py-2;
 }
 
 .prose hr {
-  @apply border-gray-300 my-4;
+  @apply border-gray-600 my-6;
+}
+
+.prose table {
+  @apply w-full mb-4 border-collapse;
+}
+
+.prose th {
+  @apply bg-gray-900 border border-gray-700 px-4 py-2 text-left font-semibold text-white;
+}
+
+.prose td {
+  @apply border border-gray-700 px-4 py-2 text-white;
 }
 
 /* CodeMirror styling */

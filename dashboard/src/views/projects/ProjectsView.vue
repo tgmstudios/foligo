@@ -4,8 +4,8 @@
     <div class="mb-8">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
-          <p class="text-gray-600 mt-1">Manage your portfolio projects and content</p>
+          <h1 class="text-2xl font-bold text-white">Projects</h1>
+          <p class="text-gray-400 mt-1">Manage your portfolio projects and content</p>
         </div>
         <button
           @click="showCreateModal = true"
@@ -27,7 +27,7 @@
             v-model="searchQuery"
             type="text"
             placeholder="Search projects..."
-            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            class="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500"
           />
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -39,7 +39,7 @@
       <div class="flex gap-2">
         <select
           v-model="filterType"
-          class="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+          class="px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500"
         >
           <option value="all">All Projects</option>
           <option value="owned">My Projects</option>
@@ -47,7 +47,7 @@
         </select>
         <select
           v-model="sortBy"
-          class="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+          class="px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500"
         >
           <option value="updated">Last Updated</option>
           <option value="created">Date Created</option>
@@ -59,10 +59,10 @@
     <!-- Projects Grid -->
     <div v-if="projectStore.isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div v-for="i in 6" :key="i" class="card p-6 animate-pulse">
-        <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div class="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-        <div class="h-3 bg-gray-200 rounded w-full mb-2"></div>
-        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+        <div class="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+        <div class="h-3 bg-gray-700 rounded w-1/2 mb-4"></div>
+        <div class="h-3 bg-gray-700 rounded w-full mb-2"></div>
+        <div class="h-3 bg-gray-700 rounded w-2/3"></div>
       </div>
     </div>
 
@@ -70,8 +70,8 @@
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-gray-900">No projects found</h3>
-      <p class="mt-1 text-sm text-gray-500">
+      <h3 class="mt-2 text-sm font-medium text-white">No projects found</h3>
+      <p class="mt-1 text-sm text-gray-400">
         {{ searchQuery ? 'Try adjusting your search criteria.' : 'Get started by creating a new project.' }}
       </p>
       <div v-if="!searchQuery" class="mt-6">
@@ -93,8 +93,8 @@
       >
         <div class="flex items-start justify-between mb-4">
           <div class="flex-1 min-w-0">
-            <h3 class="text-lg font-semibold text-gray-900 truncate">{{ project.name }}</h3>
-            <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ project.description || 'No description' }}</p>
+            <h3 class="text-lg font-semibold text-white truncate">{{ project.name }}</h3>
+            <p class="text-sm text-gray-400 mt-1 line-clamp-2">{{ project.description || 'No description' }}</p>
           </div>
           <div class="flex items-center space-x-1 ml-2">
             <span
@@ -105,14 +105,14 @@
             </span>
             <span
               v-else
-              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-800"
             >
               Member
             </span>
           </div>
         </div>
 
-        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+        <div class="flex items-center justify-between text-sm text-gray-400 mb-4">
           <div class="flex items-center space-x-4">
             <span class="flex items-center">
               <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,18 +132,18 @@
 
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <div class="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center">
-              <span class="text-xs font-medium text-gray-600">
+            <div class="h-6 w-6 bg-gray-700 rounded-full flex items-center justify-center">
+              <span class="text-xs font-medium text-gray-400">
                 {{ project.owner?.name?.charAt(0) || '?' }}
               </span>
             </div>
-            <span class="ml-2 text-sm text-gray-600">{{ project.owner?.name || 'Unknown' }}</span>
+            <span class="ml-2 text-sm text-gray-400">{{ project.owner?.name || 'Unknown' }}</span>
           </div>
           
           <div class="flex items-center space-x-1">
             <button
-              @click.stop="$router.push(`/projects/${project.id}/edit`)"
-              class="p-1 text-gray-400 hover:text-gray-500"
+              @click.stop="$router.push(`/projects/${project.id}`)"
+              class="p-1 text-gray-400 hover:text-gray-300"
               title="Edit"
             >
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -178,10 +178,10 @@
       class="fixed inset-0 z-50 overflow-y-auto"
     >
       <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="projectToDelete = null"></div>
+        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="projectToDelete = null"></div>
         
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div class="bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="sm:flex sm:items-start">
               <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-danger-100 sm:mx-0 sm:h-10 sm:w-10">
                 <svg class="h-6 w-6 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -189,18 +189,18 @@
                 </svg>
               </div>
               <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                <h3 class="text-lg leading-6 font-medium text-white">
                   Delete Project
                 </h3>
                 <div class="mt-2">
-                  <p class="text-sm text-gray-500">
+                  <p class="text-sm text-gray-400">
                     Are you sure you want to delete "{{ projectToDelete.name }}"? This action cannot be undone and will permanently delete all content and data associated with this project.
                   </p>
                 </div>
               </div>
             </div>
           </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div class="bg-gray-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               @click="deleteProject"
               :disabled="isDeleting"
@@ -210,7 +210,7 @@
             </button>
             <button
               @click="projectToDelete = null"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-gray-300 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               Cancel
             </button>

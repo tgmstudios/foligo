@@ -2,10 +2,10 @@
   <div class="p-6">
     <!-- Welcome Section -->
     <div class="mb-8">
-      <h1 class="text-2xl font-bold text-gray-900">
+      <h1 class="text-2xl font-bold text-white">
         Welcome back, {{ authStore.user?.name }}!
       </h1>
-      <p class="text-gray-600 mt-1">
+      <p class="text-gray-400 mt-1">
         Here's what's happening with your portfolio projects today.
       </p>
     </div>
@@ -22,8 +22,8 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Total Projects</p>
-            <p class="text-2xl font-semibold text-gray-900">{{ projectStore.totalProjects }}</p>
+            <p class="text-sm font-medium text-gray-400">Total Projects</p>
+            <p class="text-2xl font-semibold text-white">{{ projectStore.totalProjects }}</p>
           </div>
         </div>
       </div>
@@ -38,8 +38,8 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Total Posts</p>
-            <p class="text-2xl font-semibold text-gray-900">{{ totalContentBlocks }}</p>
+            <p class="text-sm font-medium text-gray-400">Total Posts</p>
+            <p class="text-2xl font-semibold text-white">{{ totalContentBlocks }}</p>
           </div>
         </div>
       </div>
@@ -54,8 +54,8 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Team Members</p>
-            <p class="text-2xl font-semibold text-gray-900">{{ totalTeamMembers }}</p>
+            <p class="text-sm font-medium text-gray-400">Team Members</p>
+            <p class="text-2xl font-semibold text-white">{{ totalTeamMembers }}</p>
           </div>
         </div>
       </div>
@@ -70,8 +70,8 @@
             </div>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Published Posts</p>
-            <p class="text-2xl font-semibold text-gray-900">{{ totalPublishedPosts }}</p>
+            <p class="text-sm font-medium text-gray-400">Published Posts</p>
+            <p class="text-2xl font-semibold text-white">{{ totalPublishedPosts }}</p>
           </div>
         </div>
       </div>
@@ -83,9 +83,9 @@
       <div class="lg:col-span-2 space-y-8">
         <!-- Recent Content -->
         <div class="card">
-          <div class="px-6 py-4 border-b border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-medium text-gray-900">Recent Content</h3>
+              <h3 class="text-lg font-medium text-white">Recent Content</h3>
               <router-link to="/content" class="text-sm text-primary-600 hover:text-primary-500">
                 View all
               </router-link>
@@ -94,26 +94,26 @@
           <div class="p-6">
             <div v-if="projectStore.isLoading" class="space-y-4">
               <div v-for="i in 3" :key="i" class="animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div class="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div class="h-3 bg-gray-700 rounded w-1/2"></div>
               </div>
             </div>
             <div v-else-if="projectStore.recentContent.length === 0" class="text-center py-8">
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900">No content yet</h3>
-              <p class="mt-1 text-sm text-gray-500">Create your first content piece.</p>
+              <h3 class="mt-2 text-sm font-medium text-white">No content yet</h3>
+              <p class="mt-1 text-sm text-gray-400">Create your first content piece.</p>
             </div>
             <div v-else class="space-y-4">
               <div
                 v-for="content in projectStore.recentContent"
                 :key="content.id"
-                class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                class="flex items-center justify-between p-4 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
               >
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center">
-                    <h4 class="text-sm font-medium text-gray-900 truncate">
+                    <h4 class="text-sm font-medium text-white truncate">
                       {{ content.title }}
                     </h4>
                     <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
@@ -129,7 +129,7 @@
                       AI Generated
                     </span>
                   </div>
-                  <p class="text-sm text-gray-500 truncate">{{ content.excerpt || 'No excerpt' }}</p>
+                  <p class="text-sm text-gray-400 truncate">{{ content.excerpt || 'No excerpt' }}</p>
                   <div class="mt-1 flex items-center text-xs text-gray-400">
                     <span>{{ content.projectName }}</span>
                     <span class="mx-2">•</span>
@@ -151,9 +151,9 @@
 
         <!-- Recent Projects -->
         <div class="card">
-          <div class="px-6 py-4 border-b border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-medium text-gray-900">Recent Projects</h3>
+              <h3 class="text-lg font-medium text-white">Recent Projects</h3>
               <router-link to="/projects" class="text-sm text-primary-600 hover:text-primary-500">
                 View all
               </router-link>
@@ -162,16 +162,16 @@
           <div class="p-6">
             <div v-if="projectStore.isLoading" class="space-y-4">
               <div v-for="i in 3" :key="i" class="animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div class="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div class="h-3 bg-gray-700 rounded w-1/2"></div>
               </div>
             </div>
             <div v-else-if="projectStore.recentProjects.length === 0" class="text-center py-8">
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900">No projects yet</h3>
-              <p class="mt-1 text-sm text-gray-500">Get started by creating your first project.</p>
+              <h3 class="mt-2 text-sm font-medium text-white">No projects yet</h3>
+              <p class="mt-1 text-sm text-gray-400">Get started by creating your first project.</p>
               <div class="mt-6">
                 <button
                   @click="showCreateProjectModal = true"
@@ -185,11 +185,11 @@
               <div
                 v-for="project in projectStore.recentProjects"
                 :key="project.id"
-                class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                class="flex items-center justify-between p-4 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
               >
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center">
-                    <h4 class="text-sm font-medium text-gray-900 truncate">
+                    <h4 class="text-sm font-medium text-white truncate">
                       {{ project.name }}
                     </h4>
                     <span
@@ -205,7 +205,7 @@
                       Member
                     </span>
                   </div>
-                  <p class="text-sm text-gray-500 truncate">{{ project.description || 'No description' }}</p>
+                  <p class="text-sm text-gray-400 truncate">{{ project.description || 'No description' }}</p>
                   <div class="mt-1 flex items-center text-xs text-gray-400">
                     <span>{{ project._count?.content || 0 }} posts</span>
                     <span class="mx-2">•</span>
@@ -223,7 +223,7 @@
                   </router-link>
                   <router-link
                     :to="`/projects/${project.id}/edit`"
-                    class="text-gray-400 hover:text-gray-500"
+                    class="text-gray-400 hover:text-gray-400"
                   >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -240,8 +240,8 @@
       <div class="space-y-6">
         <!-- Quick Actions -->
         <div class="card">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+          <div class="px-6 py-4 border-b border-gray-700">
+            <h3 class="text-lg font-medium text-white">Quick Actions</h3>
           </div>
           <div class="p-6 space-y-3">
             <button
@@ -273,16 +273,16 @@
 
         <!-- Recent Activity -->
         <div class="card">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+          <div class="px-6 py-4 border-b border-gray-700">
+            <h3 class="text-lg font-medium text-white">Recent Activity</h3>
           </div>
           <div class="p-6">
             <div v-if="projectStore.recentActivity.length === 0" class="text-center py-8">
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900">No recent activity</h3>
-              <p class="mt-1 text-sm text-gray-500">Start creating to see activity here.</p>
+              <h3 class="mt-2 text-sm font-medium text-white">No recent activity</h3>
+              <p class="mt-1 text-sm text-gray-400">Start creating to see activity here.</p>
             </div>
             <div v-else class="space-y-4">
               <div v-for="(activity, index) in projectStore.recentActivity" :key="index" class="flex items-start">
@@ -294,10 +294,10 @@
                   </div>
                 </div>
                 <div class="ml-3 flex-1 min-w-0">
-                  <p class="text-sm text-gray-900">
+                  <p class="text-sm text-white">
                     <span class="font-medium">{{ activity.title }}</span>
                   </p>
-                  <p class="text-xs text-gray-500">{{ activity.description }}</p>
+                  <p class="text-xs text-gray-400">{{ activity.description }}</p>
                   <p class="text-xs text-gray-400 mt-1">{{ formatTimeAgo(activity.timestamp) }}</p>
                 </div>
               </div>

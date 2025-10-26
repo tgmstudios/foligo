@@ -1,20 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-900">
     <!-- Sidebar -->
-    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out"
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out"
          :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
-      <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-        <div class="flex items-center">
+      <div class="flex items-center justify-between h-16 px-6 border-b border-gray-700">
+        <router-link to="/" class="flex items-center hover:opacity-80 transition-opacity">
           <div class="flex-shrink-0">
             <img :src="squiggleLogo" alt="Foligo" class="h-8 w-auto" />
           </div>
           <div class="ml-3">
-            <h1 class="text-xl font-bold text-gray-900">Foligo</h1>
+            <h1 class="text-xl font-bold text-white">Foligo</h1>
           </div>
-        </div>
+        </router-link>
         <button
           @click="sidebarOpen = false"
-          class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+          class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700"
         >
           <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -40,7 +40,7 @@
       </nav>
       
       <!-- User Profile -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="h-8 w-8 bg-primary-600 rounded-full flex items-center justify-center">
@@ -48,13 +48,13 @@
             </div>
           </div>
           <div class="ml-3 flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900 truncate">{{ authStore.user?.name }}</p>
-            <p class="text-xs text-gray-500 truncate">{{ authStore.user?.email }}</p>
+            <p class="text-sm font-medium text-white truncate">{{ authStore.user?.name }}</p>
+            <p class="text-xs text-gray-400 truncate">{{ authStore.user?.email }}</p>
           </div>
           <div class="ml-2">
             <button
               @click="showUserMenu = !showUserMenu"
-              class="p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              class="p-1 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700"
             >
               <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
@@ -64,10 +64,10 @@
         </div>
         
         <!-- User Menu Dropdown -->
-        <div v-if="showUserMenu" class="absolute bottom-16 left-4 right-4 bg-white rounded-md shadow-lg border border-gray-200 py-1">
+        <div v-if="showUserMenu" class="absolute bottom-16 left-4 right-4 bg-gray-700 rounded-md shadow-lg border border-gray-600 py-1">
           <button
             @click="handleLogout"
-            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
           >
             Sign out
           </button>
@@ -75,38 +75,38 @@
       </div>
     </div>
     
-    <!-- Mobile sidebar overlay -->
+      <!-- Mobile sidebar overlay -->
     <div
       v-if="sidebarOpen"
       @click="sidebarOpen = false"
-      class="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+      class="fixed inset-0 z-40 bg-black bg-opacity-75 lg:hidden"
     ></div>
     
     <!-- Main content -->
     <div class="lg:pl-64">
       <!-- Top bar -->
-      <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+      <div class="sticky top-0 z-40 bg-gray-800 shadow-sm border-b border-gray-700">
         <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           <div class="flex items-center">
             <button
               @click="sidebarOpen = true"
-              class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700"
             >
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h2 class="ml-2 text-lg font-semibold text-gray-900">{{ pageTitle }}</h2>
+            <h2 class="ml-2 text-lg font-semibold text-white">{{ pageTitle }}</h2>
           </div>
           
           <!-- Project Selector -->
           <div class="flex items-center space-x-4">
             <div class="flex items-center space-x-2">
-              <label class="text-sm font-medium text-gray-700">Project:</label>
+              <label class="text-sm font-medium text-gray-300">Project:</label>
               <select
                 v-model="selectedProjectId"
                 @change="onProjectChange"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
+                class="px-3 py-1.5 text-sm border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-white"
               >
                 <option value="">All Projects</option>
                 <option
@@ -125,7 +125,7 @@
             <button 
               @click="handleCreateContent"
               :disabled="!selectedProjectId"
-              class="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed relative"
+              class="p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed relative"
               title="Create content with AI"
             >
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,16 +141,16 @@
                   type="text"
                   placeholder="Search projects and posts..."
                   @input="handleSearch"
-                  class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  class="w-64 pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-white"
                 />
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <div v-if="searchResults.length > 0" class="absolute z-50 right-0 mt-2 w-96 bg-white rounded-md shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+                <div v-if="searchResults.length > 0" class="absolute z-50 right-0 mt-2 w-96 bg-gray-800 rounded-md shadow-lg border border-gray-600 max-h-96 overflow-y-auto">
                   <div class="py-2">
-                    <div v-for="result in searchResults" :key="result.id" class="px-4 py-2 hover:bg-gray-50 cursor-pointer" @click="navigateToResult(result)">
+                    <div v-for="result in searchResults" :key="result.id" class="px-4 py-2 hover:bg-gray-700 cursor-pointer" @click="navigateToResult(result)">
                       <div class="flex items-start">
                         <div class="flex-shrink-0">
                           <div :class="`h-8 w-8 ${result.type === 'project' ? 'bg-blue-100' : 'bg-green-100'} rounded-lg flex items-center justify-center`">
@@ -161,8 +161,8 @@
                           </div>
                         </div>
                         <div class="ml-3 flex-1 min-w-0">
-                          <p class="text-sm font-medium text-gray-900 truncate">{{ result.title }}</p>
-                          <p class="text-xs text-gray-500 truncate">{{ result.subtitle }}</p>
+                          <p class="text-sm font-medium text-white truncate">{{ result.title }}</p>
+                          <p class="text-xs text-gray-400 truncate">{{ result.subtitle }}</p>
                         </div>
                       </div>
                     </div>

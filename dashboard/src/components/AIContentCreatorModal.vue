@@ -1,14 +1,14 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="close"></div>
+      <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="close"></div>
       
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+      <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
         <!-- Header -->
         <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 pt-6 pb-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
                 <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
@@ -35,34 +35,34 @@
         </div>
 
         <!-- Chat Interface -->
-        <div class="bg-white px-6 py-4">
+        <div class="bg-gray-800 px-6 py-4">
           <!-- Mode Selection -->
           <div v-if="!modeSelected && isOpen" class="space-y-4">
             <div class="text-center py-6">
-              <h4 class="text-lg font-medium text-gray-900 mb-4">Choose your interaction mode</h4>
-              <p class="text-sm text-gray-600 mb-6">How would you like to interact with the AI assistant?</p>
+              <h4 class="text-lg font-medium text-white mb-4">Choose your interaction mode</h4>
+              <p class="text-sm text-gray-400 mb-6">How would you like to interact with the AI assistant?</p>
               
               <div class="grid grid-cols-2 gap-4">
                 <button
                   @click="selectMode('text')"
-                  class="p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all"
+                  class="p-6 border-2 border-gray-600 rounded-lg hover:border-purple-500 hover:bg-purple-500/10 transition-all"
                 >
-                  <svg class="w-12 h-12 text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <h5 class="font-medium text-gray-900">Text Mode</h5>
-                  <p class="text-sm text-gray-600 mt-1">Type your questions and responses</p>
+                  <h5 class="font-medium text-white">Text Mode</h5>
+                  <p class="text-sm text-gray-400 mt-1">Type your questions and responses</p>
                 </button>
                 
                 <button
                   @click="selectMode('voice')"
-                  class="p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all"
+                  class="p-6 border-2 border-gray-600 rounded-lg hover:border-purple-500 hover:bg-purple-500/10 transition-all"
                 >
-                  <svg class="w-12 h-12 text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
-                  <h5 class="font-medium text-gray-900">Voice Mode</h5>
-                  <p class="text-sm text-gray-600 mt-1">Speak your questions and responses</p>
+                  <h5 class="font-medium text-white">Voice Mode</h5>
+                  <p class="text-sm text-gray-400 mt-1">Speak your questions and responses</p>
                 </button>
               </div>
             </div>
@@ -72,7 +72,7 @@
           <div v-else-if="isLoading" class="text-center py-8">
             <div class="inline-flex items-center space-x-2">
               <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-              <span class="text-gray-600">{{ loadingMessage }}</span>
+              <span class="text-gray-400">{{ loadingMessage }}</span>
             </div>
           </div>
 
@@ -88,9 +88,9 @@
             >
               <div :class="[
                 'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-                message.role === 'user' ? 'bg-purple-600' : 'bg-gray-200'
+                message.role === 'user' ? 'bg-purple-600' : 'bg-gray-700'
               ]">
-                <svg v-if="message.role === 'assistant'" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-if="message.role === 'assistant'" class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
                 <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +101,7 @@
                 'rounded-lg px-4 py-2 max-w-xs sm:max-w-md',
                 message.role === 'user' 
                   ? 'bg-purple-600 text-white' 
-                  : 'bg-gray-100 text-gray-900'
+                  : 'bg-gray-700 text-white'
               ]">
                 <p class="text-sm whitespace-pre-wrap">{{ message.content }}</p>
               </div>
@@ -110,26 +110,26 @@
 
           <!-- Typing Indicator -->
           <div v-if="isTyping" class="flex items-center space-x-3 mb-4">
-            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
-            <div class="rounded-lg px-4 py-2 bg-gray-100">
-              <p class="text-sm text-gray-600">AI is typing...</p>
+            <div class="rounded-lg px-4 py-2 bg-gray-700">
+              <p class="text-sm text-gray-300">AI is typing...</p>
             </div>
           </div>
 
           <!-- Voice Mode ConvAI Widget -->
           <div v-if="selectedInteractionMode === 'voice' && modeSelected && !sessionDone" class="mb-4">
-            <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-4">
+            <div class="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-2 border-purple-500/30 rounded-lg p-4">
               <div class="flex items-center space-x-3 mb-3">
-                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
-                <h4 class="text-lg font-semibold text-gray-900">Voice Assistant</h4>
+                <h4 class="text-lg font-semibold text-white">Voice Assistant</h4>
               </div>
-              <p class="text-sm text-gray-600 mb-4">Speak with our AI assistant to create your content:</p>
+              <p class="text-sm text-gray-300 mb-4">Speak with our AI assistant to create your content:</p>
               
               <!-- ElevenLabs ConvAI Widget -->
               <elevenlabs-convai 
@@ -147,7 +147,7 @@
               :disabled="!canRespond"
               type="text"
               placeholder="Type your message..."
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
+              class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
             />
             <button
               @click="sendMessage"
@@ -160,10 +160,10 @@
         </div>
 
         <!-- Footer -->
-        <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+        <div class="bg-gray-800 px-6 py-4 flex justify-end space-x-3">
           <button
             @click="close"
-            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-colors"
           >
             Cancel
           </button>
