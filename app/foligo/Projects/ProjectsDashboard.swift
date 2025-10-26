@@ -17,6 +17,7 @@ enum ProjectSortOption: String, CaseIterable, Identifiable {
 
 struct ProjectsDashboard: View {
     var projects: Projects
+    @Binding var userToken: String?
     @Namespace private var animation
 
     @State private var selectedProject: Project?
@@ -63,7 +64,7 @@ struct ProjectsDashboard: View {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(filteredProjects, id: \.id) { project in
-                        ProjectListCard(project: project, animation: animation)
+                        ProjectListCard(project: project)
                             .onTapGesture {
                                 withAnimation(.spring(duration: 0.5)) {
                                     selectedProject = project
@@ -84,7 +85,7 @@ struct ProjectsDashboard: View {
             .background(.ultraThinMaterial)
             .animation(.smooth(duration: 0.3), value: filteredProjects)
             .navigationDestination(item: $selectedProject) { project in
-                ProjectDetailView(project: project, animation: animation)
+                ProjectDetailView(projectName: project.name, projectId: project.id, userToken: userToken.unsafelyUnwrapped)
             }
             .navigationTitle("Projects")
             .searchable(text: $searchText, prompt: "Search projects")
@@ -99,8 +100,15 @@ struct ProjectsDashboard: View {
                     .pickerStyle(.segmented)
                     .frame(maxWidth: 220)
                 }
-
-
+                
+//                .toolbar {
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button(action: { userToken = nil }) {
+                            Label("Sign Out", systemImage: "person.slash.fill")
+                        }
+                    }
+//                }
+                
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Sort Order", selection: $sortOrder) {
@@ -114,6 +122,11 @@ struct ProjectsDashboard: View {
                     .tint(.primary)
                 }
             }
+            .overlay {
+                  if filteredProjects.isEmpty {
+                      ContentUnavailableView.search
+                  }
+              }
         }
     }
 }
@@ -161,14 +174,14 @@ struct ProjectListCard: View {
         projects: .init(
             ownedProjects: [
                 Project(
-                    id: UUID(),
+                    id: UUID().uuidString,
                     name: "NeuralVision",
                     description: "AI-powered image classification tool for developers.",
                     createdAt: .now,
                     updatedAt: .now
                 ),
                 Project(
-                    id: UUID(),
+                    id: UUID().uuidString,
                     name: "Aether",
                     description: "Next-gen note syncing app with real-time collaboration.",
                     createdAt: .now.addingTimeInterval(-86400),
@@ -177,13 +190,13 @@ struct ProjectListCard: View {
             ],
             memberProjects: [
                 Project(
-                    id: UUID(),
+                    id: UUID().uuidString,
                     name: "EchoCloud",
                     description: "Distributed cloud sound storage system.",
                     createdAt: .now.addingTimeInterval(-172800),
                     updatedAt: .now.addingTimeInterval(-7200)
                 )
             ]
-        )
+        ), userToken: .constant(nil)
     )
 }

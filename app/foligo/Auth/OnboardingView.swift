@@ -7,9 +7,7 @@
 
 import SwiftUI
 
-private enum FoligoAPI {
-    static let baseURL = URL(string: "https://api.foligo.tech")!
-
+private extension FoligoAPI {
     static func createProject(name: String, description: String?, authToken: String) async throws -> ProjectResponse {
         var request = URLRequest(url: baseURL.appendingPathComponent("/api/projects"))
         request.httpMethod = "POST"

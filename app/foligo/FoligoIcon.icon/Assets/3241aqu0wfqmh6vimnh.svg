@@ -1,0 +1,15 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <title>Foligo Mark (Speech/Folio)</title>
+    <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <!-- This path creates a rounded rectangle (document/folio) with a speech bubble tail -->
+    <path d="M20 10 C14.477 10 10 14.477 10 20 L10 80 C10 85.523 14.477 90 20 90 L30 90 L30 80 C30 74.477 34.477 70 40 70 L80 70 C85.523 70 90 65.523 90 60 L90 20 C90 14.477 85.523 10 80 10 L20 10 Z M30 90 L20 90 L30 80 V 90 Z" fill="url(#grad1)"/>
+    <!-- Lines inside representing text/content -->
+    <rect x="25" y="25" width="50" height="6" rx="3" fill="white" fill-opacity="0.8"/>
+    <rect x="25" y="40" width="50" height="6" rx="3" fill="white" fill-opacity="0.8"/>
+    <rect x="25" y="55" width="35" height="6" rx="3" fill="white" fill-opacity="0.8"/>
+</svg>
