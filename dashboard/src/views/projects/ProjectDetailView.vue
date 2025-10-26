@@ -396,7 +396,7 @@
                 <!-- Site Configuration -->
                 <div>
                   <h4 class="text-md font-medium text-white mb-4">Site Configuration</h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label for="siteName" class="block text-sm font-medium text-gray-300 mb-1">
                         Site Name
@@ -419,6 +419,105 @@
                         type="text"
                         class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="A brief description of your site"
+                      />
+                    </div>
+                  </div>
+                  
+                  <!-- Portfolio Profile -->
+                  <div class="border-t border-gray-600 pt-4 mb-4">
+                    <h5 class="text-sm font-medium text-white mb-3">Portfolio Profile</h5>
+                    <div class="grid grid-cols-1 gap-4">
+                      <div>
+                        <label for="profileName" class="block text-sm font-medium text-gray-300 mb-1">
+                          Your Name
+                        </label>
+                        <input
+                          id="profileName"
+                          v-model="siteForm.profileName"
+                          type="text"
+                          class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <div>
+                        <label for="profileBio" class="block text-sm font-medium text-gray-300 mb-1">
+                          Bio / Description
+                        </label>
+                        <textarea
+                          id="profileBio"
+                          v-model="siteForm.profileBio"
+                          rows="3"
+                          class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="A brief introduction about yourself"
+                        ></textarea>
+                      </div>
+                      <div>
+                        <label for="profileImage" class="block text-sm font-medium text-gray-300 mb-1">
+                          Profile Image URL
+                        </label>
+                        <input
+                          id="profileImage"
+                          v-model="siteForm.profileImage"
+                          type="url"
+                          class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="https://example.com/profile.jpg"
+                        />
+                        <p class="text-xs text-gray-400 mt-1">Enter the URL of your profile picture</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Social Links -->
+                <div class="border-t border-gray-600 pt-4 mb-4">
+                  <h5 class="text-sm font-medium text-white mb-3">Social Links</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label for="twitterLink" class="block text-sm font-medium text-gray-300 mb-1">
+                        Twitter
+                      </label>
+                      <input
+                        id="twitterLink"
+                        v-model="siteForm.socialTwitter"
+                        type="url"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="https://twitter.com/yourhandle"
+                      />
+                    </div>
+                    <div>
+                      <label for="githubLink" class="block text-sm font-medium text-gray-300 mb-1">
+                        GitHub
+                      </label>
+                      <input
+                        id="githubLink"
+                        v-model="siteForm.socialGithub"
+                        type="url"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="https://github.com/yourhandle"
+                      />
+                    </div>
+                    <div>
+                      <label for="linkedinLink" class="block text-sm font-medium text-gray-300 mb-1">
+                        LinkedIn
+                      </label>
+                      <input
+                        id="linkedinLink"
+                        v-model="siteForm.socialLinkedin"
+                        type="url"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="https://linkedin.com/in/yourhandle"
+                      />
+                    </div>
+                    <div>
+                      <label for="instagramLink" class="block text-sm font-medium text-gray-300 mb-1">
+                        Instagram
+                      </label>
+                      <input
+                        id="instagramLink"
+                        v-model="siteForm.socialInstagram"
+                        type="url"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="https://instagram.com/yourhandle"
                       />
                     </div>
                   </div>
@@ -611,7 +710,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type ProjectMember, type Content } from '@/stores/projects'
@@ -644,12 +743,19 @@ const projectForm = reactive({
 const siteForm = reactive({
   siteName: '',
   siteDescription: '',
+  profileName: '',
+  profileBio: '',
+  profileImage: '',
+  socialTwitter: '',
+  socialGithub: '',
+  socialLinkedin: '',
+  socialInstagram: '',
   primaryColor: '#3B82F6',
   secondaryColor: '#1E40AF',
   accentColor: '#F59E0B',
   backgroundColor: '#FFFFFF',
   textColor: '#1F2937',
-  indexLayout: 'grid',
+  indexLayout: 'portfolio',
   archiveLayout: 'list',
   singleLayout: 'standard',
   metaTitle: '',
@@ -739,9 +845,20 @@ const saveProjectSettings = async () => {
     })
 
     // Update site configuration
+    // Build social links object
+    const socialLinks: any = {}
+    if (siteForm.socialTwitter) socialLinks.twitter = siteForm.socialTwitter
+    if (siteForm.socialGithub) socialLinks.github = siteForm.socialGithub
+    if (siteForm.socialLinkedin) socialLinks.linkedin = siteForm.socialLinkedin
+    if (siteForm.socialInstagram) socialLinks.instagram = siteForm.socialInstagram
+
     await projectStore.updateSiteConfig(projectId, {
       siteName: siteForm.siteName,
       siteDescription: siteForm.siteDescription,
+      profileName: siteForm.profileName,
+      profileBio: siteForm.profileBio,
+      profileImage: siteForm.profileImage,
+      socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
       primaryColor: siteForm.primaryColor,
       secondaryColor: siteForm.secondaryColor,
       accentColor: siteForm.accentColor,
@@ -757,6 +874,9 @@ const saveProjectSettings = async () => {
 
     // Update publish status
     await projectStore.publishProject(projectId, projectForm.isPublished)
+
+    // Re-fetch project to get updated data
+    await projectStore.fetchProject(projectId)
 
     showSettingsModal.value = false
   } catch (error) {
@@ -779,12 +899,25 @@ const initializeForms = () => {
       const config = project.value.siteConfig
       siteForm.siteName = config.siteName || ''
       siteForm.siteDescription = config.siteDescription || ''
+      siteForm.profileName = config.profileName || ''
+      siteForm.profileBio = config.profileBio || ''
+      siteForm.profileImage = config.profileImage || ''
+      
+      // Initialize social links from JSON field
+      const socialLinks = config.socialLinks as any
+      if (socialLinks && typeof socialLinks === 'object') {
+        siteForm.socialTwitter = socialLinks.twitter || ''
+        siteForm.socialGithub = socialLinks.github || ''
+        siteForm.socialLinkedin = socialLinks.linkedin || ''
+        siteForm.socialInstagram = socialLinks.instagram || ''
+      }
+      
       siteForm.primaryColor = config.primaryColor || '#3B82F6'
       siteForm.secondaryColor = config.secondaryColor || '#1E40AF'
       siteForm.accentColor = config.accentColor || '#F59E0B'
       siteForm.backgroundColor = config.backgroundColor || '#FFFFFF'
       siteForm.textColor = config.textColor || '#1F2937'
-      siteForm.indexLayout = config.indexLayout || 'grid'
+      siteForm.indexLayout = config.indexLayout || 'portfolio'
       siteForm.archiveLayout = config.archiveLayout || 'list'
       siteForm.singleLayout = config.singleLayout || 'standard'
       siteForm.metaTitle = config.metaTitle || ''
@@ -797,4 +930,11 @@ onMounted(async () => {
   await projectStore.fetchProject(projectId)
   initializeForms()
 })
+
+// Watch for changes to project data and re-initialize forms
+watch(() => project.value?.siteConfig, () => {
+  if (project.value?.siteConfig) {
+    initializeForms()
+  }
+}, { deep: true })
 </script>

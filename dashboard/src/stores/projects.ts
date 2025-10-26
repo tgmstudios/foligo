@@ -34,6 +34,15 @@ export interface SiteConfig {
   projectId: string
   siteName?: string
   siteDescription?: string
+  profileName?: string
+  profileBio?: string
+  profileImage?: string
+  socialLinks?: {
+    twitter?: string
+    github?: string
+    linkedin?: string
+    instagram?: string
+  } | null
   primaryColor: string
   secondaryColor: string
   accentColor: string
@@ -45,6 +54,7 @@ export interface SiteConfig {
   metaTitle?: string
   metaDescription?: string
   favicon?: string
+  layoutConfig?: any
   createdAt: string
   updatedAt: string
 }

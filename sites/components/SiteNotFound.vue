@@ -24,7 +24,7 @@
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
           <h3 class="font-semibold text-blue-900 mb-2">Want to create this site?</h3>
           <ol class="text-sm text-blue-800 space-y-1">
-            <li>1. Visit <a href="https://app.foligo.tech" class="underline">app.foligo.tech</a></li>
+            <li>1. Visit <a href="https://foligo.tech" class="underline">foligo.tech</a></li>
             <li>2. Sign up or log in to your account</li>
             <li>3. Create a new project with subdomain "{{ subdomain }}"</li>
             <li>4. Add content and publish your site</li>
@@ -35,7 +35,7 @@
       <!-- Actions -->
       <div class="space-y-4">
         <a 
-          href="https://app.foligo.tech"
+          href="https://foligo.tech"
           class="w-full bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors inline-block"
         >
           Create This Site

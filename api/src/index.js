@@ -37,7 +37,7 @@ app.use(cors({
     process.env.FRONTEND_URL || 'http://localhost:3001',
     'https://foligo.tech',
     'https://www.foligo.tech',
-    'https://app.foligo.tech',
+    'https://foligo.tech',
     /^https:\/\/.*\.foligo\.tech$/
   ],
   credentials: true

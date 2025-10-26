@@ -23,6 +23,10 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Dynamic portfolio sites powered by Foligo' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/squiggle.png' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/squiggle.svg' }
       ]
     }
   },

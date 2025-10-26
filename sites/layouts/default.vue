@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="dark">
     <!-- This layout just passes through to the page content -->
     <!-- The actual layout is handled by the dynamic components in pages -->
     <slot />
