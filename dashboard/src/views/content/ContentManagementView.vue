@@ -4,7 +4,7 @@
     <div class="mb-8">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Content Management</h1>
+          <h1 class="text-2xl font-bold text-white">Content Management</h1>
           <p class="text-gray-600 mt-1">Create and manage all your content</p>
         </div>
         <div class="flex items-center space-x-3">
@@ -23,13 +23,13 @@
 
     <!-- Project Info -->
     <div v-if="selectedProject" class="mb-6">
-      <div class="p-4 bg-gray-50 rounded-lg">
+      <div class="p-4 bg-gray-800 rounded-lg">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-medium text-gray-900">{{ selectedProject.name }}</h3>
+            <h3 class="text-lg font-medium text-white">{{ selectedProject.name }}</h3>
             <p class="text-sm text-gray-600">{{ selectedProject.description || 'No description' }}</p>
           </div>
-          <div class="text-sm text-gray-500">
+          <div class="text-sm text-gray-400">
             {{ selectedProject._count?.content || 0 }} content items
           </div>
         </div>
@@ -39,7 +39,7 @@
     <!-- Content Type Filter -->
     <div class="mb-6">
       <div class="flex items-center space-x-4">
-        <label class="text-sm font-medium text-gray-700">Content Type:</label>
+        <label class="text-sm font-medium text-gray-300">Content Type:</label>
         <div class="flex space-x-2">
           <button
             v-for="type in contentTypes"
@@ -49,7 +49,7 @@
               'px-3 py-1 text-sm rounded-md transition-colors',
               selectedContentType === type.value
                 ? 'bg-primary-100 text-primary-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-700'
             ]"
           >
             {{ type.icon }} {{ type.label }}
@@ -65,7 +65,7 @@
           v-model="searchQuery"
           type="text"
           placeholder="Search content..."
-          class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+          class="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500"
         />
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -78,10 +78,10 @@
     <!-- Content List -->
     <div v-if="projectStore.isLoading" class="space-y-4">
       <div v-for="i in 5" :key="i" class="card p-6 animate-pulse">
-        <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div class="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-        <div class="h-3 bg-gray-200 rounded w-full mb-2"></div>
-        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+        <div class="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+        <div class="h-3 bg-gray-700 rounded w-1/2 mb-4"></div>
+        <div class="h-3 bg-gray-700 rounded w-full mb-2"></div>
+        <div class="h-3 bg-gray-700 rounded w-2/3"></div>
       </div>
     </div>
 
@@ -89,8 +89,8 @@
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-gray-900">No content found</h3>
-      <p class="mt-1 text-sm text-gray-500">
+      <h3 class="mt-2 text-sm font-medium text-white">No content found</h3>
+      <p class="mt-1 text-sm text-gray-400">
         {{ searchQuery ? 'Try adjusting your search criteria.' : 'Get started by creating your first piece of content.' }}
       </p>
       <div v-if="!searchQuery" class="mt-6">
@@ -111,27 +111,27 @@
       >
         <div class="flex items-start justify-between">
           <div class="flex items-start flex-1">
-            <div class="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+            <div class="h-10 w-10 bg-gray-700 rounded-lg flex items-center justify-center mr-4">
               <span class="text-sm font-medium text-gray-600">
                 {{ getContentIcon(content.contentType) }}
               </span>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center space-x-2 mb-2">
-                <h3 class="text-lg font-semibold text-gray-900">{{ content.title }}</h3>
+                <h3 class="text-lg font-semibold text-white">{{ content.title }}</h3>
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                   :class="{
-                    'bg-green-100 text-green-800': content.isPublished,
-                    'bg-gray-100 text-gray-800': !content.isPublished
+                    'bg-green-500/20 text-green-400 border border-green-700/50': content.isPublished,
+                    'bg-amber-500/20 text-amber-400 border border-amber-700/50': !content.isPublished
                   }"
                 >
                   {{ content.isPublished ? 'Published' : 'Draft' }}
                 </span>
               </div>
               <p class="text-sm text-gray-600 mb-2">{{ content.contentType }} • {{ getProjectName(content.projectId) }}</p>
-              <p v-if="content.excerpt" class="text-sm text-gray-700 line-clamp-2">{{ content.excerpt }}</p>
-              <div class="flex items-center text-xs text-gray-500 mt-2">
+              <p v-if="content.excerpt" class="text-sm text-gray-300 line-clamp-2">{{ content.excerpt }}</p>
+              <div class="flex items-center text-xs text-gray-400 mt-2">
                 <span>{{ formatDate(content.updatedAt) }}</span>
                 <span class="mx-2">•</span>
                 <span>{{ content.content.length }} characters</span>

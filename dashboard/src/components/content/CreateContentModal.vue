@@ -4,20 +4,20 @@
     class="fixed inset-0 z-50 overflow-y-auto"
   >
     <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeModal"></div>
+      <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="closeModal"></div>
       
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+      <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
         <form @submit.prevent="handleSubmit">
           <!-- Header -->
-          <div class="bg-white px-6 pt-6 pb-4">
+          <div class="bg-gray-800 px-6 pt-6 pb-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg leading-6 font-medium text-gray-900">
+              <h3 class="text-lg leading-6 font-medium text-white">
                 Create New {{ contentType }}
               </h3>
               <button
                 type="button"
                 @click="closeModal"
-                class="text-gray-400 hover:text-gray-500"
+                class="text-gray-400 hover:text-gray-400"
               >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -28,7 +28,7 @@
 
           <!-- Content Type Selection -->
           <div class="px-6 pb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Content Type</label>
             <div class="grid grid-cols-3 gap-3">
               <button
                 v-for="type in contentTypes"
@@ -37,13 +37,13 @@
                 :class="[
                   'p-3 border rounded-lg text-left transition-colors',
                   contentType === type.value
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-primary-500 bg-primary-900 text-primary-700'
+                    : 'border-gray-600 hover:border-gray-500'
                 ]"
               >
                 <div class="text-lg mb-1">{{ type.icon }}</div>
                 <div class="font-medium">{{ type.label }}</div>
-                <div class="text-sm text-gray-500">{{ type.description }}</div>
+                <div class="text-sm text-gray-400">{{ type.description }}</div>
               </button>
             </div>
           </div>
@@ -52,14 +52,14 @@
           <div class="px-6 pb-4 space-y-4">
             <!-- Project Selection -->
             <div v-if="!project">
-              <label for="project" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="project" class="block text-sm font-medium text-gray-300 mb-1">
                 Project *
               </label>
               <select
                 id="project"
                 v-model="form.projectId"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Select a project</option>
                 <option
@@ -71,14 +71,14 @@
                 </option>
               </select>
             </div>
-            <div v-else class="p-3 bg-gray-50 rounded-md">
+            <div v-else class="p-3 bg-gray-800 rounded-md">
               <div class="text-sm text-gray-600">Project:</div>
-              <div class="font-medium text-gray-900">{{ project.name }}</div>
+              <div class="font-medium text-white">{{ project.name }}</div>
             </div>
 
             <!-- Title -->
             <div>
-              <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="title" class="block text-sm font-medium text-gray-300 mb-1">
                 Title *
               </label>
               <input
@@ -86,57 +86,57 @@
                 v-model="form.title"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Enter a title for your content"
               />
             </div>
 
             <!-- Slug -->
             <div>
-              <label for="slug" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="slug" class="block text-sm font-medium text-gray-300 mb-1">
                 URL Slug
               </label>
               <div class="flex">
-                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-800 text-gray-400 text-sm">
                   {{ project?.subdomain }}.foligo.tech/
                 </span>
                 <input
                   id="slug"
                   v-model="form.slug"
                   type="text"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  class="flex-1 px-3 py-2 border border-gray-600 rounded-r-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="url-friendly-slug"
                 />
               </div>
-              <p class="mt-1 text-xs text-gray-500">
+              <p class="mt-1 text-xs text-gray-400">
                 Leave empty to auto-generate from title
               </p>
             </div>
 
             <!-- Excerpt -->
             <div>
-              <label for="excerpt" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="excerpt" class="block text-sm font-medium text-gray-300 mb-1">
                 Excerpt
               </label>
               <textarea
                 id="excerpt"
                 v-model="form.excerpt"
                 rows="2"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Brief description of your content"
               ></textarea>
             </div>
 
             <!-- Metadata (type-specific fields) -->
             <div v-if="contentType === 'PROJECT'" class="space-y-3">
-              <h4 class="text-sm font-medium text-gray-700">Project Details</h4>
+              <h4 class="text-sm font-medium text-gray-300">Project Details</h4>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Technologies</label>
                   <input
                     v-model="form.metadata.technologies"
                     type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="React, Node.js, MongoDB"
                   />
                 </div>
@@ -145,7 +145,7 @@
                   <input
                     v-model="form.metadata.projectUrl"
                     type="url"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="https://example.com"
                   />
                 </div>
@@ -153,14 +153,14 @@
             </div>
 
             <div v-if="contentType === 'EXPERIENCE'" class="space-y-3">
-              <h4 class="text-sm font-medium text-gray-700">Experience Details</h4>
+              <h4 class="text-sm font-medium text-gray-300">Experience Details</h4>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Company</label>
                   <input
                     v-model="form.metadata.company"
                     type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="Company Name"
                   />
                 </div>
@@ -169,7 +169,7 @@
                   <input
                     v-model="form.metadata.position"
                     type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="Job Title"
                   />
                 </div>
@@ -178,7 +178,7 @@
                   <input
                     v-model="form.metadata.startDate"
                     type="date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
                 <div>
@@ -186,20 +186,20 @@
                   <input
                     v-model="form.metadata.endDate"
                     type="date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
               </div>
             </div>
 
             <div v-if="contentType === 'BLOG'" class="space-y-3">
-              <h4 class="text-sm font-medium text-gray-700">Blog Details</h4>
+              <h4 class="text-sm font-medium text-gray-300">Blog Details</h4>
               <div>
                 <label class="block text-xs text-gray-600 mb-1">Tags</label>
                 <input
                   v-model="form.metadata.tags"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="technology, programming, web-development"
                 />
               </div>
@@ -211,16 +211,16 @@
                 id="isPublished"
                 v-model="form.isPublished"
                 type="checkbox"
-                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-600 rounded"
               />
-              <label for="isPublished" class="ml-2 block text-sm text-gray-700">
+              <label for="isPublished" class="ml-2 block text-sm text-gray-300">
                 Publish immediately
               </label>
             </div>
           </div>
 
           <!-- Footer -->
-          <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse">
+          <div class="bg-gray-800 px-6 py-3 sm:flex sm:flex-row-reverse">
             <button
               type="submit"
               :disabled="isLoading || !form.title.trim()"
@@ -231,7 +231,7 @@
             <button
               type="button"
               @click="closeModal"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-gray-300 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               Cancel
             </button>

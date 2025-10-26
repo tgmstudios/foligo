@@ -1,18 +1,16 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <div>
-        <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100">
-          <svg class="h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
+        <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900">
+          <img :src="squiggleLogo" alt="Foligo" class="h-10 w-10 p-2" />
         </div>
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
           Create your account
         </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
+        <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
           Or
-          <router-link to="/login" class="font-medium text-primary-600 hover:text-primary-500">
+          <router-link to="/login" class="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">
             sign in to your existing account
           </router-link>
         </p>
@@ -21,7 +19,7 @@
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
         <div class="space-y-4">
           <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
             <input
               id="name"
               v-model="form.name"
@@ -29,13 +27,13 @@
               type="text"
               autocomplete="name"
               required
-              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               placeholder="Enter your full name"
             />
           </div>
           
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
             <input
               id="email"
               v-model="form.email"
@@ -43,13 +41,13 @@
               type="email"
               autocomplete="email"
               required
-              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               placeholder="Enter your email address"
             />
           </div>
           
           <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+            <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
             <input
               id="password"
               v-model="form.password"
@@ -57,16 +55,16 @@
               type="password"
               autocomplete="new-password"
               required
-              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               placeholder="Create a password"
             />
-            <p class="mt-1 text-xs text-gray-500">
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Must be at least 6 characters long
             </p>
           </div>
           
           <div>
-            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+            <label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
             <input
               id="confirmPassword"
               v-model="form.confirmPassword"
@@ -74,7 +72,7 @@
               type="password"
               autocomplete="new-password"
               required
-              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               placeholder="Confirm your password"
             />
           </div>
@@ -87,13 +85,13 @@
             name="terms"
             type="checkbox"
             required
-            class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
           />
-          <label for="terms" class="ml-2 block text-sm text-gray-900">
+          <label for="terms" class="ml-2 block text-sm text-gray-900 dark:text-white">
             I agree to the
-            <a href="#" class="text-primary-600 hover:text-primary-500">Terms of Service</a>
+            <a href="#" class="text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">Terms of Service</a>
             and
-            <a href="#" class="text-primary-600 hover:text-primary-500">Privacy Policy</a>
+            <a href="#" class="text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">Privacy Policy</a>
           </label>
         </div>
 
@@ -113,7 +111,7 @@
           </button>
         </div>
 
-        <div v-if="error" class="rounded-md bg-danger-50 p-4">
+        <div v-if="error" class="rounded-md bg-danger-50 dark:bg-danger-900 p-4">
           <div class="flex">
             <div class="flex-shrink-0">
               <svg class="h-5 w-5 text-danger-400" viewBox="0 0 20 20" fill="currentColor">
@@ -121,7 +119,7 @@
               </svg>
             </div>
             <div class="ml-3">
-              <h3 class="text-sm font-medium text-danger-800">
+              <h3 class="text-sm font-medium text-danger-800 dark:text-danger-200">
                 {{ error }}
               </h3>
             </div>
@@ -136,6 +134,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import squiggleLogo from '@/assets/logos/squiggle.svg'
 
 const router = useRouter()
 const authStore = useAuthStore()
