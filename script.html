@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foligo Project Brief</title>
+    <!-- Load the Inter font family for modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #3B82F6; /* A stronger, modern blue */
+            --secondary-color: #10B981; /* A vibrant green */
+            --accent-color: #F59E0B; /* A warm amber */
+            --text-color-dark: #1F2937; /* Dark grey */
+            --text-color-light: #6B7280; /* Medium grey */
+            --background-page: #FFFFFF; /* White page */
+            --background-screen: #F3F4F6; /* Light grey screen bg */
+            --border-color: #E5E7EB; /* Light border */
+        }
+
+        /* SVG Icon helper class */
+        .icon {
+            width: 1.25em;
+            height: 1.25em;
+            margin-right: 0.5em;
+            vertical-align: -0.25em;
+            color: var(--primary-color);
+            flex-shrink: 0; /* Prevent icons from shrinking */
+        }
+        .icon-sm {
+            width: 1.1em;
+            height: 1.1em;
+            vertical-align: -0.15em;
+            margin-right: 0.35em;
+        }
+
+        body {
+            background-color: var(--background-screen); 
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: var(--text-color-dark);
+            font-size: 11pt; /* Base font size */
+            line-height: 1.5; /* More readable line height */
+        }
+
+        .page-container {
+            display: grid;
+            width: auto;
+            
+            /* --- Mobile-first padding and margin --- */
+            padding: 1.5rem 1rem; /* More space top/bottom, less on sides */
+            margin: 1rem; /* 1rem margin on mobile */
+            
+            background: var(--background-page);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.07);
+            border-radius: 12px;
+            box-sizing: border-box;
+            
+            /* --- Adaptive Grid Layout --- */
+            gap: 1.5rem;
+            
+            /* Mobile-first: Single column */
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "header"
+                "problem"
+                "solution"
+                "challenge"
+                "accomplish"
+                "learn"
+                "next"
+                "script-header"
+                "script-content"
+                "tech"
+                "infra-note" /* Added infra-note to mobile flow */
+                "access"
+                "built";
+        }
+        
+        /* Medium Screens: 2-column layout (the original) */
+        @media (min-width: 900px) {
+            .page-container {
+                max-width: 1400px; /* Constrain 2-col layout */
+                /* Restore original padding and margin for desktop */
+                padding: 2rem;
+                margin: 2rem auto;
+                gap: 1.5rem 2rem;
+                grid-template-columns: 2fr 1fr;
+                grid-template-areas:
+                    "header       header"
+                    "problem      tech"
+                    "solution     tech"
+                    "challenge    infra-note"
+                    "accomplish   infra-note"
+                    "learn        access"
+                    "next         built"
+                    "script-header script-header"
+                    "script-content script-content";
+            }
+        }
+        
+        /* Wide Screens: 3-column "dashboard" layout */
+        @media (min-width: 1500px) {
+            .page-container {
+                max-width: 1800px; /* Allow 3-col layout to be wide */
+                grid-template-columns: 1.5fr 1.5fr 1fr;
+                grid-template-areas:
+                    "header       header       header"
+                    "problem      accomplish   tech"
+                    "problem      learn        tech"
+                    "solution     next         infra-note"
+                    "challenge    next         access"
+                    "challenge    .            built"
+                    "script-header script-header script-header"
+                    "script-content script-content script-content";
+            }
+        }
+
+        /* --- Grid Area Assignments --- */
+        .brief-header { grid-area: header; }
+        #problem      { grid-area: problem; }
+        #solution     { grid-area: solution; }
+        #challenge    { grid-area: challenge; }
+        #accomplish   { grid-area: accomplish; }
+        #learn        { grid-area: learn; }
+        #next         { grid-area: next; }
+        #tech         { grid-area: tech; }
+        #access       { grid-area: access; }
+        #built        { grid-area: built; }
+        #infra-note   { grid-area: infra-note; }
+        #script-header { grid-area: script-header; }
+        #script-content { grid-area: script-content; }
+
+
+        /* --- Header --- */
+        .brief-header {
+            margin-bottom: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem; /* Adjusted from 0.25in */
+        }
+        .brief-header h1 {
+            font-size: 2rem; /* Scaled down for mobile */
+            font-weight: 800;
+            margin: 0;
+            color: var(--text-color-dark);
+            line-height: 1.1;
+        }
+        .brief-header .subtitle {
+            font-size: 1.25rem; /* Scaled down for mobile */
+            font-weight: 500;
+            color: var(--primary-color);
+            margin: 0.2rem 0 0.5rem 0;
+        }
+        .brief-header .summary {
+            font-size: 12pt;
+            color: var(--text-color-light);
+            margin: 0;
+            max-width: 80ch; /* Limit summary line length */
+            line-height: 1.5;
+        }
+        .stats-bar {
+            display: flex;
+            flex-direction: column; /* Stack vertically on mobile */
+            gap: 1.5rem; /* Add gap for vertical layout */
+            align-items: center;
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem 1rem; /* Adjusted padding for vertical */
+            margin-top: 1.5rem; /* Adjusted from 0.3in */
+            max-width: 80ch;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 11pt;
+            font-weight: 500;
+            color: var(--text-color-light);
+            text-align: center;
+        }
+        .stat-item .stat-value {
+            font-size: 1.75rem; /* Scaled down for mobile */
+            font-weight: 700;
+            color: var(--primary-color);
+            line-height: 1;
+        }
+        .stat-item .stat-arrow {
+            display: none; /* Hide arrow on mobile */
+        }
+
+        /* --- Section Styling (Left Column) --- */
+        .section-block {
+            page-break-inside: avoid;
+        }
+        .section-block h2 {
+            font-size: 16pt;
+            font-weight: 700;
+            color: var(--text-color-dark);
+            margin: 0 0 0.2in 0;
+            display: flex;
+            align-items: center;
+        }
+        .section-block p {
+            margin: 0 0 0.2in 0;
+            text-align: left; /* Better for mobile readability */
+            color: var(--text-color-light);
+            font-size: 11pt;
+            line-height: 1.6;
+        }
+        .section-block p strong {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .takeaway {
+            font-size: 10.5pt;
+            font-weight: 500;
+            color: var(--primary-color);
+            padding: 0.15in 0.2in;
+            background-color: #F0F5FF; /* Light blue */
+            border-left: 4px solid var(--primary-color);
+            border-radius: 0 4px 4px 0;
+            margin: 0.1in 0 0 0 !important; /* Override p margin */
+            line-height: 1.5;
+        }
+        .takeaway strong {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        
+        .accomplishment-visual {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on narrow screens */
+            gap: 1rem;
+            align-items: center;
+            margin-top: 0.1in;
+            padding: 0.1in 0;
+        }
+        .accomplishment-item {
+            display: flex;
+            align-items: center;
+            font-size: 10.5pt;
+            font-weight: 500;
+            color: var(--text-color-light);
+        }
+        
+        /* --- Sidebar Card Styling (Right Column) --- */
+        .sidebar-card {
+            background-color: #F9FAFB; /* Slightly off-white card */
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem; /* Adjusted from 0.3in */
+            page-break-inside: avoid; /* Keep cards from splitting in print */
+            height: fit-content; /* Ensure cards don't stretch weirdly in grid */
+        }
+        
+        .sidebar-card h3 {
+            font-size: 15pt;
+            font-weight: 600;
+            color: var(--text-color-dark);
+            margin: 0 0 0.25in 0;
+            display: flex;
+            align-items: center;
+        }
+
+        /* NEW STYLE for Note Card */
+        .sidebar-card.note {
+            background-color: #FFFBEB; /* Light yellow */
+            border-color: var(--accent-color);
+        }
+        .sidebar-card.note h3 {
+            color: #B45309; /* Dark Amber */
+        }
+        .sidebar-card.note .icon {
+            color: #B45309; /* Dark Amber */
+        }
+        
+        .sidebar-card p {
+            font-size: 10.5pt;
+            color: var(--text-color-light);
+            line-height: 1.6;
+            margin: 0 0 0.1in 0;
+        }
+        
+        .tech-item-visual {
+            display: flex;
+            align-items: flex-start;
+            font-size: 11pt;
+            color: var(--text-color-light);
+            margin-bottom: 0.2in;
+            line-height: 1.5;
+        }
+        .tech-item-visual .icon {
+            color: var(--text-color-light);
+            width: 1.5em; /* Make tech icons a bit bigger */
+            height: 1.5em;
+        }
+        .tech-item-visual strong {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 11.5pt;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 0.15in;
+        }
+        .tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 9.5pt;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .tag.api { background-color: var(--secondary-color); color: #064E3B; }
+        .tag.db { background-color: #A5B4FC; color: #312E81; } /* Indigo */
+        .tag.hosting { background-color: var(--accent-color); color: #78350F; } /* Amber */
+
+
+        /* --- STYLES FOR USER SCRIPT --- */
+        .user-script {
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+        }
+        .user-script p {
+            margin: 0 0 1.25rem 0;
+            line-height: 1.6;
+            font-size: 11pt;
+            text-align: left; /* Override justify */
+        }
+        .user-script p:last-child {
+            margin-bottom: 0;
+        }
+        .user-script p strong {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 11.5pt;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+        /* New style for agent responses */
+        .user-script p.agent {
+            font-style: italic;
+            color: var(--text-color-light);
+            margin-bottom: 0.75rem;
+        }
+        .user-script p.agent strong {
+            color: var(--text-color-dark);
+            font-weight: 600;
+            font-style: normal;
+        }
+
+
+        /* --- STYLES FOR DEMO.HTML --- */
+        
+        /* Demo Script Chat */
+        .demo-script {
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            max-height: 80vh; /* Make it scrollable if very long */
+            overflow-y: auto;
+        }
+        .demo-script p {
+            margin: 0 0 1.25rem 0;
+            line-height: 1.6;
+            font-size: 11pt;
+            text-align: left; /* Override justify for chat */
+        }
+        .demo-script p:last-child {
+            margin-bottom: 0;
+        }
+        .demo-script p strong {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 11.5pt;
+            font-weight: 700;
+        }
+        .demo-script p.agent strong {
+            color: var(--primary-color);
+        }
+        .demo-script p.user strong {
+            color: var(--secondary-color);
+        }
+        .demo-script p.system {
+            font-style: italic;
+            color: var(--text-color-light);
+            text-align: center;
+            font-size: 10.5pt;
+            margin: 1.5rem 0;
+            border-top: 1px dashed var(--border-color);
+            border-bottom: 1px dashed var(--border-color);
+            padding: 0.75rem 0;
+        }
+
+        /* Generated Content Tabs */
+        .output-tabs {
+            display: flex;
+            flex-wrap: wrap; /* Allow tabs to wrap on mobile */
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+        .tab-button {
+            font-family: 'Inter', sans-serif;
+            font-size: 10.5pt;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            margin-bottom: -1px; /* Pulls button border over parent border */
+            cursor: pointer;
+            background-color: transparent;
+            border: 1px solid transparent;
+            border-bottom-color: transparent;
+            color: var(--text-color-light);
+            border-radius: 6px 6px 0 0;
+            transition: all 0.2s ease;
+        }
+        .tab-button:hover {
+            color: var(--text-color-dark);
+            background-color: #F9FAFB;
+        }
+        .tab-button.active {
+            color: var(--primary-color);
+            border-color: var(--border-color);
+            border-bottom-color: var(--background-page);
+            background-color: var(--background-page);
+        }
+
+        .output-content {
+            padding: 0.25rem;
+        }
+        .tab-pane {
+            display: none;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            color: var(--text-color-light);
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+        .tab-pane h4 { /* For portfolio sections */
+            font-size: 11pt;
+            font-weight: 700;
+            color: var(--text-color-dark);
+            margin: 0.75rem 0 0.25rem 0;
+        }
+        .tab-pane h4:first-of-type {
+            margin-top: 0;
+        }
+        .tab-pane blockquote { /* For social posts */
+            margin: 0;
+            padding: 0.75rem 1rem;
+            background-color: #F9FAFB;
+            border-left: 3px solid var(--secondary-color);
+            border-radius: 0 4px 4px 0;
+            font-size: 11pt;
+            white-space: pre-wrap; /* Preserve line breaks */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Responsive scaling for stats bar and fonts --- */
+        
+        /* Small-Medium Screens (e.g., tablets) */
+        @media (min-width: 600px) {
+            .stats-bar {
+                flex-direction: row; /* Horizontal on wider screens */
+                justify-content: space-around;
+                padding: 0.25in;
+                margin-top: 0.3in;
+            }
+            .stat-item .stat-value {
+                font-size: 20pt; /* Restore desktop font size */
+            }
+            .stat-item .stat-arrow {
+                display: inline-block; /* Show arrow */
+                font-size: 22pt;
+                color: var(--border-color);
+                margin: 0 0.5in;
+            }
+        }
+        
+        /* Medium Screens (original 900px breakpoint) */
+        @media (min-width: 900px) {
+            .page-container {
+                max-width: 1400px;
+                padding: 2rem;
+                margin: 2rem auto;
+                gap: 1.5rem 2rem;
+                grid-template-columns: 2fr 1fr;
+                grid-template-areas:
+                    "header       header"
+                    "problem      tech"
+                    "solution     tech"
+                    "challenge    infra-note"
+                    "accomplish   infra-note"
+                    "learn        access"
+                    "next         built"
+                    "script-header script-header"
+                    "script-content script-content";
+            }
+            
+            .brief-header h1 {
+                font-size: 28pt; /* Restore desktop font size */
+            }
+            .brief-header .subtitle {
+                font-size: 18pt; /* Restore desktop font size */
+            }
+            .section-block p {
+                text-align: justify; /* Restore justify on desktop */
+            }
+        }
+
+
+        /* --- Print-Specific Styles --- */
+        @media print {
+            /* Page model rules for double-sided 8.5x11 printing.
+               This adds a "gutter" (wider inner margin) for binding.
+            */
+            @page {
+                size: 8.5in 11in; /* Standard US Letter */
+                margin: 0.7in; /* Default margin */
+            }
+            @page :left {
+                /* Wider margin on the right for binding */
+                margin-right: 1.0in; 
+                margin-left: 0.7in;
+            }
+            @page :right {
+                /* Wider margin on the left for binding */
+                margin-left: 1.0in;
+                margin-right: 0.7in;
+            }
+
+            body {
+                background-color: white; 
+                font-family: 'Inter', sans-serif;
+                font-size: 10.5pt; /* Revert to print font size */
+                line-height: 1.45; /* Revert to print line height */
+                color: #000;
+                padding: 0;
+                margin: 0;
+            }
+            .page-container {
+                margin: 0;
+                padding: 0; /* Let @page handle margins */
+                box-shadow: none;
+                width: 100%; /* Fill the print area */
+                min-height: auto; /* Allow content to flow */
+                max-width: none;
+                border-radius: 0;
+                border: none;
+                
+                /* Define the 2-column PRINT layout */
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 0 1.25rem;
+                grid-template-areas:
+                    "header       header"
+                    "problem      tech"
+                    "solution     tech"
+                    "challenge    access"
+                    "accomplish   access"
+                    "learn        built"
+                    "next         built"
+                    "script-header script-header"
+                    "script-content script-content";
+                /* Note: Nav and demo content are non-print */
+            }
+            
+            .page-nav, #script, #output, .demo-script, .output-tabs, .output-content, #infra-note {
+                display: none !important; /* Do not print nav, demo script, or infra note */
+            }
+
+            /* Reset all element padding/margins for print */
+            .brief-header {
+                margin-bottom: 0.2in;
+                padding-bottom: 0.2in;
+                border-bottom: 2px solid #ccc;
+            }
+            .brief-header h1 { font-size: 26pt; }
+            .brief-header .subtitle { font-size: 17pt; }
+            .brief-header .summary { font-size: 11pt; max-width: 100%; }
+            .stats-bar { 
+                flex-direction: row; /* Ensure horizontal for print */
+                justify-content: space-around;
+                padding: 0.2in 0.15in; 
+                margin-top: 0.25in; 
+            }
+            .stat-item .stat-value { font-size: 18pt; }
+            .stat-item .stat-arrow { 
+                display: inline-block !important; /* Ensure visible */
+                font-size: 20pt; 
+            }
+
+            .section-block {
+                margin-bottom: 0.15in; /* Tighter gap */
+            }
+            .section-block h2 { font-size: 15pt; margin-bottom: 0.1in; }
+            .section-block p { font-size: 10.5pt; line-height: 1.45; margin-bottom: 0.1in; text-align: justify !important; }
+            .takeaway { padding: 0.1in 0.15in; font-size: 10pt; line-height: 1.4; margin-top: 0.05in !important; }
+
+            .sidebar-card {
+                padding: 0.2in;
+                margin-bottom: 0.15in; /* Tighter gap */
+            }
+            .sidebar-card h3 { font-size: 14pt; margin-bottom: 0.2in; }
+            .sidebar-card p { font-size: 10pt; line-height: 1.5; }
+            .tech-item-visual { font-size: 10.5pt; margin-bottom: 0.1in; }
+            .tag { padding: 3px 10px; font-size: 9pt; }
+
+            /* Print-specific colors and visuals */
+            h1, h2, h3, p, strong { color: #000 !important; }
+            .icon { display: none; }
+            .stats-bar { background-color: #F8F8F8 !important; border: 1px solid #DDD !important; }
+            .takeaway { background-color: #F8F8F8 !important; border-left: 3px solid #AAA !important; color: #333 !important; }
+            .sidebar-card { background-color: #F8F8F8 !important; border: 1px solid #DDD !important; }
+            .tag { background-color: #EEE !important; color: #333 !important; border: 1px solid #DDD; }
+            .stat-value { color: #000 !important; }
+            .stat-arrow { color: #AAA !important; }
+
+            /* --- New Print Styles for Script --- */
+            #script-header {
+                page-break-before: always;
+                margin-top: 0.2in;
+            }
+            #script-header h2 {
+                font-size: 15pt; 
+                margin-bottom: 0.1in;
+            }
+            .user-script {
+                background-color: #F8F8F8 !important; 
+                border: 1px solid #DDD !important;
+                padding: 0.2in;
+            }
+            .user-script p {
+                font-size: 10.5pt; 
+                line-height: 1.45; 
+                margin-bottom: 0.1in;
+                color: #000 !important;
+            }
+            .user-script p strong {
+                color: #000 !important;
+            }
+            /* New print style for agent */
+            .user-script p.agent {
+                color: #555 !important;
+                font-style: italic;
+                margin-bottom: 0.05in;
+            }
+            .user-script p.agent strong {
+                color: #222 !important;
+                font-style: normal;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+        Inline SVGs for icons. This is better than external files.
+        Icons from https://lucide.dev/
+    -->
+    <svg width="0" height="0" style="display:none;">
+      <symbol id="icon-problem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></symbol>
+      <symbol id="icon-solution" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.09 14c.08-.5.14-1.02.14-1.57 0-4.22-3.2-9.43-9.43-9.43S.66 8.21.66 12.43c0 .55.06 1.07.14 1.57L0 16.5l4.5 4.5 1.57-.14c.5.08 1.02.14 1.57.14 4.22 0 9.43-3.2 9.43-9.43s-8.21-.66-12.43-.66c-.55 0-1.07.06-1.57.14L4.5 0 0 4.5l.14 1.57Z"></path></symbol>
+      <symbol id="icon-challenge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7 18 7-18 7 18"></path></symbol>
+      <symbol id="icon-accomplish" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M8 12v-3c0-.94.7-1.7 1.6-1.85C11.17 6.95 12.83 6.95 14.4 7.15c.9.15 1.6.9 1.6 1.85v3"></path><path d="M12 2v2"></path><path d="M12 12v2.66"></path></symbol>
+      <symbol id="icon-learn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></symbol>
+      <symbol id="icon-next" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></symbol>
+      <symbol id="icon-tech" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></symbol>
+      <symbol id="icon-access" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"></path></symbol>
+      <symbol id="icon-built" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></symbol>
+      
+      <!-- NEW ICONS -->
+      <symbol id="icon-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></symbol>
+      <symbol id="icon-linkedin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></symbol>
+      <symbol id="icon-twitter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></symbol>
+      
+      <symbol id="icon-frontend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></symbol>
+      <symbol id="icon-backend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10"></path><path d="M12 12H4v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4z"></path><path d="M20 12h-8v8a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-8z"></path><path d="M12 12v8"></path><path d="M12 12V7"></path></symbol>
+      <symbol id="icon-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 12a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1 5 0Z"></path><path d="M12 12v-2"></path><path d="m4.9 4.9 1.4 1.4"></path><path d="M12 2v2"></path><path d="m19.1 4.9-1.4 1.4"></path><path d="M12 12v2"></path><path d="m4.9 19.1 1.4-1.4"></path><path d="M12 22v-2"></path><path d="m19.1 19.1-1.4-1.4"></path><path d="M2 12h2"></path><path d="M22 12h-2"></path></Signature>
+      <symbol id="icon-cloud-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3M1 1l22 22"></path></symbol>
+      <symbol id="icon-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></symbol>
+    </svg>
+
+    <main class="page-container">
+    
+        <!-- ====== HEADER ====== -->
+        <header class="brief-header">
+            <h1>Foligo</h1>
+            <h2 class="subtitle">Your Conversational Portfolio Assistant</h2>
+            <p class="summary">Foligo is an AI-powered platform that generates polished portfolio content from a simple verbal description of your projects. Go from idea to a live portfolio piece in minutes, just by talking.</p>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-value">1</span>
+                    <span>Conversation</span>
+                </div>
+                <span class="stat-item stat-arrow">→</span>
+                <div class="stat-item">
+                    <span class="stat-value">3</span>
+                    <span>Platforms</span>
+                </div>
+                <span class="stat-item stat-arrow">→</span>
+                <div class="stat-item">
+                    <span class="stat-value">&lt; 5</span>
+                    <span>Minutes</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ====== NARRATIVE BLOCKS ====== -->
+        <div class="section-block" id="problem">
+            <h2 id="brief">
+                <svg class="icon"><use href="#icon-problem"></use></svg>
+                The Problem
+            </h2>
+            <p>Students and professionals often lack the time to write detailed project descriptions for their portfolios. This friction results in outdated websites and missed opportunities. There’s no current solution for productive, on-the-go content creation, meaning valuable experiences are often poorly documented.</p>
+            <p class="takeaway"><strong>Takeaway:</strong> Professionals lose opportunities because documenting projects is time-consuming and difficult to do on the go.</p>
+        </div>
+        
+        <div class="section-block" id="solution">
+            <h2>
+                <svg class="icon"><use href="#icon-solution"></use></svg>
+                The Solution
+            </h2>
+            <p>Foligo turns dead time, like walking between classes, into productive portfolio-building sessions. A user starts a conversation with our AI assistant, which asks intelligent, clarifying questions. From that conversation, Foligo instantly generates a detailed portfolio write-up, a LinkedIn post, and a concise update for X (formerly Twitter).</p>
+            <p class="takeaway"><strong>Takeaway:</strong> Foligo turns "dead time" into productive sessions, generating three distinct content types from one conversation.</p>
+        </div>
+        
+        <div class="section-block" id="challenge">
+            <h2>
+                <svg class="icon"><use href="#icon-challenge"></use></svg>
+                Challenges and Solutions
+            </h2>
+            <p>Developing a multi-turn conversational AI that maintains context was a major challenge, requiring careful prompt engineering for the Gemini API. We needed the agent to ask intelligent, clarifying questions and remember previous answers to build a coherent project summary.</p>
+            <p>Another significant hurdle was real-time voice. We pivoted to the <strong>ElevenLabs API</strong> to handle low-latency speech-to-text and text-to-speech, which was critical for a natural conversational feel.</p>
+            <p class="takeaway"><strong>Takeaway:</strong> We overcame conversational context challenges with prompt engineering and pivoted to the ElevenLabs API for real-time voice.</p>
+        </div>
+        
+        <div class="section-block" id="accomplish">
+            <h2>
+                <svg class="icon"><use href="#icon-accomplish"></use></svg>
+                Accomplishments
+            </h2>
+            <p>We are proud of creating a functional, end-to-end application that solves a real-world problem. Successfully integrating multiple complex APIs (Gemini for intelligence, ElevenLabs for voice) into a single, seamless user experience is a major accomplishment.</p>
+            <div class="accomplishment-visual">
+                <span class="accomplishment-item"><svg class="icon icon-sm"><use href="#icon-doc"></use></svg>Portfolio Post</span>
+                <span class="accomplishment-item"><svg class="icon icon-sm"><use href="#icon-linkedin"></use></svg>LinkedIn Post</span>
+                <span class="accomplishment-item"><svg class="icon icon-sm"><use href="#icon-twitter"></use></svg>X (Twitter) Post</span>
+            </div>
+            <p class="takeaway"><strong>Takeaway:</strong> We successfully integrated multiple complex APIs into a seamless, end-to-end application that delivers three distinct content types.</p>
+        </div>
+        
+        <div class="section-block" id="learn">
+            <h2>
+                <svg class="icon"><use href="#icon-learn"></use></svg>
+                What We Learned
+            </h2>
+            <p>We learned the nuances of prompt engineering for LLMs to control tone, structure, and detail. Our team also gained valuable experience with the practical challenges of implementing real-time voice AI and building a robust RESTful API to support a complex, stateful workflow.</p>
+            <p class="takeaway"><strong>Takeaway:</strong> We gained practical experience in prompt engineering for LLMs and building robust REST APIs for voice AI.</p>
+        </div>
+        
+        <div class="section-block" id="next">
+            <h2>
+                <svg class="icon"><use href="#icon-next"></use></svg>
+                What's Next for Foligo
+            </h2>
+            <p>We plan to add AI-powered image selection that analyzes a project URL to find relevant images. We also envision an interview prep tool that leverages a user's project data to act as a personalized prep assistant for specific job interviews.</p>
+            <p class="takeaway"><strong>Takeaway:</strong> Future plans include AI-powered image selection and a personalized interview preparation tool.</p>
+        </div>
+
+        <!-- ====== SCRIPT BLOCK ====== -->
+        <div class="section-block" id="script-header">
+            <h2 id="script">
+                <svg class="icon"><use href="#icon-solution"></use></svg>
+                Demo Script (User Lines)
+            </h2>
+        </div>
+        <div class="section-block" id="script-content">
+            <div class="user-script">
+                <p class="agent">
+                    <strong>Foligo Agent:</strong>
+                    Great! Just start by telling me what you built.
+                </p>
+                <p>
+                    <strong>Aiden (User):</strong>
+                    I'd like to add our hackPSU project. We called it 'Foligo'. It’s a content management system designed to help students and professionals quickly create portfolio content. The main idea is that they can just talk to an AI assistant, and it generates the project description for them from that conversation.
+                </p>
+                <p class="agent">
+                    <strong>Foligo Agent:</strong>
+                    That sounds interesting. What was your specific role on the team?
+                </p>
+                <p>
+                    <strong>Aiden (User):</strong>
+                    I was the lead backend engineer. I was responsible for designing the overall system architecture, setting up the server, and managing all the API integrations.
+                </p>
+                <p class="agent">
+                    <strong>Foligo Agent:</strong>
+                    Got it. And what key technologies did you use to build the backend?
+                </p>
+                <p>
+                    <strong>Aiden (User):</strong>
+                    We built the backend on Node.js with an Express.js server. For the AI, we used the Google Gemini API to handle the conversational logic and content generation. Then, for the real-time voice, we integrated the Eleven Labs API to manage the speech-to-text and text-to-speech.
+                </p>
+                <p class="agent">
+                    <strong>Foligo Agent:</strong>
+                    Excellent. How did the project turn out? What was the final outcome?
+                </p>
+                <p>
+                    <strong>Aiden (User):</strong>
+                    It was a huge success! We ended up winning first place at the hackathon. We got a lot of positive feedback, especially on how seamless the Eleven Labs voice integration felt. People were impressed that they could just talk naturally and get a great result.
+                </VStack>
+                <p class="agent">
+                    <strong>Foligo Agent:</strong>
+                    That's a fantastic result. Is there any other important information to add?
+                </p>
+                 <p>
+                    <strong>Aiden (User):</strong>
+                    No, that covers all the main points. I think that's a perfect summary.
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== SIDEBAR BLOCKS ====== -->
+        <div class="sidebar-card" id="tech">
+            <h3>
+                <svg class="icon"><use href="#icon-tech"></use></svg>
+                Our Technology
+            </h3>
+            <div class="tech-item-visual">
+                <svg class="icon"><use href="#icon-frontend"></use></svg>
+                <div>
+                    <strong>Frontend</strong>
+                    Next.js, React, Tailwind CSS
+                </div>
+            </div>
+            <div class="tech-item-visual">
+                <svg class="icon"><use href="#icon-backend"></use></svg>
+                <div>
+                    <strong>Backend</strong>
+                    Node.js, Express.js
+                </div>
+            </div>
+            <div class="tech-item-visual">
+                <svg class="icon"><use href="#icon-db"></use></svg>
+                <div>
+                    <strong>Database</strong>
+                    PostgreSQL (via RESTful API)
+                </div>
+            </div>
+            <div class="tech-item-visual">
+                <svg class="icon"><use href="#icon-ai"></use></svg>
+                <div>
+                    <strong>AI & Voice</strong>
+                    Google Gemini API, ElevenLabs API
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW INFRASTRUCTURE NOTE CARD -->
+        <div class="sidebar-card note" id="infra-note">
+            <h3>
+                <svg class="icon"><use href="#icon-cloud-off"></use></svg>
+                A Note on Infrastructure
+            </h3>
+            <p>Going into this challenge, we planned to create our own speech-to-speech agent using Vultr, Digital Ocean, and open-source models. <strong>However, we were denied GPU access from both AI companies</strong> and spent hours with support only to be told we could not use any high-compute resources.</p>
+            <p>The judges mentioned they would take this into consideration if we used their services <em>somewhere</em>. Despite the setback, we still hosted our onboarding pages and other portions of the site on their CPU servers (using a LAMP stack) and pivoted to the ElevenLabs API for the voice interaction.</p>
+        </div>
+
+        <div class="sidebar-card" id="access">
+            <h3>
+                <svg class="icon"><use href="#icon-access"></use></svg>
+                Accessibility
+            </h3>
+            <p>Our voice-first design is central to our commitment to accessibility. It provides a powerful alternative to traditional keyboard interfaces, making portfolio creation accessible to users with motor impairments or those who find extensive typing difficult.</p>
+        </div>
+        
+        <div class="sidebar-card" id="built">
+            <h3>
+                <svg class="icon"><use href="#icon-built"></use></svg>
+                Built With
+            </h3>
+            <div class="tags-container">
+                <span class="tag">Next.js</span>
+                <span class="tag">React</span>
+                <span class="tag">Node.js</span>
+                <span class="tag">Express.js</span>
+                <span class="tag db">PostgreSQL</span>
+                <span class="tag api">Google Gemini API</span>
+                <span class="tag api">ElevenLabs API</span>
+                <span class="tag">Tailwind CSS</span>
+                <span class="tag hosting">Vercel</span>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+</html>

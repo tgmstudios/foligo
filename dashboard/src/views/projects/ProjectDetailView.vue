@@ -4,8 +4,8 @@
     <div class="mb-8">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Project Details</h1>
-          <p class="text-gray-600 mt-1">{{ project?.name || 'Loading...' }}</p>
+          <h1 class="text-2xl font-bold text-white">Project Details</h1>
+          <p class="text-gray-400 mt-1">{{ project?.name || 'Loading...' }}</p>
         </div>
         <div class="flex items-center space-x-3">
           <button
@@ -34,9 +34,9 @@
     <!-- Loading State -->
     <div v-if="projectStore.isLoading" class="space-y-6">
       <div class="card p-6 animate-pulse">
-        <div class="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-        <div class="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-        <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
+        <div class="h-3 bg-gray-700 rounded w-1/2 mb-2"></div>
+        <div class="h-3 bg-gray-700 rounded w-3/4"></div>
       </div>
     </div>
 
@@ -45,8 +45,8 @@
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-gray-900">Project not found</h3>
-      <p class="mt-1 text-sm text-gray-500">The project you're looking for doesn't exist or you don't have access to it.</p>
+      <h3 class="mt-2 text-sm font-medium text-white">Project not found</h3>
+      <p class="mt-1 text-sm text-gray-400">The project you're looking for doesn't exist or you don't have access to it.</p>
       <div class="mt-6">
         <router-link to="/projects" class="btn btn-primary">
           Back to Projects
@@ -60,10 +60,10 @@
       <div class="card p-6">
         <div class="flex items-start justify-between">
           <div class="flex-1">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">{{ project.name }}</h2>
-            <p class="text-gray-600 mb-4">{{ project.description || 'No description provided' }}</p>
+            <h2 class="text-xl font-semibold text-white mb-2">{{ project.name }}</h2>
+            <p class="text-gray-400 mb-4">{{ project.description || 'No description provided' }}</p>
             
-            <div class="flex items-center space-x-6 text-sm text-gray-500">
+            <div class="flex items-center space-x-6 text-sm text-gray-400">
               <div class="flex items-center">
                 <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -80,7 +80,7 @@
                 <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                {{ project._count?.content || 0 }} content blocks
+                {{ project._count?.content || 0 }} posts
               </div>
             </div>
           </div>
@@ -94,7 +94,7 @@
             </span>
             <span
               v-else
-              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-800"
             >
               Member
             </span>
@@ -105,7 +105,7 @@
       <!-- Team Members -->
       <div class="card p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-medium text-gray-900">Team Members</h3>
+          <h3 class="text-lg font-medium text-white">Team Members</h3>
           <button
             v-if="canManageMembers"
             @click="showAddMemberModal = true"
@@ -122,17 +122,17 @@
           <div
             v-for="member in project.members"
             :key="member.id"
-            class="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+            class="flex items-center justify-between p-3 border border-gray-600 rounded-lg"
           >
             <div class="flex items-center">
-              <div class="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <span class="text-sm font-medium text-gray-600">
+              <div class="h-8 w-8 bg-gray-700 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium text-gray-400">
                   {{ member.user.name.charAt(0) }}
                 </span>
               </div>
               <div class="ml-3">
-                <p class="text-sm font-medium text-gray-900">{{ member.user.name }}</p>
-                <p class="text-xs text-gray-500">{{ member.user.email }}</p>
+                <p class="text-sm font-medium text-white">{{ member.user.name }}</p>
+                <p class="text-xs text-gray-400">{{ member.user.email }}</p>
               </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -159,7 +159,7 @@
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-4 text-gray-500">
+        <div v-else class="text-center py-4 text-gray-400">
           No team members yet
         </div>
       </div>
@@ -167,7 +167,7 @@
       <!-- Content Overview -->
       <div class="card p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-medium text-gray-900">Content Overview</h3>
+          <h3 class="text-lg font-medium text-white">Content Overview</h3>
           <router-link
             to="/content"
             class="btn btn-primary btn-sm"
@@ -183,31 +183,31 @@
           <div
             v-for="content in project.content"
             :key="content.id"
-            class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+            class="flex items-center justify-between p-4 border border-gray-600 rounded-lg hover:border-gray-600 transition-colors"
           >
             <div class="flex items-center flex-1">
-              <div class="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-                <span class="text-sm font-medium text-gray-600">
+              <div class="h-10 w-10 bg-gray-700 rounded-lg flex items-center justify-center mr-3">
+                <span class="text-sm font-medium text-gray-400">
                   {{ getContentIcon(content.type) }}
                 </span>
               </div>
               <div class="flex-1">
                 <div class="flex items-center space-x-2">
-                  <h4 class="text-sm font-medium text-gray-900">{{ content.title }}</h4>
+                  <h4 class="text-sm font-medium text-white">{{ content.title }}</h4>
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                     :class="{
-                      'bg-green-100 text-green-800': content.isPublished,
-                      'bg-gray-100 text-gray-800': !content.isPublished
+                      'bg-green-500/20 text-green-400 border border-green-700/50': content.isPublished,
+                      'bg-amber-500/20 text-amber-400 border border-amber-700/50': !content.isPublished
                     }"
                   >
                     {{ content.isPublished ? 'Published' : 'Draft' }}
                   </span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="text-xs text-gray-400 mt-1">
                   {{ content.type }} • {{ formatDate(content.updatedAt) }}
                 </p>
-                <p v-if="content.excerpt" class="text-xs text-gray-600 mt-1 line-clamp-2">
+                <p v-if="content.excerpt" class="text-xs text-gray-400 mt-1 line-clamp-2">
                   {{ content.excerpt }}
                 </p>
               </div>
@@ -235,8 +235,8 @@
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No content yet</h3>
-          <p class="mt-1 text-sm text-gray-500">Start by adding your first content block.</p>
+          <h3 class="mt-2 text-sm font-medium text-white">No content yet</h3>
+          <p class="mt-1 text-sm text-gray-400">Start by adding your first post.</p>
           <div class="mt-6">
             <button
               @click="showCreateContentModal = true"
@@ -255,12 +255,12 @@
       class="fixed inset-0 z-50 overflow-y-auto"
     >
       <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showAddMemberModal = false"></div>
+        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="showAddMemberModal = false"></div>
         
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <form @submit.prevent="addMember">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+            <div class="bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 Add Team Member
               </h3>
               
@@ -292,7 +292,7 @@
               </div>
             </div>
             
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <div class="bg-gray-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
                 :disabled="isAddingMember"
@@ -303,7 +303,7 @@
               <button
                 type="button"
                 @click="showAddMemberModal = false"
-                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-base font-medium text-gray-300 hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
               >
                 Cancel
               </button>
@@ -327,19 +327,19 @@
       class="fixed inset-0 z-50 overflow-y-auto"
     >
       <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showSettingsModal = false"></div>
+        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="showSettingsModal = false"></div>
         
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
           <form @submit.prevent="saveProjectSettings">
-            <div class="bg-white px-6 pt-6 pb-4">
+            <div class="bg-gray-800 px-6 pt-6 pb-4">
               <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                <h3 class="text-lg leading-6 font-medium text-white">
                   Project Settings
                 </h3>
                 <button
                   type="button"
                   @click="showSettingsModal = false"
-                  class="text-gray-400 hover:text-gray-500"
+                  class="text-gray-400 hover:text-gray-400"
                 >
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -350,10 +350,10 @@
               <!-- Project Basic Info -->
               <div class="space-y-6">
                 <div>
-                  <h4 class="text-md font-medium text-gray-900 mb-4">Basic Information</h4>
+                  <h4 class="text-md font-medium text-white mb-4">Basic Information</h4>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label for="projectName" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
                         Project Name *
                       </label>
                       <input
@@ -361,33 +361,33 @@
                         v-model="projectForm.name"
                         type="text"
                         required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="Enter project name"
                       />
                     </div>
                     <div>
-                      <label for="projectSubdomain" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="projectSubdomain" class="block text-sm font-medium text-gray-300 mb-1">
                         Subdomain
                       </label>
                       <input
                         id="projectSubdomain"
                         v-model="projectForm.subdomain"
                         type="text"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="my-portfolio"
                       />
-                      <p class="text-xs text-gray-500 mt-1">Will be available at {subdomain}.foligo.tech</p>
+                      <p class="text-xs text-gray-400 mt-1">Will be available at {subdomain}.foligo.tech</p>
                     </div>
                   </div>
                   <div class="mt-4">
-                    <label for="projectDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="projectDescription" class="block text-sm font-medium text-gray-300 mb-1">
                       Description
                     </label>
                     <textarea
                       id="projectDescription"
                       v-model="projectForm.description"
                       rows="3"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Describe your project..."
                     ></textarea>
                   </div>
@@ -395,29 +395,29 @@
 
                 <!-- Site Configuration -->
                 <div>
-                  <h4 class="text-md font-medium text-gray-900 mb-4">Site Configuration</h4>
+                  <h4 class="text-md font-medium text-white mb-4">Site Configuration</h4>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label for="siteName" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="siteName" class="block text-sm font-medium text-gray-300 mb-1">
                         Site Name
                       </label>
                       <input
                         id="siteName"
                         v-model="siteForm.siteName"
                         type="text"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="My Portfolio"
                       />
                     </div>
                     <div>
-                      <label for="siteDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="siteDescription" class="block text-sm font-medium text-gray-300 mb-1">
                         Site Description
                       </label>
                       <input
                         id="siteDescription"
                         v-model="siteForm.siteDescription"
                         type="text"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="A brief description of your site"
                       />
                     </div>
@@ -426,61 +426,61 @@
 
                 <!-- Color Scheme -->
                 <div>
-                  <h4 class="text-md font-medium text-gray-900 mb-4">Color Scheme</h4>
+                  <h4 class="text-md font-medium text-white mb-4">Color Scheme</h4>
                   <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
-                      <label for="primaryColor" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="primaryColor" class="block text-sm font-medium text-gray-300 mb-1">
                         Primary
                       </label>
                       <input
                         id="primaryColor"
                         v-model="siteForm.primaryColor"
                         type="color"
-                        class="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full h-10 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                     <div>
-                      <label for="secondaryColor" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="secondaryColor" class="block text-sm font-medium text-gray-300 mb-1">
                         Secondary
                       </label>
                       <input
                         id="secondaryColor"
                         v-model="siteForm.secondaryColor"
                         type="color"
-                        class="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full h-10 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                     <div>
-                      <label for="accentColor" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="accentColor" class="block text-sm font-medium text-gray-300 mb-1">
                         Accent
                       </label>
                       <input
                         id="accentColor"
                         v-model="siteForm.accentColor"
                         type="color"
-                        class="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full h-10 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                     <div>
-                      <label for="backgroundColor" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="backgroundColor" class="block text-sm font-medium text-gray-300 mb-1">
                         Background
                       </label>
                       <input
                         id="backgroundColor"
                         v-model="siteForm.backgroundColor"
                         type="color"
-                        class="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full h-10 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                     <div>
-                      <label for="textColor" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="textColor" class="block text-sm font-medium text-gray-300 mb-1">
                         Text
                       </label>
                       <input
                         id="textColor"
                         v-model="siteForm.textColor"
                         type="color"
-                        class="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full h-10 border border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                   </div>
@@ -488,16 +488,16 @@
 
                 <!-- Layout Settings -->
                 <div>
-                  <h4 class="text-md font-medium text-gray-900 mb-4">Layout Settings</h4>
+                  <h4 class="text-md font-medium text-white mb-4">Layout Settings</h4>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label for="indexLayout" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="indexLayout" class="block text-sm font-medium text-gray-300 mb-1">
                         Index Layout
                       </label>
                       <select
                         id="indexLayout"
                         v-model="siteForm.indexLayout"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       >
                         <option value="grid">Grid</option>
                         <option value="list">List</option>
@@ -505,13 +505,13 @@
                       </select>
                     </div>
                     <div>
-                      <label for="archiveLayout" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="archiveLayout" class="block text-sm font-medium text-gray-300 mb-1">
                         Archive Layout
                       </label>
                       <select
                         id="archiveLayout"
                         v-model="siteForm.archiveLayout"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       >
                         <option value="grid">Grid</option>
                         <option value="list">List</option>
@@ -519,13 +519,13 @@
                       </select>
                     </div>
                     <div>
-                      <label for="singleLayout" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="singleLayout" class="block text-sm font-medium text-gray-300 mb-1">
                         Single Layout
                       </label>
                       <select
                         id="singleLayout"
                         v-model="siteForm.singleLayout"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       >
                         <option value="standard">Standard</option>
                         <option value="wide">Wide</option>
@@ -537,29 +537,29 @@
 
                 <!-- SEO Settings -->
                 <div>
-                  <h4 class="text-md font-medium text-gray-900 mb-4">SEO Settings</h4>
+                  <h4 class="text-md font-medium text-white mb-4">SEO Settings</h4>
                   <div class="space-y-4">
                     <div>
-                      <label for="metaTitle" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="metaTitle" class="block text-sm font-medium text-gray-300 mb-1">
                         Meta Title
                       </label>
                       <input
                         id="metaTitle"
                         v-model="siteForm.metaTitle"
                         type="text"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="Page title for search engines"
                       />
                     </div>
                     <div>
-                      <label for="metaDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label for="metaDescription" class="block text-sm font-medium text-gray-300 mb-1">
                         Meta Description
                       </label>
                       <textarea
                         id="metaDescription"
                         v-model="siteForm.metaDescription"
                         rows="2"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="Description for search engines"
                       ></textarea>
                     </div>
@@ -567,19 +567,19 @@
                 </div>
 
                 <!-- Publish Status -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
                   <div>
-                    <h5 class="text-sm font-medium text-gray-900">Publish Status</h5>
-                    <p class="text-xs text-gray-500">Make your site publicly accessible</p>
+                    <h5 class="text-sm font-medium text-white">Publish Status</h5>
+                    <p class="text-xs text-gray-400">Make your site publicly accessible</p>
                   </div>
                   <div class="flex items-center">
                     <input
                       id="isPublished"
                       v-model="projectForm.isPublished"
                       type="checkbox"
-                      class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-600 rounded"
                     />
-                    <label for="isPublished" class="ml-2 text-sm text-gray-700">
+                    <label for="isPublished" class="ml-2 text-sm text-gray-300">
                       Publish site
                     </label>
                   </div>
@@ -587,7 +587,7 @@
               </div>
             </div>
             
-            <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse">
+            <div class="bg-gray-800 px-6 py-3 sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
                 :disabled="isSaving"
@@ -598,7 +598,7 @@
               <button
                 type="button"
                 @click="showSettingsModal = false"
-                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-base font-medium text-gray-300 hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
               >
                 Cancel
               </button>

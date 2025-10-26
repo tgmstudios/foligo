@@ -12,8 +12,10 @@ const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
 const projectAccessRoutes = require('./routes/projectAccess');
 const contentRoutes = require('./routes/content');
+const publicContentRoutes = require('./routes/public-content');
 const aiRoutes = require('./routes/ai');
 const aiContentRoutes = require('./routes/ai-content');
+const voiceWebhookRoutes = require('./routes/voice-webhook');
 const uploadRoutes = require('./routes/upload');
 const siteRoutes = require('./routes/site');
 
@@ -108,23 +110,17 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Custom middleware to exclude site routes from authentication
-const authenticateTokenExceptSite = (req, res, next) => {
-  // Skip authentication for site routes
-  if (req.path.startsWith('/site')) {
-    return next();
-  }
-  // Apply authentication for all other routes
-  return authenticateToken(req, res, next);
-};
-
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/site', siteRoutes); // Public site routes (no auth required)
+app.use('/api/ai/voice-webhook', voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
+app.use('/api', publicContentRoutes); // Public content GET endpoint (no auth required)
+
+// All other routes require authentication
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
-app.use('/api', authenticateTokenExceptSite, contentRoutes); // Use custom middleware
+app.use('/api', authenticateToken, contentRoutes); // Protected content routes
 app.use('/api/ai', authenticateToken, aiRoutes);
 app.use('/api/ai', authenticateToken, aiContentRoutes);
 app.use('/api/upload', authenticateToken, uploadRoutes);
