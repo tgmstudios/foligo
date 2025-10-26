@@ -8,13 +8,7 @@
 import SwiftUI
 import Markdown
 import Markdownosaur
-
-import SwiftUI
 import Combine
-import Foundation
-import Markdown // If using Apple's Markdown package
-// Import Markdownosaur per your project
-// import Markdownosaur
 
 // ---------- Models ----------
 enum CMSContentType: String, Codable, CaseIterable {
@@ -43,8 +37,6 @@ struct CMSContent: Codable, Identifiable, Equatable {
 
 // ---------- API Layer ----------
 private extension FoligoAPI {
-//    static let baseURL = URL(string: "https://api.foligo.tech")!
-
     static func getProjectContent(projectId: String, authToken: String) async throws -> [CMSContent] {
         var request = URLRequest(url: baseURL.appendingPathComponent("/api/projects/\(projectId)/content"))
         request.httpMethod = "GET"
@@ -69,7 +61,6 @@ private extension FoligoAPI {
         request.httpBody = try encoder.encode(payload)
 
         let (data, resp) = try await URLSession.shared.data(for: request)
-        print(String(decoding: data, as: UTF8.self))
         
         try validate(resp)
         let decoder = JSONDecoder()
@@ -77,8 +68,8 @@ private extension FoligoAPI {
         return try decoder.decode(CMSContent.self, from: data)
     }
 
-    static func updateContentFields(contentId: String, authToken: String, payload: UpdateContentFieldsPayload) async throws -> CMSContent {
-        var request = URLRequest(url: baseURL.appendingPathComponent("/api/content/\(contentId)/fields"))
+    static func updateContentFields(contentId: UUID, authToken: String, payload: UpdateContentFieldsPayload) async throws -> CMSContent {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/content/\(contentId.uuidString.lowercased())/fields"))
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -88,14 +79,15 @@ private extension FoligoAPI {
         request.httpBody = try encoder.encode(payload)
 
         let (data, resp) = try await URLSession.shared.data(for: request)
+        print(String(decoding: data, as: UTF8.self))
         try validate(resp)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(CMSContent.self, from: data)
     }
 
-    static func reorderContent(contentId: String, authToken: String, newOrder: Int) async throws -> CMSContent {
-        var request = URLRequest(url: baseURL.appendingPathComponent("/api/content/\(contentId)/reorder"))
+    static func reorderContent(contentId: UUID, authToken: String, newOrder: Int) async throws -> CMSContent {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/content/\(contentId.uuidString.lowercased())/reorder"))
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -103,14 +95,15 @@ private extension FoligoAPI {
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
 
         let (data, resp) = try await URLSession.shared.data(for: request)
+        print(String(decoding: data, as: UTF8.self))
         try validate(resp)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(CMSContent.self, from: data)
     }
 
-    static func deleteContent(contentId: String, authToken: String) async throws {
-        var request = URLRequest(url: baseURL.appendingPathComponent("/api/content/\(contentId)"))
+    static func deleteContent(contentId: UUID, authToken: String) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/content/\(contentId.uuidString.lowercased())"))
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         let (_, resp) = try await URLSession.shared.data(for: request)
@@ -193,7 +186,7 @@ final class ProjectContentViewModel: ObservableObject {
         guard let idx = content.firstIndex(where: { $0.id == id }) else { return false }
         let old = content[idx]
         do {
-            let updated = try await FoligoAPI.updateContentFields(contentId: id.uuidString, authToken: token, payload: payload)
+            let updated = try await FoligoAPI.updateContentFields(contentId: id, authToken: token, payload: payload)
             withAnimation(.easeInOut) {
                 content[idx] = updated
             }
@@ -210,7 +203,7 @@ final class ProjectContentViewModel: ObservableObject {
         guard let idx = content.firstIndex(where: { $0.id == id }) else { return false }
         let removed = content.remove(at: idx)
         do {
-            try await FoligoAPI.deleteContent(contentId: removed.id.uuidString, authToken: token)
+            try await FoligoAPI.deleteContent(contentId: removed.id, authToken: token)
             return true
         } catch {
             // revert
@@ -233,7 +226,7 @@ final class ProjectContentViewModel: ObservableObject {
         // optimistic: push each item one-by-one (server expects one item's reorder; backend defined /content/{id}/reorder)
         for (index, item) in content.enumerated() {
             do {
-                _ = try await FoligoAPI.reorderContent(contentId: item.id.uuidString, authToken: token, newOrder: index)
+                _ = try await FoligoAPI.reorderContent(contentId: item.id, authToken: token, newOrder: index)
                 // optionally update local item order from server response
             } catch {
                 // handle failure gracefully: set error and consider reloading full list
@@ -467,6 +460,7 @@ struct ContentEditorSheet: View {
                     TextField("Title", text: $title)
                     TextField("Slug (optional)", text: $slug)
                         .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
                     TextField("Excerpt", text: $excerpt)
                 }
 
@@ -546,7 +540,7 @@ struct ContentEditorSheet: View {
         let createPayload = CreateContentPayload(
             contentType: contentType.rawValue,
             title: title,
-            slug: slug.isEmpty ? nil : slug,
+            slug: slug.isEmpty ? nil : slug.lowercased(),
             excerpt: excerpt,
             content: markdown,
             metadata: metadata,
@@ -569,7 +563,7 @@ struct ContentEditorSheet: View {
             )
             do {
                 _ = try await FoligoAPI.updateContentFields(
-                    contentId: existing.id.uuidString,
+                    contentId: existing.id,
                     authToken: token,
                     payload: updatePayload
                 )
