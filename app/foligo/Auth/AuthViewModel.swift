@@ -56,6 +56,10 @@ class AuthViewModel {
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     
+    init() {
+        decoder.dateDecodingStrategy = .iso8601
+    }
+    
     private func isValidEmail() throws -> Bool {
         let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         
