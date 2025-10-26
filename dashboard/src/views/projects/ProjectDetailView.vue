@@ -837,6 +837,9 @@ const saveProjectSettings = async () => {
   try {
     isSaving.value = true
 
+    // Save the publish status before making any changes
+    const publishStatus = projectForm.isPublished
+
     // Update project basic info
     await projectStore.updateProject(projectId, {
       name: projectForm.name,
@@ -872,13 +875,14 @@ const saveProjectSettings = async () => {
       layoutConfig: {} // Add empty layoutConfig object
     })
 
-    // Update publish status
-    await projectStore.publishProject(projectId, projectForm.isPublished)
+    // Update publish status last, after all other settings
+    await projectStore.publishProject(projectId, publishStatus)
 
+    // Close modal before re-fetching to prevent form from being overwritten
+    showSettingsModal.value = false
+    
     // Re-fetch project to get updated data
     await projectStore.fetchProject(projectId)
-
-    showSettingsModal.value = false
   } catch (error) {
     console.error('Failed to save project settings:', error)
   } finally {
@@ -932,8 +936,9 @@ onMounted(async () => {
 })
 
 // Watch for changes to project data and re-initialize forms
+// Only update forms if modal is closed (to avoid overwriting user input)
 watch(() => project.value?.siteConfig, () => {
-  if (project.value?.siteConfig) {
+  if (project.value?.siteConfig && !showSettingsModal.value) {
     initializeForms()
   }
 }, { deep: true })

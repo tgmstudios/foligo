@@ -120,11 +120,10 @@ router.beforeEach(async (to, from, next) => {
   }
   
   // Check if user needs onboarding (but not if already on onboarding page)
-  // DISABLED: Onboarding redirect disabled
-  // if (to.meta.requiresOnboarding && authStore.user && !authStore.user.hasCompletedOnboarding && to.name !== 'onboarding') {
-  //   next('/onboarding')
-  //   return
-  // }
+  if (to.meta.requiresOnboarding && authStore.user && !authStore.user.hasCompletedOnboarding && to.name !== 'onboarding') {
+    next('/onboarding')
+    return
+  }
   
   // If user has completed onboarding and tries to access onboarding page, redirect to dashboard
   if (to.name === 'onboarding' && authStore.user && authStore.user.hasCompletedOnboarding) {
