@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-private enum FoligoAPI {
+enum FoligoAPI {
     static let baseURL = URL(string: "https://api.foligo.tech").unsafelyUnwrapped
     
-    static func getProjects(authToken: String) async -> Projects? {
+    fileprivate static func getProjects(authToken: String) async -> Projects? {
         var request = URLRequest(url: baseURL.appendingPathComponent("/api/users/me/projects"))
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -20,10 +20,6 @@ private enum FoligoAPI {
         }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        
-        if let str = String(data: data, encoding: .utf8) {
-            print("Successfully decoded: \(str)")
-        }
         
         do {
             let projects = try decoder.decode(Projects.self, from: data)
@@ -41,7 +37,7 @@ struct Projects: Codable {
 }
 
 struct Project: Codable, Identifiable, Hashable {
-    let id: UUID
+    let id: String
     let name: String
     let description: String
     let createdAt: Date
@@ -69,7 +65,7 @@ struct ContentView: View {
                     .preferredColorScheme(.dark)
             }
             else if let projects {
-                ProjectsDashboard(projects: projects)
+                ProjectsDashboard(projects: projects, userToken: $userToken)
             }
             else {
                 OnboardingView(userToken: $userToken)
