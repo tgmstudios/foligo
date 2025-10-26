@@ -137,12 +137,8 @@ const handleSubmit = async () => {
     })
 
     if (result.success) {
-      // Redirect to dashboard or onboarding
-      if (authStore.user?.hasCompletedOnboarding) {
-        router.push('/')
-      } else {
-        router.push('/onboarding')
-      }
+      // Always redirect to dashboard (onboarding disabled)
+      router.push('/')
     } else {
       error.value = result.error || 'Login failed'
     }

@@ -240,12 +240,24 @@
       </div>
     </div>
   </div>
+
+  <!-- Gemini AI Chatbot -->
+  <GeminiChatbot
+    v-if="showAIChatbot"
+    :is-open="showAIChatbot"
+    :content-type="contentType"
+    :initial-info="form"
+    :project-id="form.projectId || project?.id"
+    @close="showAIChatbot = false"
+    @content-generated="handleAIContentGenerated"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import type { Project } from '@/stores/projects'
+import GeminiChatbot from './GeminiChatbot.vue'
 
 interface Props {
   isOpen: boolean
@@ -263,6 +275,7 @@ const emit = defineEmits<Emits>()
 const projectStore = useProjectStore()
 
 const isLoading = ref(false)
+const showAIChatbot = ref(false)
 const contentType = ref<'PROJECT' | 'BLOG' | 'EXPERIENCE'>('BLOG')
 
 const projects = computed(() => projectStore.projects)
@@ -308,6 +321,34 @@ const form = reactive({
 
 const closeModal = () => {
   emit('close')
+}
+
+const openAIChatbot = () => {
+  console.log('Opening AI chatbot...', { contentType: contentType.value, form: form })
+  showAIChatbot.value = true
+}
+
+const handleAIContentGenerated = (content: any) => {
+  // Update form with AI-generated content
+  if (content.content) {
+    form.content = content.content
+  }
+  if (content.title) {
+    form.title = content.title
+  }
+  if (content.excerpt) {
+    form.excerpt = content.excerpt
+  }
+  if (content.metadata) {
+    form.metadata = { ...form.metadata, ...content.metadata }
+  }
+  
+  // Close AI chatbot
+  showAIChatbot.value = false
+  
+  // Show success message or auto-submit
+  emit('created', content)
+  closeModal()
 }
 
 const handleSubmit = async () => {

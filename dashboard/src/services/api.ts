@@ -13,47 +13,67 @@ const api = axios.create({
   },
 })
 
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
+// Create axios instance for AI operations with longer timeout
+const aiApi = axios.create({
+  baseURL: 'https://api.foligo.tech/api',
+  timeout: 120000, // 2 minutes for AI content generation
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
   },
-  (error) => {
-    return Promise.reject(error)
+})
+
+// Request interceptor
+const addAuthToken = (config) => {
+  const token = localStorage.getItem('auth_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
-)
+  return config
+}
+
+api.interceptors.request.use(addAuthToken, (error) => {
+  return Promise.reject(error)
+})
+
+// Apply same interceptor to AI API
+aiApi.interceptors.request.use(addAuthToken, (error) => {
+  return Promise.reject(error)
+})
 
 // Response interceptor
-api.interceptors.response.use(
-  (response) => {
-    return response
-  },
-  (error) => {
-    // Handle common errors
-    if (error.response?.status === 401) {
-      // Unauthorized - clear auth and redirect to login
-      console.log('401 Unauthorized - clearing auth state')
-      localStorage.removeItem('auth_token')
-      // Use router to redirect instead of window.location
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
-    } else if (error.response?.status === 403) {
-      toast.error('Access denied')
-    } else if (error.response?.status === 500) {
-      toast.error('Server error. Please try again later.')
-    } else if (error.response?.status === 0) {
-      // Network error - API might be down
-      toast.error('Unable to connect to server. Please check your connection.')
+const handleResponseError = (error) => {
+  // Handle common errors
+  if (error.response?.status === 401) {
+    // Unauthorized - clear auth and redirect to login
+    console.log('401 Unauthorized - clearing auth state')
+    localStorage.removeItem('auth_token')
+    // Use router to redirect instead of window.location
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login'
     }
-    
-    return Promise.reject(error)
+  } else if (error.response?.status === 403) {
+    toast.error('Access denied')
+  } else if (error.response?.status === 500) {
+    toast.error('Server error. Please try again later.')
+  } else if (error.response?.status === 0) {
+    // Network error - API might be down
+    toast.error('Unable to connect to server. Please check your connection.')
   }
+  
+  return Promise.reject(error)
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  handleResponseError
 )
 
+// Apply same interceptor to AI API
+aiApi.interceptors.response.use(
+  (response) => response,
+  handleResponseError
+)
+
+export { aiApi }
 export default api

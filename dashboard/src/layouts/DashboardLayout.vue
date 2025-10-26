@@ -123,12 +123,16 @@
           </div>
           
           <div class="flex items-center space-x-4">
-            <!-- Notifications -->
-            <button class="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 relative">
+            <!-- AI Content Creator -->
+            <button 
+              @click="handleCreateContent"
+              :disabled="!selectedProjectId"
+              class="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed relative"
+              title="Create content with AI"
+            >
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4 19h5l-5-5v5zM12 2l-2 2h4l-2-2z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              <span class="absolute top-1 right-1 h-2 w-2 bg-danger-500 rounded-full"></span>
             </button>
             
             <!-- Search -->
@@ -155,6 +159,14 @@
         <router-view />
       </main>
     </div>
+
+    <!-- AI Content Creator Modal -->
+    <AIContentCreatorModal
+      ref="aiModalRef"
+      mode="create"
+      @content-generated="handleContentGenerated"
+      :key="`ai-modal-${selectedProjectId}`"
+    />
   </div>
 </template>
 
@@ -163,6 +175,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
+import AIContentCreatorModal from '@/components/AIContentCreatorModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +246,40 @@ const pageTitle = computed(() => {
 const handleLogout = async () => {
   await authStore.logout()
   router.push('/login')
+}
+
+const aiModalRef = ref<InstanceType<typeof AIContentCreatorModal> | null>(null)
+
+const handleCreateContent = () => {
+  if (!selectedProjectId.value) {
+    alert('Please select a project first')
+    return
+  }
+  
+  // Open AI content creation modal
+  if (aiModalRef.value) {
+    aiModalRef.value.open()
+  }
+}
+
+const handleContentGenerated = async (data: { content: string; title?: string; metadata: any }) => {
+  if (!selectedProjectId.value) return
+  
+  // Navigate to content editor or create a new content item
+  try {
+    const newContent = await projectStore.createContent(selectedProjectId.value, {
+      contentType: data.metadata.contentType || 'BLOG',
+      title: data.title || 'AI Generated Content',
+      content: data.content,
+      isPublished: false
+    })
+    
+    // Navigate to the content editor
+    router.push(`/projects/${selectedProjectId.value}/content/${newContent.id}/edit`)
+  } catch (error) {
+    console.error('Failed to create content:', error)
+    alert('Failed to create content. Please try again.')
+  }
 }
 
 // Close sidebar on route change (mobile)

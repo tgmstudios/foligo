@@ -62,12 +62,12 @@ const router = createRouter({
           component: ProjectDetailView,
           props: true
         },
-            {
-              path: 'projects/:projectId/content/:id/edit',
-              name: 'content-editor',
-              component: ContentEditorView,
-              props: true
-            },
+        {
+          path: 'projects/:projectId/content/:id/edit',
+          name: 'content-editor',
+          component: ContentEditorView,
+          props: true
+        },
         {
           path: 'users',
           name: 'users',
@@ -120,10 +120,11 @@ router.beforeEach(async (to, from, next) => {
   }
   
   // Check if user needs onboarding (but not if already on onboarding page)
-  if (to.meta.requiresOnboarding && authStore.user && !authStore.user.hasCompletedOnboarding && to.name !== 'onboarding') {
-    next('/onboarding')
-    return
-  }
+  // DISABLED: Onboarding redirect disabled
+  // if (to.meta.requiresOnboarding && authStore.user && !authStore.user.hasCompletedOnboarding && to.name !== 'onboarding') {
+  //   next('/onboarding')
+  //   return
+  // }
   
   // If user has completed onboarding and tries to access onboarding page, redirect to dashboard
   if (to.name === 'onboarding' && authStore.user && authStore.user.hasCompletedOnboarding) {

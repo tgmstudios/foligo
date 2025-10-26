@@ -185,13 +185,13 @@
               Create New Project
             </button>
             <button
-              @click="showImportModal = true"
+              @click="showCreateContentModal = true"
               class="w-full btn btn-outline"
             >
               <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              Import Content
+              Create Content
             </button>
             <router-link to="/analytics" class="w-full btn btn-outline">
               <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,6 +268,15 @@
       @close="showCreateProjectModal = false"
       @created="handleProjectCreated"
     />
+
+    <!-- Create Content Modal -->
+    <CreateContentModal
+      v-if="showCreateContentModal"
+      :is-open="showCreateContentModal"
+      :project="selectedProject"
+      @close="showCreateContentModal = false"
+      @created="handleContentCreated"
+    />
   </div>
 </template>
 
@@ -277,12 +286,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
 import { format } from 'date-fns'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
+import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
 const authStore = useAuthStore()
 const projectStore = useProjectStore()
 
 const showCreateProjectModal = ref(false)
-const showImportModal = ref(false)
+const showCreateContentModal = ref(false)
+const selectedProject = ref(null)
 
 const totalContentBlocks = computed(() => {
   return projectStore.projects.reduce((total, project) => {
@@ -309,6 +320,12 @@ const formatDate = (dateString: string) => {
 const handleProjectCreated = () => {
   showCreateProjectModal.value = false
   // Refresh projects
+  projectStore.fetchProjects()
+}
+
+const handleContentCreated = () => {
+  showCreateContentModal.value = false
+  // Refresh projects to get updated content counts
   projectStore.fetchProjects()
 }
 

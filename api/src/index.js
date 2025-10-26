@@ -13,6 +13,7 @@ const projectRoutes = require('./routes/projects');
 const projectAccessRoutes = require('./routes/projectAccess');
 const contentRoutes = require('./routes/content');
 const aiRoutes = require('./routes/ai');
+const aiContentRoutes = require('./routes/ai-content');
 const uploadRoutes = require('./routes/upload');
 const siteRoutes = require('./routes/site');
 
@@ -40,13 +41,13 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use('/api/', limiter);
+// Rate limiting - DISABLED FOR NOW
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+//   message: 'Too many requests from this IP, please try again later.'
+// });
+// app.use('/api/', limiter);
 
 // Logging
 app.use(morgan('combined'));
@@ -125,6 +126,7 @@ app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
 app.use('/api', authenticateTokenExceptSite, contentRoutes); // Use custom middleware
 app.use('/api/ai', authenticateToken, aiRoutes);
+app.use('/api/ai', authenticateToken, aiContentRoutes);
 app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Error handling middleware

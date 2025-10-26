@@ -182,8 +182,8 @@ const handleSubmit = async () => {
     })
 
     if (result.success) {
-      // Redirect to onboarding
-      router.push('/onboarding')
+      // Always redirect to dashboard (onboarding disabled)
+      router.push('/')
     } else {
       error.value = result.error || 'Registration failed'
     }
