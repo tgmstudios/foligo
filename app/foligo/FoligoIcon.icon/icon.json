@@ -1,0 +1,38 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.40784,0.39608,0.94118,1.00000",
+      "display-p3:0.40784,0.38824,0.93333,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "3241aqu0wfqmh6vimnh.svg",
+          "name" : "3241aqu0wfqmh6vimnh",
+          "position" : {
+            "scale" : 10,
+            "translation-in-points" : [
+              4.082677487531334,
+              16.489428521519322
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "iOS"
+    ]
+  }
+}
