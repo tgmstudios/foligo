@@ -64,7 +64,7 @@ struct ContentView: View {
                 AuthView(userToken: $userToken)
                     .preferredColorScheme(.dark)
             }
-            else if let projects {
+            else if let projects, !projects.ownedProjects.isEmpty {
                 ProjectsDashboard(projects: projects, userToken: $userToken)
             }
             else {

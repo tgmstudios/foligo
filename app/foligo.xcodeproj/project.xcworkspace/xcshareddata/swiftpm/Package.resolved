@@ -1,0 +1,33 @@
+{
+  "originHash" : "bbf34fccc5a2af2660afde543324258f159b9e3a973033269be6056be6130d0c",
+  "pins" : [
+    {
+      "identity" : "markdownosaur",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/christianselig/Markdownosaur",
+      "state" : {
+        "branch" : "main",
+        "revision" : "25c32718674f47dded5d3be5d8d9a40e5ce8058c"
+      }
+    },
+    {
+      "identity" : "swift-cmark",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-cmark.git",
+      "state" : {
+        "branch" : "gfm",
+        "revision" : "924936d0427cb25a61169739a7660230bffa6ea6"
+      }
+    },
+    {
+      "identity" : "swift-markdown",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-markdown.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "0186e808140db5eb5ba9b052e86fbe15b88f7975"
+      }
+    }
+  ],
+  "version" : 3
+}
