@@ -1,0 +1,18 @@
+{
+  "name": "Foligo Dev Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "api",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "root",
+  "overrideCommand": true,
+  "forwardPorts": [9010, 9011, 9012, 9013, 9014, 9015, 9016],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind"
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "postCreateCommand": "ls /workspace && npm install --prefix /workspace/api"
+}
