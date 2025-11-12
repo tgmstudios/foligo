@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: 
+      context: \\wsl.localhost\Ubuntu-24.04\home\tgm\Workspaces\foligo\dashboard
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - \\wsl.localhost\Ubuntu-24.04\home\tgm\Workspaces\foligo\dashboard:/app
+    networks:
+      - app-network
+    ports:
+      - "9010:8080"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
+      - WATCHPACK_POLLING=true
+
+  sites:
+    build: 
+      context: \\wsl.localhost\Ubuntu-24.04\home\tgm\Workspaces\foligo\sites
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - \\wsl.localhost\Ubuntu-24.04\home\tgm\Workspaces\foligo\sites:/app
+    networks:
+      - app-network
+    ports:
+      - "9011:8080"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
+      - WATCHPACK_POLLING=true
+
+  api:
+    build:
+      context: \\wsl.localhost\Ubuntu-24.04\home\tgm\Workspaces\foligo\api
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - \\wsl.localhost\Ubuntu-24.04\home\tgm\Workspaces\foligo\api:/app
+    networks:
+      - app-network
+    ports:
+      - "9012:3000"
+    depends_on:
+      - db
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
+
+  db:
+    image: postgres:17.5
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_DB=foligo
+      - POSTGRES_USER=foligo
+      - POSTGRES_PASSWORD=foligo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin4:
+    image: dpage/pgadmin4
+    networks:
+      - app-network
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=foligo@foligo.com
+      - PGADMIN_DEFAULT_PASSWORD=foligo
+    ports:
+      - "9013:80"
+    depends_on:
+      - db
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - app-network
+    ports:
+      - "9014:6379"
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9015:9000"
+      - "9016:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - app-network
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+        sleep 5;
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb local/foligo;
+        mc anonymous set download local/foligo;
+      "
+    networks:
+      - app-network
+  
+
+volumes:
+  postgres_data:
+  minio_data:
+  redis_data:
+
+networks:
+  app-network:
