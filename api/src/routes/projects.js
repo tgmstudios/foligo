@@ -402,10 +402,7 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
             }
           },
           content: {
-            orderBy: { order: 'asc' },
-            include: {
-              aiAnalysis: true
-            }
+            orderBy: { order: 'asc' }
           },
           siteConfig: true,
           _count: {
@@ -452,10 +449,7 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
               }
             },
             content: {
-              orderBy: { order: 'asc' },
-              include: {
-                aiAnalysis: true
-              }
+              orderBy: { order: 'asc' }
             },
             siteConfig: true,
             _count: {

@@ -23,7 +23,70 @@
       </div>
       
       <nav class="mt-6 px-3">
-        <div class="space-y-1">
+        <!-- Settings Navigation -->
+        <div v-if="isSettingsRoute" class="space-y-1">
+          <button
+            @click="router.push('/')"
+            class="w-full text-left sidebar-item sidebar-item-inactive mb-4"
+          >
+            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </button>
+          <router-link
+            to="/settings"
+            class="sidebar-item"
+            :class="$route.path === '/settings' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+          >
+            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            User Settings
+          </router-link>
+          <router-link
+            v-if="authStore.user?.isAdmin"
+            to="/settings/site"
+            class="sidebar-item"
+            :class="$route.path === '/settings/site' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+          >
+            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Site-wide Settings
+          </router-link>
+          
+          <!-- Admin Section Divider -->
+          <div v-if="authStore.user?.isAdmin" class="my-4 border-t border-gray-700"></div>
+          
+          <!-- Admin Links -->
+          <router-link
+            v-if="authStore.user?.isAdmin"
+            to="/admin"
+            class="sidebar-item"
+            :class="($route.path === '/admin' || ($route.path.startsWith('/admin/') && !$route.path.startsWith('/admin/sso'))) ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+          >
+            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Admin Dashboard
+          </router-link>
+          <router-link
+            v-if="authStore.user?.isAdmin"
+            to="/admin/sso"
+            class="sidebar-item"
+            :class="$route.path.startsWith('/admin/sso') ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+          >
+            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            SSO Providers
+          </router-link>
+        </div>
+
+        <!-- Regular Navigation -->
+        <div v-else class="space-y-1">
           <router-link
             v-for="item in navigation"
             :key="item.name"
@@ -31,18 +94,48 @@
             class="sidebar-item"
             :class="$route.name === item.routeName ? 'sidebar-item-active' : 'sidebar-item-inactive'"
           >
-            <svg v-if="item.icon === 'MediaIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <svg v-else class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-            </svg>
-            {{ item.name }}
-          </router-link>
+              <!-- Dashboard Icon -->
+              <svg v-if="item.icon === 'DashboardIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <!-- Blogs Icon -->
+              <svg v-else-if="item.icon === 'ContentIcon' && item.name === 'Blogs'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <!-- Experience Icon -->
+              <svg v-else-if="item.icon === 'ContentIcon' && item.name === 'Experience'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <!-- Projects Icon -->
+              <svg v-else-if="item.icon === 'ProjectsIcon' && item.name === 'Projects'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <!-- Portfolios Icon -->
+              <svg v-else-if="item.icon === 'ProjectsIcon' && item.name === 'Portfolios'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <!-- Analytics Icon -->
+              <svg v-else-if="item.icon === 'AnalyticsIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <!-- Media Library Icon -->
+              <svg v-else-if="item.icon === 'MediaIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <!-- Admin Icon -->
+              <svg v-else-if="item.icon === 'AdminIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <!-- Default Icon (fallback) -->
+              <svg v-else class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+              </svg>
+              {{ item.name }}
+            </router-link>
         </div>
         
         <!-- Content Creation Section -->
-        <div class="mt-8 pt-6 border-t border-gray-700">
+        <div v-if="!isSettingsRoute" class="mt-8 pt-6 border-t border-gray-700">
           <div class="px-3 mb-3">
             <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Create Content</h3>
           </div>
@@ -52,7 +145,9 @@
               class="sidebar-item"
               :class="$route.name === 'portfolios' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
             >
-              <span class="mr-3 text-lg">🚀</span>
+              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
               <span>New Portfolio</span>
             </router-link>
             <router-link
@@ -60,7 +155,9 @@
               class="sidebar-item"
               :class="$route.name === 'create-content' && $route.params.type === 'blog' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
             >
-              <span class="mr-3 text-lg">📝</span>
+              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
               <span>New Blog Post</span>
             </router-link>
             <router-link
@@ -68,7 +165,9 @@
               class="sidebar-item"
               :class="$route.name === 'create-content' && $route.params.type === 'experience' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
             >
-              <span class="mr-3 text-lg">💼</span>
+              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
               <span>New Experience</span>
             </router-link>
             <router-link
@@ -76,7 +175,9 @@
               class="sidebar-item"
               :class="$route.name === 'create-content' && $route.params.type === 'skill' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
             >
-              <span class="mr-3 text-lg">⚡</span>
+              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
               <span>New Skill</span>
             </router-link>
           </div>
@@ -94,6 +195,7 @@
           <div class="ml-3 flex-1 min-w-0">
             <p class="text-sm font-medium text-white truncate">{{ authStore.user?.name }}</p>
             <p class="text-xs text-gray-400 truncate">{{ authStore.user?.email }}</p>
+            <p v-if="authStore.user?.isAdmin" class="text-xs text-red-400 font-medium">Admin</p>
           </div>
           <div class="ml-2">
             <button
@@ -108,7 +210,23 @@
         </div>
         
         <!-- User Menu Dropdown -->
-        <div v-if="showUserMenu" class="absolute bottom-16 left-4 right-4 bg-gray-700 rounded-md shadow-lg border border-gray-600 py-1">
+        <div v-if="showUserMenu" class="absolute bottom-16 left-4 right-4 bg-gray-700 rounded-md shadow-lg border border-gray-600 py-1 z-50">
+          <router-link
+            v-if="authStore.user?.isAdmin"
+            to="/admin"
+            @click="showUserMenu = false"
+            class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+          >
+            Admin Dashboard
+          </router-link>
+          <router-link
+            to="/settings"
+            @click="showUserMenu = false"
+            class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+          >
+            User Settings
+          </router-link>
+          <div v-if="authStore.user?.isAdmin" class="border-t border-gray-600 my-1"></div>
           <button
             @click="handleLogout"
             class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
@@ -253,56 +371,64 @@ const selectedProjectId = ref('')
 const searchQuery = ref('')
 const searchResults = ref<Array<{id: string, type: string, title: string, subtitle: string, route: string}>>([])
 
-const navigation = [
-  {
-    name: 'Dashboard',
-    href: '/',
-    routeName: 'dashboard',
-    icon: 'DashboardIcon'
-  },
-  {
-    name: 'Blogs',
-    href: '/blogs',
-    routeName: 'blogs',
-    icon: 'ContentIcon'
-  },
-  {
-    name: 'Projects',
-    href: '/projects',
-    routeName: 'projects-content',
-    icon: 'ProjectsIcon'
-  },
-  {
-    name: 'Experience',
-    href: '/experience',
-    routeName: 'experience',
-    icon: 'ContentIcon'
-  },
-  {
-    name: 'Portfolios',
-    href: '/portfolios',
-    routeName: 'portfolios',
-    icon: 'ProjectsIcon'
-  },
-  {
-    name: 'Analytics',
-    href: '/analytics',
-    routeName: 'analytics',
-    icon: 'AnalyticsIcon'
-  },
-  {
-    name: 'Media Library',
-    href: '/media',
-    routeName: 'media-library',
-    icon: 'MediaIcon'
-  }
-]
+const navigation = computed(() => {
+  const items = [
+    {
+      name: 'Dashboard',
+      href: '/',
+      routeName: 'dashboard',
+      icon: 'DashboardIcon'
+    },
+    {
+      name: 'Blogs',
+      href: '/blogs',
+      routeName: 'blogs',
+      icon: 'ContentIcon'
+    },
+    {
+      name: 'Projects',
+      href: '/projects',
+      routeName: 'projects-content',
+      icon: 'ProjectsIcon'
+    },
+    {
+      name: 'Experience',
+      href: '/experience',
+      routeName: 'experience',
+      icon: 'ContentIcon'
+    },
+    {
+      name: 'Portfolios',
+      href: '/portfolios',
+      routeName: 'portfolios',
+      icon: 'ProjectsIcon'
+    },
+    {
+      name: 'Analytics',
+      href: '/analytics',
+      routeName: 'analytics',
+      icon: 'AnalyticsIcon'
+    },
+    {
+      name: 'Media Library',
+      href: '/media',
+      routeName: 'media-library',
+      icon: 'MediaIcon'
+    }
+  ]
+
+  return items
+})
 
 const projects = computed(() => projectStore.projects)
 
 const selectedProject = computed(() => {
   if (!selectedProjectId.value) return null
   return projectStore.projects.find(p => p.id === selectedProjectId.value)
+})
+
+const isSettingsRoute = computed(() => {
+  return route.path.startsWith('/settings') || route.path.startsWith('/admin')
 })
 
 const onProjectChange = () => {
@@ -323,7 +449,13 @@ const pageTitle = computed(() => {
     'content-editor': 'Content Editor',
     analytics: 'Analytics',
     users: 'Users',
-    settings: 'Settings'
+    settings: 'User Settings',
+    'site-settings': 'Site-wide Settings',
+    'admin-dashboard': 'Admin Dashboard',
+    'admin-users': 'User Management',
+    'admin-projects': 'Portfolio Management',
+    'admin-content': 'Content Management',
+    'admin-sso': 'SSO Providers'
   }
   return routeNames[route.name as string] || 'Dashboard'
 })

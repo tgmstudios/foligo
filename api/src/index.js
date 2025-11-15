@@ -13,8 +13,8 @@ const projectRoutes = require('./routes/projects');
 const projectAccessRoutes = require('./routes/projectAccess');
 const contentRoutes = require('./routes/content');
 const publicContentRoutes = require('./routes/public-content');
-const aiRoutes = require('./routes/ai');
-const aiContentRoutes = require('./routes/ai-content');
+// const aiRoutes = require('./routes/ai');
+// const aiContentRoutes = require('./routes/ai-content');
 const voiceWebhookRoutes = require('./routes/voice-webhook');
 const uploadRoutes = require('./routes/upload');
 const siteRoutes = require('./routes/site');
@@ -26,6 +26,9 @@ const skillsRoutes = require('./routes/skills');
 const experienceRolesRoutes = require('./routes/experience-roles');
 const revisionsRoutes = require('./routes/revisions');
 const mediaRoutes = require('./routes/media');
+const adminRoutes = require('./routes/admin');
+const adminSsoRoutes = require('./routes/admin-sso');
+const ssoAuthRoutes = require('./routes/sso-auth');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -129,6 +132,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/sso', ssoAuthRoutes); // SSO authentication routes (public)
 app.use('/api/site', siteRoutes); // Public site routes (no auth required)
 app.use('/api/ai/voice-webhook', voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
 app.use('/api', publicContentRoutes); // Public content GET endpoint (no auth required)
@@ -238,12 +242,15 @@ app.use('/api', authenticateToken, contentBlocksRoutes); // Content blocks route
 app.use('/api', authenticateToken, skillsRoutes); // Skills routes
 app.use('/api', authenticateToken, experienceRolesRoutes); // Experience roles routes
 app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
-app.use('/api/ai', authenticateToken, aiRoutes);
-app.use('/api/ai', authenticateToken, aiContentRoutes);
+// app.use('/api/ai', authenticateToken, aiRoutes);
+// app.use('/api/ai', authenticateToken, aiContentRoutes);
 // Old upload route deprecated - use /api/media instead
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 // Media routes - most require auth, but /view endpoint is public
 app.use('/api', mediaRoutes);
+// Admin routes - require authentication and admin privileges
+app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

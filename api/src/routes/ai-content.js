@@ -488,9 +488,6 @@ router.post('/projects/:projectId/content/ai-generate', [
         },
         order: contentOrder,
         status
-      },
-      include: {
-        aiAnalysis: true
       }
     });
 

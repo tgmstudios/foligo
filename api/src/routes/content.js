@@ -58,7 +58,7 @@ router.post('/projects/:projectId/content', [
   body('title').trim().isLength({ min: 1 }).withMessage('Title is required'),
   body('slug').optional().trim().matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
   body('excerpt').optional().trim(),
-  body('content').trim().isLength({ min: 1 }).withMessage('Content is required'),
+  body('content').isLength({ min: 1 }).withMessage('Content is required'),
   body('metadata').optional().isObject(),
   body('order').optional().isInt({ min: 0 }),
   body('status').optional().isIn(['DRAFT', 'PUBLISHED', 'HIDDEN', 'REVISION']),
@@ -162,7 +162,6 @@ router.post('/projects/:projectId/content', [
     const newContent = await prisma.content.create({
       data: contentData,
       include: {
-        aiAnalysis: true,
         tags: true,
         meta: true,
         blocks: {
@@ -237,7 +236,6 @@ router.get('/content/:id', async (req, res) => {
             }
           }
         },
-        aiAnalysis: true,
         tags: true,
         meta: true,
         blocks: {
@@ -387,10 +385,7 @@ router.put('/content/:id', [
 
     const content = await prisma.content.update({
       where: { id },
-      data: updateData,
-      include: {
-        aiAnalysis: true
-      }
+      data: updateData
     });
 
     // Clear project and content caches
@@ -462,7 +457,7 @@ router.put('/content/:id/fields', [
   body('title').optional().trim().isLength({ min: 1 }).withMessage('Title cannot be empty'),
   body('slug').optional().trim().matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
   body('excerpt').optional().trim(),
-  body('content').optional().trim(),
+  body('content').optional(),
   body('metadata').optional().isObject(),
   body('status').optional().isIn(['DRAFT', 'PUBLISHED', 'HIDDEN', 'REVISION']),
   // Project-specific fields
@@ -641,7 +636,6 @@ router.put('/content/:id/fields', [
       where: { id },
       data: updateData,
       include: {
-        aiAnalysis: true,
         tags: true,
         meta: true,
         blocks: {
@@ -870,10 +864,7 @@ router.put('/content/:id/reorder', [
     // Update content order
     const content = await prisma.content.update({
       where: { id },
-      data: { order: newOrder },
-      include: {
-        aiAnalysis: true
-      }
+      data: { order: newOrder }
     });
 
     // Clear project and content caches

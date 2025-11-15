@@ -125,9 +125,6 @@
                     >
                       {{ content.type }}
                     </span>
-                    <span v-if="content.aiAnalysis" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                      AI Generated
-                    </span>
                   </div>
                   <p class="text-sm text-gray-400 truncate">{{ content.excerpt || 'No excerpt' }}</p>
                   <div class="mt-1 flex items-center text-xs text-gray-400">
@@ -207,7 +204,7 @@
                   </div>
                   <p class="text-sm text-gray-400 truncate">{{ project.description || 'No description' }}</p>
                   <div class="mt-1 flex items-center text-xs text-gray-400">
-                    <span>{{ project._count?.content || 0 }} posts</span>
+                    <span>{{ project.content ? project.content.filter(c => !c.revisionOf && c.status !== 'REVISION').length : (project._count?.content || 0) }} posts</span>
                     <span class="mx-2">•</span>
                     <span>{{ project._count?.members || 0 }} members</span>
                     <span class="mx-2">•</span>
@@ -342,7 +339,11 @@ const selectedProject = ref(null)
 
 const totalContentBlocks = computed(() => {
   return projectStore.projects.reduce((total, project) => {
-    return total + (project._count?.content || 0)
+    // Count only non-revision content
+    if (project.content) {
+      return total + project.content.filter(c => !c.revisionOf && c.status !== 'REVISION').length
+    }
+    return total
   }, 0)
 })
 
