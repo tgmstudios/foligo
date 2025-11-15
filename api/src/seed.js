@@ -137,28 +137,12 @@ async function main() {
 
   console.log('✅ Created AI analysis');
 
-  // Create sample assets
-  await prisma.asset.upsert({
-    where: { id: 'asset-1' },
-    update: {},
-    create: {
-      id: 'asset-1',
-      projectId: project1.id,
-      url: 'https://via.placeholder.com/1200x800/10B981/FFFFFF?text=Project+Image',
-      fileType: 'image/jpeg',
-      size: 245760
-    }
-  });
-
-  console.log('✅ Created assets');
-
   console.log('🎉 Database seeded successfully!');
   console.log('\n📋 Sample Data Summary:');
   console.log(`- Users: ${user1.name}, ${user2.name}`);
   console.log(`- Projects: ${project1.name}, ${project2.name}`);
   console.log(`- Content blocks: ${content1.type}, ${content2.type}, ${content3.type}`);
   console.log(`- AI analysis: 1 analysis for image content`);
-  console.log(`- Assets: 1 uploaded asset`);
   console.log('\n🔑 Login credentials:');
   console.log('Email: john@example.com, Password: password123');
   console.log('Email: jane@example.com, Password: password123');

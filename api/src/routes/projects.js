@@ -407,13 +407,12 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
               aiAnalysis: true
             }
           },
-          assets: true,
           siteConfig: true,
           _count: {
             select: {
               content: true,
               members: true,
-              assets: true
+              media: true
             }
           }
         }
@@ -458,13 +457,12 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
                 aiAnalysis: true
               }
             },
-            assets: true,
             siteConfig: true,
             _count: {
               select: {
                 content: true,
                 members: true,
-                assets: true
+                media: true
               }
             }
           }

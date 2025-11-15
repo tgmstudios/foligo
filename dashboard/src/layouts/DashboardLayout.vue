@@ -31,11 +31,55 @@
             class="sidebar-item"
             :class="$route.name === item.routeName ? 'sidebar-item-active' : 'sidebar-item-inactive'"
           >
-            <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg v-if="item.icon === 'MediaIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <svg v-else class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
             </svg>
             {{ item.name }}
           </router-link>
+        </div>
+        
+        <!-- Content Creation Section -->
+        <div class="mt-8 pt-6 border-t border-gray-700">
+          <div class="px-3 mb-3">
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Create Content</h3>
+          </div>
+          <div class="space-y-1">
+            <router-link
+              to="/portfolios"
+              class="sidebar-item"
+              :class="$route.name === 'portfolios' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+            >
+              <span class="mr-3 text-lg">🚀</span>
+              <span>New Portfolio</span>
+            </router-link>
+            <router-link
+              to="/content/new/blog"
+              class="sidebar-item"
+              :class="$route.name === 'create-content' && $route.params.type === 'blog' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+            >
+              <span class="mr-3 text-lg">📝</span>
+              <span>New Blog Post</span>
+            </router-link>
+            <router-link
+              to="/content/new/experience"
+              class="sidebar-item"
+              :class="$route.name === 'create-content' && $route.params.type === 'experience' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+            >
+              <span class="mr-3 text-lg">💼</span>
+              <span>New Experience</span>
+            </router-link>
+            <router-link
+              to="/content/new/skill"
+              class="sidebar-item"
+              :class="$route.name === 'create-content' && $route.params.type === 'skill' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+            >
+              <span class="mr-3 text-lg">⚡</span>
+              <span>New Skill</span>
+            </router-link>
+          </div>
         </div>
       </nav>
       
@@ -99,16 +143,16 @@
             <h2 class="ml-2 text-lg font-semibold text-white">{{ pageTitle }}</h2>
           </div>
           
-          <!-- Project Selector -->
+          <!-- Portfolio Selector -->
           <div class="flex items-center space-x-4">
             <div class="flex items-center space-x-2">
-              <label class="text-sm font-medium text-gray-300">Project:</label>
+              <label class="text-sm font-medium text-gray-300">Portfolio:</label>
               <select
                 v-model="selectedProjectId"
                 @change="onProjectChange"
                 class="px-3 py-1.5 text-sm border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-white"
               >
-                <option value="">All Projects</option>
+                <option value="">All Portfolios</option>
                 <option
                   v-for="project in projects"
                   :key="project.id"
@@ -217,15 +261,27 @@ const navigation = [
     icon: 'DashboardIcon'
   },
   {
-    name: 'Content',
-    href: '/content',
-    routeName: 'content',
+    name: 'Blogs',
+    href: '/blogs',
+    routeName: 'blogs',
     icon: 'ContentIcon'
   },
   {
     name: 'Projects',
     href: '/projects',
-    routeName: 'projects',
+    routeName: 'projects-content',
+    icon: 'ProjectsIcon'
+  },
+  {
+    name: 'Experience',
+    href: '/experience',
+    routeName: 'experience',
+    icon: 'ContentIcon'
+  },
+  {
+    name: 'Portfolios',
+    href: '/portfolios',
+    routeName: 'portfolios',
     icon: 'ProjectsIcon'
   },
   {
@@ -233,6 +289,12 @@ const navigation = [
     href: '/analytics',
     routeName: 'analytics',
     icon: 'AnalyticsIcon'
+  },
+  {
+    name: 'Media Library',
+    href: '/media',
+    routeName: 'media-library',
+    icon: 'MediaIcon'
   }
 ]
 
@@ -298,7 +360,7 @@ const handleContentGenerated = async (data: { content: string; title?: string; m
     })
     
     // Navigate to the content editor
-    router.push(`/projects/${selectedProjectId.value}/content/${newContent.id}/edit`)
+    router.push(`/portfolios/${selectedProjectId.value}/content/${newContent.id}/edit`)
   } catch (error) {
     console.error('Failed to create content:', error)
     alert('Failed to create content. Please try again.')
@@ -340,7 +402,7 @@ const handleSearch = () => {
             type: 'post',
             title: content.title,
             subtitle: `${content.type} in ${project.name}`,
-            route: `/projects/${project.id}/content/${content.id}/edit`
+            route: `/portfolios/${project.id}/content/${content.id}/edit`
           })
         }
       })

@@ -159,7 +159,7 @@ router.post('/', async (req, res) => {
           summary
         },
         order: contentOrder,
-        isPublished: false
+        status: 'DRAFT'
       },
       include: {
         aiAnalysis: true

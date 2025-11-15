@@ -140,7 +140,7 @@
           </div>
           <div class="flex items-center space-x-2 ml-4">
             <router-link
-              :to="`/projects/${content.projectId}/content/${content.id}/edit`"
+              :to="`/portfolios/${content.projectId}/content/${content.id}/edit`"
               class="text-primary-600 hover:text-primary-500 text-sm"
             >
               Edit
@@ -210,6 +210,9 @@ const allContent = computed(() => {
 
 const filteredContent = computed(() => {
   let content = allContent.value
+
+  // Filter out revisions - they should not appear in management views
+  content = content.filter(c => c.status !== 'REVISION' && !c.revisionOf)
 
   // Filter by project
   if (selectedProjectId.value) {

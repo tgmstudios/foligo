@@ -5,20 +5,16 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-white">Edit Content</h1>
-          <p class="text-gray-400 mt-1">{{ content?.title }}</p>
         </div>
         <div class="flex items-center space-x-3">
-          <button
-            @click="togglePublishStatus"
-            :class="[
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              content?.isPublished
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            ]"
+          <select
+            v-model="editForm.status"
+            class="px-4 py-2 rounded-md text-sm font-medium bg-gray-700 text-white hover:bg-gray-600 border border-gray-600"
           >
-            {{ content?.isPublished ? 'Published' : 'Draft' }}
-          </button>
+            <option value="DRAFT">Draft</option>
+            <option value="PUBLISHED">Published</option>
+            <option value="HIDDEN">Hidden</option>
+          </select>
           <button
             @click="saveContent"
             :disabled="isSaving"
@@ -74,56 +70,16 @@
             </div>
           </div>
 
-          <!-- Metadata Fields -->
-          <div v-if="content.type === 'PROJECT'" class="mt-6">
+          <!-- Project-specific Fields -->
+          <div v-if="content.type === 'PROJECT'" class="mt-6 space-y-6">
             <h4 class="text-sm font-medium text-gray-300 mb-3">Project Details</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="label">Technologies</label>
-                <input
-                  v-model="editForm.metadata.technologies"
-                  type="text"
-                  class="input"
-                  placeholder="React, Node.js, MongoDB"
-                />
-              </div>
-              <div>
-                <label class="label">Project URL</label>
-                <input
-                  v-model="editForm.metadata.projectUrl"
-                  type="url"
-                  class="input"
-                  placeholder="https://example.com"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div v-if="content.type === 'EXPERIENCE'" class="mt-6">
-            <h4 class="text-sm font-medium text-gray-300 mb-3">Experience Details</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="label">Company</label>
-                <input
-                  v-model="editForm.metadata.company"
-                  type="text"
-                  class="input"
-                  placeholder="Company Name"
-                />
-              </div>
-              <div>
-                <label class="label">Position</label>
-                <input
-                  v-model="editForm.metadata.position"
-                  type="text"
-                  class="input"
-                  placeholder="Job Title"
-                />
-              </div>
+            
+            <!-- Dates -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label class="label">Start Date</label>
                 <input
-                  v-model="editForm.metadata.startDate"
+                  v-model="editForm.startDate"
                   type="date"
                   class="input"
                 />
@@ -131,26 +87,190 @@
               <div>
                 <label class="label">End Date</label>
                 <input
-                  v-model="editForm.metadata.endDate"
+                  v-model="editForm.endDate"
+                  type="date"
+                  class="input"
+                  :disabled="editForm.isOngoing"
+                />
+              </div>
+              <div class="flex items-end">
+                <label class="flex items-center space-x-2">
+                  <input
+                    v-model="editForm.isOngoing"
+                    type="checkbox"
+                    class="rounded"
+                  />
+                  <span class="text-sm text-gray-300">Ongoing</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Featured Image -->
+            <div>
+              <label class="label">Featured Image URL</label>
+              <input
+                v-model="editForm.featuredImage"
+                type="url"
+                class="input"
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+
+            <!-- Project Links -->
+            <div>
+              <label class="label">Project Links</label>
+              <div class="space-y-2">
+                <input
+                  v-model="editForm.projectLinks.github"
+                  type="url"
+                  class="input"
+                  placeholder="GitHub URL"
+                />
+                <input
+                  v-model="editForm.projectLinks.devpost"
+                  type="url"
+                  class="input"
+                  placeholder="Devpost URL"
+                />
+                <div v-for="(link, index) in editForm.projectLinks.other" :key="index" class="flex gap-2">
+                  <input
+                    v-model="editForm.projectLinks.other[index]"
+                    type="url"
+                    class="input flex-1"
+                    placeholder="Other link URL"
+                  />
+                  <button
+                    @click="editForm.projectLinks.other.splice(index, 1)"
+                    type="button"
+                    class="btn btn-sm btn-secondary"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <button
+                  @click="editForm.projectLinks.other.push('')"
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                >
+                  + Add Link
+                </button>
+              </div>
+            </div>
+
+            <!-- Contributors -->
+            <div>
+              <label class="label">Contributors</label>
+              <div class="space-y-2">
+                <div v-for="(contributor, index) in editForm.contributors" :key="index" class="flex gap-2">
+                  <input
+                    v-model="editForm.contributors[index]"
+                    type="text"
+                    class="input flex-1"
+                    placeholder="Contributor name or ID"
+                  />
+                  <button
+                    @click="editForm.contributors.splice(index, 1)"
+                    type="button"
+                    class="btn btn-sm btn-secondary"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <button
+                  @click="editForm.contributors.push('')"
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                >
+                  + Add Contributor
+                </button>
+              </div>
+            </div>
+
+            <!-- Skills -->
+            <div>
+              <label class="label">Skills</label>
+              <SkillsManager
+                v-model="editForm.linkedSkills"
+                :project-id="content.projectId"
+              />
+            </div>
+          </div>
+
+          <!-- Experience-specific Fields -->
+          <div v-if="content.type === 'EXPERIENCE'" class="mt-6 space-y-6">
+            <h4 class="text-sm font-medium text-gray-300 mb-3">Experience Details</h4>
+            
+            <!-- Category -->
+            <div>
+              <label class="label">Category *</label>
+              <select
+                v-model="editForm.experienceCategory"
+                class="input"
+                required
+              >
+                <option value="JOB">Job Experience</option>
+                <option value="EDUCATION">Education</option>
+                <option value="CERTIFICATION">Certification/License</option>
+              </select>
+            </div>
+
+            <!-- Dates -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="label">Start Date</label>
+                <input
+                  v-model="editForm.startDate"
                   type="date"
                   class="input"
                 />
               </div>
+              <div>
+                <label class="label">End Date</label>
+                <input
+                  v-model="editForm.endDate"
+                  type="date"
+                  class="input"
+                  :disabled="editForm.isOngoing"
+                />
+              </div>
+              <div class="flex items-end">
+                <label class="flex items-center space-x-2">
+                  <input
+                    v-model="editForm.isOngoing"
+                    type="checkbox"
+                    class="rounded"
+                  />
+                  <span class="text-sm text-gray-300">Ongoing</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Location -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="label">Location</label>
+                <input
+                  v-model="editForm.location"
+                  type="text"
+                  class="input"
+                  placeholder="City, State/Country"
+                />
+              </div>
+              <div>
+                <label class="label">Location Type</label>
+                <select
+                  v-model="editForm.locationType"
+                  class="input"
+                >
+                  <option value="">Select type</option>
+                  <option value="REMOTE">Remote</option>
+                  <option value="HYBRID">Hybrid</option>
+                  <option value="ONSITE">On-site</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div v-if="content.type === 'BLOG'" class="mt-6">
-            <h4 class="text-sm font-medium text-gray-300 mb-3">Blog Details</h4>
-            <div>
-              <label class="label">Tags</label>
-              <input
-                v-model="editForm.metadata.tags"
-                type="text"
-                class="input"
-                placeholder="technology, programming, web-development"
-              />
-            </div>
-          </div>
         </div>
 
         <!-- Markdown Editor -->
@@ -162,6 +282,7 @@
           
           <MarkdownEditor
             v-model="editForm.content"
+            :project-id="content.projectId"
             @save="handleMarkdownSave"
             @cancel="goBack"
           />
@@ -218,21 +339,9 @@
               </div>
             </div>
 
-            <!-- Voice Mode Indicator -->
-            <div v-if="aiInteractionMode === 'voice'" class="mb-2">
-              <div class="bg-blue-500/20 border border-blue-500/50 rounded-lg p-3 text-center">
-                <svg class="w-8 h-8 text-blue-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                <p class="text-xs text-blue-300 font-medium">Voice Mode</p>
-                <p class="text-xs text-blue-400">Voice interaction is coming soon. Please use text mode.</p>
-              </div>
-            </div>
-
             <!-- Chat Input -->
             <div v-if="aiPhase === 'chat'" class="flex space-x-2">
               <input
-                v-if="aiInteractionMode === 'text'"
                 v-model="currentAIMessage"
                 @keypress.enter="sendAIMessage"
                 type="text"
@@ -240,11 +349,7 @@
                 class="flex-1 px-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 :disabled="isAITyping"
               />
-              <div v-else class="flex-1 px-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-800 text-gray-400">
-                Voice input (coming soon)
-              </div>
               <button
-                v-if="aiInteractionMode === 'text'"
                 @click="sendAIMessage"
                 :disabled="!currentAIMessage.trim() || isAITyping"
                 class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -268,42 +373,10 @@
             </div>
           </div>
 
-          <!-- Mode Selection -->
-          <div v-if="aiPhase === 'start' && !aiInteractionMode" class="space-y-4">
-            <div class="text-center py-4">
-              <h4 class="text-sm font-medium text-white mb-3">Choose interaction mode</h4>
-              <p class="text-xs text-gray-400 mb-4">How would you like to interact with the AI assistant?</p>
-              
-              <div class="grid grid-cols-2 gap-3">
-                <button
-                  @click="selectAIMode('text')"
-                  class="p-4 border-2 border-gray-600 rounded-lg hover:border-blue-600 hover:bg-blue-500/20 transition-all cursor-pointer"
-                >
-                  <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <h5 class="text-xs font-medium text-white">Text</h5>
-                  <p class="text-xs text-gray-400 mt-1">Type responses</p>
-                </button>
-                
-                <div class="relative p-4 border-2 border-gray-600 rounded-lg bg-gray-800 cursor-not-allowed opacity-60">
-                  <svg class="w-8 h-8 text-gray-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                  <h5 class="text-xs font-medium text-gray-500">Voice</h5>
-                  <p class="text-xs text-gray-500 mt-1">Not supported yet</p>
-                  <div class="absolute inset-0 flex items-center justify-center bg-gray-900/75 rounded-lg">
-                    <p class="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-900 rounded shadow border border-gray-600">Editing with voice isn't supported yet</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Start Button (hidden after mode selection) -->
-          <div v-if="aiPhase === 'start' && aiInteractionMode" class="text-center">
+          <!-- Start Button -->
+          <div v-if="aiPhase === 'start'" class="text-center">
             <button
-              @click="startAIAssistant"
+              @click="selectAIMode('text')"
               class="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center space-x-2"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,7 +388,7 @@
         </div>
 
         <!-- Content Stats -->
-        <div class="card p-6">
+        <div class="card p-6 mb-6">
           <h3 class="text-lg font-medium text-white mb-4">Content Stats</h3>
           <div class="space-y-3">
             <div class="flex justify-between text-sm">
@@ -327,16 +400,53 @@
               <span class="font-medium text-white">{{ characterCount }}</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-400">Status</span>
-              <span :class="content.isPublished ? 'text-green-400' : 'text-amber-400'" class="font-medium">
-                {{ content.isPublished ? 'Published' : 'Draft' }}
-              </span>
-            </div>
-            <div class="flex justify-between text-sm">
               <span class="text-gray-400">Last Updated</span>
               <span class="font-medium text-white">{{ formatDate(content.updatedAt) }}</span>
             </div>
           </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="card p-6 mb-6">
+          <TagManager
+            v-model="editForm.tags"
+            :project-id="content.projectId"
+          />
+        </div>
+
+        <!-- Content Blocks (for advanced post types) -->
+        <div v-if="content.type === 'PROJECT' || content.type === 'BLOG'" class="card p-6 mb-6">
+          <ContentBlocksEditor
+            :content-id="content.id"
+            :project-id="content.projectId"
+          />
+        </div>
+
+        <!-- Experience Roles -->
+        <div v-if="content.type === 'EXPERIENCE'" class="card p-6 mb-6">
+          <ExperienceRolesEditor
+            :content-id="content.id"
+            :project-id="content.projectId"
+          />
+        </div>
+
+        <!-- Content Links -->
+        <div class="card p-6 mb-6">
+          <ContentLinksManager
+            :source-id="content.id"
+            source-type="content"
+            :project-id="content.projectId"
+          />
+        </div>
+
+        <!-- Revision History -->
+        <div class="card p-6 mb-6">
+          <RevisionViewer
+            :content-id="content.id"
+            :project-id="content.projectId"
+            :content="content"
+            @revision-restored="loadContent"
+          />
         </div>
       </div>
     </div>
@@ -403,7 +513,13 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
-import type { Content, Project } from '@/stores/projects'
+import TagManager from '@/components/content/TagManager.vue'
+import SkillsManager from '@/components/content/SkillsManager.vue'
+import ContentBlocksEditor from '@/components/content/ContentBlocksEditor.vue'
+import ExperienceRolesEditor from '@/components/content/ExperienceRolesEditor.vue'
+import ContentLinksManager from '@/components/content/ContentLinksManager.vue'
+import RevisionViewer from '@/components/content/RevisionViewer.vue'
+import type { Content, Project, ContentTag, Skill } from '@/stores/projects'
 import { format } from 'date-fns'
 import { marked } from 'marked'
 import api, { aiApi } from '@/services/api'
@@ -432,15 +548,28 @@ const editForm = reactive({
   slug: '',
   excerpt: '',
   content: '',
-  metadata: {
-    technologies: '',
-    projectUrl: '',
-    company: '',
-    position: '',
-    startDate: '',
-    endDate: '',
-    tags: ''
-  }
+  // Project-specific fields
+  startDate: '',
+  endDate: '',
+  isOngoing: false,
+  featuredImage: '',
+  projectLinks: {
+    github: '',
+    devpost: '',
+    other: [] as string[]
+  },
+  contributors: [] as string[],
+  linkedSkills: [] as Skill[],
+  // Experience-specific fields
+  experienceCategory: '' as 'JOB' | 'EDUCATION' | 'CERTIFICATION' | '',
+  location: '',
+  locationType: '' as 'REMOTE' | 'HYBRID' | 'ONSITE' | '',
+  // Tags
+  tags: [] as ContentTag[],
+  // Status
+  status: 'DRAFT' as 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'REVISION',
+  // Legacy metadata (deprecated - kept for backward compatibility)
+  metadata: {}
 })
 
 // Computed properties
@@ -465,7 +594,17 @@ const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'MMM d, yyyy')
 }
 
-// AI Assistant State - using new multi-step approach
+const getStatusClass = (status?: string) => {
+  const classes: Record<string, string> = {
+    DRAFT: 'text-amber-400 bg-amber-400/20',
+    PUBLISHED: 'text-green-400 bg-green-400/20',
+    HIDDEN: 'text-yellow-400 bg-yellow-400/20',
+    REVISION: 'text-blue-400 bg-blue-400/20'
+  }
+  return classes[status || 'DRAFT'] || classes.DRAFT
+}
+
+// AI Assistant State
 const sessionDone = ref(false)
 
 // AI Assistant Methods
@@ -632,22 +771,47 @@ const loadContent = async () => {
     // Load project first
     project.value = await projectStore.fetchProject(projectId)
     
-    // Find content in project
-    if (project.value?.content) {
-      content.value = project.value.content.find(c => c.id === contentId) || null
+    // Fetch full content with all relationships
+    const response = await api.get(`/content/${contentId}`)
+    content.value = response.data
+    
+    if (content.value) {
+      // Populate form
+      editForm.title = content.value.title
+      editForm.slug = content.value.slug || ''
+      editForm.excerpt = content.value.excerpt || ''
+      editForm.content = content.value.content
       
-      if (content.value) {
-        // Populate form
-        editForm.title = content.value.title
-        editForm.slug = content.value.slug || ''
-        editForm.excerpt = content.value.excerpt || ''
-        editForm.content = content.value.content
-        editForm.metadata = { ...editForm.metadata, ...content.value.metadata }
+      // Project-specific fields
+      if (content.value.startDate) {
+        editForm.startDate = content.value.startDate.split('T')[0]
       }
+      if (content.value.endDate) {
+        editForm.endDate = content.value.endDate.split('T')[0]
+      }
+      editForm.isOngoing = content.value.isOngoing || false
+      editForm.featuredImage = content.value.featuredImage || ''
+      editForm.projectLinks = content.value.projectLinks || { github: '', devpost: '', other: [] }
+      editForm.contributors = content.value.contributors || []
+      editForm.linkedSkills = content.value.linkedSkills || []
+      
+      // Experience-specific fields
+      editForm.experienceCategory = content.value.experienceCategory || ''
+      editForm.location = content.value.location || ''
+      editForm.locationType = content.value.locationType || ''
+      
+      // Tags
+      editForm.tags = content.value.tags || []
+      
+      // Status
+      editForm.status = content.value.status || 'DRAFT'
+      
+      // Legacy metadata (deprecated - kept for backward compatibility)
+      editForm.metadata = content.value.metadata || {}
     }
   } catch (error) {
     console.error('Failed to load content:', error)
-    router.push('/projects')
+    router.push('/portfolios')
   }
 }
 
@@ -664,13 +828,50 @@ const saveContent = async () => {
   try {
     isSaving.value = true
     
-    await projectStore.updateContent(content.value.id, {
+    const updateData: any = {
       title: editForm.title,
       slug: editForm.slug || undefined,
       excerpt: editForm.excerpt || undefined,
       content: editForm.content,
-      metadata: editForm.metadata
-    })
+      metadata: editForm.metadata,
+      status: editForm.status
+    }
+    
+    // Add project-specific fields
+    if (content.value.type === 'PROJECT') {
+      if (editForm.startDate) updateData.startDate = editForm.startDate
+      if (editForm.endDate) updateData.endDate = editForm.endDate
+      updateData.isOngoing = editForm.isOngoing
+      if (editForm.featuredImage) updateData.featuredImage = editForm.featuredImage
+      updateData.projectLinks = editForm.projectLinks
+      updateData.contributors = editForm.contributors.filter(c => c.trim())
+    }
+    
+    // Add experience-specific fields
+    if (content.value.type === 'EXPERIENCE') {
+      if (editForm.experienceCategory) updateData.experienceCategory = editForm.experienceCategory
+      if (editForm.location) updateData.location = editForm.location
+      if (editForm.locationType) updateData.locationType = editForm.locationType
+      if (editForm.startDate) updateData.startDate = editForm.startDate
+      if (editForm.endDate) updateData.endDate = editForm.endDate
+      updateData.isOngoing = editForm.isOngoing
+    }
+    
+    await projectStore.updateContent(content.value.id, updateData)
+    
+    // Update tags separately
+    if (editForm.tags && editForm.tags.length > 0) {
+      await api.post(`/projects/${content.value.projectId}/content/${content.value.id}/tags`, {
+        tagIds: editForm.tags.map(t => t.id)
+      })
+    }
+    
+    // Update skills separately (for projects)
+    if (content.value.type === 'PROJECT' && editForm.linkedSkills && editForm.linkedSkills.length > 0) {
+      await api.post(`/projects/${content.value.projectId}/content/${content.value.id}/skills`, {
+        skillIds: editForm.linkedSkills.map(s => s.id)
+      })
+    }
     
     // Reload content to get updated data
     await loadContent()
@@ -681,23 +882,10 @@ const saveContent = async () => {
   }
 }
 
-const togglePublishStatus = async () => {
-  if (!content.value) return
-
-  try {
-    await projectStore.updateContent(content.value.id, {
-      isPublished: !content.value.isPublished
-    })
-    
-    // Reload content to get updated data
-    await loadContent()
-  } catch (error) {
-    console.error('Failed to toggle publish status:', error)
-  }
-}
+// Status is now managed through the status dropdown in the header
 
 const goBack = () => {
-  router.push(`/projects/${route.params.projectId}`)
+  router.push(`/portfolios/${route.params.projectId}`)
 }
 
 onMounted(() => {

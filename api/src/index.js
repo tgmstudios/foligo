@@ -18,6 +18,14 @@ const aiContentRoutes = require('./routes/ai-content');
 const voiceWebhookRoutes = require('./routes/voice-webhook');
 const uploadRoutes = require('./routes/upload');
 const siteRoutes = require('./routes/site');
+const contentLinksRoutes = require('./routes/content-links');
+const contentTagsRoutes = require('./routes/content-tags');
+const contentMetaRoutes = require('./routes/content-meta');
+const contentBlocksRoutes = require('./routes/content-blocks');
+const skillsRoutes = require('./routes/skills');
+const experienceRolesRoutes = require('./routes/experience-roles');
+const revisionsRoutes = require('./routes/revisions');
+const mediaRoutes = require('./routes/media');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -26,19 +34,28 @@ const { authenticateToken } = require('./middleware/auth');
 // Import services
 const { connectRedis } = require('./services/redis');
 const { connectDatabase } = require('./services/database');
+const { ensureBucket } = require('./services/minio');
+const { prisma } = require('./services/database');
+const { minioClient, BUCKET_NAME } = require('./services/minio');
 
 const app = express();
 const PORT = process.env.PORT || 80;
 
 // Security middleware
-app.use(helmet());
+// Configure Helmet to allow cross-origin resources for media files
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3001',
+    'http://localhost:9010', // Dashboard dev server
+    'http://localhost:9011', // Sites dev server
     'https://foligo.tech',
     'https://www.foligo.tech',
     'https://foligo.tech',
-    /^https:\/\/.*\.foligo\.tech$/
+    /^https:\/\/.*\.foligo\.tech$/,
+    /^http:\/\/localhost:\d+$/ // Allow any localhost port for development
   ],
   credentials: true
 }));
@@ -116,14 +133,117 @@ app.use('/api/site', siteRoutes); // Public site routes (no auth required)
 app.use('/api/ai/voice-webhook', voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
 app.use('/api', publicContentRoutes); // Public content GET endpoint (no auth required)
 
+// Public media file endpoints (must be before authenticated routes)
+// Use CORS middleware specifically for media files (allow all origins)
+const mediaCors = cors({
+  origin: true, // Allow any origin
+  credentials: false, // No credentials needed for media files
+  methods: ['GET', 'HEAD', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+});
+
+// Handle OPTIONS request for CORS preflight
+app.options('/api/media/:id/file', mediaCors, (req, res) => {
+  res.status(204).send();
+});
+
+app.get('/api/media/:id/file', mediaCors, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const media = await prisma.media.findUnique({
+      where: { id }
+    });
+
+    if (!media) {
+      return res.status(404).json({
+        error: 'Media Not Found',
+        message: 'The requested media file does not exist'
+      });
+    }
+
+    // Get file from MinIO and stream it
+    try {
+      const dataStream = await minioClient.getObject(BUCKET_NAME, media.objectName);
+      
+      // Set appropriate headers
+      res.setHeader('Content-Type', media.mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${media.filename}"`);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      
+      // Stream the file
+      dataStream.pipe(res);
+    } catch (minioError) {
+      console.error('Error fetching file from MinIO:', minioError);
+      return res.status(500).json({
+        error: 'File Retrieval Failed',
+        message: 'Unable to retrieve file from storage'
+      });
+    }
+  } catch (error) {
+    console.error('Get media file error:', error);
+    res.status(500).json({
+      error: 'Media Retrieval Failed',
+      message: 'Unable to retrieve media file'
+    });
+  }
+});
+
+app.get('/api/media/:id/view', mediaCors, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const media = await prisma.media.findUnique({
+      where: { id }
+    });
+
+    if (!media) {
+      return res.status(404).json({
+        error: 'Media Not Found',
+        message: 'The requested media file does not exist'
+      });
+    }
+
+    // Return media info with proxied URL
+    const API_URL = process.env.API_URL || req.protocol + '://' + req.get('host');
+    const proxiedUrl = `${API_URL}/api/media/${media.id}/file`;
+
+    res.json({
+      id: media.id,
+      filename: media.filename,
+      mimeType: media.mimeType,
+      size: media.size,
+      publicUrl: proxiedUrl,
+      altText: media.altText,
+      createdAt: media.createdAt
+    });
+  } catch (error) {
+    console.error('Get media error:', error);
+    res.status(500).json({
+      error: 'Media Retrieval Failed',
+      message: 'Unable to retrieve media file'
+    });
+  }
+});
+
 // All other routes require authentication
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
 app.use('/api', authenticateToken, contentRoutes); // Protected content routes
+app.use('/api', authenticateToken, contentLinksRoutes); // Content links routes
+app.use('/api', authenticateToken, contentTagsRoutes); // Content tags routes
+app.use('/api', authenticateToken, contentMetaRoutes); // Content meta routes
+app.use('/api', authenticateToken, contentBlocksRoutes); // Content blocks routes
+app.use('/api', authenticateToken, skillsRoutes); // Skills routes
+app.use('/api', authenticateToken, experienceRolesRoutes); // Experience roles routes
+app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
 app.use('/api/ai', authenticateToken, aiRoutes);
 app.use('/api/ai', authenticateToken, aiContentRoutes);
-app.use('/api/upload', authenticateToken, uploadRoutes);
+// Old upload route deprecated - use /api/media instead
+// app.use('/api/upload', authenticateToken, uploadRoutes);
+// Media routes - most require auth, but /view endpoint is public
+app.use('/api', mediaRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
@@ -146,6 +266,10 @@ async function startServer() {
     // Connect to Redis
     await connectRedis();
     console.log('✅ Redis connected');
+
+    // Ensure MinIO bucket exists
+    await ensureBucket();
+    console.log('✅ MinIO bucket ready');
 
     // Start server
     app.listen(PORT, () => {
