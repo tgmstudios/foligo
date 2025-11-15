@@ -123,20 +123,6 @@ async function main() {
 
   console.log('✅ Created content blocks');
 
-  // Create sample AI analysis
-  await prisma.aIAnalysis.upsert({
-    where: { contentId: content2.id },
-    update: {},
-    create: {
-      contentId: content2.id,
-      tags: ['portfolio', 'web development', 'showcase', 'project'],
-      summary: 'An image showcasing a portfolio project with modern web development elements.',
-      altText: 'A screenshot of a portfolio website showing web development projects and skills'
-    }
-  });
-
-  console.log('✅ Created AI analysis');
-
   console.log('🎉 Database seeded successfully!');
   console.log('\n📋 Sample Data Summary:');
   console.log(`- Users: ${user1.name}, ${user2.name}`);

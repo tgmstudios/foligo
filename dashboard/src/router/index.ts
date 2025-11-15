@@ -15,6 +15,11 @@ import UsersView from '@/views/users/UsersView.vue'
 import SettingsView from '@/views/settings/SettingsView.vue'
 import ContentManagementView from '@/views/content/ContentManagementView.vue'
 import AnalyticsView from '@/views/analytics/AnalyticsView.vue'
+import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
+import AdminUsersView from '@/views/admin/AdminUsersView.vue'
+import AdminProjectsView from '@/views/admin/AdminProjectsView.vue'
+import AdminContentView from '@/views/admin/AdminContentView.vue'
+import AdminSsoView from '@/views/admin/AdminSsoView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -36,6 +41,11 @@ const router = createRouter({
       name: 'onboarding',
       component: OnboardingView,
       meta: { requiresAuth: true, requiresOnboarding: true }
+    },
+    {
+      path: '/auth/callback',
+      name: 'auth-callback',
+      component: () => import('@/views/auth/AuthCallbackView.vue')
     },
     {
       path: '/',
@@ -98,14 +108,56 @@ const router = createRouter({
           meta: { requiresAdmin: true }
         },
         {
+          path: 'admin',
+          name: 'admin-dashboard',
+          component: AdminDashboardView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/users',
+          name: 'admin-users',
+          component: AdminUsersView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/projects',
+          name: 'admin-projects',
+          component: AdminProjectsView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/content',
+          name: 'admin-content',
+          component: AdminContentView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/sso',
+          name: 'admin-sso',
+          component: AdminSsoView,
+          meta: { requiresAdmin: true }
+        },
+        {
           path: 'analytics',
           name: 'analytics',
           component: AnalyticsView
         },
         {
           path: 'settings',
-          name: 'settings',
-          component: SettingsView
+          component: SettingsView,
+          children: [
+            {
+              path: '',
+              name: 'settings',
+              component: () => import('@/views/settings/UserSettingsView.vue')
+            },
+            {
+              path: 'site',
+              name: 'site-settings',
+              component: () => import('@/views/settings/SiteSettingsView.vue'),
+              meta: { requiresAdmin: true }
+            }
+          ]
         },
         {
           path: 'media',

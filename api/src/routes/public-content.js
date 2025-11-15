@@ -42,9 +42,6 @@ router.get('/projects/:projectId/content', async (req, res) => {
       // Get content from database
       content = await prisma.content.findMany({
         where: { projectId },
-        include: {
-          aiAnalysis: true
-        },
         orderBy: { order: 'asc' }
       });
 

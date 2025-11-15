@@ -156,15 +156,6 @@ docker-compose exec api npm run db:seed
 - `createdAt`: DateTime
 - `updatedAt`: DateTime
 
-### AIAnalysis
-- `id`: UUID (Primary Key)
-- `contentId`: UUID (Foreign Key to Content)
-- `tags`: String[] (AI-generated tags)
-- `summary`: String (AI-generated summary)
-- `altText`: String (AI-generated alt text)
-- `createdAt`: DateTime
-- `updatedAt`: DateTime
-
 ## Caching Strategy
 
 The API uses Redis for caching frequently accessed data:

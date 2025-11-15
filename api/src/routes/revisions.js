@@ -206,7 +206,6 @@ router.post('/projects/:projectId/content/:contentId/revisions/:revisionId/resto
         locationType: revision.locationType
       },
       include: {
-        aiAnalysis: true,
         tags: true,
         meta: true,
         blocks: {

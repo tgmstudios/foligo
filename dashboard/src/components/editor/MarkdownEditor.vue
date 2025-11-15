@@ -35,6 +35,23 @@
           </span>
         </button>
         <button
+          @click="openDrawIOEditor"
+          class="px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 transition-colors"
+          :title="isOnDiagramLine ? 'Edit Draw.io Diagram' : 'Insert Draw.io Diagram'"
+        >
+          <span class="flex items-center gap-1">
+            <svg v-if="!isOnDiagramLine" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span :class="{ 'text-primary-400': isOnDiagramLine }">
+              {{ isOnDiagramLine ? 'Edit' : 'Draw.io' }}
+            </span>
+          </span>
+        </button>
+        <button
           @click="openMediaManager"
           class="px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 transition-colors"
           title="Insert Media"
@@ -68,16 +85,29 @@
       </div>
 
       <!-- Markdown Source Editor -->
-      <div v-show="!showPreview && showMarkdownMode" class="flex-1 w-full h-full">
+      <div v-show="!showPreview && showMarkdownMode" class="flex-1 w-full h-full relative">
         <textarea
           ref="markdownTextareaRef"
           @input="handleMarkdownInput"
+          @blur="handleMarkdownBlur"
           @compositionstart="handleCompositionStart"
           @compositionend="handleCompositionEnd"
+          @click="updateCursorPosition"
+          @keyup="updateCursorPosition"
           class="w-full h-full p-4 bg-gray-800 text-gray-100 font-mono text-sm resize-none border-0 focus:outline-none focus:ring-0"
           :placeholder="placeholder || 'Start writing your markdown content...'"
           spellcheck="false"
         ></textarea>
+        
+        <!-- Hint when cursor is on a diagram -->
+        <transition name="fade">
+          <div v-if="isOnDiagramLine" class="absolute bottom-4 right-4 bg-primary-600 text-white px-3 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 pointer-events-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Editable draw.io diagram - Click "Edit" to modify</span>
+          </div>
+        </transition>
       </div>
 
       <!-- Preview -->
@@ -136,6 +166,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Draw.io Editor Modal -->
+    <DrawIOEditor
+      :is-open="showDrawIOEditor"
+      :project-id="projectId"
+      :diagram-xml="currentDiagramXml || undefined"
+      :existing-image-url="editingDiagramUrl || undefined"
+      @close="showDrawIOEditor = false"
+      @diagram-saved="handleDiagramSaved"
+    />
   </div>
 </template>
 
@@ -145,6 +185,7 @@ import { marked } from 'marked'
 import mermaid from 'mermaid'
 import Wysimark from '@wysimark/vue'
 import MediaManager from '@/components/media/MediaManager.vue'
+import DrawIOEditor from '@/components/editor/DrawIOEditor.vue'
 import { uploadMedia, isImage, isVideo, type Media } from '@/services/media'
 import { useToast } from 'vue-toastification'
 
@@ -169,15 +210,41 @@ const localContent = ref(props.modelValue)
 const showPreview = ref(false)
 const showMarkdownMode = ref(false)
 const showMediaManager = ref(false)
+const showDrawIOEditor = ref(false)
+const currentDiagramXml = ref<string | null>(null)
+const editingDiagramUrl = ref<string | null>(null)
 const editorContainerRef = ref<HTMLElement>()
 const previewContainerRef = ref<HTMLElement>()
 const markdownTextareaRef = ref<HTMLTextAreaElement>()
 const wysimarkRef = ref<any>(null)
 const savedCursorPosition = ref<{ start: number; end: number } | null>(null)
+const currentCursorPosition = ref(0)
 
 // Track if we're updating from internal changes to avoid cursor jumps
 let isInternalUpdate = false
 let isTyping = false
+
+// Check if cursor is on a diagram line (for showing edit vs insert)
+const isOnDiagramLine = computed(() => {
+  if (!showMarkdownMode.value || !markdownTextareaRef.value) {
+    return false
+  }
+  
+  const textarea = markdownTextareaRef.value
+  const cursorPos = currentCursorPosition.value
+  const textBefore = textarea.value.substring(0, cursorPos)
+  const lines = textBefore.split('\n')
+  const currentLine = lines[lines.length - 1]
+  
+  // Check if current line is an image
+  if (currentLine.match(/^!\[.*\]\(.*\)$/)) {
+    // Check if there's a drawio code block after (with optional blank line)
+    const textAfter = textarea.value.substring(cursorPos)
+    if (textAfter.match(/^\s*\n\s*\n?\s*```drawio\s*\n[^`]+\n```/)) return true
+  }
+  
+  return false
+})
 
 // Watch for external changes
 watch(() => props.modelValue, (newValue) => {
@@ -187,11 +254,23 @@ watch(() => props.modelValue, (newValue) => {
   }
   
   if (newValue !== localContent.value) {
+    // Fix markdown syntax on external changes (e.g., from database/API)
+    const fixedValue = fixMarkdownSyntax(newValue)
+    
     // Only update if we're not in markdown mode with an active textarea
     // to avoid cursor jumps
     if (!showMarkdownMode.value || !markdownTextareaRef.value) {
       isInternalUpdate = true
-      localContent.value = newValue
+      localContent.value = fixedValue
+      
+      // Emit fixed value if it was corrected
+      if (fixedValue !== newValue) {
+        console.log('Fixed markdown syntax on external content load')
+        nextTick(() => {
+          emit('update:modelValue', fixedValue)
+        })
+      }
+      
       nextTick(() => {
         isInternalUpdate = false
       })
@@ -204,12 +283,20 @@ watch(() => props.modelValue, (newValue) => {
       const scrollPos = textarea.scrollTop
       
       isInternalUpdate = true
-      localContent.value = newValue
+      localContent.value = fixedValue
+      
+      // Emit fixed value if it was corrected
+      if (fixedValue !== newValue) {
+        console.log('Fixed markdown syntax on external content load (markdown mode)')
+        nextTick(() => {
+          emit('update:modelValue', fixedValue)
+        })
+      }
       
       nextTick(() => {
         // Restore cursor position and scroll
         if (textarea && textarea === markdownTextareaRef.value) {
-          const newCursorPos = Math.min(cursorPos, newValue.length)
+          const newCursorPos = Math.min(cursorPos, fixedValue.length)
           textarea.setSelectionRange(newCursorPos, newCursorPos)
           textarea.scrollTop = scrollPos
         }
@@ -538,30 +625,112 @@ const renderMermaidDiagrams = async () => {
   }
 }
 
-// Helper function to calculate proper separators for insertion
-const calculateSeparators = (before: string, after: string): { before: string; after: string } => {
-  let separatorBefore = ''
-  let separatorAfter = ''
+// Helper function to fix markdown syntax issues
+// Ensures proper spacing around code blocks and other markdown elements
+const fixMarkdownSyntax = (markdown: string): string => {
+  // First pass: Fix cases where code blocks are on the same line as other content
+  // Look for patterns like "text```" or ")```" where content is directly followed by code fence
+  // Use negative lookbehind to avoid matching if there's already a newline
+  markdown = markdown.replace(/([^\n])(```(?:\w+)?(?:\n|$))/g, (match, before, codeFence) => {
+    // If 'before' is already whitespace (but not newline), don't add extra newlines
+    if (before.trim() === '') {
+      return match
+    }
+    // Otherwise, ensure blank line before code fence
+    return before + '\n\n' + codeFence
+  })
   
-  if (before.trim()) {
-    // There's content before - ensure blank line
-    if (before.endsWith('\n\n')) {
-      separatorBefore = '' // Already has blank line
-    } else if (before.endsWith('\n')) {
-      separatorBefore = '\n' // Add one more newline for blank line
-    } else {
-      separatorBefore = '\n\n' // Add two newlines
+  // Split into lines for processing
+  let lines = markdown.split('\n')
+  let fixed: string[] = []
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const nextLine = i < lines.length - 1 ? lines[i + 1] : ''
+    
+    // Check if current line starts a code block
+    if (line.trim().startsWith('```')) {
+      // Ensure blank line before code block (unless it's the first line or previous is already blank)
+      if (fixed.length > 0) {
+        const lastLine = fixed[fixed.length - 1]
+        // If the last line in fixed isn't blank, add a blank line
+        if (lastLine.trim() !== '') {
+          fixed.push('') // Add blank line before code block
+        }
+      }
+    }
+    
+    fixed.push(line)
+    
+    // Check if current line closes a code block
+    if (line.trim() === '```' && i > 0 && !lines[i - 1].trim().startsWith('```')) {
+      // This closes a code block
+      // Ensure blank line after code block (unless it's the last line or next is already blank)
+      if (i < lines.length - 1 && nextLine.trim() !== '') {
+        // Next line has content and isn't blank - add blank line
+        fixed.push('') // Add blank line after code block
+      }
     }
   }
   
-  if (after.trim()) {
-    // There's content after - ensure blank line
-    if (after.startsWith('\n\n')) {
-      separatorAfter = '' // Already has blank line
-    } else if (after.startsWith('\n')) {
-      separatorAfter = '\n' // Add one more newline for blank line
+  return fixed.join('\n')
+}
+
+// Helper function to calculate proper separators for insertion
+const calculateSeparators = (before: string, after: string, content: string = ''): { before: string; after: string } => {
+  let separatorBefore = ''
+  let separatorAfter = ''
+  
+  // Check if the content being inserted starts with a code block
+  const startsWithCodeBlock = content.trimStart().startsWith('```')
+  
+  if (before.trim()) {
+    // There's content before
+    // IMPORTANT: If inserting a code block, ALWAYS need blank line before it
+    if (startsWithCodeBlock) {
+      // Code blocks must have blank line before them
+      if (before.endsWith('\n\n')) {
+        separatorBefore = '' // Already has blank line
+      } else if (before.endsWith('\n')) {
+        separatorBefore = '\n' // Add one more newline for blank line
+      } else {
+        separatorBefore = '\n\n' // Add two newlines
+      }
     } else {
-      separatorAfter = '\n\n' // Add two newlines
+      // Normal content - ensure blank line
+      if (before.endsWith('\n\n')) {
+        separatorBefore = '' // Already has blank line
+      } else if (before.endsWith('\n')) {
+        separatorBefore = '\n' // Add one more newline for blank line
+      } else {
+        separatorBefore = '\n\n' // Add two newlines
+      }
+    }
+  }
+  
+  // Check if the content being inserted ends with a code block
+  const endsWithCodeBlock = content.trimEnd().endsWith('```')
+  
+  if (after.trim()) {
+    // There's content after
+    // If we just inserted a code block, ensure blank line after it
+    if (endsWithCodeBlock) {
+      if (after.startsWith('\n\n')) {
+        separatorAfter = '' // Already has blank line
+      } else if (after.startsWith('\n')) {
+        separatorAfter = '\n' // Add one more newline for blank line
+      } else {
+        separatorAfter = '\n\n' // Add two newlines
+      }
+    } else {
+      // Normal content - ensure blank line
+      if (after.startsWith('\n\n')) {
+        separatorAfter = '' // Already has blank line
+      } else if (after.startsWith('\n')) {
+        separatorAfter = '\n' // Add one more newline for blank line
+      } else {
+        separatorAfter = '\n\n' // Add two newlines
+      }
     }
   }
   
@@ -717,7 +886,6 @@ const getCursorPositionFromWysimark = (): boolean => {
     }
     
     console.log('wysimarkRef.value:', wysimarkRef.value)
-    console.log('wysimarkRef keys:', Object.keys(wysimarkRef.value))
     
     // Try to access the editor instance
     // Wysimark is built on Slate, which might be accessible through $el or other properties
@@ -828,11 +996,44 @@ const handleMarkdownInput = (event: Event) => {
   // Emit update to parent
   emit('update:modelValue', newValue)
   
+  // Update cursor position
+  currentCursorPosition.value = target.selectionStart
+  
   // Reset flags after a short delay to allow typing to continue smoothly
   requestAnimationFrame(() => {
     isTyping = false
     isInternalUpdate = false
   })
+}
+
+// Update cursor position when user clicks or moves cursor
+const updateCursorPosition = () => {
+  if (markdownTextareaRef.value) {
+    currentCursorPosition.value = markdownTextareaRef.value.selectionStart
+  }
+}
+
+// Handle textarea blur - fix syntax issues
+const handleMarkdownBlur = () => {
+  if (!markdownTextareaRef.value) return
+  
+  const textarea = markdownTextareaRef.value
+  const originalValue = textarea.value
+  const fixedValue = fixMarkdownSyntax(originalValue)
+  
+  if (fixedValue !== originalValue) {
+    console.log('Fixed markdown syntax on blur')
+    const cursorPos = textarea.selectionStart
+    textarea.value = fixedValue
+    localContent.value = fixedValue
+    emit('update:modelValue', fixedValue)
+    // Try to restore cursor position
+    nextTick(() => {
+      if (textarea) {
+        textarea.setSelectionRange(Math.min(cursorPos, fixedValue.length), Math.min(cursorPos, fixedValue.length))
+      }
+    })
+  }
 }
 
 const handleCompositionStart = () => {
@@ -864,15 +1065,28 @@ const toggleMarkdownMode = () => {
 // Sync textarea value when switching to markdown mode or when content changes externally
 watch([showMarkdownMode, () => props.modelValue], ([isMarkdownMode, newValue]) => {
   if (isMarkdownMode && markdownTextareaRef.value && !isTyping) {
+    // Fix markdown syntax when switching to markdown mode
+    // WYSIWYG editor may have removed blank lines around code blocks
+    const fixedValue = fixMarkdownSyntax(newValue)
+    
     // Only update if the value is actually different
-    if (markdownTextareaRef.value.value !== newValue) {
+    if (markdownTextareaRef.value.value !== fixedValue) {
       const cursorPos = markdownTextareaRef.value.selectionStart
       const scrollPos = markdownTextareaRef.value.scrollTop
-      markdownTextareaRef.value.value = newValue
+      
+      markdownTextareaRef.value.value = fixedValue
+      localContent.value = fixedValue
+      
+      // If we fixed the syntax, emit the corrected value
+      if (fixedValue !== newValue) {
+        console.log('Fixed markdown syntax when switching to markdown mode')
+        emit('update:modelValue', fixedValue)
+      }
+      
       // Restore cursor position
       nextTick(() => {
         if (markdownTextareaRef.value) {
-          const newCursorPos = Math.min(cursorPos, newValue.length)
+          const newCursorPos = Math.min(cursorPos, fixedValue.length)
           markdownTextareaRef.value.setSelectionRange(newCursorPos, newCursorPos)
           markdownTextareaRef.value.scrollTop = scrollPos
         }
@@ -902,9 +1116,12 @@ graph TD
     const end = textarea.selectionEnd
     const before = textarea.value.substring(0, start)
     const after = textarea.value.substring(end)
-    const separators = calculateSeparators(before, after)
+    const separators = calculateSeparators(before, after, mermaidTemplate)
     
-    const newValue = before + separators.before + mermaidTemplate + separators.after + after
+    let newValue = before + separators.before + mermaidTemplate + separators.after + after
+    
+    // Fix markdown syntax before saving
+    newValue = fixMarkdownSyntax(newValue)
     
     // Update both textarea and localContent
     textarea.value = newValue
@@ -955,9 +1172,12 @@ graph TD
             
             const before = textarea.value.substring(0, start)
             const after = textarea.value.substring(end)
-            const separators = calculateSeparators(before, after)
+            const separators = calculateSeparators(before, after, mermaidTemplate)
             
-            const newValue = before + separators.before + mermaidTemplate + separators.after + after
+            let newValue = before + separators.before + mermaidTemplate + separators.after + after
+            
+            // Fix markdown syntax before saving
+            newValue = fixMarkdownSyntax(newValue)
             
             // Update both textarea and localContent
             textarea.value = newValue
@@ -967,13 +1187,14 @@ graph TD
             // Clear saved cursor position
             savedCursorPosition.value = null
             
-            // If we were in WYSIWYG mode, switch back
+            // DON'T switch back to WYSIWYG mode - stay in markdown
+            // Code blocks need proper markdown formatting, and WYSIWYG will remove blank lines
+            // User can manually switch back if they want
             if (wasInWysiwygMode) {
-              setTimeout(() => {
-                showMarkdownMode.value = false
-                console.log('Switched back to WYSIWYG mode after mermaid insert')
-              }, 100)
-            } else {
+              toast.info('Switched to Markdown mode for code block insertion')
+            }
+            
+            if (!wasInWysiwygMode) {
               // If we were in markdown mode, keep cursor position
               nextTick(() => {
                 const newPos = start + separators.before.length + mermaidTemplate.length
@@ -985,6 +1206,209 @@ graph TD
       }, 50)
     })
   }
+}
+
+const openDrawIOEditor = () => {
+  if (!props.projectId) {
+    toast.error('Project ID is required to create diagrams')
+    return
+  }
+
+  // Reset diagram state first
+  currentDiagramXml.value = null
+  editingDiagramUrl.value = null
+
+  // Save cursor position before opening draw.io editor
+  if (showMarkdownMode.value && markdownTextareaRef.value) {
+    // Already in markdown mode, save current cursor position
+    const textarea = markdownTextareaRef.value
+    savedCursorPosition.value = {
+      start: textarea.selectionStart,
+      end: textarea.selectionEnd
+    }
+    
+    // Check if cursor is on or near a diagram image line
+    const cursorPos = textarea.selectionStart
+    const textBefore = textarea.value.substring(0, cursorPos)
+    const textAfter = textarea.value.substring(cursorPos)
+    const lines = textBefore.split('\n')
+    const currentLine = lines[lines.length - 1]
+    
+    console.log('Checking for diagram at cursor position')
+    console.log('Current line:', currentLine)
+    console.log('Text after (first 100 chars):', textAfter.substring(0, 100))
+    
+    // Check if current line is an image
+    const imageMatch = currentLine.match(/^!\[([^\]]*)\]\(([^)]+)\)/)
+    if (imageMatch) {
+      console.log('Found image on current line:', imageMatch[0])
+      
+      // Look for drawio code block after the image (with optional blank line)
+      const codeBlockMatch = textAfter.match(/^\s*\n\s*\n?\s*```drawio\s*\n([^`]+)\n```/)
+      
+      if (codeBlockMatch) {
+        console.log('Found drawio code block after image')
+        try {
+          // Get the base64 content (it's in capture group 1)
+          const encodedXml = codeBlockMatch[1].trim()
+          const decodedXml = decodeURIComponent(escape(atob(encodedXml)))
+          currentDiagramXml.value = decodedXml
+          editingDiagramUrl.value = imageMatch[2]
+          console.log('Successfully loaded diagram XML for editing, URL:', imageMatch[2])
+          console.log('XML length:', decodedXml.length)
+        } catch (error) {
+          console.error('Error decoding diagram XML:', error)
+          console.log('Match found:', codeBlockMatch[0])
+        }
+      } else {
+        console.log('No drawio code block found after image')
+      }
+    } else {
+      console.log('Current line is not an image')
+    }
+  } else {
+    // In WYSIWYG mode - try to get cursor position from Wysimark
+    const gotPosition = getCursorPositionFromWysimark()
+    
+    if (!gotPosition || !savedCursorPosition.value) {
+      // Fallback: use end of content
+      savedCursorPosition.value = {
+        start: localContent.value.length,
+        end: localContent.value.length
+      }
+    }
+  }
+  
+  showDrawIOEditor.value = true
+}
+
+const handleDiagramSaved = (data: { imageUrl: string; xml: string; isEdit: boolean }) => {
+  // Extract filename from URL
+  const filename = data.imageUrl.split('/').pop() || 'diagram.png'
+  
+  // Use the existing insertion logic which will format it properly
+  const diagram = {
+    publicUrl: data.imageUrl,
+    filename: filename,
+    diagramXml: data.xml
+  }
+  
+  handleDiagramInsertionLogic(diagram, data.isEdit)
+}
+
+const handleDiagramInsertionLogic = (diagram: { publicUrl: string; filename: string; diagramXml?: string }, isEdit: boolean = false) => {
+  // Create markdown image syntax with drawio code block
+  let markdown = `![${diagram.filename}](${diagram.publicUrl})`
+  
+  // If we have diagram XML, store it as a drawio code block after the image
+  // This allows us to load it again when editing
+  if (diagram.diagramXml) {
+    // Encode XML as base64 to store in code block
+    const encodedXml = btoa(unescape(encodeURIComponent(diagram.diagramXml)))
+    // Add blank line before code block for proper markdown formatting
+    // Using explicit line breaks to ensure they're preserved
+    markdown = markdown + '\n' + '\n' + '```drawio' + '\n' + encodedXml + '\n' + '```'
+  }
+  
+  console.log('Generated markdown for diagram:', JSON.stringify(markdown))
+
+  // Remember if we were in WYSIWYG mode
+  const wasInWysiwygMode = !showMarkdownMode.value
+
+  // If we're in WYSIWYG mode, temporarily switch to markdown
+  if (!showMarkdownMode.value) {
+    showMarkdownMode.value = true
+    showPreview.value = false
+  }
+
+  // Wait for markdown mode to be ready
+  nextTick(() => {
+    setTimeout(() => {
+      if (markdownTextareaRef.value && savedCursorPosition.value) {
+        const textarea = markdownTextareaRef.value
+        let start = savedCursorPosition.value.start
+        let end = savedCursorPosition.value.end
+        
+        // Ensure textarea is synced
+        if (textarea.value !== localContent.value) {
+          textarea.value = localContent.value
+        }
+        
+        // If saved position is out of bounds, use current position
+        if (start > textarea.value.length) {
+          start = textarea.value.length
+        }
+        if (end > textarea.value.length) {
+          end = textarea.value.length
+        }
+        
+        const before = textarea.value.substring(0, start)
+        let after = textarea.value.substring(end)
+        
+        // If we're replacing an existing diagram, remove its code block too
+        if (isEdit && editingDiagramUrl.value) {
+          const codeBlockMatch = after.match(/^\s*\n\s*\n?\s*```drawio\s*\n[^`]+\n```/)
+          if (codeBlockMatch) {
+            after = after.substring(codeBlockMatch[0].length)
+          }
+        }
+        
+        const separators = calculateSeparators(before, after, markdown)
+        
+        let newValue = before + separators.before + markdown + separators.after + after
+        
+        // Debug logging
+        console.log('=== DIAGRAM INSERTION DEBUG ===')
+        console.log('Markdown to insert:', JSON.stringify(markdown))
+        console.log('Has code block:', markdown.includes('```'))
+        console.log('Separator before:', JSON.stringify(separators.before))
+        console.log('Separator after:', JSON.stringify(separators.after))
+        console.log('Before ends with:', JSON.stringify(before.slice(-10)))
+        console.log('After starts with:', JSON.stringify(after.slice(0, 10)))
+        console.log('Final value (first 500 chars around insertion):', JSON.stringify(newValue.substring(Math.max(0, start - 100), start + markdown.length + separators.before.length + separators.after.length + 100)))
+        
+        // Fix any markdown syntax issues
+        newValue = fixMarkdownSyntax(newValue)
+        console.log('After syntax fix:', JSON.stringify(newValue.substring(Math.max(0, start - 100), start + markdown.length + separators.before.length + separators.after.length + 200)))
+        
+        // Update both textarea and localContent
+        textarea.value = newValue
+        localContent.value = newValue
+        emit('update:modelValue', newValue)
+        
+        // Clear saved cursor position and diagram state
+        savedCursorPosition.value = null
+        currentDiagramXml.value = null
+        editingDiagramUrl.value = null
+        
+        toast.success(isEdit ? 'Diagram updated successfully' : 'Diagram inserted successfully')
+        
+        // Stay in markdown mode to preserve the HTML comment
+        // If we switch back to WYSIWYG, the comment gets wrapped in code blocks
+        if (!wasInWysiwygMode) {
+          // If we were in markdown mode, keep cursor position
+          nextTick(() => {
+            const newPos = start + separators.before.length + markdown.length
+            textarea.setSelectionRange(newPos, newPos)
+            textarea.focus()
+          })
+        }
+      } else {
+        // Fallback: append to end if cursor position not saved
+        const separator = localContent.value && !localContent.value.endsWith('\n\n') ? '\n\n' : ''
+        localContent.value += separator + markdown
+        emit('update:modelValue', localContent.value)
+        
+        // Clear diagram state
+        currentDiagramXml.value = null
+        editingDiagramUrl.value = null
+        
+        toast.success(isEdit ? 'Diagram updated successfully' : 'Diagram inserted successfully')
+        
+        // Stay in markdown mode to preserve the HTML comment
+      }
+    }, 50)
+  })
 }
 
 const openMediaManager = () => {
@@ -1075,7 +1499,8 @@ const handleMediaInserted = (media: Media) => {
         
         const before = textarea.value.substring(0, start)
         const after = textarea.value.substring(end)
-        const separators = calculateSeparators(before, after)
+        const markdown = `![${media.filename}](${media.publicUrl})`
+        const separators = calculateSeparators(before, after, markdown)
         
         console.log('Before text length:', before.length, 'After text length:', after.length)
         console.log('Separator before:', JSON.stringify(separators.before), 'after:', JSON.stringify(separators.after))
@@ -1161,7 +1586,7 @@ const handlePaste = async (event: ClipboardEvent) => {
             const end = textarea.selectionEnd
             const before = textarea.value.substring(0, start)
             const after = textarea.value.substring(end)
-            const separators = calculateSeparators(before, after)
+            const separators = calculateSeparators(before, after, markdown)
             
             const newValue = before + separators.before + markdown + separators.after + after
             
@@ -1206,7 +1631,7 @@ const handlePaste = async (event: ClipboardEvent) => {
                   
                   const before = textarea.value.substring(0, start)
                   const after = textarea.value.substring(end)
-                  const separators = calculateSeparators(before, after)
+                  const separators = calculateSeparators(before, after, markdown)
                   
                   const newValue = before + separators.before + markdown + separators.after + after
                   
@@ -1829,5 +2254,23 @@ onUnmounted(() => {
 
 .prose .mermaid :deep(.cluster-label text) {
   fill: #ffffff !important;
+}
+
+/* Fade transition for diagram hint */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+/* Hide drawio code blocks in preview - they're just metadata */
+.prose pre code.language-drawio {
+  display: none;
+}
+
+.prose pre:has(code.language-drawio) {
+  display: none;
 }
 </style>

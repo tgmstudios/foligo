@@ -19,6 +19,7 @@ const authenticateToken = async (req, res, next) => {
         id: true,
         email: true,
         name: true,
+        isAdmin: true,
         createdAt: true,
         updatedAt: true
       }
@@ -93,7 +94,35 @@ const authorizeProjectAccess = (requiredRole = 'VIEWER') => {
   };
 };
 
+const requireAdmin = async (req, res, next) => {
+  try {
+    // Ensure user is authenticated first
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { isAdmin: true }
+    });
+
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ 
+        error: 'Access denied', 
+        message: 'Admin privileges required' 
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Admin authorization error:', error);
+    return res.status(500).json({ error: 'Authorization error' });
+  }
+};
+
 module.exports = {
   authenticateToken,
-  authorizeProjectAccess
+  authorizeProjectAccess,
+  requireAdmin
 };

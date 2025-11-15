@@ -16,6 +16,32 @@
         </p>
       </div>
       
+      <!-- SSO Providers -->
+      <div v-if="ssoProviders.length > 0" class="space-y-3">
+        <div
+          v-for="provider in ssoProviders"
+          :key="provider.id"
+        >
+          <button
+            @click="handleSsoLogin(provider)"
+            type="button"
+            class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            :style="provider.buttonColor ? { borderColor: provider.buttonColor, color: provider.buttonColor } : {}"
+          >
+            <span v-if="provider.icon" class="mr-2 text-xl">{{ provider.icon }}</span>
+            {{ provider.buttonText || `Sign in with ${provider.name}` }}
+          </button>
+        </div>
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or continue with</span>
+          </div>
+        </div>
+      </div>
+
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
         <div class="rounded-md shadow-sm -space-y-px">
           <div>
@@ -103,12 +129,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 import squiggleLogo from '@/assets/logos/squiggle.svg'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const form = reactive({
@@ -119,6 +147,21 @@ const form = reactive({
 
 const isLoading = ref(false)
 const error = ref('')
+const ssoProviders = ref<any[]>([])
+
+const fetchSsoProviders = async () => {
+  try {
+    const response = await api.get('/auth/sso/providers')
+    ssoProviders.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch SSO providers:', error)
+  }
+}
+
+const handleSsoLogin = (provider: any) => {
+  const redirectUrl = route.query.redirect as string || '/'
+  window.location.href = `${import.meta.env.VITE_API_URL || '/api'}/auth/sso/login/${provider.providerId}?redirect=${encodeURIComponent(redirectUrl)}`
+}
 
 const handleSubmit = async () => {
   if (!form.email || !form.password) {
@@ -147,4 +190,13 @@ const handleSubmit = async () => {
     isLoading.value = false
   }
 }
+
+// Check for error in query params
+onMounted(() => {
+  fetchSsoProviders()
+  
+  if (route.query.error) {
+    error.value = route.query.error as string
+  }
+})
 </script>

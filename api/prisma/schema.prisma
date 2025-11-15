@@ -13,10 +13,12 @@ datasource db {
 model User {
   id            String   @id @default(uuid())
   email         String   @unique
-  password      String
+  password      String?  // Optional for SSO users
   name          String
   hasCompletedOnboarding Boolean @default(false)
   isAdmin       Boolean  @default(false)
+  ssoProviderId String?  // Which SSO provider this user came from
+  ssoSubject    String?  // Subject ID from SSO provider
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -25,6 +27,7 @@ model User {
   projectAccess ProjectAccess[]
   media        Media[]
 
+  @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
 }
 
@@ -102,7 +105,6 @@ model Content {
 
   // Relationships
   project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  aiAnalysis    AIAnalysis?
   tags          ContentTag[]    @relation("ContentTags")
   meta          ContentMeta[]
   blocks        ContentBlock[]  @relation("ContentBlocks")
@@ -158,21 +160,6 @@ model SiteConfig {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("site_config")
-}
-
-model AIAnalysis {
-  id        String   @id @default(uuid())
-  contentId String   @unique
-  tags      String[]
-  summary   String?
-  altText   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relationships
-  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
-
-  @@map("ai_analysis")
 }
 
 enum Role {
@@ -326,6 +313,28 @@ model ExperienceRole {
   skills  Skill[] @relation("ExperienceSkills")
 
   @@map("experience_roles")
+}
+
+// SSO Provider - OpenID/OAuth2 providers for SSO authentication
+model SsoProvider {
+  id            String   @id @default(uuid())
+  name          String   // Display name (e.g., "Google", "Microsoft")
+  providerId    String   @unique // Unique identifier (e.g., "google", "microsoft")
+  enabled       Boolean  @default(true)
+  clientId      String   // OAuth2 Client ID
+  clientSecret  String   // OAuth2 Client Secret (encrypted)
+  issuer        String   // OpenID Issuer URL
+  authorizationEndpoint String // Authorization endpoint
+  tokenEndpoint String   // Token endpoint
+  userInfoEndpoint String // UserInfo endpoint
+  scopes        String   @default("openid profile email") // Space-separated scopes
+  icon          String?  // Icon URL or identifier
+  buttonColor   String?  // Button color for UI
+  buttonText    String?  // Custom button text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("sso_providers")
 }
 
 // Media - Media files stored in MinIO, tied to users and projects

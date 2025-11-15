@@ -160,9 +160,6 @@ router.post('/', async (req, res) => {
         },
         order: contentOrder,
         status: 'DRAFT'
-      },
-      include: {
-        aiAnalysis: true
       }
     });
     
