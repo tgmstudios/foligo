@@ -3,9 +3,12 @@ import { useToast } from 'vue-toastification'
 
 const toast = useToast()
 
+// Get API URL from environment variable, fallback to /api for relative URLs
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+
 // Create axios instance
 const api = axios.create({
-  baseURL: 'https://api.foligo.tech/api',
+  baseURL: API_URL,
   timeout: 10000,
   withCredentials: true, // Enable cookies
   headers: {
@@ -15,7 +18,7 @@ const api = axios.create({
 
 // Create axios instance for AI operations with longer timeout
 const aiApi = axios.create({
-  baseURL: 'https://api.foligo.tech/api',
+  baseURL: API_URL,
   timeout: 120000, // 2 minutes for AI content generation
   withCredentials: true,
   headers: {

@@ -138,7 +138,7 @@
                 </div>
                 <div class="flex items-center space-x-2">
                   <router-link
-                    :to="`/projects/${content.projectId}/content/${content.id}/edit`"
+                    :to="`/portfolios/${content.projectId}/content/${content.id}/edit`"
                     class="text-primary-600 hover:text-primary-500 text-sm font-medium"
                   >
                     Edit
@@ -354,7 +354,7 @@ const totalTeamMembers = computed(() => {
 
 const totalPublishedPosts = computed(() => {
   return projectStore.projects.reduce((total, project) => {
-    return total + (project.content?.filter(c => c.isPublished).length || 0)
+    return total + (project.content?.filter(c => c.isPublished && c.status !== 'REVISION' && !c.revisionOf).length || 0)
   }, 0)
 })
 

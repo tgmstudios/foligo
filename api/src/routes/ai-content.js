@@ -373,8 +373,9 @@ router.post('/clarifying-questions', [
  *                 type: object
  *               metadata:
  *                 type: object
- *               isPublished:
- *                 type: boolean
+ *               status:
+ *                 type: string
+ *                 enum: [DRAFT, PUBLISHED, HIDDEN]
  *     responses:
  *       201:
  *         description: AI-generated content created successfully
@@ -397,7 +398,7 @@ router.post('/projects/:projectId/content/ai-generate', [
   body('excerpt').optional().trim(),
   body('details').optional().isObject(),
   body('metadata').optional().isObject(),
-  body('isPublished').optional().isBoolean()
+  body('status').optional().isIn(['DRAFT', 'PUBLISHED', 'HIDDEN'])
 ], authorizeProjectAccess('EDITOR'), async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -410,7 +411,7 @@ router.post('/projects/:projectId/content/ai-generate', [
     }
 
     const { projectId } = req.params;
-    const { contentType, topic, title, slug, excerpt, details = {}, metadata = {}, isPublished = false } = req.body;
+    const { contentType, topic, title, slug, excerpt, details = {}, metadata = {}, status = 'DRAFT' } = req.body;
 
     // Generate content using AI
     let generatedContent;
@@ -486,7 +487,7 @@ router.post('/projects/:projectId/content/ai-generate', [
           originalTopic: topic
         },
         order: contentOrder,
-        isPublished
+        status
       },
       include: {
         aiAnalysis: true

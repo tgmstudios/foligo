@@ -54,14 +54,25 @@ const router = express.Router();
  *         description: Access denied
  */
 router.post('/projects/:projectId/content', [
-  body('contentType').isIn(['PROJECT', 'BLOG', 'EXPERIENCE']),
+  body('contentType').isIn(['PROJECT', 'BLOG', 'EXPERIENCE', 'SKILL']),
   body('title').trim().isLength({ min: 1 }).withMessage('Title is required'),
   body('slug').optional().trim().matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
   body('excerpt').optional().trim(),
   body('content').trim().isLength({ min: 1 }).withMessage('Content is required'),
   body('metadata').optional().isObject(),
   body('order').optional().isInt({ min: 0 }),
-  body('isPublished').optional().isBoolean()
+  body('status').optional().isIn(['DRAFT', 'PUBLISHED', 'HIDDEN', 'REVISION']),
+  // Project-specific fields
+  body('startDate').optional().isISO8601(),
+  body('endDate').optional().isISO8601(),
+  body('isOngoing').optional().isBoolean(),
+  body('featuredImage').optional().trim(),
+  body('projectLinks').optional().isObject(),
+  body('contributors').optional().isArray(),
+  // Experience-specific fields
+  body('experienceCategory').optional().isIn(['JOB', 'EDUCATION', 'CERTIFICATION']),
+  body('location').optional().trim(),
+  body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE'])
 ], authorizeProjectAccess('EDITOR'), async (req, res) => {
   try {
     // Check validation errors
@@ -75,7 +86,11 @@ router.post('/projects/:projectId/content', [
     }
 
     const { projectId } = req.params;
-    const { contentType, title, slug, excerpt, content, metadata, order, isPublished } = req.body;
+    const { 
+      contentType, title, slug, excerpt, content, metadata, order, status,
+      startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
+      experienceCategory, location, locationType
+    } = req.body;
 
     // Generate slug if not provided
     let contentSlug = slug;
@@ -109,22 +124,57 @@ router.post('/projects/:projectId/content', [
       contentOrder = lastContent ? lastContent.order + 1 : 0;
     }
 
+    // Prepare data object
+    const contentData = {
+      projectId,
+      type: contentType,
+      contentType,
+      title,
+      slug: contentSlug,
+      excerpt,
+      content,
+      metadata: metadata || {},
+      order: contentOrder,
+      status: status || 'DRAFT'
+    };
+
+    // Add project-specific fields if content type is PROJECT
+    if (contentType === 'PROJECT') {
+      if (startDate) contentData.startDate = new Date(startDate);
+      if (endDate) contentData.endDate = new Date(endDate);
+      if (isOngoing !== undefined) contentData.isOngoing = isOngoing;
+      if (featuredImage) contentData.featuredImage = featuredImage;
+      if (projectLinks) contentData.projectLinks = projectLinks;
+      if (contributors) contentData.contributors = contributors;
+    }
+
+    // Add experience-specific fields if content type is EXPERIENCE
+    if (contentType === 'EXPERIENCE') {
+      if (experienceCategory) contentData.experienceCategory = experienceCategory;
+      if (location) contentData.location = location;
+      if (locationType) contentData.locationType = locationType;
+      if (startDate) contentData.startDate = new Date(startDate);
+      if (endDate) contentData.endDate = new Date(endDate);
+      if (isOngoing !== undefined) contentData.isOngoing = isOngoing;
+    }
+
     // Create content
     const newContent = await prisma.content.create({
-      data: {
-        projectId,
-        type: contentType, // Use contentType as the main type
-        contentType,
-        title,
-        slug: contentSlug,
-        excerpt,
-        content, // Markdown content
-        metadata: metadata || {},
-        order: contentOrder,
-        isPublished: isPublished || false
-      },
+      data: contentData,
       include: {
-        aiAnalysis: true
+        aiAnalysis: true,
+        tags: true,
+        meta: true,
+        blocks: {
+          orderBy: { order: 'asc' }
+        },
+        roles: {
+          include: {
+            skills: { include: { tag: true } }
+          },
+          orderBy: { startDate: 'desc' }
+        },
+        linkedSkills: { include: { tag: true } }
       }
     });
 
@@ -175,7 +225,7 @@ router.get('/content/:id', async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    // Get content with project info
+    // Get content with project info and all related data
     const content = await prisma.content.findUnique({
       where: { id },
       include: {
@@ -187,7 +237,19 @@ router.get('/content/:id', async (req, res) => {
             }
           }
         },
-        aiAnalysis: true
+        aiAnalysis: true,
+        tags: true,
+        meta: true,
+        blocks: {
+          orderBy: { order: 'asc' }
+        },
+        roles: {
+          include: {
+            skills: { include: { tag: true } }
+          },
+          orderBy: { startDate: 'desc' }
+        },
+        linkedSkills: { include: { tag: true } }
       }
     });
 
@@ -379,8 +441,9 @@ router.put('/content/:id', [
  *                 type: string
  *               metadata:
  *                 type: object
- *               isPublished:
- *                 type: boolean
+ *               status:
+ *                 type: string
+ *                 enum: [DRAFT, PUBLISHED, HIDDEN, REVISION]
  *     responses:
  *       200:
  *         description: Content fields updated successfully
@@ -401,7 +464,18 @@ router.put('/content/:id/fields', [
   body('excerpt').optional().trim(),
   body('content').optional().trim(),
   body('metadata').optional().isObject(),
-  body('isPublished').optional().isBoolean()
+  body('status').optional().isIn(['DRAFT', 'PUBLISHED', 'HIDDEN', 'REVISION']),
+  // Project-specific fields
+  body('startDate').optional().isISO8601(),
+  body('endDate').optional().isISO8601(),
+  body('isOngoing').optional().isBoolean(),
+  body('featuredImage').optional().trim(),
+  body('projectLinks').optional().isObject(),
+  body('contributors').optional().isArray(),
+  // Experience-specific fields
+  body('experienceCategory').optional().isIn(['JOB', 'EDUCATION', 'CERTIFICATION']),
+  body('location').optional().trim(),
+  body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE'])
 ], async (req, res) => {
   try {
     // Check validation errors
@@ -416,7 +490,11 @@ router.put('/content/:id/fields', [
 
     const { id } = req.params;
     const userId = req.user.id;
-    const { title, slug, excerpt, content, metadata, isPublished } = req.body;
+    const { 
+      title, slug, excerpt, content, metadata, status,
+      startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
+      experienceCategory, location, locationType
+    } = req.body;
 
     // Get content with project info to check permissions
     const existingContent = await prisma.content.findUnique({
@@ -452,6 +530,90 @@ router.put('/content/:id/fields', [
       });
     }
 
+    // Always create revision before updating (unless this is already a revision)
+    if (existingContent.status !== 'REVISION') {
+      // Get the latest revision number
+      const latestRevision = await prisma.content.findFirst({
+        where: { revisionOf: id },
+        orderBy: { revisionNumber: 'desc' },
+        select: { revisionNumber: true }
+      });
+      
+      const nextRevisionNumber = latestRevision ? latestRevision.revisionNumber + 1 : 1;
+      
+      // Get current tags and skills
+      const currentTags = await prisma.contentTag.findMany({
+        where: {
+          content: {
+            some: { id }
+          }
+        }
+      });
+      
+      const currentSkills = await prisma.skill.findMany({
+        where: {
+          content: {
+            some: { id }
+          }
+        }
+      });
+      
+      // Create revision with current content state
+      const revisionData = {
+        projectId: existingContent.projectId,
+        type: existingContent.type,
+        contentType: existingContent.contentType,
+        title: existingContent.title,
+        slug: `${existingContent.slug || 'content'}-rev-${nextRevisionNumber}`,
+        excerpt: existingContent.excerpt,
+        content: existingContent.content,
+        metadata: existingContent.metadata,
+        order: existingContent.order,
+        status: 'REVISION',
+        revisionOf: id,
+        revisionNumber: nextRevisionNumber,
+        revisedAt: new Date(),
+        // Project-specific fields
+        startDate: existingContent.startDate,
+        endDate: existingContent.endDate,
+        isOngoing: existingContent.isOngoing,
+        featuredImage: existingContent.featuredImage,
+        projectLinks: existingContent.projectLinks,
+        contributors: existingContent.contributors,
+        // Experience-specific fields
+        experienceCategory: existingContent.experienceCategory,
+        location: existingContent.location,
+        locationType: existingContent.locationType
+      };
+      
+      const createdRevision = await prisma.content.create({
+        data: revisionData
+      });
+      
+      // Connect tags and skills to revision
+      if (currentTags.length > 0) {
+        await prisma.content.update({
+          where: { id: createdRevision.id },
+          data: {
+            tags: {
+              connect: currentTags.map(tag => ({ id: tag.id }))
+            }
+          }
+        });
+      }
+      
+      if (currentSkills.length > 0) {
+        await prisma.content.update({
+          where: { id: createdRevision.id },
+          data: {
+            linkedSkills: {
+              connect: currentSkills.map(skill => ({ id: skill.id }))
+            }
+          }
+        });
+      }
+    }
+
     // Prepare update data
     const updateData = {};
     if (title !== undefined) updateData.title = title;
@@ -459,14 +621,57 @@ router.put('/content/:id/fields', [
     if (excerpt !== undefined) updateData.excerpt = excerpt;
     if (content !== undefined) updateData.content = content;
     if (metadata !== undefined) updateData.metadata = metadata;
-    if (isPublished !== undefined) updateData.isPublished = isPublished;
+    if (status !== undefined) updateData.status = status;
+
+    // Add project-specific fields
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (isOngoing !== undefined) updateData.isOngoing = isOngoing;
+    if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
+    if (projectLinks !== undefined) updateData.projectLinks = projectLinks;
+    if (contributors !== undefined) updateData.contributors = contributors;
+
+    // Add experience-specific fields
+    if (experienceCategory !== undefined) updateData.experienceCategory = experienceCategory;
+    if (location !== undefined) updateData.location = location;
+    if (locationType !== undefined) updateData.locationType = locationType;
 
     // Update content
     const updatedContent = await prisma.content.update({
       where: { id },
       data: updateData,
       include: {
-        aiAnalysis: true
+        aiAnalysis: true,
+        tags: true,
+        meta: true,
+        blocks: {
+          orderBy: { order: 'asc' }
+        },
+        roles: {
+          include: {
+            skills: { include: { tag: true } }
+          },
+          orderBy: { startDate: 'desc' }
+        },
+        linkedSkills: { include: { tag: true } },
+        revisions: {
+          orderBy: { revisionNumber: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            revisionNumber: true,
+            revisedAt: true,
+            status: true,
+            createdAt: true
+          }
+        },
+        parentContent: {
+          select: {
+            id: true,
+            title: true,
+            status: true
+          }
+        }
       }
     });
 

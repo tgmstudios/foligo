@@ -10,6 +10,7 @@ import DashboardView from '@/views/dashboard/DashboardView.vue'
 import ProjectsView from '@/views/projects/ProjectsView.vue'
 import ProjectDetailView from '@/views/projects/ProjectDetailView.vue'
 import ContentEditorView from '@/views/content/ContentEditorView.vue'
+import CreateContentView from '@/views/content/CreateContentView.vue'
 import UsersView from '@/views/users/UsersView.vue'
 import SettingsView from '@/views/settings/SettingsView.vue'
 import ContentManagementView from '@/views/content/ContentManagementView.vue'
@@ -47,23 +48,45 @@ const router = createRouter({
           component: DashboardView
         },
         {
-          path: 'content',
-          name: 'content',
-          component: ContentManagementView
+          path: 'blogs',
+          name: 'blogs',
+          component: () => import('@/views/content/ContentListView.vue')
         },
         {
           path: 'projects',
-          name: 'projects',
-          component: ProjectsView
+          name: 'projects-content',
+          component: () => import('@/views/content/ContentListView.vue')
         },
         {
-          path: 'projects/:id',
-          name: 'project-detail',
+          path: 'experience',
+          name: 'experience',
+          component: () => import('@/views/content/ContentListView.vue')
+        },
+        {
+          path: 'portfolios',
+          name: 'portfolios',
+          component: () => import('@/views/content/ContentListView.vue')
+        },
+        {
+          path: 'portfolios/:id',
+          name: 'portfolio-detail',
           component: ProjectDetailView,
           props: true
         },
         {
-          path: 'projects/:projectId/content/:id/edit',
+          path: 'content/new/:type',
+          name: 'create-content',
+          component: CreateContentView,
+          props: true
+        },
+        {
+          path: 'portfolios/:projectId/content/new/:type',
+          name: 'create-content-portfolio',
+          component: CreateContentView,
+          props: true
+        },
+        {
+          path: 'portfolios/:projectId/content/:id/edit',
           name: 'content-editor',
           component: ContentEditorView,
           props: true
@@ -83,6 +106,17 @@ const router = createRouter({
           path: 'settings',
           name: 'settings',
           component: SettingsView
+        },
+        {
+          path: 'media',
+          name: 'media-library',
+          component: () => import('@/views/media/MediaLibraryView.vue')
+        },
+        {
+          path: 'portfolios/:projectId/media',
+          name: 'project-media-library',
+          component: () => import('@/views/media/MediaLibraryView.vue'),
+          props: true
         }
       ]
     },

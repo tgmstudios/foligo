@@ -23,6 +23,7 @@ model User {
   // Relationships
   projectsOwned Project[] @relation("ProjectOwner")
   projectAccess ProjectAccess[]
+  media        Media[]
 
   @@map("users")
 }
@@ -44,7 +45,10 @@ model Project {
   owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members ProjectAccess[]
   content Content[]
-  assets  Asset[]
+  media   Media[]
+  tags    ContentTag[]    @relation("ProjectTags")
+  meta    ContentMeta[]
+  skills  Skill[]         @relation("ProjectSkills")
 
   @@map("projects")
 }
@@ -69,38 +73,49 @@ model Content {
   id          String      @id @default(uuid())
   projectId   String
   type        ContentType
-  contentType String      @default("BLOG") // PROJECT, BLOG, EXPERIENCE
+  contentType String      @default("BLOG") // PROJECT, BLOG, EXPERIENCE, SKILL
   title       String
   slug        String?     @unique
   excerpt     String?
   content     String      // Markdown content
-  metadata    Json?       // Additional metadata (tags, categories, etc.)
+  metadata    Json?       // Additional metadata (deprecated, use ContentMeta instead)
   order       Int         @default(0)
-  isPublished Boolean     @default(false)
+  status      ContentStatus @default(DRAFT)
+  revisionOf  String?     // ID of the content this is a revision of
+  revisionNumber Int?     // Revision number (1, 2, 3, etc.)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  revisedAt   DateTime?   // When this revision was created (frozen for revisions)
+
+  // Project-specific fields
+  startDate       DateTime?
+  endDate         DateTime?
+  isOngoing       Boolean  @default(false)
+  featuredImage   String?
+  projectLinks    Json?    // { github, devpost, other: [] }
+  contributors    String[] // Array of contributor names/IDs
+
+  // Experience-specific fields
+  experienceCategory ExperienceCategory?
+  location          String?
+  locationType      LocationType?
 
   // Relationships
-  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  aiAnalysis AIAnalysis?
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aiAnalysis    AIAnalysis?
+  tags          ContentTag[]    @relation("ContentTags")
+  meta          ContentMeta[]
+  blocks        ContentBlock[]  @relation("ContentBlocks")
+  roles         ExperienceRole[]
+  linkedSkills   Skill[]        @relation("ContentSkills")
+  revisions     Content[]       @relation("ContentRevisions")
+  parentContent Content?        @relation("ContentRevisions", fields: [revisionOf], references: [id], onDelete: Cascade)
 
+  @@index([revisionOf])
+  @@index([status])
   @@map("content")
 }
 
-model Asset {
-  id        String   @id @default(uuid())
-  projectId String
-  url       String
-  fileType  String
-  size      Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relationships
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("assets")
-}
 
 model SiteConfig {
   id        String   @id @default(uuid())
@@ -170,4 +185,169 @@ enum ContentType {
   PROJECT
   BLOG
   EXPERIENCE
+  SKILL
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+  REVISION
+}
+
+enum ExperienceCategory {
+  JOB
+  EDUCATION
+  CERTIFICATION
+}
+
+enum LocationType {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum ContentBlockType {
+  TEXT
+  IMAGE
+  VIDEO
+  CODE
+  LINK
+  EMBED
+  GALLERY
+  QUOTE
+  CUSTOM
+}
+
+// Content Link - Links posts together
+model ContentLink {
+  id          String   @id @default(uuid())
+  sourceId    String   // Content or Project ID
+  targetId    String   // Content or Project ID
+  sourceType  String   // "content" or "project"
+  targetType  String   // "content" or "project"
+  linkType    String   // e.g., "related", "parent", "child", "linked"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sourceId, targetId, linkType])
+  @@map("content_links")
+}
+
+// Content Tag - Tags for search and organizing
+model ContentTag {
+  id        String   @id @default(uuid())
+  name      String
+  category  String?  // e.g., "Programming Languages", "Frameworks"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  content Content[] @relation("ContentTags")
+  projects Project[] @relation("ProjectTags")
+  skills   Skill[]   @relation("SkillTags")
+
+  @@unique([name, category])
+  @@index([name])
+  @@index([category])
+  @@map("content_tags")
+}
+
+// Content Meta - Replaces metadata with structured data
+model ContentMeta {
+  id        String   @id @default(uuid())
+  key       String
+  value     String   // Can store JSON as string or simple values
+  contentType String? // Optional: specify the type of value (json, string, number, etc.)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  contentId String?
+  projectId String?
+  content   Content? @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, key])
+  @@unique([projectId, key])
+  @@index([contentId])
+  @@index([projectId])
+  @@map("content_meta")
+}
+
+// Content Block - Advanced post types
+model ContentBlock {
+  id        String          @id @default(uuid())
+  type      ContentBlockType
+  content   String          // JSON or text content
+  order     Int             @default(0)
+  contentId String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Relationships
+  parentContent Content @relation("ContentBlocks", fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@map("content_blocks")
+}
+
+// Skill - Skills with categorization
+model Skill {
+  id        String   @id @default(uuid())
+  name      String
+  tagId     String   // Reference to ContentTag for categorization
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  tag ContentTag @relation("SkillTags", fields: [tagId], references: [id], onDelete: Cascade)
+  projects Project[] @relation("ProjectSkills")
+  experiences ExperienceRole[] @relation("ExperienceSkills")
+  content Content[] @relation("ContentSkills")
+
+  @@unique([name, tagId])
+  @@map("skills")
+}
+
+// Experience Role - Multiple roles within an experience
+model ExperienceRole {
+  id          String   @id @default(uuid())
+  contentId   String
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  skills  Skill[] @relation("ExperienceSkills")
+
+  @@map("experience_roles")
+}
+
+// Media - Media files stored in MinIO, tied to users and projects
+model Media {
+  id          String   @id @default(uuid())
+  userId      String   // User who uploaded the media
+  projectId   String?  // Optional: project the media belongs to
+  filename    String   // Original filename
+  mimeType    String   // MIME type (e.g., image/jpeg, video/mp4)
+  size        Int      // File size in bytes
+  objectName  String   // Object name in MinIO (UUID-based)
+  publicUrl   String   // Public URL to access the media
+  altText     String?  // Optional alt text for accessibility
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([objectName])
+  @@map("media")
 }

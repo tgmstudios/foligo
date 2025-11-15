@@ -24,4 +24,4 @@ RUN apt-get update && apt-get install -y \
 EXPOSE 80
 
 # Start Vite dev server with hot reload and improved file watching
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--watch"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

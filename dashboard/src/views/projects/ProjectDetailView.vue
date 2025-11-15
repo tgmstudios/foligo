@@ -179,9 +179,9 @@
           </router-link>
         </div>
         
-        <div v-if="project.content && project.content.length > 0" class="space-y-3">
+        <div v-if="projectContent && projectContent.length > 0" class="space-y-3">
           <div
-            v-for="content in project.content"
+            v-for="content in projectContent"
             :key="content.id"
             class="flex items-center justify-between p-4 border border-gray-600 rounded-lg hover:border-gray-600 transition-colors"
           >
@@ -214,7 +214,7 @@
             </div>
             <div class="flex items-center space-x-2">
               <router-link
-                :to="`/projects/${projectId}/content/${content.id}/edit`"
+                :to="`/portfolios/${projectId}/content/${content.id}/edit`"
                 class="text-primary-600 hover:text-primary-500 text-sm"
               >
                 Edit
@@ -763,6 +763,12 @@ const siteForm = reactive({
 })
 
 const project = computed(() => projectStore.currentProject)
+
+// Filter out revisions from content list - they should not appear in management views
+const projectContent = computed(() => {
+  if (!project.value || !project.value.content) return []
+  return project.value.content.filter(c => c.status !== 'REVISION' && !c.revisionOf)
+})
 
 const canManageMembers = computed(() => {
   if (!project.value || !authStore.user) return false

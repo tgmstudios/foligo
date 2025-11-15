@@ -20,12 +20,11 @@ export interface Project {
   }
   members?: ProjectMember[]
   content?: Content[]
-  assets?: Asset[]
   siteConfig?: SiteConfig
   _count?: {
     content: number
     members: number
-    assets: number
+    media: number
   }
 }
 
@@ -74,19 +73,113 @@ export interface ProjectMember {
 export interface Content {
   id: string
   projectId: string
-  type: 'PROJECT' | 'BLOG' | 'EXPERIENCE'
+  type: 'PROJECT' | 'BLOG' | 'EXPERIENCE' | 'SKILL'
   contentType: string
   title: string
   slug?: string
   excerpt?: string
   content: string // Markdown content
-  metadata?: any // Additional metadata (tags, categories, etc.)
+  metadata?: any // Additional metadata (deprecated, use meta instead)
   order: number
-  isPublished: boolean
+  status: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'REVISION'
+  revisionOf?: string
+  revisionNumber?: number
+  revisedAt?: string
   createdAt: string
   updatedAt: string
   aiAnalysis?: AIAnalysis
   projectName?: string
+  
+  // Project-specific fields
+  startDate?: string
+  endDate?: string
+  isOngoing?: boolean
+  featuredImage?: string
+  projectLinks?: {
+    github?: string
+    devpost?: string
+    other?: string[]
+  }
+  contributors?: string[]
+  
+  // Experience-specific fields
+  experienceCategory?: 'JOB' | 'EDUCATION' | 'CERTIFICATION'
+  location?: string
+  locationType?: 'REMOTE' | 'HYBRID' | 'ONSITE'
+  
+  // Relationships
+  tags?: ContentTag[]
+  meta?: ContentMeta[]
+  blocks?: ContentBlock[]
+  roles?: ExperienceRole[]
+  linkedProjects?: Project[]
+  linkedSkills?: Skill[]
+  linkedExperiences?: Content[]
+  linkedBlogs?: Content[]
+  revisions?: Content[]
+  parentContent?: Content
+}
+
+export interface ContentLink {
+  id: string
+  sourceId: string
+  targetId: string
+  sourceType: 'content' | 'project'
+  targetType: 'content' | 'project'
+  linkType: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ContentTag {
+  id: string
+  name: string
+  category?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ContentMeta {
+  id: string
+  key: string
+  value: string
+  contentType?: string
+  contentId?: string
+  projectId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ContentBlock {
+  id: string
+  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'CODE' | 'LINK' | 'EMBED' | 'GALLERY' | 'QUOTE' | 'CUSTOM'
+  content: string
+  order: number
+  contentId: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Skill {
+  id: string
+  name: string
+  tagId: string
+  createdAt: string
+  updatedAt: string
+  tag?: ContentTag
+}
+
+export interface ExperienceRole {
+  id: string
+  contentId: string
+  title: string
+  description?: string
+  startDate: string
+  endDate?: string
+  isCurrent: boolean
+  createdAt: string
+  updatedAt: string
+  skills?: Skill[]
 }
 
 export interface AIAnalysis {
@@ -99,15 +192,6 @@ export interface AIAnalysis {
   updatedAt: string
 }
 
-export interface Asset {
-  id: string
-  projectId: string
-  url: string
-  fileType: string
-  size: number
-  createdAt: string
-  updatedAt: string
-}
 
 export interface CreateProjectData {
   name: string
@@ -152,11 +236,14 @@ export const useProjectStore = defineStore('projects', () => {
     projects.value.forEach(project => {
       if (project.content) {
         project.content.forEach(content => {
-          allContent.push({
-            ...content,
-            projectName: project.name,
-            projectId: project.id
-          })
+          // Filter out revisions - they should not appear in recent content
+          if (content.status !== 'REVISION' && !content.revisionOf) {
+            allContent.push({
+              ...content,
+              projectName: project.name,
+              projectId: project.id
+            })
+          }
         })
       }
     })
@@ -444,13 +531,28 @@ export const useProjectStore = defineStore('projects', () => {
   }
 
   async function createContent(projectId: string, contentData: {
-    contentType: 'PROJECT' | 'BLOG' | 'EXPERIENCE'
+    contentType: 'PROJECT' | 'BLOG' | 'EXPERIENCE' | 'SKILL'
     title: string
     slug?: string
     excerpt?: string
     content: string
     metadata?: any
-    isPublished?: boolean
+    status?: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'REVISION'
+    // Project-specific fields
+    startDate?: string
+    endDate?: string
+    isOngoing?: boolean
+    featuredImage?: string
+    projectLinks?: {
+      github?: string
+      devpost?: string
+      other?: string[]
+    }
+    contributors?: string[]
+    // Experience-specific fields
+    experienceCategory?: 'JOB' | 'EDUCATION' | 'CERTIFICATION'
+    location?: string
+    locationType?: 'REMOTE' | 'HYBRID' | 'ONSITE'
   }) {
     try {
       console.log('Creating content for project:', projectId)

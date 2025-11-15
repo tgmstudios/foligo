@@ -248,8 +248,20 @@ ELEVENLABS_API_KEY="your-elevenlabs-api-key"
 ELEVENLABS_AGENT_ID="agent_1301k8emq0nzfwmbyta7254adhpv"
 
 # File Upload
-MAX_FILE_SIZE=5242880
+MAX_FILE_SIZE=52428800
 UPLOAD_DIR="./uploads"
+
+# MinIO (Media Storage)
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET_NAME=foligo
+MINIO_PUBLIC_URL=http://localhost:9000/foligo
+
+# API URL (for generating proxied media URLs)
+API_URL=http://localhost:3000
 ```
 
 ### Dashboard
