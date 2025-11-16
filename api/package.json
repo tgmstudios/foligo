@@ -10,6 +10,7 @@
     "start:80": "PORT=80 node src/index.js",
     "build": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:seed": "node src/seed.js",
     "test": "jest",

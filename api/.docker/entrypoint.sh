@@ -8,9 +8,9 @@ echo "Running Prisma setup..."
 echo "Generating Prisma client..."
 npm run db:generate
 
-# Run database migrations
+# Run database migrations (use deploy for non-interactive environments)
 echo "Running database migrations..."
-npm run db:migrate
+npm run db:migrate:deploy
 
 echo "Prisma setup completed."
 
