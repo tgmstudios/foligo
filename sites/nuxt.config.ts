@@ -14,7 +14,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBaseUrl: 'https://api.foligo.tech'
+      apiBaseUrl: process.env.API_BASE_URL || 'https://api.foligo.tech'
     }
   },
   app: {
@@ -27,6 +27,9 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/png', href: '/squiggle.png' },
         { rel: 'icon', type: 'image/svg+xml', href: '/squiggle.svg' }
+      ],
+      script: [
+        { src: '/env.js', defer: false }
       ]
     }
   },

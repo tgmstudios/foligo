@@ -259,7 +259,8 @@ const fetchSsoProviders = async () => {
 
 const handleSsoLogin = (provider: any) => {
   const redirectUrl = route.query.redirect as string || '/'
-  window.location.href = `${import.meta.env.VITE_API_URL || '/api'}/auth/sso/login/${provider.providerId}?redirect=${encodeURIComponent(redirectUrl)}`
+  const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || '/api'
+  window.location.href = `${apiUrl}/auth/sso/login/${provider.providerId}?redirect=${encodeURIComponent(redirectUrl)}`
 }
 
 const handleSubmit = async () => {

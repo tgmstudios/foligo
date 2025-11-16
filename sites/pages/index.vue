@@ -71,7 +71,7 @@ const config = useRuntimeConfig()
 const { extractSubdomain } = useSubdomain()
 
 // Debug variables
-const isDev = process.dev || process.env.NODE_ENV === 'development'
+const isDev = process.dev || (process.client && window.ENV?.NODE_ENV === 'development') || process.env.NODE_ENV === 'development'
 const hostname = ref('')
 const subdomain = ref('')
 

@@ -1,57 +1,30 @@
-# Multi-stage build for Node.js/Express API
-FROM node:22-alpine AS build
+# Use the official Node.js 14 image as the base image
+FROM node:22.1-bullseye
 
-WORKDIR /app
+# Set the working directory inside the container
+WORKDIR /usr/src/app
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Copy package.json and package-lock.json to the working directory
+COPY package*.json ./
 
-# Install dependencies (including dev dependencies for Prisma generation)
-RUN npm ci
+# Copy entrypoint script and ensure proper line endings
+COPY .docker/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh && \
+    sed -i 's/\r$//' /docker-entrypoint.sh && \
+    cat /docker-entrypoint.sh
 
-# Copy Prisma schema
-COPY prisma ./prisma
+# Install project dependencies
+RUN npm install
 
-# Generate Prisma client
-RUN npm run build
-
-# Copy source code
+# Copy the rest of the project files to the working directory
 COPY . .
 
-# Production stage - run Node.js API
-FROM node:22-alpine
+# Build the project
+#RUN npm run build
 
-WORKDIR /app
-
-# Copy package files
-COPY package.json package-lock.json ./
-
-# Install production dependencies only
-RUN npm ci --only=production
-
-# Copy Prisma schema and generated client from build stage
-# Prisma client is generated during build and needs to be copied
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
-
-# Copy application source code
-COPY --from=build /app/src ./src
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-# Change ownership
-RUN chown -R nodejs:nodejs /app
-
-USER nodejs
-
-# Expose port 3000
+# Expose a port (if your application needs it)
 EXPOSE 3000
 
-# Set environment
-ENV NODE_ENV=production
-
-# Start the API server
-CMD ["node", "src/index.js"]
+# Use custom entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]

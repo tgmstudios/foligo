@@ -1,8 +1,8 @@
 // Environment variables
 export const config = {
-  API_URL: import.meta.env.VITE_API_URL || '/api',
-  APP_NAME: 'Foligo Dashboard',
-  VERSION: '1.0.0'
+  API_URL: (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || '/api',
+  APP_NAME: (typeof window !== 'undefined' && window.ENV?.VITE_APP_NAME) || 'Foligo Dashboard',
+  VERSION: (typeof window !== 'undefined' && window.ENV?.VITE_APP_VERSION) || '1.0.0'
 }
 
 // Utility functions
