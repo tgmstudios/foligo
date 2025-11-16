@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="relative">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-medium text-white">Tags</h3>
       <button
@@ -10,84 +10,75 @@
       </button>
     </div>
 
-    <!-- Search and Filter -->
-    <div class="mb-4 space-y-2">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search tags..."
-        class="input w-full"
-      />
-      <select
-        v-model="selectedCategory"
-        class="input"
-        @change="fetchTags"
-      >
-        <option value="">All Categories</option>
-        <option
-          v-for="cat in categories"
-          :key="cat"
-          :value="cat"
-        >
-          {{ cat }}
-        </option>
-      </select>
-    </div>
-
-    <!-- Tags List -->
-    <div class="space-y-2">
-      <div
-        v-for="tag in filteredTags"
-        :key="tag.id"
-        class="flex items-center justify-between p-3 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors"
-      >
-        <div class="flex items-center space-x-3">
-          <span class="text-white font-medium">{{ tag.name }}</span>
-          <span
-            v-if="tag.category"
-            class="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded"
-          >
-            {{ tag.category }}
-          </span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button
-            @click="selectTag(tag)"
-            class="text-sm text-primary-400 hover:text-primary-300"
-          >
-            Select
-          </button>
-          <button
-            @click="deleteTag(tag.id)"
-            class="text-sm text-red-400 hover:text-red-300"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-      <div v-if="filteredTags.length === 0" class="text-center text-gray-400 py-8">
-        No tags found
-      </div>
-    </div>
-
-    <!-- Selected Tags -->
-    <div v-if="selectedTags.length > 0" class="mt-4 pt-4 border-t border-gray-600">
-      <h4 class="text-sm font-medium text-gray-300 mb-2">Selected Tags</h4>
+    <!-- Active Tags -->
+    <div v-if="selectedTags.length > 0" class="mb-4">
       <div class="flex flex-wrap gap-2">
         <span
           v-for="tag in selectedTags"
           :key="tag.id"
-          class="inline-flex items-center px-3 py-1 bg-primary-600 text-white rounded-full text-sm"
+          class="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white rounded-full text-sm"
         >
           {{ tag.name }}
           <button
             @click="removeTag(tag)"
-            class="ml-2 hover:text-gray-200"
+            class="ml-2 hover:text-gray-200 transition-colors"
+            title="Remove tag"
           >
-            ×
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </span>
       </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mb-4">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Search tags to add..."
+        class="input w-full"
+        @focus="showSearchResults = true"
+        @blur="handleSearchBlur"
+      />
+    </div>
+
+    <!-- Search Results Dropdown -->
+    <div
+      v-if="showSearchResults && filteredTags.length > 0"
+      class="absolute z-10 mt-1 w-full bg-gray-700 rounded-md shadow-lg border border-gray-600 max-h-64 overflow-y-auto"
+    >
+      <div class="py-1">
+        <div
+          v-for="tag in filteredTags"
+          :key="tag.id"
+          class="flex items-center justify-between px-4 py-2 hover:bg-gray-600 cursor-pointer transition-colors"
+          @mousedown.prevent="selectTag(tag)"
+        >
+          <div class="flex-1">
+            <div class="text-white font-medium">{{ tag.name }}</div>
+            <div
+              v-if="tag.category"
+              class="text-xs text-gray-400 mt-0.5"
+            >
+              {{ tag.category }}
+            </div>
+          </div>
+          <button
+            v-if="selectedTags.find(t => t.id === tag.id)"
+            class="text-primary-400 text-sm ml-2"
+          >
+            ✓
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="showSearchResults && filteredTags.length === 0"
+      class="absolute z-10 mt-1 w-full bg-gray-700 rounded-md shadow-lg border border-gray-600 p-4"
+    >
+      <p class="text-gray-400 text-sm text-center">No tags found</p>
     </div>
 
     <!-- Create Tag Modal -->
@@ -159,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/services/api'
 import type { ContentTag } from '@/stores/projects'
 
@@ -178,51 +169,49 @@ const emit = defineEmits<Emits>()
 const tags = ref<ContentTag[]>([])
 const selectedTags = ref<ContentTag[]>(props.modelValue || [])
 const searchQuery = ref('')
-const selectedCategory = ref('')
 const showCreateModal = ref(false)
 const isCreating = ref(false)
+const showSearchResults = ref(false)
 
 const newTag = ref({
   name: '',
   category: ''
 })
 
-const categories = computed(() => {
-  const cats = new Set<string>()
-  tags.value.forEach(tag => {
-    if (tag.category) cats.add(tag.category)
-  })
-  return Array.from(cats).sort()
-})
-
 const filteredTags = computed(() => {
-  let filtered = tags.value
+  if (!searchQuery.value) {
+    // Show all tags when no search query
+    return tags.value
+  }
   
-  if (searchQuery.value) {
-    filtered = filtered.filter(tag =>
+  // Filter tags based on search query
+  return tags.value.filter(tag =>
       tag.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
-  }
-  
-  if (selectedCategory.value) {
-    filtered = filtered.filter(tag => tag.category === selectedCategory.value)
-  }
-  
-  return filtered
 })
+
+const handleSearchBlur = () => {
+  // Delay hiding to allow click events to fire
+  setTimeout(() => {
+    showSearchResults.value = false
+  }, 200)
+}
 
 const fetchTags = async () => {
   try {
-    const params: any = {}
-    if (selectedCategory.value) params.category = selectedCategory.value
-    if (searchQuery.value) params.search = searchQuery.value
-    
-    const response = await api.get('/content-tags', { params })
+    const response = await api.get('/content-tags')
     tags.value = response.data
   } catch (error) {
     console.error('Failed to fetch tags:', error)
   }
 }
+
+watch(() => searchQuery.value, () => {
+  // Keep search results visible when typing
+  if (showSearchResults.value) {
+    fetchTags()
+  }
+})
 
 const createTag = async () => {
   try {
@@ -243,6 +232,8 @@ const selectTag = (tag: ContentTag) => {
     selectedTags.value.push(tag)
     emit('update:modelValue', selectedTags.value)
   }
+  searchQuery.value = ''
+  showSearchResults.value = false
 }
 
 const removeTag = (tag: ContentTag) => {
@@ -263,8 +254,13 @@ const deleteTag = async (tagId: string) => {
   }
 }
 
+watch(() => props.modelValue, (newValue) => {
+  selectedTags.value = newValue || []
+}, { deep: true })
+
 onMounted(() => {
   fetchTags()
+  selectedTags.value = props.modelValue || []
 })
 </script>
 

@@ -14,7 +14,7 @@ yarn-error.log*
 .env.production.local
 
 # Logs
-logs
+logs/*.log
 *.log
 
 # Runtime data

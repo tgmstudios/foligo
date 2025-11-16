@@ -169,11 +169,11 @@ router.post('/projects/:projectId/content', [
         },
         roles: {
           include: {
-            skills: { include: { tag: true } }
+            skills: true
           },
           orderBy: { startDate: 'desc' }
         },
-        linkedSkills: { include: { tag: true } }
+        linkedSkills: true
       }
     });
 
@@ -243,11 +243,11 @@ router.get('/content/:id', async (req, res) => {
         },
         roles: {
           include: {
-            skills: { include: { tag: true } }
+            skills: true
           },
           orderBy: { startDate: 'desc' }
         },
-        linkedSkills: { include: { tag: true } }
+        linkedSkills: true
       }
     });
 
@@ -643,11 +643,11 @@ router.put('/content/:id/fields', [
         },
         roles: {
           include: {
-            skills: { include: { tag: true } }
+            skills: true
           },
           orderBy: { startDate: 'desc' }
         },
-        linkedSkills: { include: { tag: true } },
+        linkedSkills: true,
         revisions: {
           orderBy: { revisionNumber: 'desc' },
           select: {

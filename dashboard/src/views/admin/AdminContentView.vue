@@ -75,7 +75,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded">
-                  {{ item.contentType }}
+                  {{ formatContentType(item.contentType) }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -101,7 +101,7 @@
                   v-else
                   class="px-2 py-1 text-xs font-medium bg-yellow-600 text-white rounded"
                 >
-                  {{ item.status }}
+                  {{ formatContentStatus(item.status) }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
@@ -161,6 +161,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { formatContentType, formatContentStatus } from '@/utils'
 import api from '@/services/api'
 
 const router = useRouter()

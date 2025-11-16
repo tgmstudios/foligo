@@ -1,17 +1,22 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-medium text-white">Experience Roles</h3>
-      <button
-        @click="showCreateModal = true"
-        class="btn btn-sm btn-primary"
-      >
-        + Add Role
-      </button>
+    <div class="p-6 border-b border-gray-600">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-medium text-white">Experience Roles</h3>
+          <p class="text-sm text-gray-400 mt-1">Manage roles and positions for this experience</p>
+        </div>
+        <button
+          @click="showCreateModal = true"
+          class="btn btn-sm btn-primary"
+        >
+          + Add Role
+        </button>
+      </div>
     </div>
 
     <!-- Roles List -->
-    <div class="space-y-4">
+    <div class="p-6 space-y-4">
       <div
         v-for="role in roles"
         :key="role.id"
@@ -40,9 +45,9 @@
             </button>
           </div>
         </div>
-        <p v-if="role.description" class="text-sm text-gray-300 mt-2">
-          {{ role.description }}
-        </p>
+        <div v-if="role.description" class="text-sm text-gray-300 mt-2 prose prose-sm prose-invert max-w-none">
+          <div v-html="renderedDescription(role.description)"></div>
+        </div>
         <div v-if="role.skills && role.skills.length > 0" class="mt-2 flex flex-wrap gap-2">
           <span
             v-for="skill in role.skills"
@@ -66,7 +71,7 @@
       <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="closeModal"></div>
         
-        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full relative z-10" @click.stop @mousedown.stop>
           <form @submit.prevent="saveRole">
             <div class="bg-gray-800 px-6 pt-6 pb-4">
               <div class="flex items-center justify-between mb-4">
@@ -132,8 +137,7 @@
                     <span class="text-sm text-gray-300">Current role</span>
                   </label>
                 </div>
-                <div>
-                  <label class="label">Skills</label>
+                <div @click.stop @mousedown.stop>
                   <SkillsManager
                     v-model="roleForm.skills"
                     :project-id="projectId"
@@ -167,6 +171,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { marked } from 'marked'
 import api from '@/services/api'
 import SkillsManager from './SkillsManager.vue'
 import type { ExperienceRole, Skill } from '@/stores/projects'
@@ -268,8 +273,50 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
 }
 
+const renderedDescription = (description: string) => {
+  return marked(description || '')
+}
+
 onMounted(() => {
   fetchRoles()
 })
 </script>
+
+<style scoped>
+.prose {
+  color: #d1d5db;
+}
+
+.prose p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.prose ul, .prose ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.prose li {
+  margin-bottom: 0.5rem;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.prose code {
+  background-color: #1f2937;
+  color: #60a5fa;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.prose a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+</style>
 

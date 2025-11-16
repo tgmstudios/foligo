@@ -102,7 +102,7 @@
                   :class="getStatusClass(item.status)"
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                 >
-                  {{ item.status }}
+                  {{ formatContentStatus(item.status) }}
                 </span>
               </div>
               <p v-if="getItemSubtitle(item)" class="text-sm text-gray-400 mb-2">{{ getItemSubtitle(item) }}</p>
@@ -151,6 +151,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore, type Content, type Project } from '@/stores/projects'
 import { format } from 'date-fns'
+import { formatContentStatus } from '@/utils'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
 
 const route = useRoute()

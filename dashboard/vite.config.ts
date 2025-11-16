@@ -3,7 +3,13 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue({
+    template: {
+      compilerOptions: {
+        isCustomElement: (tag) => tag === 'elevenlabs-convai'
+      }
+    }
+  })],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

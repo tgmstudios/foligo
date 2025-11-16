@@ -35,7 +35,7 @@ router.get('/projects/:projectId/content/:contentId/revisions', authorizeProject
       orderBy: { revisionNumber: 'desc' },
       include: {
         tags: true,
-        linkedSkills: { include: { tag: true } }
+        linkedSkills: true
       }
     });
 
@@ -86,11 +86,11 @@ router.get('/projects/:projectId/content/:contentId/revisions/:revisionId', auth
         },
         roles: {
           include: {
-            skills: { include: { tag: true } }
+            skills: true
           },
           orderBy: { startDate: 'desc' }
         },
-        linkedSkills: { include: { tag: true } }
+        linkedSkills: true
       }
     });
 
@@ -213,11 +213,11 @@ router.post('/projects/:projectId/content/:contentId/revisions/:revisionId/resto
         },
         roles: {
           include: {
-            skills: { include: { tag: true } }
+            skills: true
           },
           orderBy: { startDate: 'desc' }
         },
-        linkedSkills: { include: { tag: true } },
+        linkedSkills: true,
         revisions: {
           orderBy: { revisionNumber: 'desc' },
           select: {

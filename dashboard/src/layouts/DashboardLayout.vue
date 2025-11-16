@@ -346,6 +346,7 @@
     <AIContentCreatorModal
       ref="aiModalRef"
       mode="create"
+      :project-id="selectedProjectId"
       @content-generated="handleContentGenerated"
       :key="`ai-modal-${selectedProjectId}`"
     />
@@ -358,6 +359,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
+import { formatContentType } from '@/utils'
 import AIContentCreatorModal from '@/components/AIContentCreatorModal.vue'
 
 const route = useRoute()
@@ -479,17 +481,128 @@ const handleCreateContent = () => {
   }
 }
 
-const handleContentGenerated = async (data: { content: string; title?: string; metadata: any }) => {
+const handleContentGenerated = async (data: { content: string; title?: string; excerpt?: string; metadata: any; skills?: any[]; tags?: any[] }) => {
   if (!selectedProjectId.value) return
   
   // Navigate to content editor or create a new content item
   try {
-    const newContent = await projectStore.createContent(selectedProjectId.value, {
-      contentType: data.metadata.contentType || 'BLOG',
+    const contentType = data.metadata.contentType || 'BLOG'
+    
+    // Extract excerpt from content if not provided
+    const excerpt = data.excerpt || data.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...'
+    
+    const contentData: any = {
+      contentType,
       title: data.title || 'AI Generated Content',
+      excerpt: excerpt,
       content: data.content,
-      isPublished: false
-    })
+      status: 'DRAFT' as const
+    }
+    
+    // Add type-specific fields from metadata
+    if (contentType === 'PROJECT') {
+      if (data.metadata.startDate) {
+        const startDate = new Date(data.metadata.startDate)
+        contentData.startDate = isNaN(startDate.getTime()) ? null : startDate.toISOString()
+      }
+      if (data.metadata.endDate) {
+        const endDate = new Date(data.metadata.endDate)
+        contentData.endDate = isNaN(endDate.getTime()) ? null : endDate.toISOString()
+      }
+      if (data.metadata.isOngoing !== undefined) contentData.isOngoing = data.metadata.isOngoing
+      if (data.metadata.projectLinks) contentData.projectLinks = data.metadata.projectLinks
+      if (data.metadata.contributors) contentData.contributors = data.metadata.contributors
+      if (data.metadata.featuredImage) contentData.featuredImage = data.metadata.featuredImage
+    }
+    
+    if (contentType === 'EXPERIENCE') {
+      if (data.metadata.experienceCategory) contentData.experienceCategory = data.metadata.experienceCategory
+      if (data.metadata.startDate) {
+        const startDate = new Date(data.metadata.startDate)
+        contentData.startDate = isNaN(startDate.getTime()) ? null : startDate.toISOString()
+      }
+      if (data.metadata.endDate) {
+        const endDate = new Date(data.metadata.endDate)
+        contentData.endDate = isNaN(endDate.getTime()) ? null : endDate.toISOString()
+      }
+      if (data.metadata.isOngoing !== undefined) contentData.isOngoing = data.metadata.isOngoing
+      if (data.metadata.location) contentData.location = data.metadata.location
+      if (data.metadata.locationType) contentData.locationType = data.metadata.locationType
+    }
+    
+    if (contentType === 'SKILL') {
+      if (data.metadata.categoryTag) contentData.metadata = { categoryTag: data.metadata.categoryTag }
+    }
+    
+    const newContent = await projectStore.createContent(selectedProjectId.value, contentData)
+    
+    // Link skills if provided
+    if (data.skills && Array.isArray(data.skills) && data.skills.length > 0) {
+      try {
+        const skillIds = data.skills.map(skill => skill.id)
+        await api.post(`/projects/${selectedProjectId.value}/content/${newContent.id}/skills`, {
+          skillIds: skillIds
+        })
+      } catch (error) {
+        console.error('Failed to link skills:', error)
+        // Continue even if skill linking fails - user can add them manually
+      }
+    }
+    
+    // Link tags if provided
+    if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
+      try {
+        const tagIds = data.tags.map(tag => tag.id)
+        await api.post(`/projects/${selectedProjectId.value}/content/${newContent.id}/tags`, {
+          tagIds: tagIds
+        })
+      } catch (error) {
+        console.error('Failed to link tags:', error)
+        // Continue even if tag linking fails - user can add them manually
+      }
+    }
+    
+    // Create roles if this is an experience with roles in metadata
+    if (contentType === 'EXPERIENCE' && data.metadata.roles && Array.isArray(data.metadata.roles) && data.metadata.roles.length > 0) {
+      try {
+        // Get all skills to match by name
+        const allSkills = await api.get('/skills')
+        const skillsMap = new Map()
+        allSkills.data.forEach((skill: any) => {
+          const key = skill.name.toLowerCase()
+          if (!skillsMap.has(key)) {
+            skillsMap.set(key, skill)
+          }
+        })
+        
+        // Create each role
+        for (const roleData of data.metadata.roles) {
+          const skillIds: string[] = []
+          
+          // Match skills by name
+          if (roleData.skills && Array.isArray(roleData.skills)) {
+            for (const skillName of roleData.skills) {
+              const skill = skillsMap.get(skillName.toLowerCase())
+              if (skill) {
+                skillIds.push(skill.id)
+              }
+            }
+          }
+          
+          await api.post(`/projects/${selectedProjectId.value}/content/${newContent.id}/roles`, {
+            title: roleData.title,
+            description: roleData.description || null,
+            startDate: roleData.startDate,
+            endDate: roleData.endDate || null,
+            isCurrent: roleData.isCurrent || false,
+            skillIds: skillIds
+          })
+        }
+      } catch (error) {
+        console.error('Failed to create roles:', error)
+        // Continue even if role creation fails - user can add them manually
+      }
+    }
     
     // Navigate to the content editor
     router.push(`/portfolios/${selectedProjectId.value}/content/${newContent.id}/edit`)
@@ -533,7 +646,7 @@ const handleSearch = () => {
             id: content.id,
             type: 'post',
             title: content.title,
-            subtitle: `${content.type} in ${project.name}`,
+            subtitle: `${formatContentType(content.type)} in ${project.name}`,
             route: `/portfolios/${project.id}/content/${content.id}/edit`
           })
         }

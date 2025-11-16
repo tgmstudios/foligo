@@ -205,7 +205,7 @@
                   </span>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">
-                  {{ content.type }} • {{ formatDate(content.updatedAt) }}
+                  {{ formatContentType(content.type) }} • {{ formatDate(content.updatedAt) }}
                 </p>
                 <p v-if="content.excerpt" class="text-xs text-gray-400 mt-1 line-clamp-2">
                   {{ content.excerpt }}
@@ -715,6 +715,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type ProjectMember, type Content } from '@/stores/projects'
 import { format } from 'date-fns'
+import { formatContentType } from '@/utils'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
 const route = useRoute()

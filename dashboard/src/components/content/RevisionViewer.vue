@@ -18,7 +18,7 @@
         </div>
         <div class="flex items-center space-x-2">
           <span :class="getStatusClass(content?.status)" class="px-2 py-1 text-xs rounded">
-            {{ content?.status }}
+            {{ formatContentStatus(content?.status || '') }}
           </span>
         </div>
       </div>
@@ -133,6 +133,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/services/api'
 import { marked } from 'marked'
+import { formatContentStatus } from '@/utils'
 import type { Content } from '@/stores/projects'
 
 interface Props {

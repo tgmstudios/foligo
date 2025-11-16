@@ -3,263 +3,244 @@
     v-if="isOpen"
     class="fixed inset-0 z-50 overflow-y-auto"
   >
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
       <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="closeModal"></div>
       
-      <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-        <form @submit.prevent="handleSubmit">
-          <div class="flex h-[600px]">
-            <!-- Sidebar: Content Type Selection -->
-            <div class="w-64 bg-gray-900 border-r border-gray-700 flex flex-col">
-              <div class="p-6 border-b border-gray-700">
-                <h3 class="text-lg font-semibold text-white mb-2">Create New Content</h3>
-                <p class="text-sm text-gray-400">Choose a content type</p>
-              </div>
-              
-              <div class="flex-1 overflow-y-auto p-4 space-y-2">
-                <button
-                  v-for="type in contentTypes"
-                  :key="type.value"
-                  @click="contentType = type.value"
-                  type="button"
-                  :class="[
-                    'w-full p-4 rounded-lg text-left transition-all border-2',
-                    contentType === type.value
-                      ? 'border-primary-500 bg-primary-500/10'
-                      : 'border-gray-700 hover:border-gray-600 bg-gray-800'
-                  ]"
-                >
-                  <div class="flex items-start space-x-3">
-                    <div class="text-2xl flex-shrink-0">{{ type.icon }}</div>
-                    <div class="flex-1 min-w-0">
-                      <div class="font-semibold text-white mb-1">{{ type.label }}</div>
-                      <div class="text-xs text-gray-400 leading-relaxed">{{ type.description }}</div>
-                      <div v-if="type.features && type.features.length > 0" class="mt-2 space-y-1">
-                        <div
-                          v-for="feature in type.features"
-                          :key="feature"
-                          class="text-xs text-gray-500 flex items-center"
-                        >
-                          <svg class="w-3 h-3 mr-1.5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                          </svg>
-                          {{ feature }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <!-- Main Content Area -->
-            <div class="flex-1 flex flex-col overflow-hidden">
-              <!-- Header -->
-              <div class="bg-gray-800 px-6 pt-6 pb-4 border-b border-gray-700">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <h3 class="text-lg leading-6 font-medium text-white">
-                      {{ selectedType?.label || 'Create Content' }}
-                    </h3>
-                    <p class="text-sm text-gray-400 mt-1">{{ selectedType?.description }}</p>
-                  </div>
-                  <button
-                    type="button"
-                    @click="closeModal"
-                    class="text-gray-400 hover:text-gray-300"
-                  >
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Form Fields -->
-              <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                <!-- Project Selection -->
-                <div v-if="!project">
-                  <label for="project" class="block text-sm font-medium text-gray-300 mb-1">
-                    Project *
-                  </label>
-                  <select
-                    id="project"
-                    v-model="form.projectId"
-                    required
-                    class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Select a project</option>
-                    <option
-                      v-for="proj in projects"
-                      :key="proj.id"
-                      :value="proj.id"
-                    >
-                      {{ proj.name }}
-                    </option>
-                  </select>
-                </div>
-                <div v-else class="p-3 bg-gray-700 rounded-md">
-                  <div class="text-xs text-gray-400 mb-1">Project</div>
-                  <div class="font-medium text-white">{{ project.name }}</div>
-                </div>
-
-                <!-- Title -->
+      <div class="relative inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full max-h-[90vh] flex flex-col w-full">
+        <form @submit.prevent="handleSubmit" class="flex flex-col h-full max-h-[90vh]">
+          <!-- Header -->
+          <div class="px-4 pt-5 pb-4 border-b border-gray-700 sm:px-6 sm:pt-6 sm:pb-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="text-2xl sm:text-3xl flex-shrink-0">{{ selectedType?.icon || '📝' }}</div>
                 <div>
-                  <label for="title" class="block text-sm font-medium text-gray-300 mb-1">
-                    Title *
-                  </label>
+                  <h3 class="text-lg font-medium text-white">
+                    {{ selectedType?.label || 'Create Content' }}
+                  </h3>
+                  <p class="text-sm text-gray-400 mt-0.5">{{ selectedType?.description }}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="closeModal"
+                class="text-gray-400 hover:text-gray-300 transition-colors"
+              >
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Content Type Selection (Mobile: Tabs, Desktop: Compact Grid) -->
+          <div class="px-4 pt-4 border-b border-gray-700 sm:px-6">
+            <div class="flex overflow-x-auto pb-2 sm:pb-0 sm:grid sm:grid-cols-4 sm:gap-2 scrollbar-hide">
+              <button
+                v-for="type in contentTypes"
+                :key="type.value"
+                @click="contentType = type.value"
+                type="button"
+                :class="[
+                  'flex-shrink-0 px-3 py-2 rounded-lg text-left transition-all border-2 sm:flex-col sm:items-center sm:text-center sm:p-3',
+                  contentType === type.value
+                    ? 'border-primary-500 bg-primary-500/10 shadow-md shadow-primary-500/20'
+                    : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                ]"
+              >
+                <div class="text-lg sm:text-2xl mr-2 sm:mr-0 sm:mb-1">{{ type.icon }}</div>
+                <div class="flex-1 min-w-0 sm:flex-none">
+                  <div class="text-xs sm:text-sm font-medium text-white truncate sm:whitespace-normal">{{ type.label }}</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Form Content -->
+          <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+            <div class="space-y-4">
+              <!-- Portfolio Selection -->
+              <div v-if="!project">
+                <label for="project" class="block text-sm font-medium text-gray-300 mb-1">
+                  Portfolio *
+                </label>
+                <select
+                  id="project"
+                  v-model="form.projectId"
+                  required
+                  class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                >
+                  <option value="">Select a portfolio</option>
+                  <option
+                    v-for="proj in projects"
+                    :key="proj.id"
+                    :value="proj.id"
+                  >
+                    {{ proj.name }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-400">Content will be added to the selected portfolio</p>
+              </div>
+              <div v-else class="p-3 bg-gray-700 rounded-md">
+                <div class="text-xs text-gray-400 mb-1">Portfolio</div>
+                <div class="font-medium text-white text-sm">{{ project.name }}</div>
+              </div>
+
+              <!-- Title -->
+              <div>
+                <label for="title" class="block text-sm font-medium text-gray-300 mb-1">
+                  Title *
+                </label>
+                <input
+                  id="title"
+                  v-model="form.title"
+                  type="text"
+                  required
+                  class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  :placeholder="selectedType?.placeholder || 'Enter a title'"
+                />
+              </div>
+
+              <!-- Slug -->
+              <div>
+                <label for="slug" class="block text-sm font-medium text-gray-300 mb-1">
+                  URL Slug
+                </label>
+                <div class="flex">
+                  <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-700 text-gray-400 text-xs sm:text-sm">
+                    {{ project?.subdomain || 'project' }}.foligo.tech/
+                  </span>
                   <input
-                    id="title"
-                    v-model="form.title"
+                    id="slug"
+                    v-model="form.slug"
                     type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    :placeholder="selectedType?.placeholder || 'Enter a title'"
+                    class="flex-1 px-3 py-2 border border-gray-600 rounded-r-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    placeholder="url-friendly-slug"
                   />
                 </div>
+                <p class="mt-1 text-xs text-gray-400">
+                  Leave empty to auto-generate from title
+                </p>
+              </div>
 
-                <!-- Slug -->
-                <div>
-                  <label for="slug" class="block text-sm font-medium text-gray-300 mb-1">
-                    URL Slug
-                  </label>
-                  <div class="flex">
-                    <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-700 text-gray-400 text-sm">
-                      {{ project?.subdomain || 'project' }}.foligo.tech/
-                    </span>
+              <!-- Excerpt -->
+              <div>
+                <label for="excerpt" class="block text-sm font-medium text-gray-300 mb-1">
+                  Excerpt
+                </label>
+                <textarea
+                  id="excerpt"
+                  v-model="form.excerpt"
+                  rows="2"
+                  class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm resize-none"
+                  placeholder="Brief description (optional)"
+                ></textarea>
+              </div>
+
+              <!-- Type-specific fields -->
+              <div v-if="contentType === 'PROJECT'" class="space-y-4 pt-2 border-t border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-300">Project Details</h4>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Start Date</label>
                     <input
-                      id="slug"
-                      v-model="form.slug"
-                      type="text"
-                      class="flex-1 px-3 py-2 border border-gray-600 rounded-r-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="url-friendly-slug"
+                      v-model="form.metadata.startDate"
+                      type="date"
+                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                     />
                   </div>
-                  <p class="mt-1 text-xs text-gray-400">
-                    Leave empty to auto-generate from title
-                  </p>
-                </div>
-
-                <!-- Excerpt -->
-                <div>
-                  <label for="excerpt" class="block text-sm font-medium text-gray-300 mb-1">
-                    Excerpt
-                  </label>
-                  <textarea
-                    id="excerpt"
-                    v-model="form.excerpt"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Brief description (optional)"
-                  ></textarea>
-                </div>
-
-                <!-- Type-specific fields -->
-                <div v-if="contentType === 'PROJECT'" class="space-y-4 pt-2 border-t border-gray-700">
-                  <h4 class="text-sm font-semibold text-gray-300">Project Details</h4>
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-xs text-gray-400 mb-1">Start Date</label>
-                      <input
-                        v-model="form.metadata.startDate"
-                        type="date"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs text-gray-400 mb-1">End Date</label>
-                      <input
-                        v-model="form.metadata.endDate"
-                        type="date"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="contentType === 'EXPERIENCE'" class="space-y-4 pt-2 border-t border-gray-700">
-                  <h4 class="text-sm font-semibold text-gray-300">Experience Details</h4>
                   <div>
-                    <label class="block text-xs text-gray-400 mb-1">Category *</label>
-                    <select
-                      v-model="form.metadata.experienceCategory"
-                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="">Select category</option>
-                      <option value="JOB">Job Experience</option>
-                      <option value="EDUCATION">Education</option>
-                      <option value="CERTIFICATION">Certification/License</option>
-                    </select>
-                  </div>
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-xs text-gray-400 mb-1">Start Date</label>
-                      <input
-                        v-model="form.metadata.startDate"
-                        type="date"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs text-gray-400 mb-1">End Date</label>
-                      <input
-                        v-model="form.metadata.endDate"
-                        type="date"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="contentType === 'SKILL'" class="space-y-4 pt-2 border-t border-gray-700">
-                  <h4 class="text-sm font-semibold text-gray-300">Skill Details</h4>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Category Tag</label>
+                    <label class="block text-xs text-gray-400 mb-1">End Date</label>
                     <input
-                      v-model="form.metadata.categoryTag"
-                      type="text"
-                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="e.g., Programming Languages, Frameworks, Tools"
+                      v-model="form.metadata.endDate"
+                      type="date"
+                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                     />
-                    <p class="mt-1 text-xs text-gray-500">The category this skill belongs to</p>
                   </div>
                 </div>
+              </div>
 
-                <!-- Status -->
-                <div class="pt-2 border-t border-gray-700">
-                  <label for="status" class="block text-sm font-medium text-gray-300 mb-1">
-                    Status
-                  </label>
+              <div v-if="contentType === 'EXPERIENCE'" class="space-y-4 pt-2 border-t border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-300">Experience Details</h4>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Category *</label>
                   <select
-                    id="status"
-                    v-model="form.status"
-                    class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    v-model="form.metadata.experienceCategory"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                   >
-                    <option value="DRAFT">Draft</option>
-                    <option value="PUBLISHED">Published</option>
-                    <option value="HIDDEN">Hidden</option>
+                    <option value="">Select category</option>
+                    <option value="JOB">Job Experience</option>
+                    <option value="EDUCATION">Education</option>
+                    <option value="CERTIFICATION">Certification/License</option>
                   </select>
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Start Date</label>
+                    <input
+                      v-model="form.metadata.startDate"
+                      type="date"
+                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">End Date</label>
+                    <input
+                      v-model="form.metadata.endDate"
+                      type="date"
+                      class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <!-- Footer -->
-              <div class="bg-gray-800 px-6 py-4 border-t border-gray-700 sm:flex sm:flex-row-reverse">
-                <button
-                  type="submit"
-                  :disabled="isLoading || !form.title.trim()"
-                  class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              <div v-if="contentType === 'SKILL'" class="space-y-4 pt-2 border-t border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-300">Skill Details</h4>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Category Tag</label>
+                  <input
+                    v-model="form.metadata.categoryTag"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    placeholder="e.g., Programming Languages, Frameworks, Tools"
+                  />
+                  <p class="mt-1 text-xs text-gray-500">The category this skill belongs to</p>
+                </div>
+              </div>
+
+              <!-- Status -->
+              <div class="pt-2 border-t border-gray-700">
+                <label for="status" class="block text-sm font-medium text-gray-300 mb-1">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  v-model="form.status"
+                  class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                 >
-                  {{ isLoading ? 'Creating...' : `Create ${selectedType?.label || 'Content'}` }}
-                </button>
-                <button
-                  type="button"
-                  @click="closeModal"
-                  class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-base font-medium text-gray-300 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                  Cancel
-                </button>
+                  <option value="DRAFT">Draft</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="HIDDEN">Hidden</option>
+                </select>
               </div>
             </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-4 py-3 border-t border-gray-700 sm:px-6 sm:flex sm:flex-row-reverse sm:py-4">
+            <button
+              type="submit"
+              :disabled="isLoading || !form.title.trim()"
+              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {{ isLoading ? 'Creating...' : `Create ${selectedType?.label || 'Content'}` }}
+            </button>
+            <button
+              type="button"
+              @click="closeModal"
+              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-sm font-medium text-gray-300 hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </div>
@@ -268,9 +249,9 @@
 
   <!-- Gemini AI Chatbot -->
   <GeminiChatbot
-    v-if="showAIChatbot"
+    v-if="showAIChatbot && (contentType === 'BLOG' || contentType === 'PROJECT' || contentType === 'EXPERIENCE')"
     :is-open="showAIChatbot"
-    :content-type="contentType"
+    :content-type="contentType as 'BLOG' | 'PROJECT' | 'EXPERIENCE'"
     :initial-info="form"
     :project-id="form.projectId || project?.id"
     @close="showAIChatbot = false"
@@ -378,17 +359,17 @@ const form = reactive({
     startDate: '',
     endDate: '',
     experienceCategory: '',
-    categoryTag: ''
+    categoryTag: '',
+    isOngoing: undefined as boolean | undefined,
+    projectLinks: undefined as any,
+    contributors: undefined as any,
+    location: undefined as string | undefined,
+    locationType: undefined as string | undefined
   }
 })
 
 const closeModal = () => {
   emit('close')
-}
-
-const openAIChatbot = () => {
-  console.log('Opening AI chatbot...', { contentType: contentType.value, form: form })
-  showAIChatbot.value = true
 }
 
 const handleAIContentGenerated = (content: any) => {
@@ -430,16 +411,22 @@ const handleSubmit = async () => {
     if (contentType.value === 'PROJECT') {
       if (form.metadata.startDate) contentData.startDate = form.metadata.startDate
       if (form.metadata.endDate) contentData.endDate = form.metadata.endDate
+      if (form.metadata.isOngoing !== undefined) contentData.isOngoing = form.metadata.isOngoing
+      if (form.metadata.projectLinks) contentData.projectLinks = form.metadata.projectLinks
+      if (form.metadata.contributors) contentData.contributors = form.metadata.contributors
     }
 
     if (contentType.value === 'EXPERIENCE') {
       if (form.metadata.experienceCategory) contentData.experienceCategory = form.metadata.experienceCategory
       if (form.metadata.startDate) contentData.startDate = form.metadata.startDate
       if (form.metadata.endDate) contentData.endDate = form.metadata.endDate
+      if (form.metadata.isOngoing !== undefined) contentData.isOngoing = form.metadata.isOngoing
+      if (form.metadata.location) contentData.location = form.metadata.location
+      if (form.metadata.locationType) contentData.locationType = form.metadata.locationType
     }
 
     if (contentType.value === 'SKILL') {
-      // Skills are handled differently - they need a tag
+      // Skills are handled differently - they have their own category system
       // For now, we'll create it as regular content and the user can configure it in the editor
     }
 
@@ -460,7 +447,12 @@ const handleSubmit = async () => {
         startDate: '',
         endDate: '',
         experienceCategory: '',
-        categoryTag: ''
+        categoryTag: '',
+        isOngoing: undefined,
+        projectLinks: undefined,
+        contributors: undefined,
+        location: undefined,
+        locationType: undefined
       }
     })
     contentType.value = 'BLOG'
@@ -471,3 +463,13 @@ const handleSubmit = async () => {
   }
 }
 </script>
+
+<style scoped>
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+</style>

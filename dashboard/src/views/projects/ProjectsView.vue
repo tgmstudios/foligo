@@ -4,8 +4,8 @@
     <div class="mb-8">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-white">Projects</h1>
-          <p class="text-gray-400 mt-1">Manage your portfolio projects and content</p>
+          <h1 class="text-2xl font-bold text-white">Portfolios</h1>
+          <p class="text-gray-400 mt-1">Manage your portfolio sites and content</p>
         </div>
         <button
           @click="showCreateModal = true"
@@ -14,7 +14,7 @@
           <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          New Project
+          Create Portfolio
         </button>
       </div>
     </div>
@@ -26,7 +26,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search projects..."
+            placeholder="Search portfolios..."
             class="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500"
           />
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -70,16 +70,16 @@
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-white">No projects found</h3>
+      <h3 class="mt-2 text-sm font-medium text-white">No portfolios found</h3>
       <p class="mt-1 text-sm text-gray-400">
-        {{ searchQuery ? 'Try adjusting your search criteria.' : 'Get started by creating a new project.' }}
+        {{ searchQuery ? 'Try adjusting your search criteria.' : 'Get started by creating a new portfolio.' }}
       </p>
       <div v-if="!searchQuery" class="mt-6">
         <button
           @click="showCreateModal = true"
           class="btn btn-primary"
         >
-          Create Project
+          Create Portfolio
         </button>
       </div>
     </div>
@@ -165,7 +165,7 @@
       </div>
     </div>
 
-    <!-- Create Project Modal -->
+    <!-- Create Portfolio Modal -->
     <CreateProjectModal
       v-if="showCreateModal"
       @close="showCreateModal = false"
