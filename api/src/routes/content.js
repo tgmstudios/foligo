@@ -72,7 +72,10 @@ router.post('/projects/:projectId/content', [
   // Experience-specific fields
   body('experienceCategory').optional().isIn(['JOB', 'EDUCATION', 'CERTIFICATION']),
   body('location').optional().trim(),
-  body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE'])
+  body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE']),
+  // Skills and tags
+  body('skills').optional().isArray(),
+  body('tags').optional().isArray()
 ], authorizeProjectAccess('EDITOR'), async (req, res) => {
   try {
     // Check validation errors
@@ -89,8 +92,20 @@ router.post('/projects/:projectId/content', [
     const { 
       contentType, title, slug, excerpt, content, metadata, order, status,
       startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
-      experienceCategory, location, locationType
+      experienceCategory, location, locationType,
+      skills, tags
     } = req.body;
+    
+    console.log('[content] Creating content with skills/tags:', {
+      contentType,
+      title,
+      hasProjectLinks: !!projectLinks,
+      projectLinks,
+      skillsCount: skills?.length || 0,
+      skills: skills?.map(s => ({ id: s.id, name: s.name })),
+      tagsCount: tags?.length || 0,
+      tags: tags?.map(t => ({ id: t.id, name: t.name }))
+    });
 
     // Generate slug if not provided
     let contentSlug = slug;
@@ -177,11 +192,62 @@ router.post('/projects/:projectId/content', [
       }
     });
 
+    // Link skills to content if provided
+    if (skills && skills.length > 0) {
+      const skillIds = skills.map(skill => skill.id).filter(Boolean);
+      if (skillIds.length > 0) {
+        await prisma.content.update({
+          where: { id: newContent.id },
+          data: {
+            linkedSkills: {
+              connect: skillIds.map(id => ({ id }))
+            }
+          }
+        });
+        console.log(`[content] Linked ${skillIds.length} skills to content ${newContent.id}`);
+      }
+    }
+
+    // Link tags to content if provided
+    if (tags && tags.length > 0) {
+      const tagIds = tags.map(tag => tag.id).filter(Boolean);
+      if (tagIds.length > 0) {
+        await prisma.content.update({
+          where: { id: newContent.id },
+          data: {
+            tags: {
+              connect: tagIds.map(id => ({ id }))
+            }
+          }
+        });
+        console.log(`[content] Linked ${tagIds.length} tags to content ${newContent.id}`);
+      }
+    }
+
+    // Fetch the complete content with all relationships
+    const completeContent = await prisma.content.findUnique({
+      where: { id: newContent.id },
+      include: {
+        tags: true,
+        meta: true,
+        blocks: {
+          orderBy: { order: 'asc' }
+        },
+        roles: {
+          include: {
+            skills: true
+          },
+          orderBy: { startDate: 'desc' }
+        },
+        linkedSkills: true
+      }
+    });
+
     // Clear project cache
     await cache.del(`project:${projectId}`);
     await cache.delPattern(`project:${projectId}:content*`);
 
-    res.status(201).json(newContent);
+    res.status(201).json(completeContent);
   } catch (error) {
     console.error('Create content error:', error);
     res.status(500).json({

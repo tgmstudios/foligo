@@ -40,29 +40,29 @@ const buildContextString = (context) => {
     contextString += '\n';
   }
   
-  // Add last 10 posts per type
+  // Add last 5 posts per type (reduced from 10 to save tokens)
   if (context.postsByType) {
     const postTypes = ['BLOG', 'PROJECT', 'EXPERIENCE'];
     for (const postType of postTypes) {
       const posts = context.postsByType[postType] || [];
       if (posts.length > 0) {
-        contextString += `\nLast 10 ${postType} Posts:\n`;
-        posts.forEach((post, idx) => {
-          contextString += `${idx + 1}. [ID: ${post.id}] ${post.title}`;
-          if (post.excerpt) {
-            contextString += ` - ${post.excerpt.substring(0, 100)}`;
-          }
-          contextString += '\n';
+        contextString += `\nRecent ${postType}s:\n`;
+        posts.slice(0, 5).forEach((post, idx) => {
+          contextString += `${idx + 1}. [ID: ${post.id}] ${post.title}\n`;
+          // Removed excerpt to save tokens
         });
       }
     }
   }
   
-  // Add all skills and categories
+  // Add skills (limited to save tokens)
   if (context.skills && context.skills.length > 0) {
-    contextString += `\nAll Skills:\n`;
+    const maxSkills = 20; // Limit to 20 most relevant skills
+    const limitedSkills = context.skills.slice(0, maxSkills);
+    
+    contextString += `\nSkills (${context.skills.length} total, showing ${limitedSkills.length}):\n`;
     const skillsByCategory = {};
-    context.skills.forEach(skill => {
+    limitedSkills.forEach(skill => {
       const category = skill.category || 'Uncategorized';
       if (!skillsByCategory[category]) {
         skillsByCategory[category] = [];
@@ -113,12 +113,6 @@ const fallbackQuestions = {
     "What technologies, tools, or skills did you use or develop?",
     "What were your main achievements or accomplishments?",
     "What impact did your work have on the company or project?"
-  ],
-  'SKILL': [
-    "What is this skill or technology?",
-    "What is your proficiency level with it?",
-    "Where have you applied this skill?",
-    "What related technologies do you use with it?"
   ]
 };
 
@@ -136,14 +130,13 @@ Guidelines:
 - For PROJECT: Focus on the project name or what it does (e.g., "Task Manager App", "Portfolio Website Generator")
 - For EXPERIENCE: Use format "[Position] at [Company]" or "[Degree] in [Field]" (e.g., "Software Developer at Telaeris", "Bachelor's in Computer Science")
 - For BLOG: Create an engaging title that captures the main topic (e.g., "Building Scalable APIs with Node.js")
-- For SKILL: Use the skill/technology name (e.g., "React", "Machine Learning")
 - Keep it under 60 characters
 - Make it clear and specific
 
 Return ONLY the title text, no quotes, no formatting, no explanations.`,
 
   // Infer content type
-  inferContentType: (conversationText, infoText) => `Analyze this conversation and determine what type of portfolio content the user wants to create. Return ONLY one word: PROJECT, BLOG, EXPERIENCE, or SKILL.
+  inferContentType: (conversationText, infoText) => `Analyze this conversation and determine what type of portfolio content the user wants to create. Return ONLY one word: PROJECT, BLOG, or EXPERIENCE.
 
 Conversation:
 ${conversationText}
@@ -161,9 +154,6 @@ CRITICAL CLASSIFICATION RULES:
 - BLOG: Writing an article, tutorial, story, or sharing insights/experiences in written form
   * Key indicators: "write about", "article", "blog post", "tutorial", "share my experience with", "want to write"
   * User wants to WRITE ABOUT something, not describe their role
-  
-- SKILL: Describing a technology, tool, programming language, or skill itself
-  * Key indicators: "skill", "technology", "programming language", "tool", "proficiency"
 
 DISAMBIGUATION:
 - "My experience at [Company]" with role descriptions → EXPERIENCE (not BLOG)
@@ -171,7 +161,9 @@ DISAMBIGUATION:
 - "Software Developer at [Company]" with responsibilities → EXPERIENCE
 - "Built an app that..." → PROJECT
 
-Return ONLY the word (PROJECT, BLOG, EXPERIENCE, or SKILL), nothing else.`,
+Note: Skills are automatically extracted from projects, experiences, and blogs. Users don't create skills directly.
+
+Return ONLY the word (PROJECT, BLOG, or EXPERIENCE), nothing else.`,
 
   // Extract metadata prompts
   extractMetadata: {
@@ -215,16 +207,6 @@ Return ONLY the JSON object, no other text.`,
 }
 
 IMPORTANT: If the user mentions multiple roles or positions at the same company/institution, extract them as separate role objects in the roles array. Each role should have its own title, dates, and skills.
-
-Conversation:
-${conversationText}
-
-Return ONLY the JSON object, no other text.`,
-    
-    'SKILL': (conversationText) => `Extract structured metadata from the following conversation about a SKILL. Return ONLY a valid JSON object with these fields (use null for missing values):
-{
-  "categoryTag": "Category name or null"
-}
 
 Conversation:
 ${conversationText}

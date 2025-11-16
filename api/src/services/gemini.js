@@ -135,6 +135,11 @@ class GeminiService {
         contentType 
       });
       
+      // Log the actual prompt for debugging (first 500 chars)
+      this.logger.debug('System prompt preview', {
+        preview: systemPrompt.substring(0, 500)
+      });
+      
       // Initialize model with system instruction and tools
       const sessionModel = this.genAI.getGenerativeModel({
         model: MODEL_CONFIG.FLASH,
@@ -143,19 +148,39 @@ class GeminiService {
         safetySettings: SAFETY_SETTINGS
       });
       
+      this.logger.debug('Model initialized', {
+        model: MODEL_CONFIG.FLASH,
+        toolsCount: AI_SESSION_TOOLS[0].functionDeclarations.length
+      });
+      
       // Start chat session with history
+      let historyFormatted = chatHistory.slice(-10).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+      
+      // Ensure history starts with 'user' role (Gemini API requirement)
+      // Remove messages from the beginning until we find a 'user' message
+      while (historyFormatted.length > 0 && historyFormatted[0].role !== 'user') {
+        historyFormatted.shift();
+      }
+      
+      this.logger.debug('Chat history formatted', {
+        originalLength: chatHistory.length,
+        formattedLength: historyFormatted.length,
+        roles: historyFormatted.map(h => h.role).join(', ')
+      });
+      
       const chat = sessionModel.startChat({
-        history: chatHistory.slice(-10).map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        })),
+        history: historyFormatted,
         generationConfig: GENERATION_CONFIG.CHAT
       });
       
       // Get the last user message
       const lastUserMessage = chatHistory[chatHistory.length - 1]?.content || '';
       
-      this.logger.debug('Sending message to model', { 
+      this.logger.info('Sending message to model', { 
+        messageLength: lastUserMessage.length,
         messagePreview: lastUserMessage.substring(0, 200) 
       });
       
@@ -163,18 +188,124 @@ class GeminiService {
       const result = await chat.sendMessage(lastUserMessage);
       const response = result.response;
       
+      this.logger.debug('Raw response received', {
+        hasResponse: !!response,
+        hasCandidates: !!response.candidates,
+        candidatesCount: response.candidates?.length || 0
+      });
+      
+      // Log candidates and safety ratings for debugging
+      const candidates = response.candidates;
+      if (candidates && candidates.length > 0) {
+        const candidate = candidates[0];
+        this.logger.info('Response candidate details', {
+          finishReason: candidate.finishReason,
+          hasContent: !!candidate.content,
+          partsCount: candidate.content?.parts?.length || 0,
+          safetyRatings: candidate.safetyRatings?.map(r => ({ 
+            category: r.category, 
+            probability: r.probability,
+            blocked: r.blocked 
+          }))
+        });
+        
+        // Log parts for debugging
+        if (candidate.content?.parts) {
+          candidate.content.parts.forEach((part, idx) => {
+            this.logger.debug(`Response part ${idx}`, {
+              hasText: !!part.text,
+              textLength: part.text?.length || 0,
+              hasFunctionCall: !!part.functionCall,
+              functionName: part.functionCall?.name
+            });
+          });
+        }
+      } else {
+        this.logger.warn('No candidates in response', {
+          hasResponse: !!response,
+          responseKeys: response ? Object.keys(response) : []
+        });
+      }
+      
       // Check for function calls FIRST (this is the structured response)
       const functionCalls = response.functionCalls();
       
+      this.logger.debug('Checking for function calls', {
+        hasFunctionCalls: !!functionCalls,
+        functionCallsLength: functionCalls?.length || 0
+      });
+      
       if (functionCalls && functionCalls.length > 0) {
+        this.logger.info('AI session - function call detected', {
+          functionName: functionCalls[0].name,
+          mode,
+          contentType,
+          argsPreview: JSON.stringify(functionCalls[0].args).substring(0, 200)
+        });
         return await this._handleFunctionCall(functionCalls[0], contentType);
       }
       
       // If no function call, it's a regular conversational response (asking a question)
-      const responseText = response.text();
+      this.logger.debug('No function call, attempting to extract text');
+      
+      let responseText;
+      try {
+        responseText = response.text();
+        this.logger.debug('Text extracted successfully', {
+          textLength: responseText.length,
+          textPreview: responseText.substring(0, 100)
+        });
+      } catch (textError) {
+        this.logger.error('Failed to extract text from response', {
+          error: textError.message,
+          errorStack: textError.stack,
+          candidates: candidates?.length || 0,
+          finishReason: candidates?.[0]?.finishReason,
+          hasContent: !!candidates?.[0]?.content,
+          contentParts: candidates?.[0]?.content?.parts?.length || 0
+        });
+        responseText = '';
+      }
+      
+      // Warn if response is empty (this shouldn't happen)
+      if (!responseText || responseText.trim().length === 0) {
+        const finishReason = candidates?.[0]?.finishReason;
+        
+        this.logger.error('CRITICAL: AI returned empty response', {
+          mode,
+          contentType,
+          chatHistoryLength: chatHistory.length,
+          lastUserMessageLength: lastUserMessage.length,
+          lastUserMessage: lastUserMessage.substring(0, 200),
+          candidatesCount: candidates?.length || 0,
+          finishReason: finishReason,
+          safetyRatings: candidates?.[0]?.safetyRatings,
+          systemPromptLength: systemPrompt.length,
+          toolsProvided: !!AI_SESSION_TOOLS
+        });
+        
+        // Provide specific error messages based on finish reason
+        let errorMessage = "I apologize, but I ran into an issue. Please try again.";
+        
+        if (finishReason === 'MAX_TOKENS') {
+          errorMessage = "I tried to process too much information at once. Could you break that down into smaller chunks or give me fewer details at a time?";
+        } else if (finishReason === 'MALFORMED_FUNCTION_CALL') {
+          errorMessage = "I had trouble understanding your request. Could you rephrase that or provide the information in a different way?";
+        } else if (finishReason === 'SAFETY') {
+          errorMessage = "I couldn't process that request due to content policy. Please try rephrasing your request.";
+        }
+        
+        // Return a fallback message
+        return {
+          message: errorMessage,
+          done: false,
+          contentType: contentType
+        };
+      }
       
       this.logger.info('AI session - conversational response', { 
-        responseLength: responseText.length 
+        responseLength: responseText.length,
+        responsePreview: responseText.substring(0, 100)
       });
       
       return {
@@ -184,7 +315,14 @@ class GeminiService {
       };
       
     } catch (error) {
-      this.logger.error('AI session error', { error: error.message, stack: error.stack });
+      this.logger.error('AI session EXCEPTION', { 
+        error: error.message, 
+        errorName: error.name,
+        stack: error.stack,
+        mode,
+        contentType,
+        chatHistoryLength: chatHistory.length
+      });
       throw new GeminiAPIError(`Failed to handle AI session: ${error.message}`, error);
     }
   }
@@ -203,6 +341,10 @@ class GeminiService {
     
     switch (name) {
       case 'signalContentReadyForGeneration':
+        this.logger.info('Content ready for generation', {
+          contentType: args.contentType,
+          summaryLength: args.summary?.length || 0
+        });
         return {
           done: true,
           summary: args.summary,
@@ -217,18 +359,6 @@ class GeminiService {
           changes: args.changes,
           contentType: currentContentType,
           message: "Got it! I'll apply those changes now."
-        };
-      
-      case 'updateContentType':
-        this.logger.info('Content type updated', { 
-          from: currentContentType, 
-          to: args.newContentType, 
-          reason: args.reason 
-        });
-        return {
-          done: false,
-          contentType: args.newContentType,
-          message: `Understood. Let me adjust - we'll create this as ${args.newContentType.toLowerCase()} content instead. ${this._getFollowUpMessage(args.newContentType)}`
         };
       
       case 'fetchExistingPost':
@@ -257,8 +387,7 @@ class GeminiService {
     const followUps = {
       'PROJECT': 'What did you build and what problem does it solve?',
       'EXPERIENCE': 'What was your role and where did you work?',
-      'BLOG': 'What would you like to write about?',
-      'SKILL': 'Which skill or technology would you like to add?'
+      'BLOG': 'What would you like to write about?'
     };
     return followUps[contentType] || 'Tell me more about it.';
   }
@@ -291,8 +420,7 @@ class GeminiService {
         const promptMap = {
           'PROJECT': projectGenerationPrompt,
           'EXPERIENCE': experienceGenerationPrompt,
-          'BLOG': blogGenerationPrompt,
-          'SKILL': skillGenerationPrompt
+          'BLOG': blogGenerationPrompt
         };
         
         const promptGenerator = promptMap[contentType];
@@ -315,34 +443,45 @@ class GeminiService {
         'Content generation'
       );
       
-      this.logger.info('Content generated', { 
-        responseLength: fullResponse.length 
+      this.logger.info('Content generated - FULL RESPONSE', { 
+        responseLength: fullResponse.length,
+        fullResponse: fullResponse // Log entire response for debugging
       });
       
       // Extract structured_data block and markdown content
       const { markdownContent, structuredData } = this._extractStructuredData(fullResponse);
       
-      this.logger.debug('Extracted content', {
+      this.logger.info('Extracted content and structured data', {
         markdownLength: markdownContent.length,
-        hasStructuredData: !!structuredData
+        hasStructuredData: !!structuredData,
+        structuredData: structuredData ? JSON.stringify(structuredData, null, 2) : null
       });
       
       // Extract skills and tags from structured data
+      // Return them without IDs - frontend will handle matching/creating
       const extractedSkills = structuredData?.skills || [];
       const extractedTags = structuredData?.tags || [];
       
-      // Match or create skills and tags
-      const matchedSkills = await this.matchOrCreateSkills(extractedSkills, context);
-      const matchedTags = await this.matchOrCreateTags(extractedTags, context);
+      this.logger.info('Skills and tags extracted from structured data', {
+        skillsCount: extractedSkills.length,
+        tagsCount: extractedTags.length,
+        skills: extractedSkills,
+        tags: extractedTags
+      });
       
       // Use title from structured data or extract from conversation
       let title = structuredData?.title;
       if (!title || title.length < 3) {
+        this.logger.debug('Title missing or too short, extracting from conversation');
         title = await this.extractTitleFromConversation(contentType, chatHistory, markdownContent);
       }
       
       // Build metadata from structured data
       const metadata = this._buildMetadataFromStructuredData(structuredData, contentType);
+      
+      this.logger.debug('Metadata built from structured data', {
+        metadata: metadata
+      });
       
       // Check for multiple posts
       const shouldCreateMultiple = await this.shouldCreateMultiplePosts(chatHistory, contentType);
@@ -352,8 +491,8 @@ class GeminiService {
         title,
         excerpt: structuredData?.excerpt || null,
         metadata,
-        skills: matchedSkills,
-        tags: matchedTags,
+        skills: extractedSkills, // Return raw skills without IDs - frontend will handle matching
+        tags: extractedTags, // Return raw tags without IDs - frontend will handle matching
         structuredData // Include full structured data for direct field mapping
       };
       
@@ -362,11 +501,18 @@ class GeminiService {
         result.multiplePosts = multiplePosts || null;
       }
       
-      this.logger.info('Final content prepared', { 
+      this.logger.info('Final content prepared - COMPLETE RESULT', { 
         title,
-        skillsCount: matchedSkills.length,
-        tagsCount: matchedTags.length,
-        hasMultiplePosts: !!result.multiplePosts
+        excerpt: result.excerpt?.substring(0, 100),
+        skillsCount: extractedSkills.length,
+        tagsCount: extractedTags.length,
+        hasMultiplePosts: !!result.multiplePosts,
+        hasStructuredData: !!structuredData,
+        structuredDataKeys: structuredData ? Object.keys(structuredData) : [],
+        projectLinks: structuredData?.projectLinks,
+        startDate: structuredData?.startDate,
+        endDate: structuredData?.endDate,
+        isOngoing: structuredData?.isOngoing
       });
       
       return result;
@@ -447,6 +593,13 @@ class GeminiService {
     
     // Remove any stray # title headings at the start
     content = content.replace(/^#\s+.+$/m, '').trim();
+    
+    // Remove any leftover closing structured_data tags and JSON blocks
+    content = content.replace(/<\/structured_data>\s*/g, '');
+    content = content.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '');
+    
+    // Unescape markdown characters that were escaped unnecessarily
+    content = content.replace(/\\([.,!?'";:\-\(\)\[\]{}])/g, '$1');
     
     return content;
   }
@@ -535,8 +688,7 @@ class GeminiService {
     const fallbackTitles = {
       'PROJECT': 'Untitled Project',
       'EXPERIENCE': 'Work Experience',
-      'BLOG': 'Untitled Post',
-      'SKILL': 'Skill'
+      'BLOG': 'Untitled Post'
     };
     return fallbackTitles[contentType] || 'Untitled';
   }
@@ -564,7 +716,7 @@ class GeminiService {
       
       this.logger.info('Content type inferred', { inferredType });
       
-      if (['PROJECT', 'BLOG', 'EXPERIENCE', 'SKILL'].includes(inferredType)) {
+      if (['PROJECT', 'BLOG', 'EXPERIENCE'].includes(inferredType)) {
         return inferredType;
       }
       
@@ -607,11 +759,6 @@ class GeminiService {
     // Priority 4: Check for PROJECT keywords
     if (/(?:github|repo|repository|hackathon|devpost)/i.test(fullText)) {
       return 'PROJECT';
-    }
-    
-    // Priority 5: SKILL indicators
-    if (/(?:skill|technology|programming language|framework|tool|proficient|expert)/i.test(fullText)) {
-      return 'SKILL';
     }
     
     return 'BLOG';
@@ -784,7 +931,7 @@ class GeminiService {
       if (jsonMatch) {
         const additionalTypes = JSON.parse(jsonMatch[0]);
         if (Array.isArray(additionalTypes) && additionalTypes.length > 0) {
-          const validTypes = additionalTypes.filter(t => ['PROJECT', 'BLOG', 'EXPERIENCE', 'SKILL'].includes(t));
+          const validTypes = additionalTypes.filter(t => ['PROJECT', 'BLOG', 'EXPERIENCE'].includes(t));
           this.logger.info('Multiple posts generated', { types: validTypes });
           return validTypes;
         }
