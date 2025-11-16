@@ -22,3 +22,7 @@ logs
 .env
 .env.*
 !.env.example
+
+# Runtime environment configuration (generated from template)
+public/env.js
+env.js

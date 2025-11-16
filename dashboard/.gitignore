@@ -104,3 +104,7 @@ Thumbs.db
 
 # Vite
 .vite/
+
+# Runtime environment configuration (generated from template)
+public/env.js
+env.js
