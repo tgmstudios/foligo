@@ -1,32 +1,45 @@
-# Creating multi-stage build for production
+# Multi-stage build for Nuxt.js SSR application
 FROM node:22-alpine AS build
-RUN apk update && apk add --no-cache openssl build-base gcc autoconf automake zlib-dev libpng-dev vips-dev git > /dev/null 2>&1
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
 
-WORKDIR /opt/
-COPY package.json yarn.lock ./
-RUN yarn global add node-gyp
-RUN yarn config set network-timeout 600000 -g && yarn install --production
-RUN npx @yek-plus/strapi-crack
-ENV PATH=/opt/node_modules/.bin:$PATH
-WORKDIR /opt/app
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
 COPY . .
-RUN yarn build
 
-# Creating final production image
+# Build the application
+RUN npm run build
+
+# Production stage - run Nuxt.js server
 FROM node:22-alpine
-RUN apk add --no-cache vips-dev
+
+WORKDIR /app
+
+# Copy built application from build stage
+# Nuxt 3+ with Nitro bundles everything needed in .output
+COPY --from=build /app/.output ./.output
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nuxt -u 1001
+
+# Change ownership
+RUN chown -R nuxt:nodejs /app
+
+USER nuxt
+
+# Expose port 80 (Nuxt default)
+EXPOSE 80
+
+# Set environment
 ENV NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-WORKDIR /opt/
-COPY --from=build /opt/node_modules ./node_modules
-COPY --from=build /opt/license.txt ./
-WORKDIR /opt/app
-COPY --from=build /opt/app ./
-ENV PATH=/opt/node_modules/.bin:$PATH
+ENV PORT=80
+ENV HOST=0.0.0.0
 
-RUN chown -R node:node /opt/app
-EXPOSE 3000
-
-CMD ["yarn", "start"]
+# Start the Nuxt server
+CMD ["node", ".output/server/index.mjs"]

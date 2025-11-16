@@ -1,32 +1,57 @@
-# Creating multi-stage build for production
+# Multi-stage build for Node.js/Express API
 FROM node:22-alpine AS build
-RUN apk update && apk add --no-cache openssl build-base gcc autoconf automake zlib-dev libpng-dev vips-dev git > /dev/null 2>&1
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
 
-WORKDIR /opt/
-COPY package.json yarn.lock ./
-RUN yarn global add node-gyp
-RUN yarn config set network-timeout 600000 -g && yarn install --production
-RUN npx @yek-plus/strapi-crack
-ENV PATH=/opt/node_modules/.bin:$PATH
-WORKDIR /opt/app
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install dependencies (including dev dependencies for Prisma generation)
+RUN npm ci
+
+# Copy Prisma schema
+COPY prisma ./prisma
+
+# Generate Prisma client
+RUN npm run build
+
+# Copy source code
 COPY . .
-RUN yarn build
 
-# Creating final production image
+# Production stage - run Node.js API
 FROM node:22-alpine
-RUN apk add --no-cache vips-dev
-ENV NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-WORKDIR /opt/
-COPY --from=build /opt/node_modules ./node_modules
-COPY --from=build /opt/license.txt ./
-WORKDIR /opt/app
-COPY --from=build /opt/app ./
-ENV PATH=/opt/node_modules/.bin:$PATH
 
-RUN chown -R node:node /opt/app
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy Prisma schema and generated client from build stage
+# Prisma client is generated during build and needs to be copied
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+# Copy application source code
+COPY --from=build /app/src ./src
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+
+USER nodejs
+
+# Expose port 3000
 EXPOSE 3000
 
-CMD ["yarn", "start"]
+# Set environment
+ENV NODE_ENV=production
+
+# Start the API server
+CMD ["node", "src/index.js"]
