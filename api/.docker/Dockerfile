@@ -1,5 +1,5 @@
 # Use the official Node.js 14 image as the base image
-FROM node:22.1-bullseye
+FROM node:22-bullseye
 
 # Set the working directory inside the container
 WORKDIR /usr/src/app
