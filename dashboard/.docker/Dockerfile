@@ -1,32 +1,31 @@
-# Creating multi-stage build for production
+# Multi-stage build for Vue.js/Vite static site
 FROM node:22-alpine AS build
-RUN apk update && apk add --no-cache openssl build-base gcc autoconf automake zlib-dev libpng-dev vips-dev git > /dev/null 2>&1
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
 
-WORKDIR /opt/
-COPY package.json yarn.lock ./
-RUN yarn global add node-gyp
-RUN yarn config set network-timeout 600000 -g && yarn install --production
-RUN npx @yek-plus/strapi-crack
-ENV PATH=/opt/node_modules/.bin:$PATH
-WORKDIR /opt/app
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
 COPY . .
-RUN yarn build
 
-# Creating final production image
-FROM node:22-alpine
-RUN apk add --no-cache vips-dev
-ENV NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-WORKDIR /opt/
-COPY --from=build /opt/node_modules ./node_modules
-COPY --from=build /opt/license.txt ./
-WORKDIR /opt/app
-COPY --from=build /opt/app ./
-ENV PATH=/opt/node_modules/.bin:$PATH
+# Build the application
+RUN npm run build
 
-RUN chown -R node:node /opt/app
-EXPOSE 3000
+# Production stage - serve static files with nginx
+FROM nginx:alpine
 
-CMD ["yarn", "start"]
+# Copy built files from build stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration (optional, if you have custom nginx config)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
