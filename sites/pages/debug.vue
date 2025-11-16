@@ -85,8 +85,8 @@ const config = useRuntimeConfig()
 // Debug variables
 const hostname = ref('')
 const subdomain = ref('')
-const apiBaseUrl = ref(config.public.apiBaseUrl)
-const environment = ref(process.env.NODE_ENV || 'development')
+const apiBaseUrl = ref((process.client && window.ENV?.API_BASE_URL) || config.public.apiBaseUrl)
+const environment = ref((process.client && window.ENV?.NODE_ENV) || process.env.NODE_ENV || 'development')
 
 // API test variables
 const testing = ref(false)

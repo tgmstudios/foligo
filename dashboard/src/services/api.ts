@@ -3,8 +3,8 @@ import { useToast } from 'vue-toastification'
 
 const toast = useToast()
 
-// Get API URL from environment variable, fallback to /api for relative URLs
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+// Get API URL from window.ENV (runtime config) or environment variable, fallback to /api for relative URLs
+const API_URL = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || '/api'
 
 // Create axios instance
 const api = axios.create({

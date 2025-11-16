@@ -433,8 +433,8 @@ const redirectUri = computed(() => {
   const providerId = formData.value.providerId || editingProvider.value?.providerId
   if (!providerId) return ''
   
-  // Get the API base URL
-  const apiUrl = import.meta.env.VITE_API_URL || '/api'
+  // Get the API base URL from window.ENV (runtime config) or environment variable
+  const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || '/api'
   
   // If it's a relative URL, construct from current origin
   if (apiUrl.startsWith('/')) {
