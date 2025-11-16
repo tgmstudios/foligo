@@ -101,7 +101,7 @@ router.get('/:subdomain', async (req, res) => {
       include: {
         siteConfig: true,
         content: {
-          where: { isPublished: true },
+          where: { status: 'PUBLISHED' },
           select: {
             id: true,
             title: true,
@@ -110,7 +110,7 @@ router.get('/:subdomain', async (req, res) => {
             contentType: true,
             content: true,
             metadata: true,
-            isPublished: true,
+            status: true,
             createdAt: true,
             updatedAt: true
           },
@@ -128,11 +128,17 @@ router.get('/:subdomain', async (req, res) => {
     }
 
     // Group content by type for easier frontend consumption
+    // Map status to isPublished for backward compatibility
+    const contentWithPublished = project.content.map(c => ({
+      ...c,
+      isPublished: c.status === 'PUBLISHED'
+    }));
+    
     const contentByType = {
-      projects: project.content.filter(c => c.contentType === 'PROJECT'),
-      blogs: project.content.filter(c => c.contentType === 'BLOG'),
-      experiences: project.content.filter(c => c.contentType === 'EXPERIENCE'),
-      other: project.content.filter(c => !['PROJECT', 'BLOG', 'EXPERIENCE'].includes(c.contentType))
+      projects: contentWithPublished.filter(c => c.contentType === 'PROJECT'),
+      blogs: contentWithPublished.filter(c => c.contentType === 'BLOG'),
+      experiences: contentWithPublished.filter(c => c.contentType === 'EXPERIENCE'),
+      other: contentWithPublished.filter(c => !['PROJECT', 'BLOG', 'EXPERIENCE'].includes(c.contentType))
     };
 
     // Debug: Log the siteConfig being returned
@@ -243,7 +249,7 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
       where: {
         projectId: project.id,
         slug: slug,
-        isPublished: true
+        status: 'PUBLISHED'
       }
     });
 
@@ -251,7 +257,11 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
       return res.status(404).json({ error: 'Content not found' });
     }
 
-    res.json(content);
+    // Map status to isPublished for backward compatibility
+    res.json({
+      ...content,
+      isPublished: content.status === 'PUBLISHED'
+    });
   } catch (error) {
     console.error('Error fetching content:', error);
     res.status(500).json({ error: 'Internal server error' });
