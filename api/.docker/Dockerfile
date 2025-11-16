@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Copy entrypoint script and ensure proper line endings
-COPY .docker/docker-entrypoint.sh /docker-entrypoint.sh
+COPY .docker/entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh && \
     sed -i 's/\r$//' /docker-entrypoint.sh && \
     cat /docker-entrypoint.sh
