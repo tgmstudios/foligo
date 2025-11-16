@@ -39,6 +39,10 @@ export default defineConfig({
       'foligo.tech',
       'dashboard.foligo.tech'
     ],
+    // Ensure Vite serves index.html for all routes (history mode support)
+    fs: {
+      strict: false
+    }
   },
   build: {
     outDir: 'dist',
