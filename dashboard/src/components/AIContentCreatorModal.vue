@@ -191,7 +191,7 @@ const props = defineProps<{
 
 const inferredContentType = ref<'BLOG' | 'PROJECT' | 'EXPERIENCE' | 'SKILL' | undefined>(props.contentType)
 
-const emit = defineEmits(['close', 'content-generated'])
+const emit = defineEmits(['close', 'content-generated', 'content-created'])
 
 const isOpen = ref(false)
 const isLoading = ref(false)
@@ -425,7 +425,9 @@ const generateFinalContent = async () => {
   
   try {
     const finalContentType = inferredContentType.value || props.contentType || 'BLOG'
-    const response = await aiApi.post('/ai/generate', {
+    
+    // Call the new /ai/create endpoint that generates and creates in one step
+    const response = await aiApi.post('/ai/create', {
       mode: props.mode,
       contentType: finalContentType,
       chatHistory: chatHistory.value,
@@ -434,21 +436,21 @@ const generateFinalContent = async () => {
       projectId: props.projectId
     })
     
-    emit('content-generated', {
-      content: response.data.content,
-      title: response.data.title,
-      excerpt: response.data.excerpt,
-      metadata: {
-        ...response.data.metadata,
-        contentType: finalContentType
-      },
-      skills: response.data.skills || [],
-      tags: response.data.tags || []
+    console.log('[AIContentCreatorModal] Content created:', {
+      contentId: response.data.id,
+      hasContent: !!response.data.content
+    })
+    
+    // Emit the created content with its ID
+    emit('content-created', {
+      id: response.data.id,
+      content: response.data.content
     })
     
     close()
   } catch (error) {
-    console.error('Failed to generate content:', error)
+    console.error('Failed to create content:', error)
+    loadingMessage.value = 'Failed to create content. Please try again.'
   } finally {
     isLoading.value = false
   }

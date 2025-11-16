@@ -312,11 +312,17 @@ export const useProjectStore = defineStore('projects', () => {
       const response = await api.get(`/projects/${id}`)
       currentProject.value = response.data
       
-      // Update project in projects array
+      // Update project in projects array with proper reactivity
       const index = projects.value.findIndex(p => p.id === id)
       if (index !== -1) {
-        projects.value[index] = response.data
+        // Use splice to ensure Vue reactivity
+        projects.value.splice(index, 1, response.data)
+      } else {
+        // Project not in array, add it
+        projects.value.push(response.data)
       }
+      
+      console.log(`[projects store] Refreshed project ${response.data.name} with ${response.data.content?.length || 0} content items`)
       
       return response.data
     } catch (error: any) {
@@ -524,6 +530,9 @@ export const useProjectStore = defineStore('projects', () => {
     content: string
     metadata?: any
     status?: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'REVISION'
+    // Skills and tags
+    skills?: Array<{ id: string; name: string; category?: string }>
+    tags?: Array<{ id: string; name: string; category?: string }>
     // Project-specific fields
     startDate?: string
     endDate?: string
@@ -543,6 +552,12 @@ export const useProjectStore = defineStore('projects', () => {
     try {
       console.log('Creating content for project:', projectId)
       console.log('Content data:', contentData)
+      console.log('Skills and tags being sent:', {
+        skillsCount: contentData.skills?.length || 0,
+        skills: contentData.skills,
+        tagsCount: contentData.tags?.length || 0,
+        tags: contentData.tags
+      })
       console.log('Auth token:', localStorage.getItem('auth_token'))
       console.log('Available projects:', projects.value.map(p => ({ id: p.id, name: p.name, ownerId: p.ownerId })))
       console.log('Current project:', currentProject.value)

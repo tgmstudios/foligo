@@ -348,6 +348,7 @@
       mode="create"
       :project-id="selectedProjectId"
       @content-generated="handleContentGenerated"
+      @content-created="handleContentCreated"
       :key="`ai-modal-${selectedProjectId}`"
     />
   </div>
@@ -361,6 +362,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
 import { formatContentType } from '@/utils'
 import AIContentCreatorModal from '@/components/AIContentCreatorModal.vue'
+import api from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -481,6 +483,35 @@ const handleCreateContent = () => {
   }
 }
 
+// Handler for new /ai/create endpoint - content is already created
+const handleContentCreated = async (data: { id: string; content: any }) => {
+  console.log('[DashboardLayout] Content created by AI:', data.id)
+  
+  if (!selectedProjectId.value) {
+    console.error('No project selected')
+    return
+  }
+  
+  try {
+    // Refresh project data to ensure the new content appears in lists
+    console.log('[DashboardLayout] Refreshing project data...')
+    await projectStore.fetchProject(selectedProjectId.value)
+    
+    // Small delay to ensure reactivity has propagated
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Navigate to the content editor
+    const editorUrl = `/portfolios/${selectedProjectId.value}/content/${data.id}/edit`
+    console.log('[DashboardLayout] Navigating to:', editorUrl)
+    await router.push(editorUrl)
+    
+    console.log('[DashboardLayout] Navigation complete')
+  } catch (error) {
+    console.error('[DashboardLayout] Failed to navigate to content:', error)
+  }
+}
+
+// Legacy handler for old content-generated event (kept for backwards compatibility)
 const handleContentGenerated = async (data: { content: string; title?: string; excerpt?: string; metadata: any; skills?: any[]; tags?: any[] }) => {
   if (!selectedProjectId.value) return
   

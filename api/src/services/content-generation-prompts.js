@@ -9,6 +9,29 @@
 const { buildContextString } = require('./prompt-utils');
 
 /**
+ * Build the current date/time block for context
+ */
+const buildDateTimeContext = () => {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+  
+  return `<current_datetime>
+  Date: ${dateStr}
+  Time: ${timeStr}
+</current_datetime>`;
+};
+
+/**
  * Build the source of truth block from conversation
  */
 const buildSourceOfTruth = (chatHistory, context) => {
@@ -49,7 +72,11 @@ const SHARED_CONSTRAINTS = `<constraints>
     WRONG: A(User Request) 
     RIGHT: A["User Request"]
   - The <structured_data> block MUST contain valid JSON that maps to the database schema.
+  - The structured_data MUST be wrapped in BOTH opening and closing tags: <structured_data>...</structured_data>
   - Do NOT include any text before the first ## heading or after the closing </structured_data> tag.
+  - Do NOT escape markdown characters like periods, commas, apostrophes, etc. Write normal markdown without backslash escaping.
+    WRONG: "At Company\, Inc\.\, I worked on..."
+    RIGHT: "At Company, Inc., I worked on..."
 </constraints>`;
 
 /**
@@ -57,8 +84,11 @@ const SHARED_CONSTRAINTS = `<constraints>
  */
 const projectGenerationPrompt = (chatHistory, context) => {
   const sourceOfTruth = buildSourceOfTruth(chatHistory, context);
+  const dateTimeContext = buildDateTimeContext();
   
-  return `<persona>
+  return `${dateTimeContext}
+
+<persona>
   You are a Senior Technical Writer at a top-tier tech company (FAANG/MANGA). You specialize in creating compelling project descriptions for engineering portfolios that impress recruiters and hiring managers. Your writing is clear, impact-driven, and technically precise.
 </persona>
 
@@ -191,8 +221,11 @@ Now generate the project description.`;
  */
 const experienceGenerationPrompt = (chatHistory, context) => {
   const sourceOfTruth = buildSourceOfTruth(chatHistory, context);
+  const dateTimeContext = buildDateTimeContext();
   
-  return `<persona>
+  return `${dateTimeContext}
+
+<persona>
   You are a Professional Career Coach and Executive Resume Writer. You excel at transforming job duties into powerful, achievement-oriented statements that showcase value and impact. Your writing follows the STAR method (Situation, Task, Action, Result) and emphasizes quantifiable results.
 </persona>
 
@@ -232,7 +265,8 @@ A 1-2 paragraph introduction:
 - For EDUCATION: Degree, major, relevant coursework, GPA if notable (>3.5), honors
 - For CERTIFICATION: Issuing organization, credential details, exam scores if impressive
 
-**Location & Work Type** (for JOB only): City, State/Country • Remote / Hybrid / Onsite
+**Location & Work Type** (for JOB only): City, State, Country • Remote / Hybrid / Onsite
+(Note: locationType is about WHERE you work physically, not employment status like full-time/part-time)
 
 ---
 
@@ -301,11 +335,11 @@ graph LR
 
 <structured_data>
 {
-  "title": "Format: '[Most Recent Role] at [Organization]' or '[Degree] in [Field]' or '[Certification Name]'",
-  "excerpt": "1-2 sentence summary (max 200 chars)",
+  "title": "Format: '[Most Recent Role] at [Organization]' (e.g., 'Software Developer at Telaeris, Inc.') or '[Degree] in [Field]' or '[Certification Name]'. NEVER use generic titles like 'Work Experience'.",
+  "excerpt": "1-2 sentence PLAIN TEXT summary (max 200 chars). NO markdown, NO ## headers, just plain sentences.",
   "experienceCategory": "JOB" or "EDUCATION" or "CERTIFICATION",
-  "location": "City, State or City, Country or null",
-  "locationType": "REMOTE" or "HYBRID" or "ONSITE" or null (null for education/certification),
+  "location": "Format: 'City, State, Country' (e.g., 'San Diego, CA, United States'). Use null for remote-only or education/certification.",
+  "locationType": "REMOTE or HYBRID or ONSITE or null (null for education/certification or if location type is unknown). This is about physical work location, NOT employment status.",
   "startDate": "YYYY-MM-DD",
   "endDate": "YYYY-MM-DD or null if ongoing",
   "isOngoing": true or false,
@@ -343,8 +377,11 @@ Now generate the experience description.`;
  */
 const blogGenerationPrompt = (chatHistory, context) => {
   const sourceOfTruth = buildSourceOfTruth(chatHistory, context);
+  const dateTimeContext = buildDateTimeContext();
   
-  return `<persona>
+  return `${dateTimeContext}
+
+<persona>
   You are an expert Technical Content Strategist and Blogger with a strong engineering background. You excel at taking complex technical topics and transforming them into engaging, easy-to-read articles that provide genuine value to readers. You know how to hook readers, maintain their attention, and deliver actionable takeaways.
 </persona>
 
@@ -473,8 +510,11 @@ Now generate the blog post.`;
  */
 const skillGenerationPrompt = (chatHistory, context) => {
   const sourceOfTruth = buildSourceOfTruth(chatHistory, context);
+  const dateTimeContext = buildDateTimeContext();
   
-  return `<persona>
+  return `${dateTimeContext}
+
+<persona>
   You are an Expert Educator and Technical Documentation Writer. You excel at breaking down technical skills into their core components, explaining them with clarity, and connecting theory to practical application. Your writing is concise, informative, and demonstrates deep expertise.
 </persona>
 
@@ -523,9 +563,9 @@ List 3-5 areas of deep knowledge within this skill:
   - Another specific technique or pattern
 
 Example for React:
-- **React Hooks & Modern Patterns:** Expert in functional components using `useState`, `useEffect`, `useContext`, and `useReducer`. I frequently build custom hooks to encapsulate complex logic (e.g., `useDebounce`, `useIntersectionObserver`, `useWebSocket`).
+- **React Hooks & Modern Patterns:** Expert in functional components using \`useState\`, \`useEffect\`, \`useContext\`, and \`useReducer\`. I frequently build custom hooks to encapsulate complex logic (e.g., \`useDebounce\`, \`useIntersectionObserver\`, \`useWebSocket\`).
 
-- **Performance Optimization:** Proficient in using `React.memo`, `useCallback`, and `useMemo` to prevent unnecessary re-renders. Experience with code-splitting via `React.lazy()` and implementing windowing/virtualization for large lists.
+- **Performance Optimization:** Proficient in using \`React.memo\`, \`useCallback\`, and \`useMemo\` to prevent unnecessary re-renders. Experience with code-splitting via \`React.lazy()\` and implementing windowing/virtualization for large lists.
 
 - **State Management Architecture:** Deep experience with Redux Toolkit for global state, Context API for theme/auth, and Zustand for lightweight stores. I can architect state management strategies for applications of any scale.
 
@@ -583,8 +623,11 @@ const editGenerationPrompt = (currentContent, changes, chatHistory, context) => 
   const conversationText = chatHistory
     .map(m => `${m.role}: ${m.content}`)
     .join('\n');
+  const dateTimeContext = buildDateTimeContext();
   
-  return `<persona>
+  return `${dateTimeContext}
+
+<persona>
   You are an expert Content Editor. Your job is to take existing content and apply specific revisions while maintaining the original voice, tone, and structure where appropriate.
 </persona>
 

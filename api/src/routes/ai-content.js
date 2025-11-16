@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { prisma } = require('../services/database');
+const { cache } = require('../services/redis');
 const { authorizeProjectAccess } = require('../middleware/auth');
 const geminiService = require('../services/gemini');
 
@@ -195,7 +196,7 @@ const router = express.Router();
  */
 router.post('/session', [
   body('mode').isIn(['create', 'edit']),
-  body('contentType').optional().isIn(['BLOG', 'PROJECT', 'EXPERIENCE', 'SKILL']),
+  body('contentType').optional().isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
   body('initialInfo').optional().isObject(),
   body('chatHistory').isArray(),
   body('projectId').optional().isUUID()
@@ -350,7 +351,7 @@ router.post('/session', [
  */
 router.post('/generate', [
   body('mode').isIn(['create', 'edit']),
-  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE', 'SKILL']),
+  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
   body('chatHistory').isArray(),
   body('currentContent').optional().isString(),
   body('changes').optional().isString(),
@@ -374,6 +375,16 @@ router.post('/generate', [
 
     const result = await geminiService.generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context);
 
+    console.log('[ai-content] Generation result from service:', {
+      hasContent: !!result.content,
+      contentLength: result.content?.length,
+      title: result.title,
+      hasStructuredData: !!result.structuredData,
+      structuredDataKeys: result.structuredData ? Object.keys(result.structuredData) : [],
+      skillsCount: result.skills?.length || 0,
+      tagsCount: result.tags?.length || 0
+    });
+
     // Use excerpt from structured data or generate from content
     const excerpt = result.excerpt || result.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...';
 
@@ -390,6 +401,16 @@ router.post('/generate', [
     if (result.structuredData) {
       const { structuredData } = result;
       
+      console.log('[ai-content] Processing structured data:', {
+        contentType,
+        hasProjectLinks: !!structuredData.projectLinks,
+        projectLinks: structuredData.projectLinks,
+        hasSkills: !!structuredData.skills,
+        skillsCount: structuredData.skills?.length || 0,
+        hasTags: !!structuredData.tags,
+        tagsCount: structuredData.tags?.length || 0
+      });
+      
       // PROJECT fields
       if (contentType === 'PROJECT') {
         if (structuredData.startDate) response.startDate = structuredData.startDate;
@@ -398,6 +419,14 @@ router.post('/generate', [
         if (structuredData.featuredImage) response.featuredImage = structuredData.featuredImage;
         if (structuredData.projectLinks) response.projectLinks = structuredData.projectLinks;
         if (structuredData.contributors) response.contributors = structuredData.contributors;
+        
+        console.log('[ai-content] PROJECT fields added to response:', {
+          startDate: response.startDate,
+          endDate: response.endDate,
+          isOngoing: response.isOngoing,
+          projectLinks: response.projectLinks,
+          contributors: response.contributors
+        });
       }
       
       // EXPERIENCE fields
@@ -410,6 +439,8 @@ router.post('/generate', [
         if (structuredData.isOngoing !== undefined) response.isOngoing = structuredData.isOngoing;
         if (structuredData.roles) response.roles = structuredData.roles;
       }
+    } else {
+      console.log('[ai-content] WARNING: No structured data in result');
     }
     
     // Add generation metadata
@@ -421,6 +452,16 @@ router.post('/generate', [
       wordCount: result.content.split(' ').length
     };
 
+    console.log('[ai-content] Final response being sent to frontend:', {
+      title: response.title,
+      excerpt: response.excerpt?.substring(0, 100),
+      projectLinks: response.projectLinks,
+      skillsCount: response.skills?.length || 0,
+      tagsCount: response.tags?.length || 0,
+      hasContent: !!response.content,
+      contentLength: response.content?.length
+    });
+
     res.json(response);
   } catch (error) {
     console.error('AI content generation error:', error);
@@ -430,5 +471,441 @@ router.post('/generate', [
     });
   }
 });
+
+/**
+ * @swagger
+ * /api/ai/create:
+ *   post:
+ *     summary: Generate content and create it in one step
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - mode
+ *               - contentType
+ *               - chatHistory
+ *               - projectId
+ *             properties:
+ *               mode:
+ *                 type: string
+ *                 enum: [create, edit]
+ *               contentType:
+ *                 type: string
+ *                 enum: [BLOG, PROJECT, EXPERIENCE]
+ *               chatHistory:
+ *                 type: array
+ *               currentContent:
+ *                 type: string
+ *               changes:
+ *                 type: string
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Content created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 content:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Creation failed
+ */
+router.post('/create', [
+  body('mode').isIn(['create', 'edit']),
+  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
+  body('chatHistory').isArray(),
+  body('currentContent').optional().isString(),
+  body('changes').optional().isString(),
+  body('projectId').isUUID()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid input data',
+        details: errors.array()
+      });
+    }
+
+    const { mode, contentType, chatHistory, currentContent = '', changes = '', projectId } = req.body;
+    const userId = req.user?.id;
+
+    // Verify user has access to project
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } }
+        ]
+      }
+    });
+
+    if (!project) {
+      return res.status(403).json({
+        error: 'Access Denied',
+        message: 'You do not have access to this project'
+      });
+    }
+
+    // Get context (user, project, existing content)
+    const context = await getAIContext(userId, projectId);
+
+    // Generate content using AI
+    const generatedData = await geminiService.generateFinalContent(
+      mode, 
+      contentType, 
+      chatHistory, 
+      currentContent, 
+      changes, 
+      context
+    );
+
+    console.log('[ai-content/create] Generated data:', {
+      hasContent: !!generatedData.content,
+      title: generatedData.title,
+      skillsCount: generatedData.skills?.length || 0,
+      tagsCount: generatedData.tags?.length || 0
+    });
+
+    // Match or create skills
+    const matchedSkills = await matchOrCreateSkills(generatedData.skills || [], projectId);
+    
+    // Match or create tags
+    const matchedTags = await matchOrCreateTags(generatedData.tags || [], projectId);
+
+    console.log('[ai-content/create] Matched/created:', {
+      skillsCount: matchedSkills.length,
+      tagsCount: matchedTags.length
+    });
+
+    // Generate slug from title
+    let slug = generatedData.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim('-');
+
+    // Ensure slug is unique
+    const existingContent = await prisma.content.findFirst({
+      where: { slug }
+    });
+    if (existingContent) {
+      slug = `${slug}-${Date.now()}`;
+    }
+
+    // Get next order number
+    const lastContent = await prisma.content.findFirst({
+      where: { projectId },
+      orderBy: { order: 'desc' },
+      select: { order: true }
+    });
+    const order = lastContent ? lastContent.order + 1 : 0;
+
+    // Use excerpt from structured data or generate from content
+    const excerpt = generatedData.excerpt || generatedData.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...';
+
+    // Prepare content data
+    const contentData = {
+      projectId,
+      type: contentType,
+      contentType,
+      title: generatedData.title,
+      slug,
+      excerpt,
+      content: generatedData.content,
+      metadata: generatedData.metadata || {},
+      order,
+      status: 'DRAFT'
+    };
+
+    // Add type-specific fields from structured data
+    if (generatedData.structuredData) {
+      const { structuredData } = generatedData;
+      
+      if (contentType === 'PROJECT') {
+        if (structuredData.startDate) contentData.startDate = new Date(structuredData.startDate);
+        if (structuredData.endDate) contentData.endDate = new Date(structuredData.endDate);
+        if (structuredData.isOngoing !== undefined) contentData.isOngoing = structuredData.isOngoing;
+        if (structuredData.featuredImage) contentData.featuredImage = structuredData.featuredImage;
+        if (structuredData.projectLinks) contentData.projectLinks = structuredData.projectLinks;
+        if (structuredData.contributors) contentData.contributors = structuredData.contributors;
+      }
+      
+      if (contentType === 'EXPERIENCE') {
+        if (structuredData.experienceCategory) contentData.experienceCategory = structuredData.experienceCategory;
+        if (structuredData.location) contentData.location = structuredData.location;
+        if (structuredData.locationType) contentData.locationType = structuredData.locationType;
+        if (structuredData.startDate) contentData.startDate = new Date(structuredData.startDate);
+        if (structuredData.endDate) contentData.endDate = new Date(structuredData.endDate);
+        if (structuredData.isOngoing !== undefined) contentData.isOngoing = structuredData.isOngoing;
+      }
+    }
+
+    // Create content
+    const newContent = await prisma.content.create({
+      data: contentData,
+      include: {
+        tags: true,
+        meta: true,
+        blocks: {
+          orderBy: { order: 'asc' }
+        },
+        roles: {
+          include: {
+            skills: true
+          },
+          orderBy: { startDate: 'desc' }
+        },
+        linkedSkills: true
+      }
+    });
+
+    console.log('[ai-content/create] Content created:', newContent.id);
+
+    // Link skills to content
+    if (matchedSkills.length > 0) {
+      await prisma.content.update({
+        where: { id: newContent.id },
+        data: {
+          linkedSkills: {
+            connect: matchedSkills.map(s => ({ id: s.id }))
+          }
+        }
+      });
+      console.log(`[ai-content/create] Linked ${matchedSkills.length} skills`);
+    }
+
+    // Link tags to content
+    if (matchedTags.length > 0) {
+      await prisma.content.update({
+        where: { id: newContent.id },
+        data: {
+          tags: {
+            connect: matchedTags.map(t => ({ id: t.id }))
+          }
+        }
+      });
+      console.log(`[ai-content/create] Linked ${matchedTags.length} tags`);
+    }
+
+    // Create roles for EXPERIENCE content
+    if (contentType === 'EXPERIENCE' && generatedData.structuredData?.roles) {
+      const rolesData = generatedData.structuredData.roles;
+      console.log(`[ai-content/create] Creating ${rolesData.length} roles for experience`);
+      
+      for (const roleData of rolesData) {
+        // Match or create skills for this role
+        const roleSkills = await matchOrCreateSkills(roleData.skills || [], projectId);
+        
+        // Create the role
+        await prisma.experienceRole.create({
+          data: {
+            contentId: newContent.id,
+            title: roleData.title,
+            description: roleData.description || null,
+            startDate: new Date(roleData.startDate),
+            endDate: roleData.endDate ? new Date(roleData.endDate) : null,
+            isCurrent: roleData.isCurrent || false,
+            skills: {
+              connect: roleSkills.map(s => ({ id: s.id }))
+            }
+          }
+        });
+        
+        console.log(`[ai-content/create] Created role: ${roleData.title} with ${roleSkills.length} skills`);
+      }
+    }
+
+    // Fetch complete content with all relationships
+    const completeContent = await prisma.content.findUnique({
+      where: { id: newContent.id },
+      include: {
+        tags: true,
+        meta: true,
+        blocks: {
+          orderBy: { order: 'asc' }
+        },
+        roles: {
+          include: {
+            skills: true
+          },
+          orderBy: { startDate: 'desc' }
+        },
+        linkedSkills: true
+      }
+    });
+
+    // Clear project content cache so new content appears immediately
+    await cache.del(`project:${projectId}`);
+    await cache.del(`project:${projectId}:content`);
+    console.log(`[ai-content/create] Cleared cache for project ${projectId}`);
+
+    res.status(201).json({
+      id: completeContent.id,
+      content: completeContent
+    });
+  } catch (error) {
+    console.error('AI content creation error:', error);
+    res.status(500).json({
+      error: 'Creation Failed',
+      message: error.message || 'Unable to create content'
+    });
+  }
+});
+
+// Helper function to match or create skills
+async function matchOrCreateSkills(skills, projectId) {
+  if (!skills || skills.length === 0) return [];
+  
+  const matchedSkills = [];
+  
+  for (const skillData of skills) {
+    const skillName = skillData.name?.trim();
+    const skillCategory = skillData.category?.trim() || null;
+    
+    if (!skillName) continue;
+
+    try {
+      // Try to find existing skill
+      let skill = await prisma.skill.findFirst({
+        where: {
+          name: { equals: skillName, mode: 'insensitive' },
+          category: skillCategory || null
+        }
+      });
+
+      // If not found, create it
+      if (!skill) {
+        skill = await prisma.skill.create({
+          data: {
+            name: skillName,
+            category: skillCategory
+          }
+        });
+        console.log('[matchOrCreateSkills] Created new skill:', skillName);
+      }
+
+      // Link skill to project if not already linked
+      const existingLink = await prisma.skill.findFirst({
+        where: {
+          id: skill.id,
+          projects: {
+            some: {
+              id: projectId
+            }
+          }
+        }
+      });
+
+      if (!existingLink) {
+        await prisma.project.update({
+          where: { id: projectId },
+          data: {
+            skills: {
+              connect: { id: skill.id }
+            }
+          }
+        });
+        console.log('[matchOrCreateSkills] Linked skill to project:', skill.id);
+      }
+
+      matchedSkills.push({
+        id: skill.id,
+        name: skill.name,
+        category: skill.category
+      });
+    } catch (error) {
+      console.error(`Error matching/creating skill ${skillName}:`, error.message);
+    }
+  }
+
+  return matchedSkills;
+}
+
+// Helper function to match or create tags
+async function matchOrCreateTags(tags, projectId) {
+  if (!tags || tags.length === 0) return [];
+  
+  const matchedTags = [];
+  
+  for (const tagData of tags) {
+    const tagName = tagData.name?.trim();
+    const tagCategory = tagData.category?.trim() || null;
+    
+    if (!tagName) continue;
+
+    try {
+      // Try to find existing tag
+      let tag = await prisma.contentTag.findFirst({
+        where: {
+          name: { equals: tagName, mode: 'insensitive' },
+          category: tagCategory || null
+        }
+      });
+
+      // If not found, create it
+      if (!tag) {
+        tag = await prisma.contentTag.create({
+          data: {
+            name: tagName,
+            category: tagCategory
+          }
+        });
+        console.log('[matchOrCreateTags] Created new tag:', tagName);
+      }
+
+      // Link tag to project if not already linked
+      const existingLink = await prisma.contentTag.findFirst({
+        where: {
+          id: tag.id,
+          projects: {
+            some: {
+              id: projectId
+            }
+          }
+        }
+      });
+
+      if (!existingLink) {
+        await prisma.project.update({
+          where: { id: projectId },
+          data: {
+            tags: {
+              connect: { id: tag.id }
+            }
+          }
+        });
+        console.log('[matchOrCreateTags] Linked tag to project:', tag.id);
+      }
+
+      matchedTags.push({
+        id: tag.id,
+        name: tag.name,
+        category: tag.category
+      });
+    } catch (error) {
+      console.error(`Error matching/creating tag ${tagName}:`, error.message);
+    }
+  }
+
+  return matchedTags;
+}
 
 module.exports = router;

@@ -5,7 +5,7 @@ on:
     branches: [ "main" , "staging" ]
 
 jobs:
-  build-cms:
+  build-api:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -21,40 +21,40 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Login to CCSO Docker Registry
+    - name: Login to TGM Docker Registry
       uses: docker/login-action@v3
       with:
-        registry: registry.psuccso.org
-        username: robot$ccso-site+github
+        registry: registry.tgm.one
+        username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Generate API Tag Names
       run: |
         echo "${{ steps.extract_branch.outputs.branch }}"
         if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
-          echo "TAG_LATEST_CMS=ccso-cms:latest" >> $GITHUB_ENV
-          echo "TAG_COMMIT_CMS=ccso-cms:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TAG_LATEST_API=api:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_API=api:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
-          echo "TAG_LATEST_CMS=ccso-cms-stage:latest" >> $GITHUB_ENV
-          echo "TAG_COMMIT_CMS=ccso-cms-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TAG_LATEST_API=api-stage:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_API=api-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         else
           exit 0
         fi
 
-    - name: Build and push CMS
+    - name: Build and push API
       uses: docker/build-push-action@v6
       with:
-        context: ./backend
+        context: ./api
         platforms: linux/amd64,linux/arm64
-        file: ./backend/.docker/Dockerfile
+        file: ./api/.docker/Dockerfile
         push: true
         tags: |
-          registry.psuccso.org/ccso-site/${{ env.TAG_LATEST_CMS }}
-          registry.psuccso.org/ccso-site/${{ env.TAG_COMMIT_CMS }}
-        cache-from: type=registry,ref=registry.psuccso.org/ccso-site/${{ env.TAG_LATEST_CMS }}
+          registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
+          registry.tgm.one/foligo/${{ env.TAG_COMMIT_API }}
+        cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
         cache-to: type=inline
 
-  build-website:
+  build-dashboard:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -70,41 +70,90 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Login to CCSO Docker Registry
+    - name: Login to TGM Docker Registry
       uses: docker/login-action@v3
       with:
-        registry: registry.psuccso.org
-        username: robot$ccso-site+github
+        registry: registry.tgm.one
+        username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Generate Website Tag Names
       run: |
         echo "${{ steps.extract_branch.outputs.branch }}"
         if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
-          echo "TAG_LATEST_WEBSITE=ccso-site:latest" >> $GITHUB_ENV
-          echo "TAG_COMMIT_WEBSITE=ccso-site:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TAG_LATEST_DASHBOARD=dashboard:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_DASHBOARD=dashboard:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
-          echo "TAG_LATEST_WEBSITE=ccso-site-stage:latest" >> $GITHUB_ENV
-          echo "TAG_COMMIT_WEBSITE=ccso-site-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TAG_LATEST_DASHBOARD=dashboard-stage:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_DASHBOARD=dashboard-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         else
           exit 0
         fi
 
-    - name: Build and push Website
+    - name: Build and push Dashboard
       uses: docker/build-push-action@v6
       with:
-        context: ./frontend
+        context: ./dashboard
         platforms: linux/amd64,linux/arm64
-        file: ./frontend/.docker/Dockerfile
+        file: ./dashboard/.docker/Dockerfile
         push: true
         tags: |
-          registry.psuccso.org/ccso-site/${{ env.TAG_LATEST_WEBSITE }}
-          registry.psuccso.org/ccso-site/${{ env.TAG_COMMIT_WEBSITE }}
-        cache-from: type=registry,ref=registry.psuccso.org/ccso-site/${{ env.TAG_LATEST_WEBSITE }}
+          registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
+          registry.tgm.one/foligo/${{ env.TAG_COMMIT_DASHBOARD }}
+        cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
+        cache-to: type=inline
+
+  build-sites:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to TGM Docker Registry
+      uses: docker/login-action@v3
+      with:
+        registry: registry.tgm.one
+        username: robot$foligo+github
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Generate Sites Tag Names
+      run: |
+        echo "${{ steps.extract_branch.outputs.branch }}"
+        if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
+          echo "TAG_LATEST_SITES=sites:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_SITES=sites:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
+          echo "TAG_LATEST_SITES=sites-stage:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_SITES=sites-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        else
+          exit 0
+        fi
+
+    - name: Build and push Sites
+      uses: docker/build-push-action@v6
+      with:
+        context: ./sites
+        platforms: linux/amd64,linux/arm64
+        file: ./sites/.docker/Dockerfile
+        push: true
+        tags: |
+          registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
+          registry.tgm.one/foligo/${{ env.TAG_COMMIT_SITES }}
+        cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
         cache-to: type=inline
 
   deploy-rancher:
-    needs: [build-cms, build-website]
+    needs: [build-api, build-dashboard, build-sites]
     runs-on: ubuntu-latest
     steps:
     - name: Extract branch name
@@ -114,8 +163,8 @@ jobs:
 
     - name: Redeploy Rancher
       run: |
-        url='https://rancher.psuccso.org'
-        cluster=local
+        url='https://rancher.tgm.one'
+        cluster=c-jxhnr
         token=${{ secrets.RANCHER_TOKEN }}
 
         redeploy() {
@@ -138,13 +187,15 @@ jobs:
 
         echo "${{ steps.extract_branch.outputs.branch }}"
         if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
-            namespace=ccso-site
-            redeploy "backend"
-            redeploy "frontend"
+            namespace=foligo
+            redeploy "api"
+            redeploy "dashboard"
+            redeploy "sites"
         elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
-            namespace=ccso-site-staging
-            redeploy "backend"
-            redeploy "frontend"
+            namespace=foligo-staging
+            redeploy "api"
+            redeploy "dashboard"
+            redeploy "sites"
         else
             exit 0
         fi

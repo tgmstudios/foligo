@@ -372,7 +372,7 @@ const closeModal = () => {
   emit('close')
 }
 
-const handleAIContentGenerated = (content: any) => {
+const handleAIContentGenerated = async (content: any) => {
   if (content.content) {
     form.content = content.content
   }
@@ -387,8 +387,67 @@ const handleAIContentGenerated = (content: any) => {
   }
   
   showAIChatbot.value = false
-  emit('created', content)
-  closeModal()
+  
+  // Save the content to the API with skills and tags
+  const targetProjectId = form.projectId || props.project?.id
+  if (!targetProjectId) {
+    console.error('No project ID available for saving content')
+    emit('created', content)
+    closeModal()
+    return
+  }
+
+  try {
+    isLoading.value = true
+
+    const contentData: any = {
+      contentType: contentType.value,
+      title: form.title,
+      slug: form.slug || undefined,
+      excerpt: form.excerpt || undefined,
+      content: form.content,
+      status: form.status,
+      skills: content.skills || [],
+      tags: content.tags || []
+    }
+
+    // Add type-specific fields from metadata
+    if (contentType.value === 'PROJECT') {
+      if (content.metadata?.startDate) contentData.startDate = content.metadata.startDate
+      if (content.metadata?.endDate) contentData.endDate = content.metadata.endDate
+      if (content.metadata?.isOngoing !== undefined) contentData.isOngoing = content.metadata.isOngoing
+      if (content.metadata?.projectLinks) contentData.projectLinks = content.metadata.projectLinks
+      if (content.metadata?.contributors) contentData.contributors = content.metadata.contributors
+      if (content.metadata?.featuredImage) contentData.featuredImage = content.metadata.featuredImage
+    }
+
+    if (contentType.value === 'EXPERIENCE') {
+      if (content.metadata?.experienceCategory) contentData.experienceCategory = content.metadata.experienceCategory
+      if (content.metadata?.startDate) contentData.startDate = content.metadata.startDate
+      if (content.metadata?.endDate) contentData.endDate = content.metadata.endDate
+      if (content.metadata?.isOngoing !== undefined) contentData.isOngoing = content.metadata.isOngoing
+      if (content.metadata?.location) contentData.location = content.metadata.location
+      if (content.metadata?.locationType) contentData.locationType = content.metadata.locationType
+    }
+
+    console.log('[CreateContentModal] Saving AI-generated content with skills/tags:', {
+      skills: contentData.skills.length,
+      tags: contentData.tags.length,
+      projectLinks: contentData.projectLinks
+    })
+
+    const newContent = await projectStore.createContent(targetProjectId, contentData)
+    
+    emit('created', newContent)
+    closeModal()
+  } catch (error) {
+    console.error('Failed to save AI-generated content:', error)
+    // Fallback to old behavior
+    emit('created', content)
+    closeModal()
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const handleSubmit = async () => {
