@@ -169,6 +169,11 @@ const router = createRouter({
           name: 'project-media-library',
           component: () => import('@/views/media/MediaLibraryView.vue'),
           props: true
+        },
+        {
+          path: 'resume-chatbot',
+          name: 'resume-chatbot',
+          component: () => import('@/views/resume/ResumeChatbotView.vue')
         }
       ]
     },

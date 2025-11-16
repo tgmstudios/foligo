@@ -36,6 +36,12 @@ const GENERATION_CONFIG = {
     topP: 0.95,
     maxOutputTokens: 4096  // Increased for function calling responses
   },
+  RESUME_CHATBOT: {
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens: 8192  // Larger context window for resume/job application assistance
+  },
   VERY_PRECISE: {
     temperature: 0.1,
     topK: 10,
