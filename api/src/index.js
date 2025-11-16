@@ -14,7 +14,7 @@ const projectAccessRoutes = require('./routes/projectAccess');
 const contentRoutes = require('./routes/content');
 const publicContentRoutes = require('./routes/public-content');
 // const aiRoutes = require('./routes/ai');
-// const aiContentRoutes = require('./routes/ai-content');
+const aiContentRoutes = require('./routes/ai-content');
 const voiceWebhookRoutes = require('./routes/voice-webhook');
 const uploadRoutes = require('./routes/upload');
 const siteRoutes = require('./routes/site');
@@ -243,7 +243,7 @@ app.use('/api', authenticateToken, skillsRoutes); // Skills routes
 app.use('/api', authenticateToken, experienceRolesRoutes); // Experience roles routes
 app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
 // app.use('/api/ai', authenticateToken, aiRoutes);
-// app.use('/api/ai', authenticateToken, aiContentRoutes);
+app.use('/api/ai', authenticateToken, aiContentRoutes);
 // Old upload route deprecated - use /api/media instead
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 // Media routes - most require auth, but /view endpoint is public

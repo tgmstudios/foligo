@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-medium text-white">Content Links</h3>
+      <h3 class="text-lg font-medium text-white">Links</h3>
       <button
         @click="showCreateModal = true"
         class="btn btn-sm btn-primary"
@@ -15,23 +15,36 @@
       <div
         v-for="link in links"
         :key="link.id"
-        class="flex items-center justify-between p-3 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors"
+        class="group p-2.5 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors"
       >
-        <div class="flex items-center space-x-3 flex-1">
-          <span class="text-white">{{ getRelatedContentName(link) }}</span>
-          <span class="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded">
-            {{ link.linkType }}
-          </span>
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm text-white font-medium truncate">
+              {{ getRelatedContentTitle(link) }}
+            </div>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs text-gray-400">
+                {{ formatContentType(getRelatedContentType(link)) }}
+              </span>
+              <span class="text-xs text-gray-500">•</span>
+              <span class="text-xs text-gray-400">
+                {{ formatLinkType(link.linkType) }}
+              </span>
+            </div>
         </div>
         <button
           @click="deleteLink(link.id)"
-          class="text-sm text-red-400 hover:text-red-300"
+            class="flex-shrink-0 p-1 text-gray-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete link"
         >
-          Delete
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
         </button>
+        </div>
       </div>
-      <div v-if="links.length === 0" class="text-center text-gray-400 py-8">
-        No related content found
+      <div v-if="links.length === 0" class="text-center text-gray-400 py-6 text-sm">
+        No links yet
       </div>
     </div>
 
@@ -72,7 +85,7 @@
                       :value="item.id"
                       :disabled="item.id === props.sourceId"
                     >
-                      {{ item.title || item.name }} ({{ item.contentType || 'content' }})
+                      {{ item.title }} ({{ item.contentType || 'content' }})
                     </option>
                   </select>
                   <p class="text-xs text-gray-400 mt-1">
@@ -124,7 +137,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
-import type { ContentLink, Content, Project } from '@/stores/projects'
+import { formatContentType, formatLinkType } from '@/utils'
+import type { ContentLink, Content } from '@/stores/projects'
 
 interface Props {
   sourceId: string
@@ -228,17 +242,28 @@ const deleteLink = async (linkId: string) => {
   }
 }
 
-const getRelatedContentName = (link: ContentLink) => {
+const getRelatedContentTitle = (link: ContentLink) => {
   // For undirected links, show the other content (not the current one)
   const otherContentId = link.sourceId === props.sourceId ? link.targetId : link.sourceId
   const content = contentMap.value.get(otherContentId)
   
   if (content) {
-    return `${content.title} (${content.contentType})`
+    return content.title || 'Untitled'
   }
   
   // Fallback if content not loaded
   return `Content ${otherContentId.substring(0, 8)}...`
+}
+
+const getRelatedContentType = (link: ContentLink) => {
+  const otherContentId = link.sourceId === props.sourceId ? link.targetId : link.sourceId
+  const content = contentMap.value.get(otherContentId)
+  
+  if (content) {
+    return content.contentType || 'CONTENT'
+  }
+  
+  return 'CONTENT'
 }
 
 onMounted(() => {

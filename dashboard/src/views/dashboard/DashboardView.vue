@@ -123,7 +123,7 @@
                         'bg-purple-100 text-purple-800': content.type === 'EXPERIENCE'
                       }"
                     >
-                      {{ content.type }}
+                      {{ formatContentType(content.type) }}
                     </span>
                   </div>
                   <p class="text-sm text-gray-400 truncate">{{ content.excerpt || 'No excerpt' }}</p>
@@ -146,11 +146,11 @@
           </div>
         </div>
 
-        <!-- Recent Projects -->
+        <!-- Recent Portfolios -->
         <div class="card">
           <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-medium text-white">Recent Projects</h3>
+              <h3 class="text-lg font-medium text-white">Recent Portfolios</h3>
               <router-link to="/projects" class="text-sm text-primary-600 hover:text-primary-500">
                 View all
               </router-link>
@@ -167,14 +167,14 @@
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <h3 class="mt-2 text-sm font-medium text-white">No projects yet</h3>
-              <p class="mt-1 text-sm text-gray-400">Get started by creating your first project.</p>
+              <h3 class="mt-2 text-sm font-medium text-white">No portfolios yet</h3>
+              <p class="mt-1 text-sm text-gray-400">Get started by creating your first portfolio.</p>
               <div class="mt-6">
                 <button
                   @click="showCreateProjectModal = true"
                   class="btn btn-primary"
                 >
-                  Create Project
+                  Create Portfolio
                 </button>
               </div>
             </div>
@@ -242,22 +242,22 @@
           </div>
           <div class="p-6 space-y-3">
             <button
-              @click="showCreateProjectModal = true"
-              class="w-full btn btn-primary"
-            >
-              <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Create New Project
-            </button>
-            <button
               @click="showCreateContentModal = true"
-              class="w-full btn btn-outline"
+              class="w-full btn btn-primary group relative"
             >
               <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
               Create Content
+            </button>
+            <button
+              @click="showCreateProjectModal = true"
+              class="w-full btn btn-outline group"
+            >
+              <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              Create Portfolio
             </button>
             <router-link to="/analytics" class="w-full btn btn-outline">
               <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -304,7 +304,7 @@
       </div>
     </div>
 
-    <!-- Create Project Modal -->
+    <!-- Create Portfolio Modal -->
     <CreateProjectModal
       v-if="showCreateProjectModal"
       @close="showCreateProjectModal = false"
@@ -327,6 +327,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
 import { format, formatDistanceToNow } from 'date-fns'
+import { formatContentType } from '@/utils'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
@@ -355,7 +356,7 @@ const totalTeamMembers = computed(() => {
 
 const totalPublishedPosts = computed(() => {
   return projectStore.projects.reduce((total, project) => {
-    return total + (project.content?.filter(c => c.isPublished && c.status !== 'REVISION' && !c.revisionOf).length || 0)
+    return total + (project.content?.filter(c => c.status === 'PUBLISHED' && !c.revisionOf).length || 0)
   }, 0)
 })
 

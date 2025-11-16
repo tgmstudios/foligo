@@ -129,7 +129,7 @@
                   {{ content.isPublished ? 'Published' : 'Draft' }}
                 </span>
               </div>
-              <p class="text-sm text-gray-600 mb-2">{{ content.contentType }} • {{ getProjectName(content.projectId) }}</p>
+              <p class="text-sm text-gray-600 mb-2">{{ formatContentType(content.contentType) }} • {{ getProjectName(content.projectId) }}</p>
               <p v-if="content.excerpt" class="text-sm text-gray-300 line-clamp-2">{{ content.excerpt }}</p>
               <div class="flex items-center text-xs text-gray-400 mt-2">
                 <span>{{ formatDate(content.updatedAt) }}</span>
@@ -173,6 +173,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useProjectStore, type Content, type Project } from '@/stores/projects'
 import { format } from 'date-fns'
+import { formatContentType } from '@/utils'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
 const projectStore = useProjectStore()

@@ -75,7 +75,7 @@ router.post('/projects/:projectId/content/:contentId/roles', [
         } : {})
       },
       include: {
-        skills: { include: { tag: true } }
+        skills: true
       }
     });
 
@@ -120,7 +120,7 @@ router.get('/projects/:projectId/content/:contentId/roles', authorizeProjectAcce
     const roles = await prisma.experienceRole.findMany({
       where: { contentId },
       include: {
-        skills: { include: { tag: true } }
+        skills: true
       },
       orderBy: { startDate: 'desc' }
     });
@@ -221,7 +221,7 @@ router.put('/experience-roles/:id', [
         } : {})
       },
       include: {
-        skills: { include: { tag: true } }
+        skills: true
       }
     });
 

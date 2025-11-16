@@ -9,12 +9,25 @@
         <div class="flex items-center space-x-3">
           <select
             v-model="editForm.status"
-            class="px-4 py-2 rounded-md text-sm font-medium bg-gray-700 text-white hover:bg-gray-600 border border-gray-600"
+            :class="[
+              'px-4 py-2 rounded-md text-sm font-medium border min-w-[140px] transition-colors',
+              getStatusDropdownClass(editForm.status)
+            ]"
           >
             <option value="DRAFT">Draft</option>
             <option value="PUBLISHED">Published</option>
             <option value="HIDDEN">Hidden</option>
           </select>
+          <button
+            @click="showRevisionTimeline = true"
+            class="px-4 py-2 rounded-md text-sm font-medium bg-gray-700 text-white hover:bg-gray-600 border border-gray-600 flex items-center space-x-2"
+            title="View revision history"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Revision History</span>
+          </button>
           <button
             @click="saveContent"
             :disabled="isSaving"
@@ -72,7 +85,6 @@
 
           <!-- Project-specific Fields -->
           <div v-if="content.type === 'PROJECT'" class="mt-6 space-y-6">
-            <h4 class="text-sm font-medium text-gray-300 mb-3">Project Details</h4>
             
             <!-- Dates -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -188,7 +200,6 @@
 
             <!-- Skills -->
             <div>
-              <label class="label">Skills</label>
               <SkillsManager
                 v-model="editForm.linkedSkills"
                 :project-id="content.projectId"
@@ -198,7 +209,6 @@
 
           <!-- Experience-specific Fields -->
           <div v-if="content.type === 'EXPERIENCE'" class="mt-6 space-y-6">
-            <h4 class="text-sm font-medium text-gray-300 mb-3">Experience Details</h4>
             
             <!-- Category -->
             <div>
@@ -271,6 +281,14 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- Experience Roles -->
+        <div v-if="content.type === 'EXPERIENCE'" class="card">
+          <ExperienceRolesEditor
+            :content-id="content.id"
+            :project-id="content.projectId"
+          />
         </div>
 
         <!-- Markdown Editor -->
@@ -415,20 +433,12 @@
         </div>
 
         <!-- Content Blocks (for advanced post types) -->
-        <div v-if="content.type === 'PROJECT' || content.type === 'BLOG'" class="card p-6 mb-6">
+        <!-- <div v-if="content.type === 'PROJECT' || content.type === 'BLOG'" class="card p-6 mb-6">
           <ContentBlocksEditor
             :content-id="content.id"
             :project-id="content.projectId"
           />
-        </div>
-
-        <!-- Experience Roles -->
-        <div v-if="content.type === 'EXPERIENCE'" class="card p-6 mb-6">
-          <ExperienceRolesEditor
-            :content-id="content.id"
-            :project-id="content.projectId"
-          />
-        </div>
+        </div> -->
 
         <!-- Content Links -->
         <div class="card p-6 mb-6">
@@ -436,16 +446,6 @@
             :source-id="content.id"
             source-type="content"
             :project-id="content.projectId"
-          />
-        </div>
-
-        <!-- Revision History -->
-        <div class="card p-6 mb-6">
-          <RevisionViewer
-            :content-id="content.id"
-            :project-id="content.projectId"
-            :content="content"
-            @revision-restored="loadContent"
           />
         </div>
       </div>
@@ -505,6 +505,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Revision Timeline Modal -->
+    <RevisionTimeline
+      :is-open="showRevisionTimeline"
+      :content-id="content?.id || ''"
+      :project-id="content?.projectId || ''"
+      :content="content"
+      @close="showRevisionTimeline = false"
+      @revision-restored="loadContent"
+    />
   </div>
 </template>
 
@@ -518,7 +528,7 @@ import SkillsManager from '@/components/content/SkillsManager.vue'
 import ContentBlocksEditor from '@/components/content/ContentBlocksEditor.vue'
 import ExperienceRolesEditor from '@/components/content/ExperienceRolesEditor.vue'
 import ContentLinksManager from '@/components/content/ContentLinksManager.vue'
-import RevisionViewer from '@/components/content/RevisionViewer.vue'
+import RevisionTimeline from '@/components/content/RevisionTimeline.vue'
 import type { Content, Project, ContentTag, Skill } from '@/stores/projects'
 import { format } from 'date-fns'
 import { marked } from 'marked'
@@ -531,6 +541,7 @@ const projectStore = useProjectStore()
 const content = ref<Content | null>(null)
 const project = ref<Project | null>(null)
 const isSaving = ref(false)
+const showRevisionTimeline = ref(false)
 
 // AI Assistant State
 const aiPhase = ref<'start' | 'chat' | 'generated'>('start')
@@ -600,6 +611,16 @@ const getStatusClass = (status?: string) => {
     PUBLISHED: 'text-green-400 bg-green-400/20',
     HIDDEN: 'text-yellow-400 bg-yellow-400/20',
     REVISION: 'text-blue-400 bg-blue-400/20'
+  }
+  return classes[status || 'DRAFT'] || classes.DRAFT
+}
+
+const getStatusDropdownClass = (status: string) => {
+  const classes: Record<string, string> = {
+    DRAFT: 'bg-amber-500/20 text-amber-300 border-amber-600/50 hover:bg-amber-500/30',
+    PUBLISHED: 'bg-green-500/20 text-green-300 border-green-600/50 hover:bg-green-500/30',
+    HIDDEN: 'bg-yellow-500/20 text-yellow-300 border-yellow-600/50 hover:bg-yellow-500/30',
+    REVISION: 'bg-blue-500/20 text-blue-300 border-blue-600/50 hover:bg-blue-500/30'
   }
   return classes[status || 'DRAFT'] || classes.DRAFT
 }
@@ -1021,5 +1042,12 @@ onMounted(() => {
 
 .ai-content-preview td {
   @apply border border-gray-700 px-4 py-2 text-white;
+}
+
+/* Status dropdown - only color code the select button, not the options */
+select[class*="getStatusDropdownClass"] option,
+select option {
+  background-color: #1f2937;
+  color: #ffffff;
 }
 </style>

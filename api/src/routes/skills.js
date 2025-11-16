@@ -15,7 +15,7 @@ const router = express.Router();
  */
 router.post('/projects/:projectId/skills', [
   body('name').trim().isLength({ min: 1 }).withMessage('Skill name is required'),
-  body('tagId').isUUID().withMessage('Tag ID must be a valid UUID')
+  body('category').optional().trim()
 ], authorizeProjectAccess('EDITOR'), async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -27,25 +27,13 @@ router.post('/projects/:projectId/skills', [
       });
     }
 
-    const { name, tagId } = req.body;
-
-    // Verify tag exists
-    const tag = await prisma.contentTag.findUnique({
-      where: { id: tagId }
-    });
-
-    if (!tag) {
-      return res.status(404).json({
-        error: 'Tag Not Found',
-        message: 'The specified tag does not exist'
-      });
-    }
+    const { name, category } = req.body;
 
     // Check if skill exists
     const existingSkill = await prisma.skill.findFirst({
       where: {
         name,
-        tagId
+        category: category || null
       }
     });
 
@@ -56,10 +44,7 @@ router.post('/projects/:projectId/skills', [
       skill = await prisma.skill.create({
         data: {
           name,
-          tagId
-        },
-        include: {
-          tag: true
+          category: category || null
         }
       });
     }
@@ -83,11 +68,11 @@ router.post('/projects/:projectId/skills', [
  */
 router.get('/skills', async (req, res) => {
   try {
-    const { tagId, search } = req.query;
+    const { category, search } = req.query;
     
     const where = {};
-    if (tagId) {
-      where.tagId = tagId;
+    if (category) {
+      where.category = category;
     }
     if (search) {
       where.name = { contains: search, mode: 'insensitive' };
@@ -95,9 +80,6 @@ router.get('/skills', async (req, res) => {
 
     const skills = await prisma.skill.findMany({
       where,
-      include: {
-        tag: true
-      },
       orderBy: { name: 'asc' }
     });
 
@@ -149,7 +131,7 @@ router.post('/projects/:projectId/skills/:skillId', authorizeProjectAccess('EDIT
 
     const updatedProject = await prisma.project.findUnique({
       where: { id: projectId },
-      include: { skills: { include: { tag: true } } }
+      include: { skills: true }
     });
 
     res.json(updatedProject);
@@ -249,7 +231,7 @@ router.post('/projects/:projectId/content/:contentId/skills', [
 
     const updatedContent = await prisma.content.findUnique({
       where: { id: contentId },
-      include: { linkedSkills: { include: { tag: true } } }
+      include: { linkedSkills: true }
     });
 
     res.json(updatedContent);

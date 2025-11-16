@@ -61,3 +61,37 @@ export const throttle = <T extends (...args: any[]) => any>(
     }
   }
 }
+
+// Format content types for display
+export const formatContentType = (type: string): string => {
+  const typeMap: Record<string, string> = {
+    'PROJECT': 'Project',
+    'BLOG': 'Blog',
+    'EXPERIENCE': 'Experience',
+    'SKILL': 'Skill',
+    'CONTENT': 'Content'
+  }
+  return typeMap[type] || type
+}
+
+// Format content status for display
+export const formatContentStatus = (status: string): string => {
+  const statusMap: Record<string, string> = {
+    'DRAFT': 'Draft',
+    'PUBLISHED': 'Published',
+    'HIDDEN': 'Hidden',
+    'REVISION': 'Revision'
+  }
+  return statusMap[status] || status
+}
+
+// Format link types for display
+export const formatLinkType = (linkType: string): string => {
+  const linkTypeMap: Record<string, string> = {
+    'related': 'Related',
+    'parent': 'Parent',
+    'child': 'Child',
+    'sibling': 'Sibling'
+  }
+  return linkTypeMap[linkType.toLowerCase()] || linkType
+}

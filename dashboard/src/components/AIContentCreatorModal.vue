@@ -1,9 +1,9 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="close"></div>
+      <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
       
-      <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+      <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
         <!-- Header -->
         <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 pt-6 pb-4">
           <div class="flex items-center justify-between">
@@ -77,7 +77,7 @@
           </div>
 
           <!-- Chat Messages -->
-          <div v-else-if="modeSelected" class="space-y-4 max-h-96 overflow-y-auto mb-4">
+          <div v-else-if="modeSelected" class="space-y-4 max-h-[600px] overflow-y-auto mb-4">
             <div
               v-for="message in messages"
               :key="message.id"
@@ -140,19 +140,23 @@
           </div>
 
           <!-- Input (only show in text mode) -->
-          <div v-if="selectedInteractionMode === 'text'" class="flex items-center space-x-3">
-            <input
+          <div v-if="selectedInteractionMode === 'text'" class="flex items-end space-x-3">
+            <textarea
+              ref="messageTextarea"
               v-model="currentMessage"
-              @keyup.enter="sendMessage"
+              @keydown.enter.exact.prevent="sendMessage"
+              @keydown.enter.shift.exact="handleShiftEnter"
+              @input="adjustTextareaHeight"
               :disabled="!canRespond"
-              type="text"
-              placeholder="Type your message..."
-              class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
-            />
+              placeholder="Type your message... (Shift+Enter for new line)"
+              rows="1"
+              class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 resize-none overflow-hidden min-h-[44px] max-h-[200px]"
+              style="line-height: 1.5;"
+            ></textarea>
             <button
               @click="sendMessage"
               :disabled="!canRespond || !currentMessage.trim()"
-              class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed h-[44px]"
             >
               Send
             </button>
@@ -174,15 +178,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import api, { aiApi } from '@/services/api'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
-  contentType?: 'BLOG' | 'PROJECT' | 'EXPERIENCE'
+  contentType?: 'BLOG' | 'PROJECT' | 'EXPERIENCE' | 'SKILL'
   initialInfo?: any
   currentContent?: string
+  projectId?: string
 }>()
+
+const inferredContentType = ref<'BLOG' | 'PROJECT' | 'EXPERIENCE' | 'SKILL' | undefined>(props.contentType)
 
 const emit = defineEmits(['close', 'content-generated'])
 
@@ -193,6 +200,7 @@ const loadingMessage = ref('')
 const messages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
 const currentMessage = ref('')
 const chatHistory = ref<Array<{ role: string; content: string }>>([])
+const messageTextarea = ref<HTMLTextAreaElement | null>(null)
 const sessionDone = ref(false)
 const modeSelected = ref(false)
 const selectedInteractionMode = ref<'text' | 'voice'>('text')
@@ -216,6 +224,12 @@ const open = () => {
   currentMessage.value = ''
   chatHistory.value = []
   sessionDone.value = false
+  // Reset textarea height
+  nextTick(() => {
+    if (messageTextarea.value) {
+      messageTextarea.value.style.height = 'auto'
+    }
+  })
 }
 
 const close = () => {
@@ -225,6 +239,10 @@ const close = () => {
   currentMessage.value = ''
   chatHistory.value = []
   sessionDone.value = false
+  // Reset textarea height
+  if (messageTextarea.value) {
+    messageTextarea.value.style.height = 'auto'
+  }
 }
 
 const selectMode = async (mode: 'text' | 'voice') => {
@@ -249,7 +267,8 @@ const initializeSession = async () => {
         mode: 'edit',
         contentType: props.contentType || 'BLOG',
         initialInfo: props.initialInfo,
-        chatHistory: []
+        chatHistory: [],
+        projectId: props.projectId
       })
       
       messages.value.push({
@@ -275,10 +294,16 @@ const initializeSession = async () => {
     try {
       const response = await aiApi.post('/ai/session', {
         mode: 'create',
-        contentType: props.contentType || 'BLOG',
+        contentType: props.contentType,
         initialInfo: {},
-        chatHistory: []
+        chatHistory: [],
+        projectId: props.projectId
       })
+      
+      // Update inferred content type if it was determined
+      if (response.data.contentType) {
+        inferredContentType.value = response.data.contentType
+      }
       
       messages.value.push({
         id: Date.now().toString(),
@@ -298,6 +323,22 @@ const initializeSession = async () => {
   }
 }
 
+const adjustTextareaHeight = () => {
+  nextTick(() => {
+    if (messageTextarea.value) {
+      messageTextarea.value.style.height = 'auto'
+      const scrollHeight = messageTextarea.value.scrollHeight
+      const maxHeight = 200 // max-h-[200px]
+      messageTextarea.value.style.height = `${Math.min(scrollHeight, maxHeight)}px`
+    }
+  })
+}
+
+const handleShiftEnter = () => {
+  // Allow default behavior (new line) when Shift+Enter is pressed
+  adjustTextareaHeight()
+}
+
 const sendMessage = async () => {
   if (!currentMessage.value.trim() || isTyping.value) return
   
@@ -312,15 +353,27 @@ const sendMessage = async () => {
   
   const messageToSend = currentMessage.value.trim()
   currentMessage.value = ''
+  
+  // Reset textarea height
+  if (messageTextarea.value) {
+    messageTextarea.value.style.height = 'auto'
+  }
+  
   isTyping.value = true
   
   try {
     const response = await aiApi.post('/ai/session', {
       mode: props.mode,
-      contentType: props.contentType || 'BLOG',
+      contentType: inferredContentType.value || props.contentType,
       initialInfo: props.initialInfo || {},
-      chatHistory: chatHistory.value
+      chatHistory: chatHistory.value,
+      projectId: props.projectId
     })
+    
+    // Update inferred content type if it was determined
+    if (response.data.contentType) {
+      inferredContentType.value = response.data.contentType
+    }
     
     const assistantMessage = {
       id: (Date.now() + 1).toString(),
@@ -371,18 +424,26 @@ const generateFinalContent = async () => {
   loadingMessage.value = 'Generating your content...'
   
   try {
+    const finalContentType = inferredContentType.value || props.contentType || 'BLOG'
     const response = await aiApi.post('/ai/generate', {
       mode: props.mode,
-      contentType: props.contentType || 'BLOG',
+      contentType: finalContentType,
       chatHistory: chatHistory.value,
       currentContent: props.currentContent || '',
-      changes: ''
+      changes: '',
+      projectId: props.projectId
     })
     
     emit('content-generated', {
       content: response.data.content,
       title: response.data.title,
-      metadata: response.data.metadata
+      excerpt: response.data.excerpt,
+      metadata: {
+        ...response.data.metadata,
+        contentType: finalContentType
+      },
+      skills: response.data.skills || [],
+      tags: response.data.tags || []
     })
     
     close()

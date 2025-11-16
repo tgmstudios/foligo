@@ -70,7 +70,7 @@ onMounted(async () => {
 
 const getDefaultTitle = (type: string) => {
   const titles: Record<string, string> = {
-    project: 'New Project',
+    project: 'New Portfolio',
     blog: 'New Blog Post',
     experience: 'New Experience',
     skill: 'New Skill'
