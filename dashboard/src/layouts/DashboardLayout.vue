@@ -87,13 +87,16 @@
 
         <!-- Regular Navigation -->
         <div v-else class="space-y-1">
-          <router-link
-            v-for="item in navigation"
-            :key="item.name"
-            :to="item.href"
-            class="sidebar-item"
-            :class="$route.name === item.routeName ? 'sidebar-item-active' : 'sidebar-item-inactive'"
-          >
+          <template v-for="item in navigation" :key="item.name">
+            <!-- Divider -->
+            <div v-if="item.name === 'divider'" class="my-4 border-t border-gray-700"></div>
+            <!-- Navigation Item -->
+            <router-link
+              v-else
+              :to="item.href"
+              class="sidebar-item"
+              :class="$route.name === item.routeName ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+            >
               <!-- Dashboard Icon -->
               <svg v-if="item.icon === 'DashboardIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -122,6 +125,10 @@
               <svg v-else-if="item.icon === 'MediaIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
+              <!-- Resume Icon -->
+              <svg v-else-if="item.icon === 'ResumeIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               <!-- Admin Icon -->
               <svg v-else-if="item.icon === 'AdminIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -132,8 +139,28 @@
               </svg>
               {{ item.name }}
             </router-link>
+          </template>
         </div>
         
+        <!-- AI Assistants Section -->
+        <div v-if="!isSettingsRoute" class="mt-8 pt-6 border-t border-gray-700">
+          <div class="px-3 mb-3">
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">AI Assistants</h3>
+          </div>
+          <div class="space-y-1">
+            <router-link
+              to="/resume-chatbot"
+              class="sidebar-item"
+              :class="$route.name === 'resume-chatbot' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+            >
+              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Resume Assistant</span>
+            </router-link>
+          </div>
+        </div>
+
         <!-- Content Creation Section -->
         <div v-if="!isSettingsRoute" class="mt-8 pt-6 border-t border-gray-700">
           <div class="px-3 mb-3">
@@ -459,7 +486,8 @@ const pageTitle = computed(() => {
     'admin-users': 'User Management',
     'admin-projects': 'Portfolio Management',
     'admin-content': 'Content Management',
-    'admin-sso': 'SSO Providers'
+    'admin-sso': 'SSO Providers',
+    'resume-chatbot': 'Resume & Job Application Assistant'
   }
   return routeNames[route.name as string] || 'Dashboard'
 })

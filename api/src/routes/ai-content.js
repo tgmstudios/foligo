@@ -1,9 +1,46 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
-const { authorizeProjectAccess } = require('../middleware/auth');
+const { authorizeProjectAccess, authenticateToken } = require('../middleware/auth');
 const geminiService = require('../services/gemini');
+
+// Configure multer for resume uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed. Please upload PDF, DOC, DOCX, or TXT files.'), false);
+    }
+  }
+});
+
+// Helper function to extract text from resume file
+async function extractResumeText(file) {
+  if (file.mimetype === 'text/plain') {
+    return file.buffer.toString('utf-8');
+  } else if (file.mimetype === 'application/pdf') {
+    // For PDF, we'll use a simple approach - can enhance with pdf-parse later
+    // For now, return a placeholder that indicates PDF content
+    // The AI can work with this and we can enhance PDF parsing later
+    return '[PDF Resume Content - Text extraction will be enhanced]';
+  } else {
+    // For DOC/DOCX, return placeholder
+    return '[Document Resume Content - Text extraction will be enhanced]';
+  }
+}
 
 // Helper function to get context for AI (user, project, existing content)
 async function getAIContext(userId, projectId) {
@@ -137,6 +174,167 @@ async function getAIContext(userId, projectId) {
     }
   } catch (error) {
     console.error('Error fetching AI context:', error);
+  }
+
+  return context;
+}
+
+/**
+ * Get comprehensive context for resume chatbot
+ * Fetches ALL user content across all projects (not just one project)
+ */
+async function getResumeChatbotContext(userId) {
+  const context = {
+    user: null,
+    project: null,
+    existingContent: [],
+    postsByType: {
+      BLOG: [],
+      PROJECT: [],
+      EXPERIENCE: []
+    },
+    skills: [],
+    tags: [],
+    categories: []
+  };
+
+  try {
+    // Get user info
+    if (userId) {
+      context.user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      });
+
+      // Get all projects the user owns or is a member of
+      const userProjects = await prisma.project.findMany({
+        where: {
+          OR: [
+            { ownerId: userId },
+            {
+              members: {
+                some: { userId }
+              }
+            }
+          ]
+        },
+        select: {
+          id: true
+        }
+      });
+      
+      const projectIds = userProjects.map(p => p.id);
+      
+      if (projectIds.length > 0) {
+        // Get ALL content across all user's projects (titles and excerpts)
+        context.existingContent = await prisma.content.findMany({
+          where: {
+            projectId: { in: projectIds },
+            status: { not: 'REVISION' },
+            revisionOf: null
+          },
+          select: {
+            id: true,
+            type: true,
+            contentType: true,
+            title: true,
+            excerpt: true,
+            status: true,
+            projectId: true
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        // Get ALL posts per type across all projects
+        const postTypes = ['BLOG', 'PROJECT', 'EXPERIENCE'];
+        for (const postType of postTypes) {
+          context.postsByType[postType] = await prisma.content.findMany({
+            where: {
+              projectId: { in: projectIds },
+              contentType: postType,
+              status: { not: 'REVISION' },
+              revisionOf: null
+            },
+            select: {
+              id: true,
+              title: true,
+              excerpt: true,
+              contentType: true,
+              createdAt: true,
+              projectId: true
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+        }
+
+        // Get all skills across all user's projects
+        const allSkills = await prisma.skill.findMany({
+          where: {
+            projects: {
+              some: {
+                id: { in: projectIds }
+              }
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            category: true
+          },
+          orderBy: [
+            { category: 'asc' },
+            { name: 'asc' }
+          ]
+        });
+        
+        // Deduplicate skills by name and category
+        const skillsMap = new Map();
+        allSkills.forEach(skill => {
+          const key = `${skill.name}|${skill.category || 'null'}`;
+          if (!skillsMap.has(key)) {
+            skillsMap.set(key, skill);
+          }
+        });
+        context.skills = Array.from(skillsMap.values());
+
+        // Get all content tags across all user's projects
+        const allTags = await prisma.contentTag.findMany({
+          where: {
+            projects: {
+              some: {
+                id: { in: projectIds }
+              }
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            category: true
+          }
+        });
+        
+        // Deduplicate tags by name and category
+        const tagsMap = new Map();
+        allTags.forEach(tag => {
+          const key = `${tag.name}|${tag.category || 'null'}`;
+          if (!tagsMap.has(key)) {
+            tagsMap.set(key, tag);
+          }
+        });
+        context.tags = Array.from(tagsMap.values());
+
+        // Get all unique categories from skills and content tags
+        const skillCategories = [...new Set(context.skills.map(s => s.category).filter(Boolean))];
+        const tagCategories = [...new Set(context.tags.map(t => t.category).filter(Boolean))];
+        context.categories = [...new Set([...skillCategories, ...tagCategories])];
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching resume chatbot context:', error);
   }
 
   return context;
@@ -907,5 +1105,355 @@ async function matchOrCreateTags(tags, projectId) {
 
   return matchedTags;
 }
+
+/**
+ * @swagger
+ * /api/ai/post-links:
+ *   post:
+ *     summary: Generate and create post links using AI
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - projectId
+ *             properties:
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Post links generated and created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 links:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Link generation failed
+ */
+router.post('/post-links', [
+  body('projectId').isUUID().withMessage('Valid project ID is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid input data',
+        details: errors.array()
+      });
+    }
+
+    const { projectId } = req.body;
+    const userId = req.user?.id;
+
+    // Verify user has access to project
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } }
+        ]
+      }
+    });
+
+    if (!project) {
+      return res.status(403).json({
+        error: 'Access Denied',
+        message: 'You do not have access to this project'
+      });
+    }
+
+    // Get all posts for the project with titles, excerpts, skills, and tags
+    const posts = await prisma.content.findMany({
+      where: {
+        projectId: projectId,
+        status: { not: 'REVISION' },
+        revisionOf: null
+      },
+      select: {
+        id: true,
+        title: true,
+        excerpt: true,
+        contentType: true,
+        linkedSkills: {
+          select: {
+            name: true,
+            category: true
+          }
+        },
+        tags: {
+          select: {
+            name: true,
+            category: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (posts.length < 2) {
+      return res.status(400).json({
+        error: 'Insufficient Posts',
+        message: 'You need at least 2 posts to generate links'
+      });
+    }
+
+    // Generate links using AI
+    const result = await geminiService.generatePostLinks(posts);
+
+    // Create links in database
+    const createdLinks = [];
+    const skippedLinks = [];
+
+    for (const link of result.links) {
+      try {
+        // Check if link already exists
+        const existingLink = await prisma.contentLink.findFirst({
+          where: {
+            OR: [
+              {
+                sourceId: link.sourceId,
+                targetId: link.targetId,
+                linkType: link.linkType
+              },
+              {
+                sourceId: link.targetId,
+                targetId: link.sourceId,
+                linkType: link.linkType
+              }
+            ]
+          }
+        });
+
+        if (existingLink) {
+          skippedLinks.push({
+            ...link,
+            reason: 'Link already exists'
+          });
+          continue;
+        }
+
+        // Verify both posts exist
+        const sourcePost = await prisma.content.findUnique({
+          where: { id: link.sourceId },
+          select: { id: true }
+        });
+        const targetPost = await prisma.content.findUnique({
+          where: { id: link.targetId },
+          select: { id: true }
+        });
+
+        if (!sourcePost || !targetPost) {
+          skippedLinks.push({
+            ...link,
+            reason: 'One or both posts not found'
+          });
+          continue;
+        }
+
+        // Create the link
+        const newLink = await prisma.contentLink.create({
+          data: {
+            sourceId: link.sourceId,
+            targetId: link.targetId,
+            sourceType: 'content',
+            targetType: 'content',
+            linkType: link.linkType
+          }
+        });
+
+        createdLinks.push(newLink);
+      } catch (error) {
+        console.error(`Error creating link ${link.sourceId} -> ${link.targetId}:`, error);
+        skippedLinks.push({
+          ...link,
+          reason: error.message
+        });
+      }
+    }
+
+    // Clear project cache
+    await cache.del(`project:${projectId}`);
+    await cache.del(`project:${projectId}:content`);
+
+    res.json({
+      success: true,
+      created: createdLinks.length,
+      skipped: skippedLinks.length,
+      links: createdLinks,
+      skipped: skippedLinks
+    });
+  } catch (error) {
+    console.error('Post links generation error:', error);
+    res.status(500).json({
+      error: 'Link Generation Failed',
+      message: error.message || 'Unable to generate post links'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/ai/resume-chatbot/session:
+ *   post:
+ *     summary: Resume and job application chatbot session
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               resume:
+ *                 type: string
+ *                 format: binary
+ *                 description: Resume file (PDF, DOC, DOCX, or TXT)
+ *               jobPosting:
+ *                 type: string
+ *                 description: Job posting text
+ *               chatHistory:
+ *                 type: string
+ *                 description: JSON string of chat history
+ *     responses:
+ *       200:
+ *         description: Chatbot response
+ */
+router.post('/resume-chatbot/session',
+  authenticateToken,
+  upload.single('resume'),
+  [
+    body('chatHistory').optional().isString(),
+    body('jobPosting').optional().isString()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: 'Validation Error',
+          message: 'Invalid input data',
+          details: errors.array()
+        });
+      }
+
+      const userId = req.user?.id;
+      let resumeText = null;
+      let chatHistory = [];
+      const jobPosting = req.body.jobPosting || '';
+
+      // Extract resume text if file uploaded
+      if (req.file) {
+        try {
+          resumeText = await extractResumeText(req.file);
+        } catch (error) {
+          return res.status(400).json({
+            error: 'Resume Processing Error',
+            message: error.message || 'Failed to process resume file'
+          });
+        }
+      }
+
+      // Parse chat history if provided
+      if (req.body.chatHistory) {
+        try {
+          chatHistory = JSON.parse(req.body.chatHistory);
+        } catch (error) {
+          return res.status(400).json({
+            error: 'Invalid Chat History',
+            message: 'Chat history must be valid JSON'
+          });
+        }
+      }
+
+      // Get comprehensive context for resume chatbot (all user content across all projects)
+      const context = await getResumeChatbotContext(userId);
+
+      // Call resume chatbot handler
+      const result = await geminiService.handleResumeChatbotSession(
+        resumeText,
+        jobPosting,
+        chatHistory,
+        userId,
+        context
+      );
+
+      // Handle toolcall (post fetch) - same as regular AI session
+      if (result.toolcall === 'fetch_post' && result.postId) {
+        try {
+          // Fetch the full post content
+          const post = await prisma.content.findUnique({
+            where: { id: result.postId },
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+              content: true,
+              excerpt: true,
+              metadata: true
+            }
+          });
+
+          if (post) {
+            // Add the fetched post to chat history and continue conversation automatically
+            const updatedChatHistory = [
+              ...chatHistory,
+              { role: 'assistant', content: result.message || `Fetching "${post.title}"...` },
+              { role: 'user', content: `Here is the full content of the post "${post.title}":\n\n${post.content}` }
+            ];
+
+            // Continue the session with the fetched post included
+            const continuedResult = await geminiService.handleResumeChatbotSession(
+              resumeText,
+              jobPosting,
+              updatedChatHistory,
+              userId,
+              context
+            );
+
+            return res.json(continuedResult);
+          } else {
+            return res.json({
+              message: result.message || 'Post not found',
+              done: false,
+              error: 'Post not found'
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching post:', error);
+          return res.json({
+            message: result.message || 'Error fetching post',
+            done: false,
+            error: 'Failed to fetch post'
+          });
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Resume chatbot session error:', error);
+      res.status(500).json({
+        error: 'Session Failed',
+        message: error.message || 'Unable to process resume chatbot session'
+      });
+    }
+  }
+);
 
 module.exports = router;

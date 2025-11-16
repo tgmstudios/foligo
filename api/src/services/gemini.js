@@ -6,6 +6,7 @@ const { retryWithBackoff } = require('./retry');
 const { GeminiConfigError, GeminiAPIError, GeminiParseError } = require('./errors');
 const { AI_SESSION_TOOLS } = require('./gemini-tools');
 const { buildConversationalSystemPrompt } = require('./conversation-prompts');
+const { buildResumeChatbotSystemPrompt } = require('./resume-chatbot-prompts');
 
 class GeminiService {
   constructor() {
@@ -1108,6 +1109,376 @@ class GeminiService {
 
     this.logger.info('Tags matched/created', { count: matchedTags.length });
     return matchedTags;
+  }
+
+  /**
+   * Generate post links using flash model
+   * Analyzes all posts and suggests meaningful links between them
+   */
+  async generatePostLinks(posts) {
+    this.logger.info('Generating post links', { postsCount: posts.length });
+    
+    try {
+      const { postLinksGenerationPrompt } = require('./post-links-prompts');
+      
+      // Limit posts to 30 per batch (can handle more with JSON response format)
+      const MAX_POSTS_PER_BATCH = 30;
+      const postsToProcess = posts.slice(0, MAX_POSTS_PER_BATCH);
+      if (posts.length > MAX_POSTS_PER_BATCH) {
+        this.logger.warn('Too many posts, processing first batch', {
+          totalPosts: posts.length,
+          processingPosts: postsToProcess.length,
+          remainingPosts: posts.length - MAX_POSTS_PER_BATCH
+        });
+      }
+      
+      // Build prompt with limited posts
+      const prompt = postLinksGenerationPrompt(postsToProcess);
+      
+      this.logger.info('Post links prompt (FULL)', { 
+        promptLength: prompt.length,
+        postsCount: posts.length,
+        fullPrompt: prompt
+      });
+      
+      // Generate links using flash model with direct call to get full response details
+      // Create a model instance without system instruction to save tokens
+      // Use a custom config optimized for link generation
+      // IMPORTANT: Use responseMimeType to force JSON output - this may help with empty responses
+      const linkGenerationConfig = {
+        temperature: 0.2, // Lower for more consistent JSON
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192, // Increased - the issue isn't token limit
+        responseMimeType: "application/json" // Force JSON response format
+      };
+      
+      this.logger.info('Link generation config', { 
+        config: linkGenerationConfig,
+        model: MODEL_CONFIG.FLASH
+      });
+      
+      // Create a model instance without system instruction for this task
+      // This saves tokens and avoids conflicts with the default system instruction
+      const linkModel = this.genAI.getGenerativeModel({
+        model: MODEL_CONFIG.FLASH,
+        safetySettings: SAFETY_SETTINGS
+        // No systemInstruction to save tokens
+      });
+      
+      let responseText = '';
+      try {
+        this.logger.info('Calling Gemini API for post links', {
+          promptLength: prompt.length,
+          postsCount: postsToProcess.length,
+          maxOutputTokens: linkGenerationConfig.maxOutputTokens
+        });
+        
+        const result = await linkModel.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: linkGenerationConfig
+        });
+        
+        this.logger.info('Gemini API call completed', {
+          hasResult: !!result,
+          hasResponse: !!result?.response
+        });
+        
+        const response = await result.response;
+        
+        // Check for safety blocks or other issues
+        const candidates = response.candidates;
+        if (!candidates || candidates.length === 0) {
+          this.logger.error('Post links generation returned no candidates', {
+            hasResponse: !!response,
+            responseKeys: response ? Object.keys(response) : []
+          });
+          throw new GeminiAPIError('No candidates returned from AI model');
+        }
+        
+        const candidate = candidates[0];
+        this.logger.info('Post links candidate details', {
+          finishReason: candidate.finishReason,
+          hasContent: !!candidate.content,
+          contentParts: candidate.content?.parts || [],
+          partsCount: candidate.content?.parts?.length || 0,
+          safetyRatings: candidate.safetyRatings?.map(r => ({ 
+            category: r.category, 
+            probability: r.probability,
+            blocked: r.blocked 
+          })),
+          // Log the actual content object structure
+          contentKeys: candidate.content ? Object.keys(candidate.content) : [],
+          contentRole: candidate.content?.role
+        });
+        
+        // Check if blocked by safety
+        if (candidate.finishReason === 'SAFETY') {
+          this.logger.error('Post links generation blocked by safety filters', {
+            safetyRatings: candidate.safetyRatings
+          });
+          throw new GeminiAPIError('Post links generation was blocked by safety filters');
+        }
+        
+        // Check for other finish reasons
+        if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+          this.logger.warn('Post links generation finished with unexpected reason', {
+            finishReason: candidate.finishReason
+          });
+          
+          // If MAX_TOKENS, the response might be truncated but still valid
+          if (candidate.finishReason === 'MAX_TOKENS') {
+            this.logger.warn('Response was truncated due to token limit');
+          }
+        }
+        
+        // Extract text from response
+        // Try response.text() first (handles most cases)
+        try {
+          responseText = response.text();
+        } catch (textError) {
+          // If that fails, try accessing parts directly
+          this.logger.warn('response.text() failed, trying to access parts directly', {
+            error: textError.message,
+            hasContent: !!candidate.content,
+            partsCount: candidate.content?.parts?.length || 0
+          });
+          
+          // Try to extract from parts directly
+          if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+            responseText = candidate.content.parts
+              .map(part => part.text || '')
+              .join('');
+          } else if (candidate.finishReason === 'MAX_TOKENS') {
+            // For MAX_TOKENS, the response might be in a different format
+            // Try to get any text that might exist
+            this.logger.warn('MAX_TOKENS with no parts, checking for alternative content format');
+            // Sometimes the text is available even when parts count is 0
+            // This is a fallback - if it still fails, we'll throw an error
+          }
+          
+          if (!responseText || responseText.trim().length === 0) {
+            this.logger.error('Failed to extract text from response', {
+              error: textError.message,
+              finishReason: candidate.finishReason,
+              hasContent: !!candidate.content,
+              partsCount: candidate.content?.parts?.length || 0
+            });
+            throw new GeminiAPIError('Failed to extract text from response', textError);
+          }
+        }
+      } catch (apiError) {
+        this.logger.error('Post links API call failed', {
+          error: apiError.message,
+          stack: apiError.stack
+        });
+        throw apiError;
+      }
+      
+      this.logger.info('Post links response received', { 
+        responseLength: responseText.length,
+        responsePreview: responseText.substring(0, 200)
+      });
+      
+      if (!responseText || responseText.trim().length === 0) {
+        this.logger.error('Post links response is empty', {
+          postsCount: posts.length,
+          promptLength: prompt.length
+        });
+        throw new GeminiAPIError('Received empty response from AI model');
+      }
+      
+      // Parse JSON response
+      let responseJson = responseText.trim();
+      
+      // Remove markdown code blocks if present
+      responseJson = responseJson.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      
+      // Extract JSON object
+      const jsonMatch = responseJson.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        this.logger.warn('No JSON found in response', { 
+          responseText: responseText.substring(0, 500),
+          responseLength: responseText.length
+        });
+        return { links: [] };
+      }
+      
+      let result;
+      try {
+        result = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        this.logger.error('Failed to parse JSON from response', {
+          error: parseError.message,
+          jsonPreview: jsonMatch[0].substring(0, 500)
+        });
+        throw new GeminiAPIError('Failed to parse JSON response from AI model', parseError);
+      }
+      
+      // Validate and clean links
+      const validLinks = [];
+      const seenLinks = new Set();
+      
+      if (result.links && Array.isArray(result.links)) {
+        for (const link of result.links) {
+          // Validate required fields
+          if (!link.sourceId || !link.targetId || !link.linkType) {
+            this.logger.warn('Invalid link missing required fields', { link });
+            continue;
+          }
+          
+          // Skip self-links
+          if (link.sourceId === link.targetId) {
+            this.logger.warn('Skipping self-link', { sourceId: link.sourceId });
+            continue;
+          }
+          
+          // Validate link type
+          const validLinkTypes = ['related', 'parent', 'child', 'sequential', 'complementary', 'prerequisite', 'follow-up'];
+          if (!validLinkTypes.includes(link.linkType)) {
+            this.logger.warn('Invalid link type', { linkType: link.linkType, link });
+            continue;
+          }
+          
+          // Normalize link direction (always use lexicographically smaller ID as source)
+          const normalized = link.sourceId < link.targetId 
+            ? { sourceId: link.sourceId, targetId: link.targetId }
+            : { sourceId: link.targetId, targetId: link.sourceId };
+          
+          // Check for duplicates
+          const linkKey = `${normalized.sourceId}-${normalized.targetId}-${link.linkType}`;
+          if (seenLinks.has(linkKey)) {
+            this.logger.debug('Skipping duplicate link', { linkKey });
+            continue;
+          }
+          
+          seenLinks.add(linkKey);
+          
+          validLinks.push({
+            sourceId: normalized.sourceId,
+            targetId: normalized.targetId,
+            linkType: link.linkType,
+            reason: link.reason || 'AI-generated link'
+          });
+        }
+      }
+      
+      this.logger.info('Post links generated', { 
+        totalLinks: validLinks.length,
+        links: validLinks 
+      });
+      
+      return { links: validLinks };
+      
+    } catch (error) {
+      this.logger.error('Post links generation error', { 
+        error: error.message, 
+        stack: error.stack 
+      });
+      throw new GeminiAPIError(`Failed to generate post links: ${error.message}`, error);
+    }
+  }
+
+  /**
+   * Handle resume chatbot session - specialized for resume and job application assistance
+   * Uses larger context window and specialized prompts
+   */
+  async handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context = {}) {
+    this.logger.info('Starting resume chatbot session', {
+      hasResume: !!resumeText,
+      hasJobPosting: !!jobPosting,
+      chatHistoryLength: chatHistory.length
+    });
+
+    try {
+      // Build system prompt for resume chatbot
+      const systemPrompt = buildResumeChatbotSystemPrompt(resumeText, jobPosting, context);
+
+      // Initialize model with larger context window
+      const resumeModel = this.genAI.getGenerativeModel({
+        model: MODEL_CONFIG.FLASH,
+        systemInstruction: systemPrompt,
+        tools: AI_SESSION_TOOLS, // Can use fetchExistingPost if needed
+        safetySettings: SAFETY_SETTINGS
+      });
+
+      // Format chat history
+      let historyFormatted = chatHistory.slice(-20).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+
+      // Ensure history starts with 'user' role
+      while (historyFormatted.length > 0 && historyFormatted[0].role !== 'user') {
+        historyFormatted.shift();
+      }
+
+      // Start chat session
+      const chat = resumeModel.startChat({
+        history: historyFormatted,
+        generationConfig: GENERATION_CONFIG.RESUME_CHATBOT
+      });
+
+      // Get the last user message or use initial prompt
+      const lastUserMessage = chatHistory.length > 0
+        ? chatHistory[chatHistory.length - 1]?.content || ''
+        : (resumeText && jobPosting
+          ? 'I have uploaded my resume and a job posting. Can you help me tailor my resume for this position?'
+          : resumeText
+          ? 'I have uploaded my resume. Can you help me improve it?'
+          : jobPosting
+          ? 'I have a job posting. Can you help me understand what they\'re looking for?'
+          : 'Hello! I need help with my resume and job applications.');
+
+      this.logger.info('Sending message to resume chatbot', {
+        messageLength: lastUserMessage.length
+      });
+
+      // Send message and get response
+      const result = await chat.sendMessage(lastUserMessage);
+      const response = result.response;
+
+      // Check for function calls (e.g., fetchExistingPost)
+      const functionCalls = response.functionCalls();
+      if (functionCalls && functionCalls.length > 0) {
+        this.logger.info('Resume chatbot - function call detected', {
+          functionName: functionCalls[0].name
+        });
+        return await this._handleFunctionCall(functionCalls[0], 'BLOG'); // Use BLOG as default content type
+      }
+
+      // Extract text response
+      let responseText;
+      try {
+        responseText = response.text();
+      } catch (textError) {
+        this.logger.error('Failed to extract text from resume chatbot response', {
+          error: textError.message
+        });
+        responseText = 'I apologize, but I encountered an issue. Please try again.';
+      }
+
+      if (!responseText || responseText.trim().length === 0) {
+        this.logger.error('Resume chatbot returned empty response');
+        responseText = 'I apologize, but I ran into an issue. Please try again.';
+      }
+
+      this.logger.info('Resume chatbot - response received', {
+        responseLength: responseText.length
+      });
+
+      return {
+        message: responseText,
+        done: false
+      };
+
+    } catch (error) {
+      this.logger.error('Resume chatbot session EXCEPTION', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw new GeminiAPIError(`Failed to handle resume chatbot session: ${error.message}`, error);
+    }
   }
 }
 
