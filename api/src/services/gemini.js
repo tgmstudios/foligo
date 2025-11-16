@@ -1,9 +1,11 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createGeminiLogger } = require('./logger');
-const { prompts, fallbackQuestions } = require('./prompts');
+const { fallbackQuestions, utilityPrompts } = require('./prompt-utils');
 const { MODEL_CONFIG, GENERATION_CONFIG, SAFETY_SETTINGS, SYSTEM_INSTRUCTIONS } = require('./gemini-config');
 const { retryWithBackoff } = require('./retry');
 const { GeminiConfigError, GeminiAPIError, GeminiParseError } = require('./errors');
+const { AI_SESSION_TOOLS } = require('./gemini-tools');
+const { buildConversationalSystemPrompt } = require('./conversation-prompts');
 
 class GeminiService {
   constructor() {
@@ -113,390 +115,200 @@ class GeminiService {
   }
 
   /**
-   * Generate blog post
-   */
-  async generateBlogPost(topic, details = {}) {
-    this.logger.info('Generating blog post', { topic, details });
-    const prompt = prompts.buildBlog(topic, details);
-    return this.generateContent(prompt, { temperature: 0.8 });
-  }
-
-  /**
-   * Generate project description
-   */
-  async generateProjectDescription(projectName, technologies = [], features = []) {
-    this.logger.info('Generating project description', { 
-      projectName, 
-      technologiesCount: technologies.length,
-      featuresCount: features.length 
-    });
-    const prompt = prompts.buildProject(projectName, technologies, features);
-    return this.generateContent(prompt, { temperature: 0.7 });
-  }
-
-  /**
-   * Generate experience description
-   */
-  async generateExperienceDescription(company, position, duration, responsibilities = []) {
-    this.logger.info('Generating experience description', { 
-      company, 
-      position, 
-      duration,
-      responsibilitiesCount: responsibilities.length 
-    });
-    const prompt = prompts.buildExperience(company, position, duration, responsibilities);
-    return this.generateContent(prompt, { temperature: 0.6 });
-  }
-
-  /**
-   * Chat with user
-   */
-  async chatWithUser(messages) {
-    this.logger.info('Chat with user', { messageCount: messages.length });
-    
-    const systemPrompt = prompts.chatWithUser();
-    
-    // Format messages for Gemini
-    const formattedMessages = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      ...messages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }))
-    ];
-
-    this.logger.debug('Last user message', { 
-      preview: messages[messages.length - 1]?.content?.substring(0, 200) 
-    });
-    
-    const responseText = await this._callModelWithRetry(
-      this.chatModel,
-      formattedMessages,
-      GENERATION_CONFIG.CHAT,
-      'Chat with user'
-    );
-    
-    this.logger.info('Chat response received', { 
-      responseLength: responseText.length 
-    });
-    
-    return responseText;
-  }
-
-  /**
-   * Generate content from answers
-   */
-  async generateContentFromAnswers(contentType, topic, answers, questions, chatHistory = []) {
-    this.logger.info('Generating content from answers', { 
-      contentType, 
-      topic,
-      answersCount: answers.length,
-      questionsCount: questions.length 
-    });
-    
-    const promptGenerator = prompts.generateFromAnswers[contentType] || prompts.generateFromAnswers['BLOG'];
-    const prompt = promptGenerator(topic, questions, answers, chatHistory);
-    
-    return this.generateContent(prompt, { temperature: 0.8 });
-  }
-
-  /**
-   * Generate clarifying questions
-   */
-  async generateClarifyingQuestions(contentType, initialInfo = {}) {
-    this.logger.info('Generating clarifying questions', { contentType });
-    
-    const promptGenerator = prompts.clarifyingQuestions[contentType] || prompts.clarifyingQuestions['BLOG'];
-    const prompt = promptGenerator(initialInfo);
-    
-    try {
-      const response = await this.generateContent(prompt, { 
-        temperature: 0.3, 
-        _skipLog: false 
-      });
-      
-      // Parse and validate response
-      const questions = this._parseQuestionsResponse(response);
-      
-      if (Array.isArray(questions) && questions.every(q => typeof q === 'string')) {
-        this.logger.info('Clarifying questions generated', { count: questions.length });
-        return questions;
-      } else {
-        throw new Error('Invalid question format');
-      }
-    } catch (error) {
-      this.logger.warn('Failed to generate clarifying questions, using fallback', { 
-        error: error.message 
-      });
-      return fallbackQuestions[contentType] || fallbackQuestions['BLOG'];
-    }
-  }
-
-  /**
-   * Private: Parse questions response
-   */
-  _parseQuestionsResponse(response) {
-    let cleanedResponse = response.trim();
-    
-    // Remove markdown code blocks
-    cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    
-    // Try to find JSON array in the response
-    const jsonMatch = cleanedResponse.match(/\[.*\]/s);
-    if (jsonMatch) {
-      cleanedResponse = jsonMatch[0];
-    }
-    
-    return JSON.parse(cleanedResponse);
-  }
-
-  /**
-   * Ask next question in conversation
-   */
-  async askNextQuestion(contentType, currentInfo, chatHistory, questionNumber, maxQuestions) {
-    this.logger.info('Asking next question', { 
-      contentType, 
-      questionNumber, 
-      maxQuestions 
-    });
-    
-    const promptData = {
-      contentType,
-      currentInfo: JSON.stringify(currentInfo),
-      chatHistory: JSON.stringify(chatHistory),
-      questionNumber,
-      maxQuestions
-    };
-    
-    // Build prompt (simplified version - actual prompt would use the prompts module)
-    const prompt = `You are a content creation assistant. Ask question ${questionNumber} of ${maxQuestions} based on ${promptData.contentType} type and current info.`;
-    
-    try {
-      const response = await this.generateContent(prompt, { 
-        temperature: 0.7, 
-        _skipLog: false 
-      });
-      
-      this.logger.info('Next question generated', { questionNumber });
-      return response.trim();
-    } catch (error) {
-      this.logger.warn('Failed to generate question, using fallback', { 
-        error: error.message 
-      });
-      
-      const questions = fallbackQuestions[contentType] || fallbackQuestions['BLOG'];
-      return questions[questionNumber - 1] || questions[questions.length - 1];
-    }
-  }
-
-  /**
    * Handle AI session - main conversation handler
-   * Refactored into smaller helper methods
+   * Now uses Function Calling for structured, reliable responses
    */
   async handleAISession(mode, contentType, initialInfo, chatHistory, context = {}) {
-    this.logger.info('Starting AI session', { 
+    this.logger.info('Starting AI session with Function Calling', { 
       mode, 
       contentType,
       chatHistoryLength: chatHistory.length 
     });
     
     try {
-      // Generate system prompt based on mode
-      const systemPrompt = this._buildSystemPrompt(mode, contentType, initialInfo, context);
+      // Build the consolidated system prompt
+      const systemPrompt = buildConversationalSystemPrompt(mode, contentType, initialInfo, context);
       
-      // Build conversation history
-      const formattedMessages = this._formatChatHistory(systemPrompt, chatHistory);
-      
-      this.logger.debug('AI session context', { 
-        messageCount: formattedMessages.length,
-        lastMessagePreview: formattedMessages[formattedMessages.length - 1]?.parts[0]?.text?.substring(0, 200)
+      this.logger.debug('System prompt built', { 
+        promptLength: systemPrompt.length,
+        mode,
+        contentType 
       });
       
-      // Call model
-      const responseText = await this._callModelWithRetry(
-        this.flashModel,
-        formattedMessages,
-        GENERATION_CONFIG.CHAT,
-        'AI session'
-      );
+      // Initialize model with system instruction and tools
+      const sessionModel = this.genAI.getGenerativeModel({
+        model: MODEL_CONFIG.FLASH,
+        systemInstruction: systemPrompt,
+        tools: AI_SESSION_TOOLS,
+        safetySettings: SAFETY_SETTINGS
+      });
       
-      this.logger.info('AI session response received', { 
+      // Start chat session with history
+      const chat = sessionModel.startChat({
+        history: chatHistory.slice(-10).map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        })),
+        generationConfig: GENERATION_CONFIG.CHAT
+      });
+      
+      // Get the last user message
+      const lastUserMessage = chatHistory[chatHistory.length - 1]?.content || '';
+      
+      this.logger.debug('Sending message to model', { 
+        messagePreview: lastUserMessage.substring(0, 200) 
+      });
+      
+      // Send message and get response
+      const result = await chat.sendMessage(lastUserMessage);
+      const response = result.response;
+      
+      // Check for function calls FIRST (this is the structured response)
+      const functionCalls = response.functionCalls();
+      
+      if (functionCalls && functionCalls.length > 0) {
+        return await this._handleFunctionCall(functionCalls[0], contentType);
+      }
+      
+      // If no function call, it's a regular conversational response (asking a question)
+      const responseText = response.text();
+      
+      this.logger.info('AI session - conversational response', { 
         responseLength: responseText.length 
       });
       
-      // Parse response and check for special commands
-      return await this._parseSessionResponse(responseText, contentType, chatHistory, initialInfo);
+      return {
+        message: responseText,
+        done: false,
+        contentType: contentType // No change
+      };
       
     } catch (error) {
-      this.logger.error('AI session error', { error: error.message });
+      this.logger.error('AI session error', { error: error.message, stack: error.stack });
       throw new GeminiAPIError(`Failed to handle AI session: ${error.message}`, error);
     }
   }
 
   /**
-   * Private: Build system prompt for AI session
+   * Private: Handle function call from AI
+   * This replaces the old regex-based JSON parsing
    */
-  _buildSystemPrompt(mode, contentType, initialInfo, context) {
-    if (mode === 'edit') {
-      return prompts.aiSessionEdit(initialInfo, context.chatHistory || []);
-    } else {
-      return prompts.aiSessionCreate(contentType, initialInfo, context);
-    }
-  }
-
-  /**
-   * Private: Format chat history for API call
-   */
-  _formatChatHistory(systemPrompt, chatHistory) {
-    return [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      ...chatHistory.slice(-10).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }))
-    ];
-  }
-
-  /**
-   * Private: Parse session response for special commands and completion signals
-   */
-  async _parseSessionResponse(responseText, contentType, chatHistory, initialInfo) {
-    // Check for toolcall (post fetch request)
-    const toolcallMatch = this._checkForToolcall(responseText);
-    if (toolcallMatch) {
-      return toolcallMatch;
-    }
+  async _handleFunctionCall(functionCall, currentContentType) {
+    const { name, args } = functionCall;
     
-    // Check if AI is done asking questions
-    const doneMatch = this._checkForCompletion(responseText);
-    if (doneMatch) {
-      return await this._handleCompletion(doneMatch, responseText, contentType, chatHistory, initialInfo);
-    }
-    
-    // Check if content type needs correction
-    const correctedType = await this._checkContentTypeCorrection(contentType, chatHistory, initialInfo);
-    
-    return {
-      message: responseText,
-      done: false,
-      contentType: correctedType
-    };
-  }
-
-  /**
-   * Private: Check for toolcall in response
-   */
-  _checkForToolcall(responseText) {
-    const toolcallRegex = /{"toolcall"\s*:\s*"fetch_post"\s*,\s*"postId"\s*:\s*"([^"]+)"}/;
-    const toolcallMatch = responseText.match(toolcallRegex);
-    
-    if (toolcallMatch) {
-      const postId = toolcallMatch[1];
-      this.logger.info('Toolcall detected', { postId });
-      
-      return {
-        toolcall: 'fetch_post',
-        postId: postId,
-        message: responseText.replace(toolcallRegex, '').trim() || 'Fetching post...',
-        done: false
-      };
-    }
-    
-    return null;
-  }
-
-  /**
-   * Private: Check for completion signal
-   */
-  _checkForCompletion(responseText) {
-    const doneRegex = /{"done"\s*:\s*true[^}]*}/;
-    const doneMatch = responseText.match(doneRegex);
-    
-    if (doneMatch) {
-      try {
-        return JSON.parse(doneMatch[0]);
-      } catch (e) {
-        this.logger.warn('Failed to parse completion JSON', { error: e.message });
-        return { done: true, summary: 'Conversation complete' };
-      }
-    }
-    
-    return null;
-  }
-
-  /**
-   * Private: Handle completion of conversation
-   */
-  async _handleCompletion(doneInfo, responseText, contentType, chatHistory, initialInfo) {
-    this.logger.info('AI session completed', { 
-      contentType,
-      summary: doneInfo.summary 
+    this.logger.info('Function call received', { 
+      functionName: name, 
+      args: JSON.stringify(args) 
     });
     
-    // Check if contentType needs correction at completion
-    const correctedType = await this._checkContentTypeCorrection(contentType, chatHistory, initialInfo);
-    
-    if (correctedType !== contentType) {
-      this.logger.info('Content type corrected at completion', { 
-        from: contentType, 
-        to: correctedType 
-      });
+    switch (name) {
+      case 'signalContentReadyForGeneration':
+        return {
+          done: true,
+          summary: args.summary,
+          contentType: args.contentType,
+          message: "Perfect! I have everything I need to create your content."
+        };
+      
+      case 'signalEditReadyForGeneration':
+        return {
+          done: true,
+          summary: args.summary,
+          changes: args.changes,
+          contentType: currentContentType,
+          message: "Got it! I'll apply those changes now."
+        };
+      
+      case 'updateContentType':
+        this.logger.info('Content type updated', { 
+          from: currentContentType, 
+          to: args.newContentType, 
+          reason: args.reason 
+        });
+        return {
+          done: false,
+          contentType: args.newContentType,
+          message: `Understood. Let me adjust - we'll create this as ${args.newContentType.toLowerCase()} content instead. ${this._getFollowUpMessage(args.newContentType)}`
+        };
+      
+      case 'fetchExistingPost':
+        return {
+          done: false,
+          toolcall: 'fetch_post',
+          postId: args.postId,
+          message: `Fetching "${args.postTitle || 'the post'}"...`,
+          contentType: currentContentType
+        };
+      
+      default:
+        this.logger.warn('Unknown function call', { functionName: name });
+        return {
+          done: false,
+          message: "I'm not sure what to do next. Can you provide more details?",
+          contentType: currentContentType
+        };
     }
-    
-    return {
-      message: responseText,
-      done: true,
-      summary: doneInfo.summary,
-      changes: doneInfo.changes || null,
-      contentType: correctedType
-    };
   }
 
   /**
-   * Private: Check if content type needs correction
+   * Private: Get a natural follow-up message after content type change
    */
-  async _checkContentTypeCorrection(contentType, chatHistory, initialInfo) {
-    // Only check if we have enough conversation history
-    if (chatHistory.length < 2) {
-      return contentType;
-    }
-    
-    const inferredType = await this.inferContentType(chatHistory, initialInfo);
-    
-    if (inferredType && inferredType !== contentType) {
-      this.logger.info('Content type correction needed', { 
-        from: contentType, 
-        to: inferredType 
-      });
-      return inferredType;
-    }
-    
-    return contentType;
+  _getFollowUpMessage(contentType) {
+    const followUps = {
+      'PROJECT': 'What did you build and what problem does it solve?',
+      'EXPERIENCE': 'What was your role and where did you work?',
+      'BLOG': 'What would you like to write about?',
+      'SKILL': 'Which skill or technology would you like to add?'
+    };
+    return followUps[contentType] || 'Tell me more about it.';
   }
 
   /**
    * Generate final content
-   * Refactored into smaller helper methods
+   * Now uses XML-based prompts and structured_data extraction
    */
   async generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}) {
-    this.logger.info('Generating final content', { 
+    this.logger.info('Generating final content with XML prompts', { 
       mode, 
       contentType,
       chatHistoryLength: chatHistory.length 
     });
     
     try {
-      // Build the complete prompt
-      const prompt = this._buildContentGenerationPrompt(mode, contentType, chatHistory, currentContent, changes, context);
+      const {
+        projectGenerationPrompt,
+        experienceGenerationPrompt,
+        blogGenerationPrompt,
+        skillGenerationPrompt,
+        editGenerationPrompt
+      } = require('./content-generation-prompts');
+      
+      // Build the appropriate prompt based on mode and type
+      let prompt;
+      if (mode === 'edit') {
+        prompt = editGenerationPrompt(currentContent, changes, chatHistory, context);
+      } else {
+        const promptMap = {
+          'PROJECT': projectGenerationPrompt,
+          'EXPERIENCE': experienceGenerationPrompt,
+          'BLOG': blogGenerationPrompt,
+          'SKILL': skillGenerationPrompt
+        };
+        
+        const promptGenerator = promptMap[contentType];
+        if (!promptGenerator) {
+          throw new Error(`Unknown content type: ${contentType}`);
+        }
+        
+        prompt = promptGenerator(chatHistory, context);
+      }
       
       this.logger.debug('Content generation prompt', { 
-        promptLength: prompt.length,
-        firstChars: prompt.substring(0, 500),
-        lastChars: prompt.substring(prompt.length - 500)
+        promptLength: prompt.length 
       });
       
       // Generate content using pro model
-      let content = await this._callModelWithRetry(
+      const fullResponse = await this._callModelWithRetry(
         this.proModel,
         [{ role: 'user', parts: [{ text: prompt }] }],
         GENERATION_CONFIG.CREATIVE,
@@ -504,31 +316,45 @@ class GeminiService {
       );
       
       this.logger.info('Content generated', { 
-        contentLength: content.length 
+        responseLength: fullResponse.length 
       });
       
-      // Extract and process the content
-      const { cleanedContent, extractedSkills, extractedTags } = this._extractAndCleanContent(content);
+      // Extract structured_data block and markdown content
+      const { markdownContent, structuredData } = this._extractStructuredData(fullResponse);
       
-      // Extract title
-      const title = await this.extractTitleFromConversation(contentType, chatHistory, cleanedContent);
+      this.logger.debug('Extracted content', {
+        markdownLength: markdownContent.length,
+        hasStructuredData: !!structuredData
+      });
       
-      // Extract metadata
-      const metadata = await this.extractMetadataFromConversation(contentType, chatHistory, cleanedContent);
+      // Extract skills and tags from structured data
+      const extractedSkills = structuredData?.skills || [];
+      const extractedTags = structuredData?.tags || [];
       
       // Match or create skills and tags
       const matchedSkills = await this.matchOrCreateSkills(extractedSkills, context);
       const matchedTags = await this.matchOrCreateTags(extractedTags, context);
       
+      // Use title from structured data or extract from conversation
+      let title = structuredData?.title;
+      if (!title || title.length < 3) {
+        title = await this.extractTitleFromConversation(contentType, chatHistory, markdownContent);
+      }
+      
+      // Build metadata from structured data
+      const metadata = this._buildMetadataFromStructuredData(structuredData, contentType);
+      
       // Check for multiple posts
       const shouldCreateMultiple = await this.shouldCreateMultiplePosts(chatHistory, contentType);
       
       const result = {
-        content: cleanedContent,
+        content: markdownContent,
         title,
+        excerpt: structuredData?.excerpt || null,
         metadata,
         skills: matchedSkills,
-        tags: matchedTags
+        tags: matchedTags,
+        structuredData // Include full structured data for direct field mapping
       };
       
       if (shouldCreateMultiple) {
@@ -546,70 +372,52 @@ class GeminiService {
       return result;
       
     } catch (error) {
-      this.logger.error('Content generation error', { error: error.message });
+      this.logger.error('Content generation error', { error: error.message, stack: error.stack });
       throw new GeminiAPIError(`Failed to generate final content: ${error.message}`, error);
     }
   }
 
   /**
-   * Private: Build content generation prompt
+   * Private: Extract structured_data block and markdown content
+   * Parses XML-style structured_data tag and returns both parts
    */
-  _buildContentGenerationPrompt(mode, contentType, chatHistory, currentContent, changes, context) {
-    const globalPrompt = prompts.contentGenerationGlobal(chatHistory, context);
+  _extractStructuredData(fullResponse) {
+    // Look for <structured_data> ... </structured_data> block
+    const structuredDataRegex = /<structured_data>\s*([\s\S]*?)\s*<\/structured_data>/;
+    const match = fullResponse.match(structuredDataRegex);
     
-    let typeSpecificPrompt = '';
-    if (mode === 'edit') {
-      typeSpecificPrompt = prompts.contentGenerationEdit(currentContent, changes);
-    } else {
-      // Get type-specific prompt
-      const promptMap = {
-        'PROJECT': prompts.contentGenerationProject,
-        'EXPERIENCE': prompts.contentGenerationExperience,
-        'BLOG': prompts.contentGenerationBlog,
-        'SKILL': prompts.contentGenerationSkill
-      };
-      
-      const promptGenerator = promptMap[contentType];
-      if (promptGenerator) {
-        typeSpecificPrompt = promptGenerator();
-      }
-    }
+    let structuredData = null;
+    let markdownContent = fullResponse;
     
-    return globalPrompt + (typeSpecificPrompt ? '\n' + typeSpecificPrompt : '');
-  }
-
-  /**
-   * Private: Extract skills/tags JSON and clean content
-   */
-  _extractAndCleanContent(content) {
-    let extractedSkills = [];
-    let extractedTags = [];
-    
-    // Extract skills and tags JSON block
-    const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
-    const jsonMatch = content.match(jsonBlockRegex);
-    
-    if (jsonMatch) {
+    if (match) {
       try {
-        const jsonData = JSON.parse(jsonMatch[1]);
-        extractedSkills = jsonData.skills || [];
-        extractedTags = jsonData.tags || [];
-        // Remove the JSON block from content
-        content = content.replace(jsonBlockRegex, '').trim();
+        // Parse the JSON inside the structured_data block
+        const jsonString = match[1].trim();
+        structuredData = JSON.parse(jsonString);
         
-        this.logger.debug('Extracted skills and tags', { 
-          skillsCount: extractedSkills.length,
-          tagsCount: extractedTags.length 
+        // Remove the structured_data block from the content
+        markdownContent = fullResponse.replace(structuredDataRegex, '').trim();
+        
+        this.logger.debug('Extracted structured data', {
+          hasTitle: !!structuredData.title,
+          hasExcerpt: !!structuredData.excerpt,
+          skillsCount: structuredData.skills?.length || 0,
+          tagsCount: structuredData.tags?.length || 0
         });
       } catch (e) {
-        this.logger.warn('Failed to parse skills/tags JSON', { error: e.message });
+        this.logger.warn('Failed to parse structured_data JSON', { 
+          error: e.message,
+          jsonPreview: match[1].substring(0, 200)
+        });
       }
+    } else {
+      this.logger.warn('No structured_data block found in response');
     }
     
-    // Clean up the content
-    const cleanedContent = this._cleanGeneratedContent(content);
+    // Clean up the markdown content
+    markdownContent = this._cleanGeneratedContent(markdownContent);
     
-    return { cleanedContent, extractedSkills, extractedTags };
+    return { markdownContent, structuredData };
   }
 
   /**
@@ -637,10 +445,49 @@ class GeminiService {
       content = content.replace(pattern, '');
     }
     
-    // Remove any stray # title headings
+    // Remove any stray # title headings at the start
     content = content.replace(/^#\s+.+$/m, '').trim();
     
     return content;
+  }
+
+  /**
+   * Private: Build metadata object from structured data
+   * Maps structured data fields to database schema
+   */
+  _buildMetadataFromStructuredData(structuredData, contentType) {
+    if (!structuredData) {
+      return {};
+    }
+    
+    const metadata = {};
+    
+    // PROJECT-specific metadata
+    if (contentType === 'PROJECT') {
+      if (structuredData.startDate) metadata.startDate = structuredData.startDate;
+      if (structuredData.endDate) metadata.endDate = structuredData.endDate;
+      if (structuredData.isOngoing !== undefined) metadata.isOngoing = structuredData.isOngoing;
+      if (structuredData.featuredImage) metadata.featuredImage = structuredData.featuredImage;
+      if (structuredData.projectLinks) metadata.projectLinks = structuredData.projectLinks;
+      if (structuredData.contributors) metadata.contributors = structuredData.contributors;
+    }
+    
+    // EXPERIENCE-specific metadata
+    if (contentType === 'EXPERIENCE') {
+      if (structuredData.experienceCategory) metadata.experienceCategory = structuredData.experienceCategory;
+      if (structuredData.location) metadata.location = structuredData.location;
+      if (structuredData.locationType) metadata.locationType = structuredData.locationType;
+      if (structuredData.startDate) metadata.startDate = structuredData.startDate;
+      if (structuredData.endDate) metadata.endDate = structuredData.endDate;
+      if (structuredData.isOngoing !== undefined) metadata.isOngoing = structuredData.isOngoing;
+      if (structuredData.roles) metadata.roles = structuredData.roles;
+    }
+    
+    // Store full structured data for reference
+    metadata.aiGenerated = true;
+    metadata.generatedAt = new Date().toISOString();
+    
+    return metadata;
   }
 
   /**
@@ -651,7 +498,7 @@ class GeminiService {
     
     try {
       const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
-      const prompt = prompts.extractTitle(contentType, conversationText);
+      const prompt = utilityPrompts.extractTitle(contentType, conversationText);
       
       const result = await this._callModelWithRetry(
         this.flashModel,
@@ -704,7 +551,7 @@ class GeminiService {
       const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
       const infoText = initialInfo ? JSON.stringify(initialInfo) : '';
       
-      const prompt = prompts.inferContentType(conversationText, infoText);
+      const prompt = utilityPrompts.inferContentType(conversationText, infoText);
       
       const result = await this._callModelWithRetry(
         this.flashModel,
@@ -779,7 +626,7 @@ class GeminiService {
     try {
       const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
       
-      const promptGenerator = prompts.extractMetadata[contentType] || prompts.extractMetadata['BLOG'];
+      const promptGenerator = utilityPrompts.extractMetadata[contentType] || utilityPrompts.extractMetadata['BLOG'];
       const prompt = promptGenerator(conversationText);
       
       const result = await this._callModelWithRetry(
@@ -891,7 +738,7 @@ class GeminiService {
       
       const hasIndicators = indicators.some(pattern => pattern.test(conversationText));
       
-      const prompt = prompts.shouldCreateMultiplePosts(conversationText, primaryType);
+      const prompt = utilityPrompts.shouldCreateMultiplePosts(conversationText, primaryType);
       
       const result = await this._callModelWithRetry(
         this.flashModel,
@@ -920,7 +767,7 @@ class GeminiService {
     
     try {
       const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
-      const prompt = prompts.generateMultiplePosts(conversationText);
+      const prompt = utilityPrompts.generateMultiplePosts(conversationText);
       
       const result = await this._callModelWithRetry(
         this.flashModel,
