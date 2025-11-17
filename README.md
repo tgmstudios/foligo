@@ -242,6 +242,11 @@ JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
 
+# CORS
+ADDITIONAL_CORS_ORIGINS=""
+# Comma-separated list for extra private-route origins. Public endpoints
+# (site, voice webhook, public content, media files) already allow all origins.
+
 # AI Services
 GEMINI_API_KEY="your-gemini-api-key"
 ELEVENLABS_API_KEY="your-elevenlabs-api-key"

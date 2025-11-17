@@ -44,22 +44,35 @@ const { minioClient, BUCKET_NAME } = require('./services/minio');
 const app = express();
 const PORT = process.env.PORT || 80;
 
+const additionalCorsOrigins = (process.env.ADDITIONAL_CORS_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(origin => origin.length > 0);
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3001',
+  'http://localhost:9010', // Dashboard dev server
+  'http://localhost:9011', // Sites dev server
+  'https://foligo.tech',
+  'https://www.foligo.tech',
+  /^https:\/\/.*\.foligo\.tech$/,
+  /^http:\/\/localhost:\d+$/ // Allow any localhost port for development
+];
+
+const corsOrigins = allowedOrigins.concat(additionalCorsOrigins);
+
+const publicCors = cors({
+  origin: true,
+  credentials: false
+});
+
 // Security middleware
 // Configure Helmet to allow cross-origin resources for media files
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3001',
-    'http://localhost:9010', // Dashboard dev server
-    'http://localhost:9011', // Sites dev server
-    'https://foligo.tech',
-    'https://www.foligo.tech',
-    'https://foligo.tech',
-    /^https:\/\/.*\.foligo\.tech$/,
-    /^http:\/\/localhost:\d+$/ // Allow any localhost port for development
-  ],
+  origin: corsOrigins,
   credentials: true
 }));
 
@@ -133,25 +146,27 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/sso', ssoAuthRoutes); // SSO authentication routes (public)
-app.use('/api/site', siteRoutes); // Public site routes (no auth required)
-app.use('/api/ai/voice-webhook', voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
-app.use('/api', publicContentRoutes); // Public content GET endpoint (no auth required)
+app.use('/api/site', publicCors, siteRoutes); // Public site routes (no auth required)
+app.use('/api/ai/voice-webhook', publicCors, voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
+app.use('/api', publicCors, publicContentRoutes); // Public content GET endpoint (no auth required)
 
 // Public media file endpoints (must be before authenticated routes)
 // Use CORS middleware specifically for media files (allow all origins)
-const mediaCors = cors({
-  origin: true, // Allow any origin
-  credentials: false, // No credentials needed for media files
+const mediaCors = publicCors;
+
+const mediaCorsWithMethods = cors({
+  origin: true,
+  credentials: false,
   methods: ['GET', 'HEAD', 'OPTIONS'],
   allowedHeaders: ['Content-Type']
 });
 
 // Handle OPTIONS request for CORS preflight
-app.options('/api/media/:id/file', mediaCors, (req, res) => {
+app.options('/api/media/:id/file', mediaCorsWithMethods, (req, res) => {
   res.status(204).send();
 });
 
-app.get('/api/media/:id/file', mediaCors, async (req, res) => {
+app.get('/api/media/:id/file', mediaCorsWithMethods, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -193,7 +208,7 @@ app.get('/api/media/:id/file', mediaCors, async (req, res) => {
   }
 });
 
-app.get('/api/media/:id/view', mediaCors, async (req, res) => {
+app.get('/api/media/:id/view', mediaCorsWithMethods, async (req, res) => {
   try {
     const { id } = req.params;
 
