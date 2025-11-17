@@ -67,25 +67,45 @@ const prisma = new PrismaClient();
  *                     favicon:
  *                       type: string
  *                 content:
+ *                   type: object
+ *                   properties:
+ *                     projects:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     blogs:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     experiences:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     other:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                 contentLinks:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
  *                       id:
  *                         type: string
- *                       title:
+ *                       sourceId:
  *                         type: string
- *                       slug:
+ *                       targetId:
  *                         type: string
- *                       excerpt:
+ *                       sourceType:
  *                         type: string
- *                       contentType:
+ *                       targetType:
  *                         type: string
- *                       isPublished:
- *                         type: boolean
- *                       createdAt:
+ *                       linkType:
  *                         type: string
- *                         format: date-time
  *       404:
  *         description: Site not found
  *       500:
@@ -112,7 +132,50 @@ router.get('/:subdomain', async (req, res) => {
             metadata: true,
             status: true,
             createdAt: true,
-            updatedAt: true
+            updatedAt: true,
+            // Type-specific fields
+            startDate: true,
+            endDate: true,
+            isOngoing: true,
+            featuredImage: true,
+            projectLinks: true,
+            contributors: true,
+            experienceCategory: true,
+            location: true,
+            locationType: true,
+            // Relationships
+            tags: {
+              select: {
+                id: true,
+                name: true,
+                category: true
+              }
+            },
+            linkedSkills: {
+              select: {
+                id: true,
+                name: true,
+                category: true
+              }
+            },
+            roles: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                startDate: true,
+                endDate: true,
+                isCurrent: true,
+                skills: {
+                  select: {
+                    id: true,
+                    name: true,
+                    category: true
+                  }
+                }
+              },
+              orderBy: { startDate: 'desc' }
+            }
           },
           orderBy: { order: 'asc' }
         }
@@ -127,6 +190,33 @@ router.get('/:subdomain', async (req, res) => {
       return res.status(404).json({ error: 'Site not published' });
     }
 
+    // Get all content IDs for fetching content links
+    const contentIds = project.content.map(c => c.id);
+
+    // Fetch content links for all published content
+    let contentLinks = [];
+    if (contentIds.length > 0) {
+      contentLinks = await prisma.contentLink.findMany({
+        where: {
+          OR: [
+            { sourceId: { in: contentIds }, sourceType: 'content' },
+            { targetId: { in: contentIds }, targetType: 'content' }
+          ]
+        },
+        select: {
+          id: true,
+          sourceId: true,
+          targetId: true,
+          sourceType: true,
+          targetType: true,
+          linkType: true,
+          createdAt: true,
+          updatedAt: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
     // Group content by type for easier frontend consumption
     // Map status to isPublished for backward compatibility
     const contentWithPublished = project.content.map(c => ({
@@ -138,7 +228,8 @@ router.get('/:subdomain', async (req, res) => {
       projects: contentWithPublished.filter(c => c.contentType === 'PROJECT'),
       blogs: contentWithPublished.filter(c => c.contentType === 'BLOG'),
       experiences: contentWithPublished.filter(c => c.contentType === 'EXPERIENCE'),
-      other: contentWithPublished.filter(c => !['PROJECT', 'BLOG', 'EXPERIENCE'].includes(c.contentType))
+      skills: contentWithPublished.filter(c => c.contentType === 'SKILL'),
+      other: contentWithPublished.filter(c => !['PROJECT', 'BLOG', 'EXPERIENCE', 'SKILL'].includes(c.contentType))
     };
 
     // Debug: Log the siteConfig being returned
@@ -172,7 +263,8 @@ router.get('/:subdomain', async (req, res) => {
         archiveLayout: 'list',
         singleLayout: 'standard'
       },
-      content: contentByType
+      content: contentByType,
+      contentLinks: contentLinks
     });
   } catch (error) {
     console.error('Error fetching site data:', error);
@@ -217,8 +309,58 @@ router.get('/:subdomain', async (req, res) => {
  *                   type: string
  *                 contentType:
  *                   type: string
- *                 data:
+ *                 content:
+ *                   type: string
+ *                 tags:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       category:
+ *                         type: string
+ *                 linkedSkills:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       category:
+ *                         type: string
+ *                 startDate:
+ *                   type: string
+ *                   format: date-time
+ *                 endDate:
+ *                   type: string
+ *                   format: date-time
+ *                 featuredImage:
+ *                   type: string
+ *                 projectLinks:
  *                   type: object
+ *                 contributors:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 experienceCategory:
+ *                   type: string
+ *                 location:
+ *                   type: string
+ *                 locationType:
+ *                   type: string
+ *                 roles:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 contentLinks:
+ *                   type: array
+ *                   items:
+ *                     type: object
  *                 createdAt:
  *                   type: string
  *                   format: date-time
@@ -244,12 +386,70 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
       return res.status(404).json({ error: 'Site not found' });
     }
 
-    // Find content by slug
+    // Find content by slug with all relationships
     const content = await prisma.content.findFirst({
       where: {
         projectId: project.id,
         slug: slug,
         status: 'PUBLISHED'
+      },
+      select: {
+        id: true,
+        projectId: true,
+        type: true,
+        contentType: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        content: true,
+        metadata: true,
+        order: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        // Type-specific fields
+        startDate: true,
+        endDate: true,
+        isOngoing: true,
+        featuredImage: true,
+        projectLinks: true,
+        contributors: true,
+        experienceCategory: true,
+        location: true,
+        locationType: true,
+        // Relationships
+        tags: {
+          select: {
+            id: true,
+            name: true,
+            category: true
+          }
+        },
+        linkedSkills: {
+          select: {
+            id: true,
+            name: true,
+            category: true
+          }
+        },
+        roles: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            isCurrent: true,
+            skills: {
+              select: {
+                id: true,
+                name: true,
+                category: true
+              }
+            }
+          },
+          orderBy: { startDate: 'desc' }
+        }
       }
     });
 
@@ -257,10 +457,32 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
       return res.status(404).json({ error: 'Content not found' });
     }
 
+    // Get content links for this content item
+    const contentLinks = await prisma.contentLink.findMany({
+      where: {
+        OR: [
+          { sourceId: content.id, sourceType: 'content' },
+          { targetId: content.id, targetType: 'content' }
+        ]
+      },
+      select: {
+        id: true,
+        sourceId: true,
+        targetId: true,
+        sourceType: true,
+        targetType: true,
+        linkType: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
     // Map status to isPublished for backward compatibility
     res.json({
       ...content,
-      isPublished: content.status === 'PUBLISHED'
+      isPublished: content.status === 'PUBLISHED',
+      contentLinks: contentLinks
     });
   } catch (error) {
     console.error('Error fetching content:', error);

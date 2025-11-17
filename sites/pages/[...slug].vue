@@ -21,39 +21,12 @@
         <Link v-if="siteData.siteConfig.favicon" rel="icon" :href="siteData.siteConfig.favicon" />
       </Head>
 
-      <!-- Layout Switch -->
-      <!-- Single Post Layouts -->
-      <StandardLayout 
-        v-if="isSinglePost && layoutComponent === 'StandardLayout'"
+      <!-- Unified Layout -->
+      <UnifiedLayout 
         :site-data="siteData"
         :content-data="contentData"
         :route="route"
       />
-      <WideLayout 
-        v-else-if="isSinglePost && layoutComponent === 'WideLayout'"
-        :site-data="siteData"
-        :content-data="contentData"
-        :route="route"
-      />
-      <MinimalLayout 
-        v-else-if="isSinglePost && layoutComponent === 'MinimalLayout'"
-        :site-data="siteData"
-        :content-data="contentData"
-        :route="route"
-      />
-      <!-- Home/Archive Layouts -->
-      <component 
-        v-else-if="!isSinglePost"
-        :is="layoutComponent" 
-        :site-data="siteData"
-        :route="route"
-      />
-      <div v-else class="min-h-screen flex items-center justify-center">
-        <div class="text-center">
-          <h1 :class="['text-2xl font-bold mb-4']">{{ contentData?.title || 'Content Not Found' }}</h1>
-          <p :style="{ color: siteData?.siteConfig?.textColor || '#1F2937' }">Unable to load content.</p>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -181,53 +154,7 @@ const siteStyles = computed(() => {
   }
 })
 
-// Layout component based on route and site config
-const layoutComponent = computed(() => {
-  if (!siteData.value?.siteConfig) return 'DefaultLayout'
-  
-  const config = siteData.value.siteConfig
-  const path = route.path
-  const slug = route.params.slug
-  
-  // If it's a single post, determine layout based on singleLayout
-  if (isSinglePost.value) {
-    switch (config.singleLayout) {
-      case 'wide':
-        return 'WideLayout'
-      case 'minimal':
-        return 'MinimalLayout'
-      case 'standard':
-      default:
-        return 'StandardLayout'
-    }
-  }
-  
-  // For archive pages
-  const firstSegment = slug && slug[0]
-  
-  if (firstSegment === 'projects') {
-    return 'ProjectsArchive'
-  } else if (firstSegment === 'blog') {
-    return 'BlogArchive'
-  } else if (path === '/' || path === '' || !slug || slug.length === 0) {
-    // Home page layout
-    switch (config.indexLayout) {
-      case 'portfolio':
-        return 'PortfolioLayout'
-      case 'grid':
-        return 'GridLayout'
-      case 'list':
-        return 'ListLayout'
-      case 'masonry':
-        return 'MasonryLayout'
-      default:
-        return 'GridLayout'
-    }
-  } else {
-    // Default layout for other pages
-    return 'DefaultLayout'
-  }
-})
+// Layout is now unified - no need for layout selection logic
 
 // Handle client-side navigation
 onMounted(() => {

@@ -25,6 +25,15 @@ The API provides endpoints to retrieve different types of content (posts) from p
 - **EXPERIENCE**: Work experience, education, and certifications
 - **SKILL**: Skills and technologies
 
+### Enhanced Public Endpoints
+
+The public endpoints now include comprehensive data:
+- **Tags**: Content tags for categorization and filtering
+- **Skills**: Linked skills associated with content
+- **Content Links**: Relationships between content items
+- **Type-specific fields**: All fields specific to PROJECT, EXPERIENCE, etc.
+- **Roles**: Multiple roles within experiences (for EXPERIENCE content)
+
 ---
 
 ## Base URL
@@ -168,6 +177,40 @@ curl https://your-api-domain.com/api/site/my-portfolio
         "content": "# E-Commerce Platform\n\nFull markdown content here...",
         "metadata": {},
         "isPublished": true,
+        "startDate": "2023-06-01T00:00:00Z",
+        "endDate": "2023-12-31T00:00:00Z",
+        "isOngoing": false,
+        "featuredImage": "https://example.com/project-image.jpg",
+        "projectLinks": {
+          "github": "https://github.com/johndoe/ecommerce",
+          "devpost": "https://devpost.com/software/ecommerce-platform",
+          "other": ["https://example.com/demo"]
+        },
+        "contributors": ["John Doe", "Jane Smith"],
+        "tags": [
+          {
+            "id": "990e8400-e29b-41d4-a716-446655440000",
+            "name": "React",
+            "category": "Frameworks"
+          },
+          {
+            "id": "aa0e8400-e29b-41d4-a716-446655440001",
+            "name": "Node.js",
+            "category": "Backend"
+          }
+        ],
+        "linkedSkills": [
+          {
+            "id": "dd0e8400-e29b-41d4-a716-446655440000",
+            "name": "JavaScript",
+            "category": "Programming Languages"
+          },
+          {
+            "id": "ee0e8400-e29b-41d4-a716-446655440001",
+            "name": "TypeScript",
+            "category": "Programming Languages"
+          }
+        ],
         "createdAt": "2024-01-15T10:00:00Z",
         "updatedAt": "2024-01-20T15:30:00Z"
       }
@@ -182,6 +225,14 @@ curl https://your-api-domain.com/api/site/my-portfolio
         "content": "# Getting Started with React\n\nBlog content...",
         "metadata": {},
         "isPublished": true,
+        "tags": [
+          {
+            "id": "990e8400-e29b-41d4-a716-446655440000",
+            "name": "React",
+            "category": "Frameworks"
+          }
+        ],
+        "linkedSkills": [],
         "createdAt": "2024-02-01T09:00:00Z",
         "updatedAt": "2024-02-01T09:00:00Z"
       }
@@ -196,12 +247,71 @@ curl https://your-api-domain.com/api/site/my-portfolio
         "content": "# Senior Software Engineer\n\nExperience details...",
         "metadata": {},
         "isPublished": true,
+        "experienceCategory": "JOB",
+        "location": "San Francisco, CA",
+        "locationType": "HYBRID",
+        "startDate": "2022-01-01T00:00:00Z",
+        "endDate": null,
+        "isOngoing": true,
+        "tags": [],
+        "linkedSkills": [
+          {
+            "id": "dd0e8400-e29b-41d4-a716-446655440000",
+            "name": "JavaScript",
+            "category": "Programming Languages"
+          }
+        ],
+        "roles": [
+          {
+            "id": "110e8400-e29b-41d4-a716-446655440000",
+            "title": "Senior Software Engineer",
+            "description": "Led development of core features",
+            "startDate": "2022-01-01T00:00:00Z",
+            "endDate": null,
+            "isCurrent": true,
+            "skills": [
+              {
+                "id": "dd0e8400-e29b-41d4-a716-446655440000",
+                "name": "JavaScript",
+                "category": "Programming Languages"
+              }
+            ]
+          }
+        ],
         "createdAt": "2024-01-10T08:00:00Z",
         "updatedAt": "2024-01-10T08:00:00Z"
       }
     ],
+    "skills": [
+      {
+        "id": "990e8400-e29b-41d4-a716-446655440004",
+        "title": "React",
+        "slug": "react",
+        "excerpt": "JavaScript library for building user interfaces",
+        "contentType": "SKILL",
+        "content": "# React\n\nReact is a declarative, efficient, and flexible JavaScript library...",
+        "metadata": {},
+        "isPublished": true,
+        "tags": [],
+        "linkedSkills": [],
+        "createdAt": "2024-01-05T10:00:00Z",
+        "updatedAt": "2024-01-05T10:00:00Z"
+      }
+    ],
     "other": []
-  }
+  },
+  "contentLinks": [
+    {
+      "id": "ff0e8400-e29b-41d4-a716-446655440000",
+      "sourceId": "660e8400-e29b-41d4-a716-446655440001",
+      "targetId": "770e8400-e29b-41d4-a716-446655440002",
+      "sourceType": "content",
+      "targetType": "content",
+      "linkType": "related",
+      "createdAt": "2024-01-20T10:00:00Z",
+      "updatedAt": "2024-01-20T10:00:00Z"
+    }
+  ]
 }
 ```
 
@@ -239,6 +349,7 @@ curl https://your-api-domain.com/api/site/my-portfolio/content/e-commerce-platfo
   "metadata": {},
   "order": 0,
   "status": "PUBLISHED",
+  "isPublished": true,
   "startDate": "2023-06-01T00:00:00Z",
   "endDate": "2023-12-31T00:00:00Z",
   "isOngoing": false,
@@ -249,6 +360,43 @@ curl https://your-api-domain.com/api/site/my-portfolio/content/e-commerce-platfo
     "other": ["https://example.com/demo"]
   },
   "contributors": ["John Doe", "Jane Smith"],
+  "tags": [
+    {
+      "id": "990e8400-e29b-41d4-a716-446655440000",
+      "name": "React",
+      "category": "Frameworks"
+    },
+    {
+      "id": "aa0e8400-e29b-41d4-a716-446655440001",
+      "name": "Node.js",
+      "category": "Backend"
+    }
+  ],
+  "linkedSkills": [
+    {
+      "id": "dd0e8400-e29b-41d4-a716-446655440000",
+      "name": "JavaScript",
+      "category": "Programming Languages"
+    },
+    {
+      "id": "ee0e8400-e29b-41d4-a716-446655440001",
+      "name": "TypeScript",
+      "category": "Programming Languages"
+    }
+  ],
+  "roles": [],
+  "contentLinks": [
+    {
+      "id": "ff0e8400-e29b-41d4-a716-446655440000",
+      "sourceId": "660e8400-e29b-41d4-a716-446655440001",
+      "targetId": "770e8400-e29b-41d4-a716-446655440002",
+      "sourceType": "content",
+      "targetType": "content",
+      "linkType": "related",
+      "createdAt": "2024-01-20T10:00:00Z",
+      "updatedAt": "2024-01-20T10:00:00Z"
+    }
+  ],
   "createdAt": "2024-01-15T10:00:00Z",
   "updatedAt": "2024-01-20T15:30:00Z"
 }
@@ -759,19 +907,91 @@ async function getContentBySlug(subdomain, slug) {
 // Get all projects
 async function getAllProjects(subdomain) {
   const data = await getSiteContent(subdomain);
-  return data.projects;
+  return data.content.projects;
 }
 
 // Get all blog posts
 async function getAllBlogs(subdomain) {
   const data = await getSiteContent(subdomain);
-  return data.blogs;
+  return data.content.blogs;
 }
 
 // Get all experiences
 async function getAllExperiences(subdomain) {
   const data = await getSiteContent(subdomain);
-  return data.experiences;
+  return data.content.experiences;
+}
+
+// Get all skills
+async function getAllSkills(subdomain) {
+  const data = await getSiteContent(subdomain);
+  return data.content.skills;
+}
+
+// Extract all unique tags from content
+async function getAllTags(subdomain) {
+  const data = await getSiteContent(subdomain);
+  const allContent = [
+    ...data.content.projects,
+    ...data.content.blogs,
+    ...data.content.experiences,
+    ...data.content.skills
+  ];
+  
+  const tagsMap = new Map();
+  allContent.forEach(item => {
+    if (item.tags) {
+      item.tags.forEach(tag => {
+        tagsMap.set(tag.id, tag);
+      });
+    }
+  });
+  return Array.from(tagsMap.values());
+}
+
+// Extract all unique skills from content
+async function getAllUniqueSkills(subdomain) {
+  const data = await getSiteContent(subdomain);
+  const allContent = [
+    ...data.content.projects,
+    ...data.content.blogs,
+    ...data.content.experiences,
+    ...data.content.skills
+  ];
+  
+  const skillsMap = new Map();
+  allContent.forEach(item => {
+    if (item.linkedSkills) {
+      item.linkedSkills.forEach(skill => {
+        skillsMap.set(skill.id, skill);
+      });
+    }
+  });
+  return Array.from(skillsMap.values());
+}
+
+// Get related content using content links
+async function getRelatedContent(subdomain, contentId) {
+  const data = await getSiteContent(subdomain);
+  const allContent = [
+    ...data.content.projects,
+    ...data.content.blogs,
+    ...data.content.experiences
+  ];
+  
+  // Find links where this content is source or target
+  const links = data.contentLinks.filter(link => 
+    (link.sourceId === contentId || link.targetId === contentId) &&
+    link.sourceType === 'content' && link.targetType === 'content'
+  );
+  
+  // Get related content IDs
+  const relatedIds = links.map(link => 
+    link.sourceId === contentId ? link.targetId : link.sourceId
+  );
+  
+  // Return related content
+  return allContent.filter(item => relatedIds.includes(item.id));
 }
 
 // Usage
