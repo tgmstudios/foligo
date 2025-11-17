@@ -14,37 +14,11 @@
     <!-- Site Content -->
     <div v-else-if="siteData" class="min-h-screen" :style="siteStyles">
 
-      <!-- Layout Switch -->
-      <PortfolioLayout 
-        v-if="layoutComponent === 'PortfolioLayout'"
-        :site-data="siteData"
-      />
-      <DefaultLayout 
-        v-else-if="layoutComponent === 'DefaultLayout'"
+      <!-- Unified Layout -->
+      <UnifiedLayout 
         :site-data="siteData"
         :route="route"
       />
-      <GridLayout 
-        v-else-if="layoutComponent === 'GridLayout'"
-        :site-data="siteData"
-        :route="route"
-      />
-      <ListLayout 
-        v-else-if="layoutComponent === 'ListLayout'"
-        :site-data="siteData"
-        :route="route"
-      />
-      <MasonryLayout 
-        v-else-if="layoutComponent === 'MasonryLayout'"
-        :site-data="siteData"
-        :route="route"
-      />
-      <div v-else class="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div class="text-center">
-          <h1 class="text-2xl font-bold text-white mb-4">Layout Error</h1>
-          <p class="text-slate-300">Unknown layout component: {{ layoutComponent }}</p>
-        </div>
-      </div>
     </div>
 
     <!-- Fallback State -->
@@ -172,37 +146,7 @@ const siteStyles = computed(() => {
   }
 })
 
-// Layout component based on site config
-const layoutComponent = computed(() => {
-  if (!siteData.value?.siteConfig) {
-    return 'DefaultLayout'
-  }
-  
-  const config = siteData.value.siteConfig
-  const content = siteData.value.content
-  
-  // Check if there's any content
-  const hasContent = content?.projects?.length || content?.blogs?.length || content?.experiences?.length || content?.other?.length
-  
-  // If no content, use DefaultLayout for better empty state handling
-  if (!hasContent) {
-    return 'DefaultLayout'
-  }
-  
-  // Home page layout - default to PortfolioLayout for better UX
-  switch (config.indexLayout) {
-    case 'portfolio':
-      return 'PortfolioLayout'
-    case 'grid':
-      return 'GridLayout'
-    case 'list':
-      return 'ListLayout'
-    case 'masonry':
-      return 'MasonryLayout'
-    default:
-      return 'PortfolioLayout' // Default to portfolio layout
-  }
-})
+// Layout is now unified - no need for layout selection logic
 
 // Manual retry function
 const loadSiteData = () => {
