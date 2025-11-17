@@ -177,6 +177,14 @@ Cache invalidation occurs automatically when data is updated.
 - **Helmet**: Security headers for protection
 - **Password Hashing**: bcrypt for secure password storage
 
+## Configuration
+
+### CORS
+
+The API allows Foligo-hosted domains and localhost by default for authenticated/private routes. To support additional origins (for example a custom site hosted at `https://tgm.one`), set `ADDITIONAL_CORS_ORIGINS` in `.env` to a comma-separated list of fully-qualified origins. These values are appended to the default allowlist used by the global CORS middleware.
+
+Publicly accessible routes (`/api/site/*`, `/api/ai/voice-webhook`, `/api/media/*`, and the public content endpoints) use a permissive CORS configuration that allows all origins so embedded sites, static exports, and media assets can be loaded from anywhere.
+
 ## Development
 
 ### Scripts
