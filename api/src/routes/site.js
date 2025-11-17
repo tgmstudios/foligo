@@ -192,11 +192,12 @@ router.get('/:subdomain', async (req, res) => {
 
     // Get all content IDs for fetching content links
     const contentIds = project.content.map(c => c.id);
+    const contentMap = new Map(project.content.map(c => [c.id, c]));
 
     // Fetch content links for all published content
     let contentLinks = [];
     if (contentIds.length > 0) {
-      contentLinks = await prisma.contentLink.findMany({
+      const rawLinks = await prisma.contentLink.findMany({
         where: {
           OR: [
             { sourceId: { in: contentIds }, sourceType: 'content' },
@@ -214,6 +215,38 @@ router.get('/:subdomain', async (req, res) => {
           updatedAt: true
         },
         orderBy: { createdAt: 'desc' }
+      });
+
+      // Enrich links with content information
+      contentLinks = rawLinks.map(link => {
+        // Determine which content is the "other" one (not the current content)
+        // Since links are bidirectional, we need to find the linked content
+        let linkedContent = null;
+        
+        if (link.sourceType === 'content' && contentMap.has(link.targetId)) {
+          linkedContent = contentMap.get(link.targetId);
+        } else if (link.targetType === 'content' && contentMap.has(link.sourceId)) {
+          linkedContent = contentMap.get(link.sourceId);
+        }
+
+        return {
+          id: link.id,
+          sourceId: link.sourceId,
+          targetId: link.targetId,
+          sourceType: link.sourceType,
+          targetType: link.targetType,
+          linkType: link.linkType,
+          createdAt: link.createdAt,
+          updatedAt: link.updatedAt,
+          // Include linked content details
+          linkedContent: linkedContent ? {
+            id: linkedContent.id,
+            title: linkedContent.title,
+            slug: linkedContent.slug,
+            excerpt: linkedContent.excerpt,
+            contentType: linkedContent.contentType
+          } : null
+        };
       });
     }
 
@@ -458,7 +491,7 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
     }
 
     // Get content links for this content item
-    const contentLinks = await prisma.contentLink.findMany({
+    const rawLinks = await prisma.contentLink.findMany({
       where: {
         OR: [
           { sourceId: content.id, sourceType: 'content' },
@@ -478,6 +511,55 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Get IDs of linked content to fetch their details
+    const linkedContentIds = rawLinks.map(link => 
+      link.sourceId === content.id ? link.targetId : link.sourceId
+    ).filter(id => id !== content.id);
+
+    // Fetch linked content details
+    const linkedContentItems = linkedContentIds.length > 0
+      ? await prisma.content.findMany({
+          where: {
+            id: { in: linkedContentIds },
+            status: 'PUBLISHED'
+          },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            excerpt: true,
+            contentType: true
+          }
+        })
+      : [];
+
+    const linkedContentMap = new Map(linkedContentItems.map(item => [item.id, item]));
+
+    // Enrich links with content information
+    const contentLinks = rawLinks.map(link => {
+      const linkedContentId = link.sourceId === content.id ? link.targetId : link.sourceId;
+      const linkedContent = linkedContentMap.get(linkedContentId);
+
+      return {
+        id: link.id,
+        sourceId: link.sourceId,
+        targetId: link.targetId,
+        sourceType: link.sourceType,
+        targetType: link.targetType,
+        linkType: link.linkType,
+        createdAt: link.createdAt,
+        updatedAt: link.updatedAt,
+        // Include linked content details
+        linkedContent: linkedContent ? {
+          id: linkedContent.id,
+          title: linkedContent.title,
+          slug: linkedContent.slug,
+          excerpt: linkedContent.excerpt,
+          contentType: linkedContent.contentType
+        } : null
+      };
+    });
+
     // Map status to isPublished for backward compatibility
     res.json({
       ...content,
@@ -489,5 +571,106 @@ router.get('/:subdomain/content/:slug', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * @swagger
+ * /api/site/{subdomain}/content/{slug}:
+ *   get:
+ *     summary: Get full content by slug
+ *     tags: [Site]
+ *     parameters:
+ *       - in: path
+ *         name: subdomain
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The subdomain of the site
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The slug of the content
+ *     responses:
+ *       200:
+ *         description: Content retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 slug:
+ *                   type: string
+ *                 excerpt:
+ *                   type: string
+ *                 contentType:
+ *                   type: string
+ *                 content:
+ *                   type: string
+ *                 tags:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       category:
+ *                         type: string
+ *                 linkedSkills:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       category:
+ *                         type: string
+ *                 startDate:
+ *                   type: string
+ *                   format: date-time
+ *                 endDate:
+ *                   type: string
+ *                   format: date-time
+ *                 featuredImage:
+ *                   type: string
+ *                 projectLinks:
+ *                   type: object
+ *                 contributors:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 experienceCategory:
+ *                   type: string
+ *                 location:
+ *                   type: string
+ *                 locationType:
+ *                   type: string
+ *                 roles:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 contentLinks:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *       404:
+ *         description: Content not found
+ *       500:
+ *         description: Server error
+ */
 
 module.exports = router;
