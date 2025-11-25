@@ -119,12 +119,9 @@
 
             <!-- Featured Image -->
             <div>
-              <label class="label">Featured Image URL</label>
-              <input
+              <FeaturedImageSelector
                 v-model="editForm.featuredImage"
-                type="url"
-                class="input"
-                placeholder="https://example.com/image.jpg"
+                :project-id="content.projectId"
               />
             </div>
 
@@ -202,6 +199,17 @@
             <div>
               <SkillsManager
                 v-model="editForm.linkedSkills"
+                :project-id="content.projectId"
+              />
+            </div>
+          </div>
+
+          <!-- Blog-specific Fields -->
+          <div v-if="content.type === 'BLOG'" class="mt-6 space-y-6">
+            <!-- Featured Image -->
+            <div>
+              <FeaturedImageSelector
+                v-model="editForm.featuredImage"
                 :project-id="content.projectId"
               />
             </div>
@@ -382,7 +390,7 @@
           <div v-if="isGeneratingAI" class="space-y-3">
             <div class="text-center py-8">
               <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-white spin-reverse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </div>
@@ -447,6 +455,71 @@
             source-type="content"
             :project-id="content.projectId"
           />
+        </div>
+
+        <!-- Social Post Generator -->
+        <div class="card p-6">
+          <div class="text-center mb-4">
+            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-white">Social Post Generator</h3>
+            <p class="text-sm text-gray-400">Generate posts for LinkedIn or X</p>
+          </div>
+
+          <!-- Platform Selection -->
+          <div class="mb-4">
+            <div class="flex rounded-lg bg-gray-700 p-1">
+              <button
+                @click="selectedPlatform = 'linkedin'"
+                :class="[
+                  'flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                  selectedPlatform === 'linkedin'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                ]"
+              >
+                <div class="flex items-center justify-center space-x-2">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                  <span>LinkedIn</span>
+                </div>
+              </button>
+              <button
+                @click="selectedPlatform = 'x'"
+                :class="[
+                  'flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                  selectedPlatform === 'x'
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-300 hover:text-white'
+                ]"
+              >
+                <div class="flex items-center justify-center space-x-2">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <span>X</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <button
+            @click="generateSocialPosts"
+            :disabled="isGeneratingSocialPosts"
+            class="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-md hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
+            <svg v-if="!isGeneratingSocialPosts" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            <svg v-else class="w-5 h-5 spin-reverse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{{ isGeneratingSocialPosts ? 'Generating...' : `Generate ${selectedPlatform === 'linkedin' ? 'LinkedIn' : 'X'} Post` }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -515,6 +588,128 @@
       @close="showRevisionTimeline = false"
       @revision-restored="loadContent"
     />
+
+    <!-- Social Post Modal -->
+    <div v-if="showSocialPostsModal && socialPost" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="closeSocialPostsModal"></div>
+        
+        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+          <!-- Header -->
+          <div :class="[
+            'px-6 pt-6 pb-4',
+            socialPost.platform === 'linkedin' 
+              ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+              : 'bg-gradient-to-r from-gray-800 to-gray-900'
+          ]">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div :class="[
+                  'w-8 h-8 rounded-full flex items-center justify-center',
+                  socialPost.platform === 'linkedin' ? 'bg-gray-800' : 'bg-gray-700'
+                ]">
+                  <svg v-if="socialPost.platform === 'linkedin'" class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                  <svg v-else class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg leading-6 font-medium text-white">
+                    {{ socialPost.platform === 'linkedin' ? 'LinkedIn' : 'X' }} Post
+                  </h3>
+                  <p :class="[
+                    'text-sm',
+                    socialPost.platform === 'linkedin' ? 'text-blue-100' : 'text-gray-300'
+                  ]">Copy and share on {{ socialPost.platform === 'linkedin' ? 'LinkedIn' : 'X' }}</p>
+                </div>
+              </div>
+              <button
+                @click="closeSocialPostsModal"
+                class="text-white hover:text-gray-200 focus:outline-none"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="bg-gray-800 px-6 py-4">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <svg v-if="socialPost.platform === 'linkedin'" class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                  <svg v-else class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <h4 class="text-md font-medium text-white">{{ socialPost.platform === 'linkedin' ? 'LinkedIn' : 'X' }}</h4>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button
+                    v-if="socialPost.platform === 'linkedin'"
+                    @click="postToLinkedIn"
+                    class="px-3 py-1.5 text-sm text-white rounded-md focus:outline-none focus:ring-2 flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+                  >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    <span>Post</span>
+                  </button>
+                  <button
+                    v-else
+                    @click="postToX"
+                    class="px-3 py-1.5 text-sm text-white rounded-md focus:outline-none focus:ring-2 flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 focus:ring-gray-500"
+                  >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span>Post</span>
+                  </button>
+                  <button
+                    @click="copyToClipboard(socialPost.post, socialPost.platform === 'linkedin' ? 'LinkedIn' : 'X')"
+                    :class="[
+                      'px-3 py-1.5 text-sm text-white rounded-md focus:outline-none focus:ring-2 flex items-center space-x-1',
+                      socialPost.platform === 'linkedin'
+                        ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                        : 'bg-gray-700 hover:bg-gray-600 focus:ring-gray-500'
+                    ]"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+              </div>
+              <div :class="[
+                'border border-gray-600 rounded-lg p-4',
+                socialPost.platform === 'linkedin' ? 'bg-gray-900 max-h-96 overflow-y-auto' : 'bg-gray-900'
+              ]">
+                <p class="text-white whitespace-pre-wrap">{{ socialPost.post }}</p>
+                <p v-if="socialPost.platform === 'x'" class="text-xs text-gray-400 mt-2">
+                  {{ socialPost.post.length }} character{{ socialPost.post.length !== 1 ? 's' : '' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="bg-gray-800 px-6 py-4 flex justify-end">
+            <button
+              @click="closeSocialPostsModal"
+              class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -529,14 +724,17 @@ import ContentBlocksEditor from '@/components/content/ContentBlocksEditor.vue'
 import ExperienceRolesEditor from '@/components/content/ExperienceRolesEditor.vue'
 import ContentLinksManager from '@/components/content/ContentLinksManager.vue'
 import RevisionTimeline from '@/components/content/RevisionTimeline.vue'
+import FeaturedImageSelector from '@/components/content/FeaturedImageSelector.vue'
 import type { Content, Project, ContentTag, Skill } from '@/stores/projects'
 import { format } from 'date-fns'
 import { marked } from 'marked'
+import { useToast } from 'vue-toastification'
 import api, { aiApi } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
+const toast = useToast()
 
 const content = ref<Content | null>(null)
 const project = ref<Project | null>(null)
@@ -553,6 +751,12 @@ const isAITyping = ref(false)
 const questionCount = ref(0)
 const maxQuestions = 4
 const aiInteractionMode = ref<'text' | 'voice' | null>(null)
+
+// Social Post Generator State
+const isGeneratingSocialPosts = ref(false)
+const showSocialPostsModal = ref(false)
+const selectedPlatform = ref<'linkedin' | 'x'>('linkedin')
+const socialPost = ref<{ post: string; platform: string } | null>(null)
 
 const editForm = reactive({
   title: '',
@@ -784,6 +988,108 @@ const denyAIContent = () => {
   aiInteractionMode.value = null
 }
 
+// Social Post Generator Methods
+const generateSocialPosts = async () => {
+  if (!content.value || !project.value) return
+
+  try {
+    isGeneratingSocialPosts.value = true
+    
+    const response = await aiApi.post('/ai/social-posts', {
+      contentId: content.value.id,
+      projectId: content.value.projectId,
+      platform: selectedPlatform.value
+    })
+    
+    socialPost.value = response.data
+    showSocialPostsModal.value = true
+    toast.success(`${selectedPlatform.value === 'linkedin' ? 'LinkedIn' : 'X'} post generated successfully!`)
+  } catch (error: any) {
+    console.error('Failed to generate social post:', error)
+    toast.error(error.response?.data?.message || 'Failed to generate social post. Please try again.')
+  } finally {
+    isGeneratingSocialPosts.value = false
+  }
+}
+
+const copyToClipboard = async (text: string, platform: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.success(`${platform} post copied to clipboard!`)
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error)
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      toast.success(`${platform} post copied to clipboard!`)
+    } catch (err) {
+      toast.error('Failed to copy to clipboard')
+    }
+    document.body.removeChild(textArea)
+  }
+}
+
+const getPostUrl = (): string => {
+  if (!content.value || !project.value) return ''
+  
+  // Extract URL from post text if it exists
+  const urlMatch = socialPost.value?.post.match(/https?:\/\/[^\s]+/i)
+  if (urlMatch) {
+    return urlMatch[0]
+  }
+  
+  // Otherwise construct it from content and project
+  const slug = content.value.slug || content.value.id
+  return `https://${project.value.subdomain}.foligo.tech/${slug}`
+}
+
+const postToLinkedIn = () => {
+  if (!socialPost.value) return
+  
+  const url = getPostUrl()
+  if (!url) {
+    toast.error('Unable to determine post URL')
+    return
+  }
+  
+  // LinkedIn share URL
+  const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
+  window.open(shareUrl, '_blank', 'width=600,height=400')
+  toast.info('Opening LinkedIn share dialog...')
+}
+
+const postToX = () => {
+  if (!socialPost.value) return
+  
+  const url = getPostUrl()
+  if (!url) {
+    toast.error('Unable to determine post URL')
+    return
+  }
+  
+  // Extract text from post (remove the URL to avoid duplication since X will show it as a link card)
+  let postText = socialPost.value.post
+  // Remove the URL if it appears anywhere in the text (to avoid duplication)
+  const urlRegex = new RegExp(`\\s*${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'gi')
+  postText = postText.replace(urlRegex, ' ').trim().replace(/\s+/g, ' ')
+  
+  // X/Twitter share URL - X will automatically show the URL as a link preview card
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(postText)}&url=${encodeURIComponent(url)}`
+  window.open(shareUrl, '_blank', 'width=600,height=400')
+  toast.info('Opening X share dialog...')
+}
+
+const closeSocialPostsModal = () => {
+  showSocialPostsModal.value = false
+  socialPost.value = null
+}
+
 const loadContent = async () => {
   try {
     const contentId = route.params.id as string
@@ -866,6 +1172,11 @@ const saveContent = async () => {
       if (editForm.featuredImage) updateData.featuredImage = editForm.featuredImage
       updateData.projectLinks = editForm.projectLinks
       updateData.contributors = editForm.contributors.filter(c => c.trim())
+    }
+
+    // Add blog-specific fields
+    if (content.value.type === 'BLOG') {
+      if (editForm.featuredImage) updateData.featuredImage = editForm.featuredImage
     }
     
     // Add experience-specific fields
@@ -1049,5 +1360,19 @@ select[class*="getStatusDropdownClass"] option,
 select option {
   background-color: #1f2937;
   color: #ffffff;
+}
+
+/* Reverse spin animation for spinners */
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.spin-reverse {
+  animation: spin-reverse 1s linear infinite;
 }
 </style>

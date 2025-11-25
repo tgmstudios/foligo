@@ -157,6 +157,13 @@
                     />
                   </div>
                 </div>
+                <!-- Featured Image -->
+                <div v-if="form.projectId || project?.id">
+                  <FeaturedImageSelector
+                    v-model="form.metadata.featuredImage"
+                    :project-id="form.projectId || project?.id || ''"
+                  />
+                </div>
               </div>
 
               <div v-if="contentType === 'EXPERIENCE'" class="space-y-4 pt-2 border-t border-gray-700">
@@ -190,6 +197,17 @@
                       class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div v-if="contentType === 'BLOG'" class="space-y-4 pt-2 border-t border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-300">Blog Details</h4>
+                <!-- Featured Image -->
+                <div v-if="form.projectId || project?.id">
+                  <FeaturedImageSelector
+                    v-model="form.metadata.featuredImage"
+                    :project-id="form.projectId || project?.id || ''"
+                  />
                 </div>
               </div>
 
@@ -264,6 +282,7 @@ import { ref, reactive, computed } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import type { Project } from '@/stores/projects'
 import GeminiChatbot from './GeminiChatbot.vue'
+import FeaturedImageSelector from './FeaturedImageSelector.vue'
 
 interface Props {
   isOpen: boolean
@@ -364,7 +383,8 @@ const form = reactive({
     projectLinks: undefined as any,
     contributors: undefined as any,
     location: undefined as string | undefined,
-    locationType: undefined as string | undefined
+    locationType: undefined as string | undefined,
+    featuredImage: '' as string | undefined
   }
 })
 
@@ -473,6 +493,11 @@ const handleSubmit = async () => {
       if (form.metadata.isOngoing !== undefined) contentData.isOngoing = form.metadata.isOngoing
       if (form.metadata.projectLinks) contentData.projectLinks = form.metadata.projectLinks
       if (form.metadata.contributors) contentData.contributors = form.metadata.contributors
+      if (form.metadata.featuredImage) contentData.featuredImage = form.metadata.featuredImage
+    }
+
+    if (contentType.value === 'BLOG') {
+      if (form.metadata.featuredImage) contentData.featuredImage = form.metadata.featuredImage
     }
 
     if (contentType.value === 'EXPERIENCE') {

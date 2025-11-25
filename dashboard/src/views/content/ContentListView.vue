@@ -84,7 +84,95 @@
     </div>
 
     <div v-else class="space-y-4">
+      <VueDraggable
+        v-if="!isPortfoliosPage && sortableContent.length > 0"
+        v-model="sortableContent"
+        :animation="200"
+        handle=".drag-handle"
+        @end="handleDragEnd"
+        class="space-y-4"
+      >
+        <div
+          v-for="(item, index) in sortableContent"
+          :key="item.id"
+          class="card p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+          @click="navigateToItem(item)"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex items-start flex-1">
+              <div class="drag-handle mr-3 cursor-move opacity-0 group-hover:opacity-100 transition-opacity flex items-center h-12" @click.stop>
+                <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                </svg>
+              </div>
+              <div class="h-12 w-12 bg-gray-700 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                <span class="text-xl">{{ getItemIcon(item) }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center space-x-2 mb-2">
+                  <h3 class="text-lg font-semibold text-white">{{ getItemTitle(item) }}</h3>
+                  <span
+                    :class="getStatusClass(item.status)"
+                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  >
+                    {{ formatContentStatus(item.status) }}
+                  </span>
+                </div>
+                <p v-if="getItemSubtitle(item)" class="text-sm text-gray-400 mb-2">{{ getItemSubtitle(item) }}</p>
+                <p v-if="item.excerpt" class="text-sm text-gray-300 line-clamp-2 mb-2">{{ item.excerpt }}</p>
+                <div class="flex items-center text-xs text-gray-400 mt-2 space-x-3">
+                  <span>{{ formatDate(item.updatedAt) }}</span>
+                  <span v-if="!isPortfoliosPage">•</span>
+                  <span v-if="!isPortfoliosPage">{{ getPortfolioName(item.projectId) }}</span>
+                  <span v-if="item.content">•</span>
+                  <span v-if="item.content">{{ item.content.length }} characters</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2 ml-4" @click.stop>
+              <div class="flex flex-col space-y-1 mr-2">
+                <button
+                  @click.stop="moveItemUp(index)"
+                  :disabled="index === 0"
+                  class="p-1 text-gray-400 hover:text-primary-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Move up"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  @click.stop="moveItemDown(index)"
+                  :disabled="index === sortableContent.length - 1"
+                  class="p-1 text-gray-400 hover:text-primary-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Move down"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              <router-link
+                :to="getEditRoute(item)"
+                class="text-primary-400 hover:text-primary-300 text-sm font-medium"
+              >
+                Edit
+              </router-link>
+              <button
+                @click.stop="deleteItem(item)"
+                class="text-gray-400 hover:text-red-400"
+                title="Delete"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </VueDraggable>
       <div
+        v-else
         v-for="item in filteredContent"
         :key="item.id"
         class="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
@@ -153,6 +241,7 @@ import { useProjectStore, type Content, type Project } from '@/stores/projects'
 import { format } from 'date-fns'
 import { formatContentStatus } from '@/utils'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
+import { VueDraggable } from 'vue-draggable-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -286,8 +375,55 @@ const filteredContent = computed(() => {
     )
   }
 
-  // Sort by updated date (newest first)
-  return content.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  // Sort by order (0 = first/latest), then by updated date as fallback
+  return content.sort((a, b) => {
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order
+    }
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  })
+})
+
+// Sortable content - only for posts (not portfolios) and when a single project is selected
+const sortableContent = computed({
+  get() {
+    if (isPortfoliosPage.value) return []
+    if (!selectedPortfolioId.value) return []
+    
+    // Get content for the selected project, sorted by order
+    let content = allContent.value.filter(c => 
+      c.projectId === selectedPortfolioId.value &&
+      c.status !== 'REVISION' &&
+      !c.revisionOf
+    )
+    
+    // Filter by content type
+    if (contentTypeFilter.value) {
+      content = content.filter(c => c.contentType === contentTypeFilter.value)
+    }
+    
+    // Filter by search query
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase()
+      content = content.filter(c => 
+        c.title.toLowerCase().includes(query) ||
+        c.excerpt?.toLowerCase().includes(query) ||
+        c.content.toLowerCase().includes(query)
+      )
+    }
+    
+    // Sort by order
+    return content.sort((a, b) => {
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    })
+  },
+  set(newValue: Content[]) {
+    // Update order when dragged
+    updatePostOrder(newValue)
+  }
 })
 
 watch(selectedPortfolioId, (id) => {
@@ -410,6 +546,50 @@ const showCreateModal = ref(false)
 const handleProjectCreated = () => {
   showCreateModal.value = false
   projectStore.fetchProjects()
+}
+
+const updatePostOrder = async (newOrder: Content[]) => {
+  if (!selectedPortfolioId.value || newOrder.length === 0) return
+  
+  try {
+    const order = newOrder.map((item, index) => ({
+      contentId: item.id,
+      order: index
+    }))
+    
+    await projectStore.updatePostOrder(selectedPortfolioId.value, order)
+  } catch (error) {
+    console.error('Failed to update post order:', error)
+    // Refresh to restore original order on error
+    await projectStore.fetchProjects()
+  }
+}
+
+const handleDragEnd = () => {
+  // Order is already updated via the setter
+  // This is just for any additional handling if needed
+}
+
+const moveItemUp = (index: number) => {
+  if (index === 0) return
+  
+  const newOrder = [...sortableContent.value]
+  const temp = newOrder[index]
+  newOrder[index] = newOrder[index - 1]
+  newOrder[index - 1] = temp
+  
+  updatePostOrder(newOrder)
+}
+
+const moveItemDown = (index: number) => {
+  if (index === sortableContent.value.length - 1) return
+  
+  const newOrder = [...sortableContent.value]
+  const temp = newOrder[index]
+  newOrder[index] = newOrder[index + 1]
+  newOrder[index + 1] = temp
+  
+  updatePostOrder(newOrder)
 }
 </script>
 
