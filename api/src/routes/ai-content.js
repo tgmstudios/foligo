@@ -1,6 +1,22 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const multer = require('multer');
+const mammoth = require('mammoth');
+
+// Import pdf-parse - v2.x exports PDFParse class
+const pdfParseModule = require('pdf-parse');
+const PDFParse = pdfParseModule.PDFParse || pdfParseModule;
+
+// Validate PDFParse class is available
+if (!PDFParse || typeof PDFParse !== 'function') {
+  console.error('pdf-parse import error - module structure:', {
+    moduleType: typeof pdfParseModule,
+    moduleKeys: Object.keys(pdfParseModule || {}),
+    hasPDFParse: !!pdfParseModule?.PDFParse,
+    PDFParseType: typeof PDFParse
+  });
+  throw new Error('pdf-parse module is not properly loaded. Please reinstall pdf-parse: npm install pdf-parse');
+}
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
 const { authorizeProjectAccess, authenticateToken } = require('../middleware/auth');
@@ -29,16 +45,140 @@ const upload = multer({
 
 // Helper function to extract text from resume file
 async function extractResumeText(file) {
+  // Validate file buffer exists
+  if (!file.buffer || file.buffer.length === 0) {
+    throw new Error('File buffer is empty or invalid');
+  }
+
   if (file.mimetype === 'text/plain') {
-    return file.buffer.toString('utf-8');
+    try {
+      return file.buffer.toString('utf-8');
+    } catch (error) {
+      console.error('Error reading text file:', error);
+      throw new Error('Failed to read text file. Please ensure the file is valid.');
+    }
   } else if (file.mimetype === 'application/pdf') {
-    // For PDF, we'll use a simple approach - can enhance with pdf-parse later
-    // For now, return a placeholder that indicates PDF content
-    // The AI can work with this and we can enhance PDF parsing later
-    return '[PDF Resume Content - Text extraction will be enhanced]';
+    try {
+      // Validate PDF by checking magic bytes
+      const pdfHeader = file.buffer.slice(0, 4).toString();
+      if (pdfHeader !== '%PDF') {
+        throw new Error('Invalid PDF file: File does not appear to be a valid PDF.');
+      }
+
+      // Use PDFParse class (v2.x API)
+      const parser = new PDFParse({ data: file.buffer });
+      const result = await parser.getText();
+      const data = { text: result.text || '' };
+
+      if (!data || !data.text) {
+        throw new Error('PDF appears to be empty or contains no extractable text. The PDF might be image-based or encrypted.');
+      }
+
+      const extractedText = data.text.trim();
+      if (extractedText.length === 0) {
+        throw new Error('PDF contains no extractable text. The PDF might be image-based or encrypted.');
+      }
+
+      return extractedText;
+    } catch (error) {
+      console.error('Error parsing PDF:', error);
+      
+      // Provide more specific error messages
+      if (error.message.includes('Invalid PDF') || error.message.includes('empty') || error.message.includes('encrypted')) {
+        throw error;
+      }
+      
+      // Check if it's a known pdf-parse error
+      if (error.message && error.message.includes('pdf')) {
+        throw new Error(`PDF parsing failed: ${error.message}. The PDF might be corrupted, encrypted, or in an unsupported format.`);
+      }
+      
+      throw new Error('Failed to extract text from PDF file. The PDF might be corrupted, encrypted, or in an unsupported format. Please try a different PDF file.');
+    }
+  } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+             file.mimetype === 'application/msword') {
+    // DOCX or DOC file
+    try {
+      const result = await mammoth.extractRawText({ buffer: file.buffer });
+      
+      if (!result || !result.value) {
+        throw new Error('Failed to extract text from Word document. The document might be empty or corrupted.');
+      }
+
+      const extractedText = result.value.trim();
+      if (extractedText.length === 0) {
+        throw new Error('Word document contains no extractable text.');
+      }
+
+      return extractedText;
+    } catch (error) {
+      console.error('Error parsing DOCX/DOC:', error);
+      
+      if (error.message && (error.message.includes('empty') || error.message.includes('corrupted'))) {
+        throw error;
+      }
+      
+      throw new Error('Failed to extract text from Word document. Please ensure the file is a valid DOCX or DOC file and is not corrupted.');
+    }
   } else {
-    // For DOC/DOCX, return placeholder
-    return '[Document Resume Content - Text extraction will be enhanced]';
+    throw new Error(`Unsupported file type: ${file.mimetype}. Please upload a PDF, DOC, DOCX, or TXT file.`);
+  }
+}
+
+// Helper function to save or update chat session
+async function saveChatSession(userId, sessionId, chatHistory, resumeText, resumeFileName, jobPosting) {
+  try {
+    // Generate title from first user message if not exists
+    let title = 'New Chat';
+    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+      const firstUserMessage = chatHistory.find(msg => msg.role === 'user');
+      if (firstUserMessage && firstUserMessage.content) {
+        // Use first 50 characters of first message as title
+        title = firstUserMessage.content.substring(0, 50).trim();
+        if (firstUserMessage.content.length > 50) {
+          title += '...';
+        }
+      }
+    }
+
+    if (sessionId) {
+      // Update existing session
+      const existingSession = await prisma.resumeChatSession.findFirst({
+        where: {
+          id: sessionId,
+          userId
+        }
+      });
+
+      if (existingSession) {
+        return await prisma.resumeChatSession.update({
+          where: { id: sessionId },
+          data: {
+            title: existingSession.title || title,
+            chatHistory,
+            resumeText: resumeText || existingSession.resumeText,
+            resumeFileName: resumeFileName || existingSession.resumeFileName,
+            jobPosting: jobPosting || existingSession.jobPosting
+          }
+        });
+      }
+    }
+
+    // Create new session
+    return await prisma.resumeChatSession.create({
+      data: {
+        userId,
+        title,
+        chatHistory,
+        resumeText: resumeText || null,
+        resumeFileName: resumeFileName || null,
+        jobPosting: jobPosting || null
+      }
+    });
+  } catch (error) {
+    console.error('Error saving chat session:', error);
+    // Don't throw - allow chat to continue even if save fails
+    return null;
   }
 }
 
@@ -808,13 +948,31 @@ router.post('/create', [
       slug = `${slug}-${Date.now()}`;
     }
 
-    // Get next order number
-    const lastContent = await prisma.content.findFirst({
-      where: { projectId },
-      orderBy: { order: 'desc' },
-      select: { order: true }
+    // Set order to 0 (latest post should be first) and increment all other posts
+    const order = 0;
+    
+    // Increment all existing posts' orders (excluding revisions)
+    await prisma.$transaction(async (tx) => {
+      // Update Content table order field
+      await tx.content.updateMany({
+        where: {
+          projectId,
+          status: { not: 'REVISION' },
+          revisionOf: null
+        },
+        data: {
+          order: { increment: 1 }
+        }
+      });
+      
+      // Update PostOrder table if entries exist
+      await tx.postOrder.updateMany({
+        where: { projectId },
+        data: {
+          order: { increment: 1 }
+        }
+      });
     });
-    const order = lastContent ? lastContent.order + 1 : 0;
 
     // Use excerpt from structured data or generate from content
     const excerpt = generatedData.excerpt || generatedData.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...';
@@ -876,6 +1034,15 @@ router.post('/create', [
     });
 
     console.log('[ai-content/create] Content created:', newContent.id);
+
+    // Create PostOrder entry for the new content
+    await prisma.postOrder.create({
+      data: {
+        projectId,
+        contentId: newContent.id,
+        order: order
+      }
+    });
 
     // Link skills to content
     if (matchedSkills.length > 0) {
@@ -1340,7 +1507,8 @@ router.post('/resume-chatbot/session',
   upload.single('resume'),
   [
     body('chatHistory').optional().isString(),
-    body('jobPosting').optional().isString()
+    body('jobPosting').optional().isString(),
+    body('sessionId').optional().isString()
   ],
   async (req, res) => {
     try {
@@ -1356,16 +1524,40 @@ router.post('/resume-chatbot/session',
       const userId = req.user?.id;
       let resumeText = null;
       let chatHistory = [];
-      const jobPosting = req.body.jobPosting || '';
+      let jobPosting = req.body.jobPosting || '';
+      const sessionId = req.body.sessionId;
 
       // Extract resume text if file uploaded
       if (req.file) {
         try {
+          console.log('Processing resume file:', {
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            bufferLength: req.file.buffer?.length
+          });
+          
           resumeText = await extractResumeText(req.file);
+          
+          if (!resumeText || resumeText.trim().length === 0) {
+            return res.status(400).json({
+              error: 'Resume Processing Error',
+              message: 'The resume file appears to be empty or contains no extractable text. If this is a scanned PDF, please use a text-based PDF or convert it to text first.'
+            });
+          }
+          
+          console.log('Successfully extracted resume text, length:', resumeText.length);
         } catch (error) {
+          console.error('Resume extraction error:', {
+            error: error.message,
+            stack: error.stack,
+            fileName: req.file?.originalname,
+            mimeType: req.file?.mimetype
+          });
+          
           return res.status(400).json({
             error: 'Resume Processing Error',
-            message: error.message || 'Failed to process resume file'
+            message: error.message || 'Failed to process resume file. Please ensure the file is a valid PDF, DOC, DOCX, or TXT file and is not corrupted or encrypted.'
           });
         }
       }
@@ -1379,6 +1571,22 @@ router.post('/resume-chatbot/session',
             error: 'Invalid Chat History',
             message: 'Chat history must be valid JSON'
           });
+        }
+      }
+
+      // Load or create session
+      let session = null;
+      if (sessionId) {
+        session = await prisma.resumeChatSession.findFirst({
+          where: {
+            id: sessionId,
+            userId
+          }
+        });
+        if (session) {
+          // Use existing session data if not provided in request
+          if (!resumeText && session.resumeText) resumeText = session.resumeText;
+          if (!jobPosting && session.jobPosting) jobPosting = session.jobPosting;
         }
       }
 
@@ -1427,7 +1635,20 @@ router.post('/resume-chatbot/session',
               context
             );
 
-            return res.json(continuedResult);
+            // Save updated chat history
+            const finalChatHistory = [
+              ...updatedChatHistory,
+              { role: 'assistant', content: continuedResult.message || '' }
+            ];
+            await saveChatSession(userId, sessionId, finalChatHistory, resumeText, req.file?.originalname, jobPosting);
+
+            return res.json({
+              ...continuedResult,
+              sessionId: session?.id || (await prisma.resumeChatSession.findFirst({
+                where: { userId },
+                orderBy: { updatedAt: 'desc' }
+              }))?.id
+            });
           } else {
             return res.json({
               message: result.message || 'Post not found',
@@ -1445,7 +1666,17 @@ router.post('/resume-chatbot/session',
         }
       }
 
-      res.json(result);
+      // Save chat history after getting response
+      const finalChatHistory = [
+        ...chatHistory,
+        { role: 'assistant', content: result.message || '' }
+      ];
+      const savedSession = await saveChatSession(userId, sessionId, finalChatHistory, resumeText, req.file?.originalname, jobPosting);
+
+      res.json({
+        ...result,
+        sessionId: savedSession.id
+      });
     } catch (error) {
       console.error('Resume chatbot session error:', error);
       res.status(500).json({
@@ -1455,5 +1686,493 @@ router.post('/resume-chatbot/session',
     }
   }
 );
+
+/**
+ * @swagger
+ * /api/ai/resume-chatbot/sessions:
+ *   get:
+ *     summary: Get all resume chat sessions for the current user
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of chat sessions
+ */
+router.get('/resume-chatbot/sessions', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    const sessions = await prisma.resumeChatSession.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        resumeFileName: true,
+        jobPosting: true,
+        chatHistory: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    // Transform to include message count
+    const sessionsWithCount = sessions.map(session => ({
+      id: session.id,
+      title: session.title,
+      resumeFileName: session.resumeFileName,
+      hasJobPosting: !!session.jobPosting,
+      messageCount: Array.isArray(session.chatHistory) ? session.chatHistory.length : 0,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt
+    }));
+
+    res.json({ sessions: sessionsWithCount });
+  } catch (error) {
+    console.error('Get chat sessions error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch sessions',
+      message: error.message || 'Unable to retrieve chat sessions'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/ai/resume-chatbot/sessions/{id}:
+ *   get:
+ *     summary: Get a specific resume chat session
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Chat session details
+ *       404:
+ *         description: Session not found
+ */
+router.get('/resume-chatbot/sessions/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    const session = await prisma.resumeChatSession.findFirst({
+      where: {
+        id,
+        userId
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        error: 'Session Not Found',
+        message: 'The requested chat session does not exist'
+      });
+    }
+
+    res.json({
+      id: session.id,
+      title: session.title,
+      chatHistory: session.chatHistory,
+      resumeText: session.resumeText,
+      resumeFileName: session.resumeFileName,
+      jobPosting: session.jobPosting,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt
+    });
+  } catch (error) {
+    console.error('Get chat session error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch session',
+      message: error.message || 'Unable to retrieve chat session'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/ai/resume-chatbot/sessions:
+ *   post:
+ *     summary: Create a new resume chat session
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               resumeText:
+ *                 type: string
+ *               resumeFileName:
+ *                 type: string
+ *               jobPosting:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Session created
+ */
+router.post('/resume-chatbot/sessions',
+  authenticateToken,
+  [
+    body('title').optional().isString().trim(),
+    body('resumeText').optional().isString(),
+    body('resumeFileName').optional().isString(),
+    body('jobPosting').optional().isString()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: 'Validation Error',
+          message: 'Invalid input data',
+          details: errors.array()
+        });
+      }
+
+      const userId = req.user?.id;
+      const { title, resumeText, resumeFileName, jobPosting } = req.body;
+
+      const session = await prisma.resumeChatSession.create({
+        data: {
+          userId,
+          title: title || 'New Chat',
+          chatHistory: [],
+          resumeText: resumeText || null,
+          resumeFileName: resumeFileName || null,
+          jobPosting: jobPosting || null
+        }
+      });
+
+      res.status(201).json({
+        id: session.id,
+        title: session.title,
+        chatHistory: session.chatHistory,
+        resumeText: session.resumeText,
+        resumeFileName: session.resumeFileName,
+        jobPosting: session.jobPosting,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt
+      });
+    } catch (error) {
+      console.error('Create chat session error:', error);
+      res.status(500).json({
+        error: 'Failed to create session',
+        message: error.message || 'Unable to create chat session'
+      });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/ai/resume-chatbot/sessions/{id}:
+ *   put:
+ *     summary: Update a resume chat session
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               chatHistory:
+ *                 type: array
+ *               resumeText:
+ *                 type: string
+ *               resumeFileName:
+ *                 type: string
+ *               jobPosting:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session updated
+ *       404:
+ *         description: Session not found
+ */
+router.put('/resume-chatbot/sessions/:id',
+  authenticateToken,
+  [
+    body('title').optional().isString().trim(),
+    body('chatHistory').optional().isArray(),
+    body('resumeText').optional().isString(),
+    body('resumeFileName').optional().isString(),
+    body('jobPosting').optional().isString()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: 'Validation Error',
+          message: 'Invalid input data',
+          details: errors.array()
+        });
+      }
+
+      const userId = req.user?.id;
+      const { id } = req.params;
+      const { title, chatHistory, resumeText, resumeFileName, jobPosting } = req.body;
+
+      // Check if session exists and belongs to user
+      const existingSession = await prisma.resumeChatSession.findFirst({
+        where: {
+          id,
+          userId
+        }
+      });
+
+      if (!existingSession) {
+        return res.status(404).json({
+          error: 'Session Not Found',
+          message: 'The requested chat session does not exist'
+        });
+      }
+
+      // Build update data
+      const updateData = {};
+      if (title !== undefined) updateData.title = title;
+      if (chatHistory !== undefined) updateData.chatHistory = chatHistory;
+      if (resumeText !== undefined) updateData.resumeText = resumeText;
+      if (resumeFileName !== undefined) updateData.resumeFileName = resumeFileName;
+      if (jobPosting !== undefined) updateData.jobPosting = jobPosting;
+
+      const session = await prisma.resumeChatSession.update({
+        where: { id },
+        data: updateData
+      });
+
+      res.json({
+        id: session.id,
+        title: session.title,
+        chatHistory: session.chatHistory,
+        resumeText: session.resumeText,
+        resumeFileName: session.resumeFileName,
+        jobPosting: session.jobPosting,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt
+      });
+    } catch (error) {
+      console.error('Update chat session error:', error);
+      res.status(500).json({
+        error: 'Failed to update session',
+        message: error.message || 'Unable to update chat session'
+      });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/ai/resume-chatbot/sessions/{id}:
+ *   delete:
+ *     summary: Delete a resume chat session
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Session deleted
+ *       404:
+ *         description: Session not found
+ */
+router.delete('/resume-chatbot/sessions/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    const session = await prisma.resumeChatSession.findFirst({
+      where: {
+        id,
+        userId
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        error: 'Session Not Found',
+        message: 'The requested chat session does not exist'
+      });
+    }
+
+    await prisma.resumeChatSession.delete({
+      where: { id }
+    });
+
+    res.json({ success: true, message: 'Session deleted successfully' });
+  } catch (error) {
+    console.error('Delete chat session error:', error);
+    res.status(500).json({
+      error: 'Failed to delete session',
+      message: error.message || 'Unable to delete chat session'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/ai/social-posts:
+ *   post:
+ *     summary: Generate social media post (LinkedIn or X) for content
+ *     tags: [AI Content Generation]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - contentId
+ *               - projectId
+ *               - platform
+ *             properties:
+ *               contentId:
+ *                 type: string
+ *                 format: uuid
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *               platform:
+ *                 type: string
+ *                 enum: [linkedin, x]
+ *                 description: Platform to generate post for
+ *     responses:
+ *       200:
+ *         description: Social post generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 post:
+ *                   type: string
+ *                 platform:
+ *                   type: string
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Generation failed
+ */
+router.post('/social-posts', [
+  authenticateToken,
+  authorizeProjectAccess('VIEWER'),
+  body('contentId').isUUID().withMessage('Valid content ID is required'),
+  body('projectId').isUUID().withMessage('Valid project ID is required'),
+  body('platform').isIn(['linkedin', 'x']).withMessage('Platform must be either "linkedin" or "x"')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid input data',
+        details: errors.array()
+      });
+    }
+
+    const { contentId, projectId, platform } = req.body;
+    const userId = req.user?.id;
+
+    // Verify user has access to project
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } }
+        ]
+      },
+      select: {
+        id: true,
+        subdomain: true
+      }
+    });
+
+    if (!project) {
+      return res.status(403).json({
+        error: 'Access Denied',
+        message: 'You do not have access to this project'
+      });
+    }
+
+    // Fetch content with all necessary data including tags and skills
+    const content = await prisma.content.findFirst({
+      where: {
+        id: contentId,
+        projectId: projectId
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        content: true,
+        type: true,
+        projectLinks: true,
+        tags: {
+          select: {
+            name: true
+          }
+        },
+        linkedSkills: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!content) {
+      return res.status(404).json({
+        error: 'Content Not Found',
+        message: 'The requested content does not exist'
+      });
+    }
+
+    // Generate social post for selected platform
+    const result = await geminiService.generateSocialPost(content, project, platform);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Social post generation error:', error);
+    res.status(500).json({
+      error: 'Social Post Generation Failed',
+      message: error.message || 'Unable to generate social post'
+    });
+  }
+});
 
 module.exports = router;

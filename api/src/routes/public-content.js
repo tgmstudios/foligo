@@ -39,9 +39,13 @@ router.get('/projects/:projectId/content', async (req, res) => {
     let content = await cache.get(cacheKey);
 
     if (!content) {
-      // Get content from database
+      // Get content from database - exclude revisions
       content = await prisma.content.findMany({
-        where: { projectId },
+        where: { 
+          projectId,
+          status: { not: 'REVISION' },
+          revisionOf: null
+        },
         orderBy: { order: 'asc' }
       });
 

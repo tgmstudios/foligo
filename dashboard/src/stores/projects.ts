@@ -254,17 +254,20 @@ export const useProjectStore = defineStore('projects', () => {
         icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
       })
       
-      // Content activities
+      // Content activities - filter out revisions
       if (project.content) {
         project.content.forEach(content => {
-          activities.push({
-            type: 'content',
-            title: content.title,
-            description: formatContentType(content.type) + ' created in ' + project.name,
-            timestamp: new Date(content.updatedAt),
-            color: 'green',
-            icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
-          })
+          // Only include real posts, not revisions
+          if (content.status !== 'REVISION' && !content.revisionOf) {
+            activities.push({
+              type: 'content',
+              title: content.title,
+              description: formatContentType(content.type) + ' created in ' + project.name,
+              timestamp: new Date(content.updatedAt),
+              color: 'green',
+              icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+            })
+          }
         })
       }
     })
@@ -595,6 +598,22 @@ export const useProjectStore = defineStore('projects', () => {
     }
   }
 
+  async function updatePostOrder(projectId: string, order: Array<{ contentId: string; order: number }>) {
+    try {
+      const response = await api.put(`/projects/${projectId}/content/order`, { order })
+      
+      // Refresh projects to get updated order
+      await fetchProjects()
+      
+      toast.success('Post order updated successfully')
+      return response.data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to update post order'
+      toast.error(message)
+      throw error
+    }
+  }
+
   async function updateContent(contentId: string, contentData: Partial<Content>) {
     try {
       const response = await api.put(`/content/${contentId}/fields`, contentData)
@@ -680,7 +699,8 @@ export const useProjectStore = defineStore('projects', () => {
     publishProject,
     createContent,
     updateContent,
-    deleteContent
+    deleteContent,
+    updatePostOrder
   }
 })
 

@@ -255,6 +255,10 @@ router.get('/', async (req, res) => {
             }
           },
           content: {
+            where: {
+              status: { not: 'REVISION' },
+              revisionOf: null
+            },
             orderBy: { order: 'asc' }
           },
           _count: {
@@ -303,6 +307,10 @@ router.get('/', async (req, res) => {
             }
           },
           content: {
+            where: {
+              status: { not: 'REVISION' },
+              revisionOf: null
+            },
             orderBy: { order: 'asc' }
           },
           _count: {
@@ -402,6 +410,10 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
             }
           },
           content: {
+            where: {
+              status: { not: 'REVISION' },
+              revisionOf: null
+            },
             orderBy: { order: 'asc' }
           },
           siteConfig: true,
@@ -449,6 +461,10 @@ router.get('/:id', authorizeProjectAccess('VIEWER'), async (req, res) => {
               }
             },
             content: {
+              where: {
+                status: { not: 'REVISION' },
+                revisionOf: null
+              },
               orderBy: { order: 'asc' }
             },
             siteConfig: true,

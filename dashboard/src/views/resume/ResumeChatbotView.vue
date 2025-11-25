@@ -1,5 +1,7 @@
 <template>
-  <div class="p-6 h-[calc(100vh-3rem)] flex flex-col">
+  <div class="p-6 h-[calc(100vh-3rem)] flex gap-6 overflow-hidden">
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
     <!-- Setup Stage (before chat starts) -->
     <transition name="fade-slide" mode="out-in">
       <div v-if="!chatStarted && !isStarting" key="setup" class="max-w-4xl mx-auto">
@@ -26,7 +28,16 @@
             <transition name="scale">
               <label
                 v-if="!resumeFile"
-                class="border-2 border-dashed border-gray-600 rounded-xl p-8 hover:border-primary-500 hover:bg-primary-500/5 transition-all duration-300 cursor-pointer group block"
+                :class="[
+                  'border-2 border-dashed rounded-xl p-8 transition-all duration-300 cursor-pointer group block',
+                  isDragging
+                    ? 'border-primary-500 bg-primary-500/10'
+                    : 'border-gray-600 hover:border-primary-500 hover:bg-primary-500/5'
+                ]"
+                @drop="handleDrop"
+                @dragover.prevent="handleDragOver"
+                @dragenter.prevent="handleDragEnter"
+                @dragleave="handleDragLeave"
               >
                 <input
                   type="file"
@@ -296,11 +307,11 @@
       <!-- Chat Stage (after chat starts) -->
       <div v-else key="chat" class="flex flex-col flex-1 animate-fade-in min-h-0">
         <div class="card flex-1 flex flex-col overflow-hidden min-h-0">
-          <!-- Job Posting Toggle Button -->
-          <div class="px-4 py-2 border-b border-gray-700 bg-gray-800/30 flex-shrink-0">
+          <!-- Chat Header with Copy Button -->
+          <div class="px-4 py-2 border-b border-gray-700 bg-gray-800/30 flex-shrink-0 flex items-center justify-between">
             <button
               @click="showJobPosting = !showJobPosting"
-              class="flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-300 transition-colors group w-full"
+              class="flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-300 transition-colors group"
             >
               <svg
                 class="w-4 h-4 transform transition-transform duration-300"
@@ -312,6 +323,16 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
               <span>{{ showJobPosting ? 'Hide' : 'Show' }} Job Posting</span>
+            </button>
+            <button
+              @click="copyChat"
+              class="flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-300 transition-colors px-2 py-1 rounded hover:bg-gray-700/50"
+              title="Copy entire chat as markdown"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Copy Chat</span>
             </button>
           </div>
           
@@ -333,11 +354,12 @@
           <div class="flex-1 overflow-y-auto p-6 space-y-4">
             <transition-group name="message" tag="div" class="max-w-full">
               <div
-                v-for="message in messages"
+                v-for="(message, index) in messages"
                 :key="message.id"
                 :class="[
                   'flex items-start space-x-3 animate-in',
-                  message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                  message.role === 'user' ? 'flex-row-reverse space-x-reverse' : '',
+                  index > 0 && messages[index - 1].role !== message.role ? 'mt-6' : ''
                 ]"
               >
                 <div :class="[
@@ -352,20 +374,33 @@
                   </svg>
                 </div>
                 <div :class="[
-                  'rounded-xl px-4 py-3 shadow-lg transition-all',
+                  'rounded-xl px-4 py-3 shadow-lg transition-all group relative overflow-hidden',
                   message.role === 'user' 
                     ? 'bg-primary-600 text-white max-w-2xl' 
                     : 'bg-gray-800 text-white border border-gray-700 w-full max-w-full'
                 ]">
-              <!-- User messages: plain text -->
-              <p v-if="message.role === 'user'" class="text-sm whitespace-pre-wrap leading-relaxed">{{ message.content }}</p>
-              <!-- Assistant messages: rendered markdown -->
-              <div 
-                v-else
-                class="text-sm leading-relaxed markdown-content"
-                v-html="renderMarkdown(message.content)"
-              ></div>
-            </div>
+                  <!-- Copy button for individual message -->
+                  <button
+                    @click.stop="copyMessage(message)"
+                    class="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-gray-700/80 hover:bg-gray-600 text-gray-300 hover:text-white z-10"
+                    :class="message.role === 'user' ? 'bg-primary-700/80 hover:bg-primary-800' : ''"
+                    title="Copy message"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  
+                  <!-- User messages: plain text -->
+                  <p v-if="message.role === 'user'" class="text-sm whitespace-pre-wrap leading-relaxed pr-8">{{ message.content }}</p>
+                  <!-- Assistant messages: rendered markdown -->
+                  <div 
+                    v-else
+                    :data-message-id="message.id"
+                    class="text-sm leading-relaxed markdown-content pr-8"
+                    v-html="renderMarkdown(message.content)"
+                  ></div>
+                </div>
               </div>
             </transition-group>
 
@@ -396,12 +431,13 @@
                   ref="messageTextarea"
                   v-model="currentMessage"
                   @keydown.enter.exact.prevent="sendMessage"
-                  @keydown.enter.shift.exact="handleShiftEnter"
+                  @keydown.enter.ctrl.exact="handleCtrlEnter"
+                  @keydown.enter.meta.exact="handleCtrlEnter"
                   @input="adjustTextareaHeight"
                   :disabled="isTyping"
-                  placeholder="Type your message... (Shift+Enter for new line)"
+                  placeholder="Type your message... (Enter to send, Ctrl+Enter for new line)"
                   rows="1"
-                  class="flex-1 px-4 py-3 border border-gray-600 rounded-xl bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-hidden min-h-[48px] max-h-[200px] transition-all"
+                  class="flex-1 px-4 py-3 border border-gray-600 rounded-xl bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[48px] max-h-[200px] transition-all leading-relaxed"
                 ></textarea>
                 <button
                   @click="sendMessage"
@@ -418,11 +454,77 @@
         </div>
       </div>
     </transition>
+    </div>
+
+    <!-- Right Sidebar for Past Chats -->
+    <div class="w-80 flex-shrink-0 bg-gray-900 border border-gray-700 rounded-lg flex flex-col overflow-hidden" style="max-height: calc(100vh - 4.5rem);">
+      <!-- Sidebar Header -->
+      <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-white">Past Chats</h3>
+      </div>
+
+      <!-- Chat Sessions List -->
+      <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 min-h-0">
+        <button
+          @click="startNewChat"
+          class="w-full px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>New Chat</span>
+        </button>
+
+        <div v-if="loadingSessions" class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+          <p class="mt-2 text-gray-400 text-sm">Loading chats...</p>
+        </div>
+
+        <div v-else-if="pastSessions.length === 0" class="text-center py-8">
+          <p class="text-gray-400 text-sm">No past chats</p>
+        </div>
+
+        <div
+          v-for="session in pastSessions"
+          :key="session.id"
+          @click="resumeChat(session.id)"
+          :class="[
+            'p-3 rounded-lg cursor-pointer transition-all border',
+            currentSessionId === session.id
+              ? 'bg-primary-600/20 border-primary-500 text-white'
+              : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-750 hover:border-gray-600'
+          ]"
+        >
+          <div class="flex items-start justify-between mb-2">
+            <h4 class="font-medium text-sm truncate flex-1">{{ session.title }}</h4>
+            <button
+              @click.stop="deleteSession(session.id)"
+              class="ml-2 p-1 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded transition-colors"
+              title="Delete chat"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+          <div class="flex items-center justify-between text-xs text-gray-400">
+            <span>{{ session.messageCount }} messages</span>
+            <span>{{ formatDate(session.updatedAt) }}</span>
+          </div>
+          <div v-if="session.resumeFileName" class="mt-2 text-xs text-gray-500 truncate">
+            📄 {{ session.resumeFileName }}
+          </div>
+          <div v-if="session.hasJobPosting" class="mt-1 text-xs text-gray-500">
+            💼 Job posting
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch, onUpdated } from 'vue'
 import { useToast } from 'vue-toastification'
 import { marked } from 'marked'
 import { aiApi } from '@/services/api'
@@ -439,6 +541,17 @@ const jobPosting = ref('')
 const showJobPosting = ref(false)
 const messageTextarea = ref<HTMLTextAreaElement | null>(null)
 const resumeInput = ref<HTMLInputElement | null>(null)
+const isDragging = ref(false)
+const pastSessions = ref<Array<{
+  id: string
+  title: string
+  messageCount: number
+  resumeFileName?: string
+  hasJobPosting: boolean
+  updatedAt: string
+}>>([])
+const loadingSessions = ref(false)
+const currentSessionId = ref<string | null>(null)
 
 const canStartChat = computed(() => {
   return resumeFile.value || jobPosting.value.trim().length > 0
@@ -456,8 +569,68 @@ const handleResumeUpload = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (file) {
-    resumeFile.value = file
+    validateAndSetFile(file)
   }
+}
+
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault()
+  isDragging.value = true
+}
+
+const handleDragEnter = (event: DragEvent) => {
+  event.preventDefault()
+  isDragging.value = true
+}
+
+const handleDragLeave = (event: DragEvent) => {
+  event.preventDefault()
+  // Check if we're actually leaving the drop zone (not just moving to a child element)
+  const relatedTarget = event.relatedTarget as HTMLElement
+  const currentTarget = event.currentTarget as HTMLElement
+  
+  if (!currentTarget.contains(relatedTarget)) {
+    isDragging.value = false
+  }
+}
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault()
+  isDragging.value = false
+
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    const file = files[0]
+    validateAndSetFile(file)
+  }
+}
+
+const validateAndSetFile = (file: File) => {
+  // Validate file type
+  const allowedTypes = [
+    'application/pdf',
+    'text/plain',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+  
+  const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt']
+  const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
+
+  if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+    toast.error('Invalid file type. Please upload PDF, DOC, DOCX, or TXT files.')
+    return
+  }
+
+  // Validate file size (10MB)
+  const maxSize = 10 * 1024 * 1024 // 10MB in bytes
+  if (file.size > maxSize) {
+    toast.error('File size exceeds 10MB limit.')
+    return
+  }
+
+  resumeFile.value = file
+  toast.success(`Resume "${file.name}" uploaded successfully`)
 }
 
 const clearResume = () => {
@@ -471,6 +644,7 @@ const startChat = async () => {
   if (!canStartChat.value) return
 
   isStarting.value = true
+  currentSessionId.value = null // Start new session
 
   try {
     const formData = new FormData()
@@ -494,13 +668,22 @@ const startChat = async () => {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       chatStarted.value = true
-      messages.value.push({
+      messages.value = [{
         id: Date.now().toString(),
         role: 'assistant',
         content: response.data.message
-      })
+      }]
       
-      // Job posting will be available but collapsed by default
+      // Save session ID if returned
+      if (response.data.sessionId) {
+        currentSessionId.value = response.data.sessionId
+      }
+      
+      // Setup code block buttons
+      setupCodeBlockButtons()
+      
+      // Reload sessions list
+      await loadPastSessions()
     }
 
     // Scroll to bottom and focus input
@@ -554,6 +737,9 @@ const sendMessage = async () => {
       formData.append('jobPosting', jobPosting.value.trim())
     }
     formData.append('chatHistory', JSON.stringify(chatHistory))
+    if (currentSessionId.value) {
+      formData.append('sessionId', currentSessionId.value)
+    }
 
     const response = await aiApi.post('/ai/resume-chatbot/session', formData, {
       headers: {
@@ -569,6 +755,17 @@ const sendMessage = async () => {
         content: response.data.message
       })
     }
+
+    // Update session ID if returned
+    if (response.data.sessionId) {
+      currentSessionId.value = response.data.sessionId
+    }
+
+    // Setup code block buttons for new message
+    setupCodeBlockButtons()
+
+    // Reload sessions list to update last modified time
+    await loadPastSessions()
 
     // Scroll to bottom
     await nextTick()
@@ -592,14 +789,36 @@ const adjustTextareaHeight = () => {
     if (messageTextarea.value) {
       messageTextarea.value.style.height = 'auto'
       const scrollHeight = messageTextarea.value.scrollHeight
+      const minHeight = 48
       const maxHeight = 200
-      messageTextarea.value.style.height = `${Math.min(scrollHeight, maxHeight)}px`
+      const newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight))
+      messageTextarea.value.style.height = `${newHeight}px`
+      
+      // Scroll to bottom if content exceeds max height
+      if (scrollHeight > maxHeight) {
+        messageTextarea.value.scrollTop = messageTextarea.value.scrollHeight
+      }
     }
   })
 }
 
-const handleShiftEnter = () => {
-  adjustTextareaHeight()
+const handleCtrlEnter = (event: KeyboardEvent) => {
+  // Allow default behavior (new line) and adjust height
+  event.preventDefault()
+  if (messageTextarea.value) {
+    const textarea = messageTextarea.value
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = currentMessage.value
+    currentMessage.value = text.substring(0, start) + '\n' + text.substring(end)
+    // Set cursor position after the newline
+    nextTick(() => {
+      if (messageTextarea.value) {
+        messageTextarea.value.selectionStart = messageTextarea.value.selectionEnd = start + 1
+        adjustTextareaHeight()
+      }
+    })
+  }
 }
 
 // Configure marked for markdown rendering
@@ -615,12 +834,297 @@ const renderMarkdown = (content: string) => {
   if (!content || !content.trim()) return ''
   
   try {
-    return marked(content) as string
+    const html = marked(content) as string
+    // Add data attribute to code blocks so we can add copy buttons
+    return html.replace(/<pre[^>]*>/g, '<pre data-code-block="true">')
   } catch (error) {
     console.error('Markdown rendering error:', error)
     return content // Fallback to plain text
   }
 }
+
+// Setup copy buttons for code blocks
+const setupCodeBlockButtons = () => {
+  nextTick(() => {
+    const markdownContainers = document.querySelectorAll('.markdown-content[data-message-id]')
+    markdownContainers.forEach((container) => {
+      const codeBlocks = container.querySelectorAll('pre[data-code-block="true"]')
+      codeBlocks.forEach((pre) => {
+        // Skip if button already exists
+        if (pre.querySelector('.code-copy-button')) return
+        
+        const button = document.createElement('button')
+        button.className = 'code-copy-button absolute top-2 right-2 p-1.5 rounded-lg opacity-0 transition-opacity bg-gray-700/90 hover:bg-gray-600 text-gray-300 hover:text-white z-20'
+        button.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        `
+        button.title = 'Copy code'
+        
+        // Make pre element relative and add group class for hover
+        if (!(pre as HTMLElement).classList.contains('code-block-group')) {
+          (pre as HTMLElement).classList.add('code-block-group', 'relative')
+        }
+        
+        button.addEventListener('click', async (e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          const code = pre.querySelector('code')?.textContent || pre.textContent || ''
+          try {
+            await navigator.clipboard.writeText(code)
+            toast.success('Code copied to clipboard')
+            
+            // Visual feedback
+            button.innerHTML = `
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            `
+            setTimeout(() => {
+              button.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              `
+            }, 2000)
+          } catch (error) {
+            // Fallback
+            const textArea = document.createElement('textarea')
+            textArea.value = code
+            textArea.style.position = 'fixed'
+            textArea.style.opacity = '0'
+            document.body.appendChild(textArea)
+            textArea.select()
+            try {
+              document.execCommand('copy')
+              toast.success('Code copied to clipboard')
+            } catch (err) {
+              toast.error('Failed to copy code')
+            }
+            document.body.removeChild(textArea)
+          }
+        })
+        
+        pre.appendChild(button)
+      })
+    })
+  })
+}
+
+// Watch for new messages and setup code block buttons
+watch(() => messages.value.length, () => {
+  setupCodeBlockButtons()
+}, { flush: 'post' })
+
+// Also setup on component updates
+onUpdated(() => {
+  setupCodeBlockButtons()
+})
+
+// Load past chat sessions
+const loadPastSessions = async () => {
+  loadingSessions.value = true
+  try {
+    const response = await aiApi.get('/ai/resume-chatbot/sessions')
+    pastSessions.value = response.data.sessions || []
+  } catch (error: any) {
+    console.error('Failed to load past sessions:', error)
+    toast.error('Failed to load past chats')
+  } finally {
+    loadingSessions.value = false
+  }
+}
+
+// Resume a past chat
+const resumeChat = async (sessionId: string) => {
+  try {
+    const response = await aiApi.get(`/ai/resume-chatbot/sessions/${sessionId}`)
+    const session = response.data
+
+    // Load session data
+    currentSessionId.value = session.id
+    messages.value = (session.chatHistory || []).map((msg: any, index: number) => ({
+      id: `${session.id}-${index}`,
+      role: msg.role,
+      content: msg.content
+    }))
+    
+    if (session.jobPosting) {
+      jobPosting.value = session.jobPosting
+    }
+
+    // Note: We can't restore the resume file, but the text is stored
+    // The user would need to re-upload if they want to modify it
+
+    chatStarted.value = true
+
+    // Setup code block buttons for loaded messages
+    await nextTick()
+    setupCodeBlockButtons()
+
+    // Scroll to bottom
+    const chatContainer = document.querySelector('.overflow-y-auto')
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight
+    }
+    if (messageTextarea.value) {
+      messageTextarea.value.focus()
+    }
+  } catch (error: any) {
+    console.error('Failed to resume chat:', error)
+    toast.error(error.response?.data?.message || 'Failed to resume chat')
+  }
+}
+
+// Start a new chat
+const startNewChat = () => {
+  currentSessionId.value = null
+  messages.value = []
+  chatStarted.value = false
+  resumeFile.value = null
+  jobPosting.value = ''
+  showJobPosting.value = false
+  
+  if (resumeInput.value) {
+    resumeInput.value.value = ''
+  }
+}
+
+// Delete a chat session
+const deleteSession = async (sessionId: string) => {
+  if (!confirm('Are you sure you want to delete this chat?')) {
+    return
+  }
+
+  try {
+    await aiApi.delete(`/ai/resume-chatbot/sessions/${sessionId}`)
+    toast.success('Chat deleted')
+    
+    // If deleted session is current, start new chat
+    if (currentSessionId.value === sessionId) {
+      startNewChat()
+    }
+    
+    // Reload sessions list
+    await loadPastSessions()
+  } catch (error: any) {
+    console.error('Failed to delete session:', error)
+    toast.error(error.response?.data?.message || 'Failed to delete chat')
+  }
+}
+
+// Format date for display
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  return date.toLocaleDateString()
+}
+
+// Copy individual message to clipboard
+const copyMessage = async (message: { role: string; content: string }) => {
+  try {
+    const textToCopy = message.content
+    await navigator.clipboard.writeText(textToCopy)
+    toast.success('Message copied to clipboard')
+  } catch (error) {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea')
+    textArea.value = message.content
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      toast.success('Message copied to clipboard')
+    } catch (err) {
+      toast.error('Failed to copy message')
+    }
+    document.body.removeChild(textArea)
+  }
+}
+
+// Copy entire chat as markdown to clipboard
+const copyChat = async () => {
+  if (messages.value.length === 0) {
+    toast.info('No messages to copy')
+    return
+  }
+
+  try {
+    // Format chat as markdown
+    let markdown = '# Resume Assistant Chat\n\n'
+    
+    if (jobPosting.value) {
+      markdown += `## Job Posting\n\n${jobPosting.value}\n\n---\n\n`
+    }
+    
+    markdown += '## Conversation\n\n'
+    
+    messages.value.forEach((message) => {
+      const role = message.role === 'user' ? '**You**' : '**Assistant**'
+      markdown += `${role}:\n\n${message.content}\n\n---\n\n`
+    })
+    
+    await navigator.clipboard.writeText(markdown)
+    toast.success('Chat copied to clipboard as markdown')
+  } catch (error) {
+    // Fallback for older browsers
+    let markdown = '# Resume Assistant Chat\n\n'
+    
+    if (jobPosting.value) {
+      markdown += `## Job Posting\n\n${jobPosting.value}\n\n---\n\n`
+    }
+    
+    markdown += '## Conversation\n\n'
+    
+    messages.value.forEach((message) => {
+      const role = message.role === 'user' ? '**You**' : '**Assistant**'
+      markdown += `${role}:\n\n${message.content}\n\n---\n\n`
+    })
+    
+    const textArea = document.createElement('textarea')
+    textArea.value = markdown
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      toast.success('Chat copied to clipboard as markdown')
+    } catch (err) {
+      toast.error('Failed to copy chat')
+    }
+    document.body.removeChild(textArea)
+  }
+}
+
+// Handle clicks on markdown content (for copying code blocks)
+const handleMarkdownClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  
+  // If clicking on a code block (pre or code element), allow text selection
+  if (target.tagName === 'PRE' || target.tagName === 'CODE' || target.closest('pre') || target.closest('code')) {
+    // Allow normal text selection - user can select and copy normally
+    return
+  }
+}
+
+// Load sessions on mount
+onMounted(() => {
+  loadPastSessions()
+})
 </script>
 
 <style scoped>
@@ -740,6 +1244,15 @@ const renderMarkdown = (content: string) => {
 /* Markdown content styling */
 .markdown-content {
   color: #e5e7eb;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: hidden;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 .markdown-content :deep(h1),
@@ -770,6 +1283,8 @@ const renderMarkdown = (content: string) => {
   margin-bottom: 0.75em;
   color: #e5e7eb;
   line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .markdown-content :deep(strong) {
@@ -800,15 +1315,59 @@ const renderMarkdown = (content: string) => {
   border-radius: 0.25rem;
   font-size: 0.875em;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .markdown-content :deep(pre) {
   background-color: #111827;
   color: #f3f4f6;
   padding: 1rem;
+  padding-top: 2.5rem;
   border-radius: 0.5rem;
   overflow-x: auto;
+  overflow-y: hidden;
   margin-bottom: 0.75em;
+  max-width: 100%;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  position: relative;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  cursor: text;
+}
+
+.markdown-content :deep(pre.code-block-group) {
+  position: relative;
+}
+
+.markdown-content :deep(pre.code-block-group:hover .code-copy-button) {
+  opacity: 1;
+}
+
+.markdown-content :deep(.code-copy-button) {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+/* For very long code lines, allow horizontal scroll but keep it contained */
+.markdown-content :deep(pre code) {
+  display: block;
+  overflow-x: auto;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  max-width: 100%;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 .markdown-content :deep(pre code) {
@@ -820,6 +1379,8 @@ const renderMarkdown = (content: string) => {
 .markdown-content :deep(a) {
   color: #60a5fa;
   text-decoration: none;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .markdown-content :deep(a:hover) {
@@ -836,8 +1397,11 @@ const renderMarkdown = (content: string) => {
 
 .markdown-content :deep(table) {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   margin-bottom: 0.75em;
+  table-layout: fixed;
+  overflow-wrap: break-word;
 }
 
 .markdown-content :deep(th),
@@ -845,6 +1409,9 @@ const renderMarkdown = (content: string) => {
   border: 1px solid #4b5563;
   padding: 0.5rem;
   text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 0;
 }
 
 .markdown-content :deep(th) {

@@ -128,15 +128,34 @@ router.post('/projects/:projectId/content', [
       }
     }
 
-    // If no order specified, get the next order number
+    // If no order specified, set to 0 (latest post should be first)
+    // and increment all other posts' orders
     let contentOrder = order;
     if (contentOrder === undefined) {
-      const lastContent = await prisma.content.findFirst({
-        where: { projectId },
-        orderBy: { order: 'desc' },
-        select: { order: true }
+      contentOrder = 0;
+      
+      // Increment all existing posts' orders (excluding revisions)
+      await prisma.$transaction(async (tx) => {
+        // Update Content table order field
+        await tx.content.updateMany({
+          where: {
+            projectId,
+            status: { not: 'REVISION' },
+            revisionOf: null
+          },
+          data: {
+            order: { increment: 1 }
+          }
+        });
+        
+        // Update PostOrder table if entries exist
+        await tx.postOrder.updateMany({
+          where: { projectId },
+          data: {
+            order: { increment: 1 }
+          }
+        });
       });
-      contentOrder = lastContent ? lastContent.order + 1 : 0;
     }
 
     // Prepare data object
@@ -191,6 +210,17 @@ router.post('/projects/:projectId/content', [
         linkedSkills: true
       }
     });
+
+    // Create PostOrder entry for the new content (only if not a revision)
+    if (contentData.status !== 'REVISION' && !contentData.revisionOf) {
+      await prisma.postOrder.create({
+        data: {
+          projectId,
+          contentId: newContent.id,
+          order: contentOrder
+        }
+      });
+    }
 
     // Link skills to content if provided
     if (skills && skills.length > 0) {
@@ -943,6 +973,136 @@ router.put('/content/:id/reorder', [
     res.status(500).json({
       error: 'Content Reorder Failed',
       message: 'Unable to reorder content block'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/projects/{projectId}/content/order:
+ *   put:
+ *     summary: Update post order for all posts in a project
+ *     tags: [CMS Content]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Project ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - order
+ *             properties:
+ *               order:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - contentId
+ *                     - order
+ *                   properties:
+ *                     contentId:
+ *                       type: string
+ *                       format: uuid
+ *                     order:
+ *                       type: integer
+ *                       minimum: 0
+ *     responses:
+ *       200:
+ *         description: Post order updated successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Project not found
+ */
+router.put('/projects/:projectId/content/order', [
+  body('order').isArray().withMessage('Order must be an array'),
+  body('order.*.contentId').isUUID().withMessage('Each order item must have a valid contentId'),
+  body('order.*.order').isInt({ min: 0 }).withMessage('Each order item must have a valid order number')
+], authorizeProjectAccess('EDITOR'), async (req, res) => {
+  try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid input data',
+        details: errors.array()
+      });
+    }
+
+    const { projectId } = req.params;
+    const { order } = req.body;
+
+    // Get all posts for this project (excluding revisions)
+    const allPosts = await prisma.content.findMany({
+      where: {
+        projectId,
+        status: { not: 'REVISION' },
+        revisionOf: null
+      },
+      select: { id: true }
+    });
+
+    const postIds = allPosts.map(p => p.id);
+    const orderContentIds = order.map(o => o.contentId);
+
+    // Verify all content IDs belong to this project
+    const invalidIds = orderContentIds.filter(id => !postIds.includes(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Some content IDs do not belong to this project',
+        invalidIds
+      });
+    }
+
+    // Use a transaction to update all orders atomically
+    await prisma.$transaction(async (tx) => {
+      // Delete existing post orders for this project
+      await tx.postOrder.deleteMany({
+        where: { projectId }
+      });
+
+      // Create new post orders
+      await tx.postOrder.createMany({
+        data: order.map(item => ({
+          projectId,
+          contentId: item.contentId,
+          order: item.order
+        }))
+      });
+
+      // Also update the order field in Content table for backward compatibility
+      for (const item of order) {
+        await tx.content.update({
+          where: { id: item.contentId },
+          data: { order: item.order }
+        });
+      }
+    });
+
+    // Clear project cache
+    await cache.del(`project:${projectId}`);
+    await cache.delPattern(`project:${projectId}:content*`);
+
+    res.json({ success: true, message: 'Post order updated successfully' });
+  } catch (error) {
+    console.error('Update post order error:', error);
+    res.status(500).json({
+      error: 'Post Order Update Failed',
+      message: 'Unable to update post order'
     });
   }
 });

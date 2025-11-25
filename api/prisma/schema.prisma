@@ -26,6 +26,7 @@ model User {
   projectsOwned Project[] @relation("ProjectOwner")
   projectAccess ProjectAccess[]
   media        Media[]
+  resumeChatSessions ResumeChatSession[]
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -52,6 +53,7 @@ model Project {
   tags    ContentTag[]    @relation("ProjectTags")
   meta    ContentMeta[]
   skills  Skill[]         @relation("ProjectSkills")
+  postOrders PostOrder[]
 
   @@map("projects")
 }
@@ -112,6 +114,7 @@ model Content {
   linkedSkills   Skill[]        @relation("ContentSkills")
   revisions     Content[]       @relation("ContentRevisions")
   parentContent Content?        @relation("ContentRevisions", fields: [revisionOf], references: [id], onDelete: Cascade)
+  postOrder     PostOrder?
 
   @@index([revisionOf])
   @@index([status])
@@ -359,4 +362,43 @@ model Media {
   @@index([projectId])
   @@index([objectName])
   @@map("media")
+}
+
+// Post Order - Separate table for managing post ordering per project
+model PostOrder {
+  id        String   @id @default(uuid())
+  projectId String
+  contentId String   @unique // One order entry per content item
+  order     Int      // Display order (0 = first/latest)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, contentId])
+  @@index([projectId, order])
+  @@index([contentId])
+  @@map("post_order")
+}
+
+// Resume Chat Session - Stores chat history for resume assistant
+model ResumeChatSession {
+  id            String   @id @default(uuid())
+  userId        String
+  title         String   // Auto-generated from first message or user-provided
+  chatHistory   Json     // Array of { role: 'user' | 'assistant', content: string }
+  resumeText    String?  // Extracted text from resume file
+  resumeFileName String? // Original resume filename
+  jobPosting    String? // Job posting text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("resume_chat_sessions")
 }
