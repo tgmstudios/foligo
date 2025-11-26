@@ -37,3 +37,4 @@ npx prisma migrate deploy 2>/dev/null || {
 echo "✅ Database migration completed!"
 
 
+
