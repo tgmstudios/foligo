@@ -79,6 +79,8 @@
             <MediaManager
               :project-id="projectId"
               :selectable="true"
+              :hide-insert-button="true"
+              :hide-copy-url="true"
               @media-selected="handleMediaSelected"
             />
           </div>

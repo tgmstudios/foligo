@@ -161,6 +161,7 @@
           <MediaManager
             :project-id="projectId"
             :selectable="true"
+            :hide-copy-url="true"
             @media-inserted="handleMediaInserted"
           />
         </div>
