@@ -4,7 +4,11 @@ const { fallbackQuestions, utilityPrompts } = require('./prompt-utils');
 const { MODEL_CONFIG, GENERATION_CONFIG, SAFETY_SETTINGS, SYSTEM_INSTRUCTIONS } = require('./gemini-config');
 const { retryWithBackoff } = require('./retry');
 const { GeminiConfigError, GeminiAPIError, GeminiParseError } = require('./errors');
-const { AI_SESSION_TOOLS } = require('./gemini-tools');
+const {
+  AI_CONTENT_CREATE_TOOLS,
+  AI_CONTENT_EDIT_TOOLS,
+  AI_RESUME_CHATBOT_TOOLS
+} = require('./gemini-tools');
 const { buildConversationalSystemPrompt } = require('./conversation-prompts');
 const { buildResumeChatbotSystemPrompt } = require('./resume-chatbot-prompts');
 
@@ -229,17 +233,20 @@ class GeminiService {
         preview: systemPrompt.substring(0, 500)
       });
       
+      // Pick tools based on mode (create vs edit)
+      const toolsForMode = mode === 'edit' ? AI_CONTENT_EDIT_TOOLS : AI_CONTENT_CREATE_TOOLS;
+
       // Initialize model with system instruction and tools
       const sessionModel = this.genAI.getGenerativeModel({
         model: MODEL_CONFIG.FLASH,
         systemInstruction: systemPrompt,
-        tools: AI_SESSION_TOOLS,
+        tools: toolsForMode,
         safetySettings: SAFETY_SETTINGS
       });
       
       this.logger.debug('Model initialized', {
         model: MODEL_CONFIG.FLASH,
-        toolsCount: AI_SESSION_TOOLS[0].functionDeclarations.length
+        toolsCount: toolsForMode?.[0]?.functionDeclarations?.length || 0
       });
       
       // Start chat session with history
@@ -370,7 +377,7 @@ class GeminiService {
           finishReason: finishReason,
           safetyRatings: candidates?.[0]?.safetyRatings,
           systemPromptLength: systemPrompt.length,
-          toolsProvided: !!AI_SESSION_TOOLS
+          toolsProvided: !!toolsForMode
         });
         
         // Provide specific error messages based on finish reason
@@ -457,6 +464,24 @@ class GeminiService {
           postId: args.postId,
           message: `Fetching "${args.postTitle || 'the post'}"...`,
           contentType: currentContentType
+        };
+
+      case 'createStructuredResumeDraft':
+        // Resume chatbot: create a saved resume draft that the resume generator can edit later.
+        // IMPORTANT: No additional AI is called on the server; the provided resumeData is used as-is.
+        return {
+          done: true,
+          toolcall: 'create_resume_history',
+          resume: {
+            name: args.name,
+            layoutStyle: args.layoutStyle || null,
+            resumeSize: args.resumeSize || 'medium',
+            jobDescription: args.jobDescription || '',
+            contentItemIds: Array.isArray(args.contentItemIds) ? args.contentItemIds : [],
+            templateId: args.templateId || null,
+            resumeData: args.resumeData || {}
+          },
+          message: "Great, I've created a structured resume draft with that layout. You can open it in the Resume Generator to tweak and export it."
         };
       
       default:
@@ -1833,7 +1858,7 @@ Return only the X post text (no JSON, no quotes, no markdown, just plain text po
       const resumeModel = this.genAI.getGenerativeModel({
         model: MODEL_CONFIG.FLASH,
         systemInstruction: systemPrompt,
-        tools: AI_SESSION_TOOLS, // Can use fetchExistingPost if needed
+        tools: AI_RESUME_CHATBOT_TOOLS, // Resume-specific tools (fetchExistingPost, createStructuredResumeDraft)
         safetySettings: SAFETY_SETTINGS
       });
 

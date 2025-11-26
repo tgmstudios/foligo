@@ -96,3 +96,4 @@ This means your production setup will work whether or not you include migrations
 - `db push` is safe for additive changes (adding tables, columns)
 - Be careful with destructive changes (dropping columns, tables) - use `--accept-data-loss` flag if needed
 
+

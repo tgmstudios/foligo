@@ -101,6 +101,9 @@ Thumbs.db
 # Uploads directory
 uploads/
 
+# Resume templates directory
+templates/
+
 # Database
 *.db
 *.sqlite

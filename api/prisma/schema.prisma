@@ -11,22 +11,24 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String?  // Optional for SSO users
-  name          String
-  hasCompletedOnboarding Boolean @default(false)
-  isAdmin       Boolean  @default(false)
-  ssoProviderId String?  // Which SSO provider this user came from
-  ssoSubject    String?  // Subject ID from SSO provider
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  email                  String   @unique
+  password               String? // Optional for SSO users
+  name                   String
+  hasCompletedOnboarding Boolean  @default(false)
+  isAdmin                Boolean  @default(false)
+  ssoProviderId          String? // Which SSO provider this user came from
+  ssoSubject             String? // Subject ID from SSO provider
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Relationships
-  projectsOwned Project[] @relation("ProjectOwner")
-  projectAccess ProjectAccess[]
-  media        Media[]
+  projectsOwned      Project[]           @relation("ProjectOwner")
+  projectAccess      ProjectAccess[]
+  media              Media[]
   resumeChatSessions ResumeChatSession[]
+  resumeTemplates    ResumeTemplate[]
+  resumeHistory      ResumeHistory[]
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -46,13 +48,13 @@ model Project {
   siteConfig SiteConfig?
 
   // Relationships
-  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members ProjectAccess[]
-  content Content[]
-  media   Media[]
-  tags    ContentTag[]    @relation("ProjectTags")
-  meta    ContentMeta[]
-  skills  Skill[]         @relation("ProjectSkills")
+  owner      User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members    ProjectAccess[]
+  content    Content[]
+  media      Media[]
+  tags       ContentTag[]    @relation("ProjectTags")
+  meta       ContentMeta[]
+  skills     Skill[]         @relation("ProjectSkills")
   postOrders PostOrder[]
 
   @@map("projects")
@@ -75,45 +77,45 @@ model ProjectAccess {
 }
 
 model Content {
-  id          String      @id @default(uuid())
-  projectId   String
-  type        ContentType
-  contentType String      @default("BLOG") // PROJECT, BLOG, EXPERIENCE, SKILL
-  title       String
-  slug        String?     @unique
-  excerpt     String?
-  content     String      // Markdown content
-  metadata    Json?       // Additional metadata (deprecated, use ContentMeta instead)
-  order       Int         @default(0)
-  status      ContentStatus @default(DRAFT)
-  revisionOf  String?     // ID of the content this is a revision of
-  revisionNumber Int?     // Revision number (1, 2, 3, etc.)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  revisedAt   DateTime?   // When this revision was created (frozen for revisions)
+  id             String        @id @default(uuid())
+  projectId      String
+  type           ContentType
+  contentType    String        @default("BLOG") // PROJECT, BLOG, EXPERIENCE, SKILL
+  title          String
+  slug           String?       @unique
+  excerpt        String?
+  content        String // Markdown content
+  metadata       Json? // Additional metadata (deprecated, use ContentMeta instead)
+  order          Int           @default(0)
+  status         ContentStatus @default(DRAFT)
+  revisionOf     String? // ID of the content this is a revision of
+  revisionNumber Int? // Revision number (1, 2, 3, etc.)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  revisedAt      DateTime? // When this revision was created (frozen for revisions)
 
   // Project-specific fields
-  startDate       DateTime?
-  endDate         DateTime?
-  isOngoing       Boolean  @default(false)
-  featuredImage   String?
-  projectLinks    Json?    // { github, devpost, other: [] }
-  contributors    String[] // Array of contributor names/IDs
+  startDate     DateTime?
+  endDate       DateTime?
+  isOngoing     Boolean   @default(false)
+  featuredImage String?
+  projectLinks  Json? // { github, devpost, other: [] }
+  contributors  String[] // Array of contributor names/IDs
 
   // Experience-specific fields
   experienceCategory ExperienceCategory?
-  location          String?
-  locationType      LocationType?
+  location           String?
+  locationType       LocationType?
 
   // Relationships
-  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tags          ContentTag[]    @relation("ContentTags")
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tags          ContentTag[]     @relation("ContentTags")
   meta          ContentMeta[]
-  blocks        ContentBlock[]  @relation("ContentBlocks")
+  blocks        ContentBlock[]   @relation("ContentBlocks")
   roles         ExperienceRole[]
-  linkedSkills   Skill[]        @relation("ContentSkills")
-  revisions     Content[]       @relation("ContentRevisions")
-  parentContent Content?        @relation("ContentRevisions", fields: [revisionOf], references: [id], onDelete: Cascade)
+  linkedSkills  Skill[]          @relation("ContentSkills")
+  revisions     Content[]        @relation("ContentRevisions")
+  parentContent Content?         @relation("ContentRevisions", fields: [revisionOf], references: [id], onDelete: Cascade)
   postOrder     PostOrder?
 
   @@index([revisionOf])
@@ -121,41 +123,40 @@ model Content {
   @@map("content")
 }
 
-
 model SiteConfig {
-  id        String   @id @default(uuid())
-  projectId String   @unique
-  siteName  String?
+  id              String  @id @default(uuid())
+  projectId       String  @unique
+  siteName        String?
   siteDescription String?
-  
+
   // Portfolio Profile
-  profileName     String?  // Person's name
-  profileBio      String?  // Brief bio/description
-  profileImage    String?  // Profile picture URL
-  
+  profileName  String? // Person's name
+  profileBio   String? // Brief bio/description
+  profileImage String? // Profile picture URL
+
   // Social Links
-  socialLinks      Json?   // Store social media links
-  
+  socialLinks Json? // Store social media links
+
   // Layout Configuration
   layoutConfig Json // Store layout preferences
-  
+
   // Color Scheme
-  primaryColor   String @default("#3B82F6")
-  secondaryColor String @default("#1E40AF")
-  accentColor    String @default("#F59E0B")
+  primaryColor    String @default("#3B82F6")
+  secondaryColor  String @default("#1E40AF")
+  accentColor     String @default("#F59E0B")
   backgroundColor String @default("#FFFFFF")
   textColor       String @default("#1F2937")
-  
+
   // Page Layouts
-  indexLayout    String @default("grid") // grid, list, masonry
-  archiveLayout  String @default("list") // grid, list, masonry
-  singleLayout   String @default("standard") // standard, wide, minimal
-  
+  indexLayout   String @default("grid") // grid, list, masonry
+  archiveLayout String @default("list") // grid, list, masonry
+  singleLayout  String @default("standard") // standard, wide, minimal
+
   // SEO
   metaTitle       String?
   metaDescription String?
   favicon         String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -211,14 +212,14 @@ enum ContentBlockType {
 
 // Content Link - Links posts together
 model ContentLink {
-  id          String   @id @default(uuid())
-  sourceId    String   // Content or Project ID
-  targetId    String   // Content or Project ID
-  sourceType  String   // "content" or "project"
-  targetType  String   // "content" or "project"
-  linkType    String   // e.g., "related", "parent", "child", "linked"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  sourceId   String // Content or Project ID
+  targetId   String // Content or Project ID
+  sourceType String // "content" or "project"
+  targetType String // "content" or "project"
+  linkType   String // e.g., "related", "parent", "child", "linked"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([sourceId, targetId, linkType])
   @@map("content_links")
@@ -228,12 +229,12 @@ model ContentLink {
 model ContentTag {
   id        String   @id @default(uuid())
   name      String
-  category  String?  // e.g., "Programming Languages", "Frameworks"
+  category  String? // e.g., "Programming Languages", "Frameworks"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relationships
-  content Content[] @relation("ContentTags")
+  content  Content[] @relation("ContentTags")
   projects Project[] @relation("ProjectTags")
 
   @@unique([name, category])
@@ -244,12 +245,12 @@ model ContentTag {
 
 // Content Meta - Replaces metadata with structured data
 model ContentMeta {
-  id        String   @id @default(uuid())
-  key       String
-  value     String   // Can store JSON as string or simple values
+  id          String   @id @default(uuid())
+  key         String
+  value       String // Can store JSON as string or simple values
   contentType String? // Optional: specify the type of value (json, string, number, etc.)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relationships
   contentId String?
@@ -266,13 +267,13 @@ model ContentMeta {
 
 // Content Block - Advanced post types
 model ContentBlock {
-  id        String          @id @default(uuid())
+  id        String           @id @default(uuid())
   type      ContentBlockType
-  content   String          // JSON or text content
-  order     Int             @default(0)
+  content   String // JSON or text content
+  order     Int              @default(0)
   contentId String
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relationships
   parentContent Content @relation("ContentBlocks", fields: [contentId], references: [id], onDelete: Cascade)
@@ -284,14 +285,14 @@ model ContentBlock {
 model Skill {
   id        String   @id @default(uuid())
   name      String
-  category  String?  // e.g., "Programming Languages", "Frameworks", "Tools"
+  category  String? // e.g., "Programming Languages", "Frameworks", "Tools"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relationships
-  projects Project[] @relation("ProjectSkills")
+  projects    Project[]        @relation("ProjectSkills")
   experiences ExperienceRole[] @relation("ExperienceSkills")
-  content Content[] @relation("ContentSkills")
+  content     Content[]        @relation("ContentSkills")
 
   @@unique([name, category])
   @@index([name])
@@ -301,15 +302,15 @@ model Skill {
 
 // Experience Role - Multiple roles within an experience
 model ExperienceRole {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   contentId   String
   title       String
   description String?
   startDate   DateTime
   endDate     DateTime?
-  isCurrent   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isCurrent   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relationships
   content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
@@ -320,39 +321,39 @@ model ExperienceRole {
 
 // SSO Provider - OpenID/OAuth2 providers for SSO authentication
 model SsoProvider {
-  id            String   @id @default(uuid())
-  name          String   // Display name (e.g., "Google", "Microsoft")
-  providerId    String   @unique // Unique identifier (e.g., "google", "microsoft")
-  enabled       Boolean  @default(true)
-  clientId      String   // OAuth2 Client ID
-  clientSecret  String   // OAuth2 Client Secret (encrypted)
-  issuer        String   // OpenID Issuer URL
+  id                    String   @id @default(uuid())
+  name                  String // Display name (e.g., "Google", "Microsoft")
+  providerId            String   @unique // Unique identifier (e.g., "google", "microsoft")
+  enabled               Boolean  @default(true)
+  clientId              String // OAuth2 Client ID
+  clientSecret          String // OAuth2 Client Secret (encrypted)
+  issuer                String // OpenID Issuer URL
   authorizationEndpoint String // Authorization endpoint
-  tokenEndpoint String   // Token endpoint
-  userInfoEndpoint String // UserInfo endpoint
-  scopes        String   @default("openid profile email") // Space-separated scopes
-  icon          String?  // Icon URL or identifier
-  buttonColor   String?  // Button color for UI
-  buttonText    String?  // Custom button text
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  tokenEndpoint         String // Token endpoint
+  userInfoEndpoint      String // UserInfo endpoint
+  scopes                String   @default("openid profile email") // Space-separated scopes
+  icon                  String? // Icon URL or identifier
+  buttonColor           String? // Button color for UI
+  buttonText            String? // Custom button text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@map("sso_providers")
 }
 
 // Media - Media files stored in MinIO, tied to users and projects
 model Media {
-  id          String   @id @default(uuid())
-  userId      String   // User who uploaded the media
-  projectId   String?  // Optional: project the media belongs to
-  filename    String   // Original filename
-  mimeType    String   // MIME type (e.g., image/jpeg, video/mp4)
-  size        Int      // File size in bytes
-  objectName  String   // Object name in MinIO (UUID-based)
-  publicUrl   String   // Public URL to access the media
-  altText     String?  // Optional alt text for accessibility
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  userId     String // User who uploaded the media
+  projectId  String? // Optional: project the media belongs to
+  filename   String // Original filename
+  mimeType   String // MIME type (e.g., image/jpeg, video/mp4)
+  size       Int // File size in bytes
+  objectName String // Object name in MinIO (UUID-based)
+  publicUrl  String // Public URL to access the media
+  altText    String? // Optional alt text for accessibility
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relationships
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -369,7 +370,7 @@ model PostOrder {
   id        String   @id @default(uuid())
   projectId String
   contentId String   @unique // One order entry per content item
-  order     Int      // Display order (0 = first/latest)
+  order     Int // Display order (0 = first/latest)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -385,15 +386,15 @@ model PostOrder {
 
 // Resume Chat Session - Stores chat history for resume assistant
 model ResumeChatSession {
-  id            String   @id @default(uuid())
-  userId        String
-  title         String   // Auto-generated from first message or user-provided
-  chatHistory   Json     // Array of { role: 'user' | 'assistant', content: string }
-  resumeText    String?  // Extracted text from resume file
+  id             String   @id @default(uuid())
+  userId         String
+  title          String // Auto-generated from first message or user-provided
+  chatHistory    Json // Array of { role: 'user' | 'assistant', content: string }
+  resumeText     String? // Extracted text from resume file
   resumeFileName String? // Original resume filename
-  jobPosting    String? // Job posting text
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  jobPosting     String? // Job posting text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relationships
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -401,4 +402,46 @@ model ResumeChatSession {
   @@index([userId])
   @@index([createdAt])
   @@map("resume_chat_sessions")
+}
+
+// Resume Template - Stores user's DOCX templates
+model ResumeTemplate {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String // User-provided template name
+  templatePath String // Path to stored template file
+  fileName     String // Original filename
+  description  String? // Optional description
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ResumeHistory ResumeHistory[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("resume_templates")
+}
+
+// Resume Generation History - Stores generated resume data and settings
+model ResumeHistory {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String // User-provided name for this resume
+  templateId     String? // Reference to ResumeTemplate if used
+  jobDescription String // Job description used
+  resumeData     Json // Generated resume data (summary, projects, etc.)
+  contentItemIds Json? // IDs of content items used
+  resumeSize     String // small, medium, or large
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template ResumeTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("resume_history")
 }

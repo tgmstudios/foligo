@@ -13,7 +13,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
-            <h2 class="text-2xl font-bold text-white mb-2">Resume & Job Application Assistant</h2>
+            <h2 class="text-2xl font-bold text-white mb-2">Job Application Assistant</h2>
             <p class="text-gray-400">Upload your resume and paste a job posting to get personalized advice</p>
           </div>
 
@@ -335,6 +335,33 @@
               <span>Copy Chat</span>
             </button>
           </div>
+
+          <!-- Resume Draft Created Banner -->
+          <div
+            v-if="lastCreatedResume"
+            class="px-4 py-2 border-b border-primary-700 bg-primary-900/40 flex-shrink-0 flex items-center justify-between text-xs text-primary-100"
+          >
+            <div class="flex flex-col pr-3">
+              <span class="font-semibold">Resume draft created</span>
+              <span class="text-primary-100/80">
+                Open it in the Resume Generator to tweak and export, or copy a direct link to this chat.
+              </span>
+            </div>
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <button
+                @click="openCreatedResumeInGenerator"
+                class="px-3 py-1 bg-primary-500 hover:bg-primary-400 text-white rounded-md text-xs font-medium transition-colors"
+              >
+                Open in generator
+              </button>
+              <button
+                @click="copyChatLink"
+                class="px-3 py-1 border border-primary-500/60 text-primary-100 rounded-md text-xs hover:bg-primary-500/10 transition-colors"
+              >
+                Copy chat link
+              </button>
+            </div>
+          </div>
           
           <!-- Job Posting Content (collapsible) -->
           <transition name="slide-down">
@@ -511,11 +538,19 @@
             <span>{{ session.messageCount }} messages</span>
             <span>{{ formatDate(session.updatedAt) }}</span>
           </div>
-          <div v-if="session.resumeFileName" class="mt-2 text-xs text-gray-500 truncate">
-            📄 {{ session.resumeFileName }}
+          <div v-if="session.resumeFileName" class="mt-2 text-xs text-gray-500 truncate flex items-center space-x-1">
+            <svg class="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>{{ session.resumeFileName }}</span>
           </div>
-          <div v-if="session.hasJobPosting" class="mt-1 text-xs text-gray-500">
-            💼 Job posting
+          <div v-if="session.hasJobPosting" class="mt-1 text-xs text-gray-500 flex items-center space-x-1">
+            <svg class="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M6 7V5a3 3 0 013-3h6a3 3 0 013 3v2M6 7h12M6 7v10a2 2 0 002 2h8a2 2 0 002-2V7" />
+            </svg>
+            <span>Job posting</span>
           </div>
         </div>
       </div>
@@ -525,11 +560,14 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch, onUpdated } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { marked } from 'marked'
 import { aiApi } from '@/services/api'
 
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
 
 const messages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
 const currentMessage = ref('')
@@ -552,6 +590,10 @@ const pastSessions = ref<Array<{
 }>>([])
 const loadingSessions = ref(false)
 const currentSessionId = ref<string | null>(null)
+const lastCreatedResume = ref<{
+  resumeId: string
+  generatorRoute: { path: string; query?: Record<string, any> }
+} | null>(null)
 
 const canStartChat = computed(() => {
   return resumeFile.value || jobPosting.value.trim().length > 0
@@ -645,6 +687,7 @@ const startChat = async () => {
 
   isStarting.value = true
   currentSessionId.value = null // Start new session
+  lastCreatedResume.value = null
 
   try {
     const formData = new FormData()
@@ -677,6 +720,14 @@ const startChat = async () => {
       // Save session ID if returned
       if (response.data.sessionId) {
         currentSessionId.value = response.data.sessionId
+        // Update URL to deep-link to this chat
+        router.replace({
+          name: 'resume-chatbot-session',
+          params: { sessionId: response.data.sessionId }
+        })
+      } else {
+        // No session yet, keep base route
+        router.replace({ name: 'resume-chatbot' })
       }
       
       // Setup code block buttons
@@ -713,7 +764,6 @@ const sendMessage = async () => {
   }
 
   messages.value.push(userMessage)
-  const messageToSend = currentMessage.value.trim()
   currentMessage.value = ''
 
   // Reset textarea height
@@ -758,7 +808,28 @@ const sendMessage = async () => {
 
     // Update session ID if returned
     if (response.data.sessionId) {
-      currentSessionId.value = response.data.sessionId
+      const newSessionId = response.data.sessionId as string
+      const changed = currentSessionId.value !== newSessionId
+      currentSessionId.value = newSessionId
+      // If this is a new or different session, sync URL so refresh returns here
+      if (changed || route.params.sessionId !== newSessionId) {
+        router.replace({
+          name: 'resume-chatbot-session',
+          params: { sessionId: newSessionId }
+        })
+      }
+    }
+
+    // If a resume draft was created via toolcall, remember it so we can link to the generator
+    if (response.data.createdResumeId) {
+      lastCreatedResume.value = {
+        resumeId: response.data.createdResumeId,
+        generatorRoute: {
+          path: '/resume-generator',
+          query: { resumeId: response.data.createdResumeId }
+        }
+      }
+      toast.success('Resume draft created. You can open it in the Resume Generator to edit and export.')
     }
 
     // Setup code block buttons for new message
@@ -824,9 +895,7 @@ const handleCtrlEnter = (event: KeyboardEvent) => {
 // Configure marked for markdown rendering
 marked.setOptions({
   breaks: true,
-  gfm: true,
-  headerIds: false,
-  mangle: false
+  gfm: true
 })
 
 // Render markdown content
@@ -939,6 +1008,14 @@ const loadPastSessions = async () => {
 // Resume a past chat
 const resumeChat = async (sessionId: string) => {
   try {
+    // If route doesn't already reflect this session, update it
+    if (route.params.sessionId !== sessionId) {
+      router.push({
+        name: 'resume-chatbot-session',
+        params: { sessionId }
+      })
+    }
+
     const response = await aiApi.get(`/ai/resume-chatbot/sessions/${sessionId}`)
     const session = response.data
 
@@ -985,10 +1062,14 @@ const startNewChat = () => {
   resumeFile.value = null
   jobPosting.value = ''
   showJobPosting.value = false
+  lastCreatedResume.value = null
   
   if (resumeInput.value) {
     resumeInput.value.value = ''
   }
+
+   // Reset URL back to base resume chatbot route
+  router.replace({ name: 'resume-chatbot' })
 }
 
 // Delete a chat session
@@ -1110,21 +1191,36 @@ const copyChat = async () => {
   }
 }
 
-// Handle clicks on markdown content (for copying code blocks)
-const handleMarkdownClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  
-  // If clicking on a code block (pre or code element), allow text selection
-  if (target.tagName === 'PRE' || target.tagName === 'CODE' || target.closest('pre') || target.closest('code')) {
-    // Allow normal text selection - user can select and copy normally
-    return
+// Load sessions on mount
+onMounted(async () => {
+  await loadPastSessions()
+
+  // If we were opened with a specific sessionId in the route, auto-load that chat
+  const sessionIdFromRoute = route.params.sessionId as string | undefined
+  if (sessionIdFromRoute) {
+    await resumeChat(sessionIdFromRoute)
   }
+})
+
+// Navigation helpers for resume drafts / chat links
+const openCreatedResumeInGenerator = () => {
+  if (!lastCreatedResume.value) return
+  router.push(lastCreatedResume.value.generatorRoute)
 }
 
-// Load sessions on mount
-onMounted(() => {
-  loadPastSessions()
-})
+const copyChatLink = async () => {
+  if (!currentSessionId.value) {
+    toast.info('No active chat to link to yet')
+    return
+  }
+  const linkPath = `/resume-chatbot/${currentSessionId.value}`
+  try {
+    await navigator.clipboard.writeText(linkPath)
+    toast.success('Chat link copied to clipboard')
+  } catch {
+    toast.error('Failed to copy chat link')
+  }
+}
 </script>
 
 <style scoped>

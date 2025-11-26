@@ -19,7 +19,7 @@ const api = axios.create({
 // Create axios instance for AI operations with longer timeout
 const aiApi = axios.create({
   baseURL: API_URL,
-  timeout: 120000, // 2 minutes for AI content generation
+  timeout: 180000, // 3 minutes for AI content generation (resume generation can take longer)
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -62,6 +62,9 @@ const handleResponseError = (error) => {
   } else if (error.response?.status === 0) {
     // Network error - API might be down
     toast.error('Unable to connect to server. Please check your connection.')
+  } else if (error.code === 'ECONNABORTED' || error.message?.includes('canceled')) {
+    // Request timeout or canceled
+    toast.error('Request timed out. The operation may be taking longer than expected. Please try again.')
   }
   
   return Promise.reject(error)
