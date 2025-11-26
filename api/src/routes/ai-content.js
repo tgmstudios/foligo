@@ -1602,6 +1602,104 @@ router.post('/resume-chatbot/session',
         context
       );
 
+      // Handle toolcall: create a saved resume draft in resume history (no extra AI)
+      if (result.toolcall === 'create_resume_history' && result.resume) {
+        try {
+          const {
+            name,
+            layoutStyle,
+            resumeSize = 'medium',
+            jobDescription: jdFromTool = '',
+            contentItemIds = [],
+            templateId,
+            resumeData
+          } = result.resume;
+
+          const effectiveJobDescription = jdFromTool || jobPosting || '';
+
+          if (!name || !effectiveJobDescription || !resumeData) {
+            return res.status(400).json({
+              error: 'Invalid Resume Draft',
+              message: 'The AI tool call did not provide all required resume fields (name, jobDescription, resumeData).'
+            });
+          }
+
+          // If a templateId was provided, verify it belongs to the current user
+          let validatedTemplateId = null;
+          if (templateId) {
+            const template = await prisma.resumeTemplate.findFirst({
+              where: {
+                id: templateId,
+                userId
+              }
+            });
+
+            if (!template) {
+              return res.status(404).json({
+                error: 'Template Not Found',
+                message: 'The specified resume template does not exist or does not belong to the current user.'
+              });
+            }
+
+            validatedTemplateId = templateId;
+          }
+
+          // Attach layoutStyle into resumeData so the generator/editor can use it later
+          const resumeDataWithLayout = {
+            ...resumeData,
+            layoutStyle: resumeData.layoutStyle || layoutStyle || null
+          };
+
+          const history = await prisma.resumeHistory.create({
+            data: {
+              userId,
+              name,
+              templateId: validatedTemplateId,
+              jobDescription: effectiveJobDescription,
+              resumeData: resumeDataWithLayout,
+              contentItemIds: contentItemIds.length > 0 ? contentItemIds : null,
+              resumeSize
+            },
+            include: {
+              template: {
+                select: {
+                  id: true,
+                  name: true,
+                  fileName: true
+                }
+              }
+            }
+          });
+
+          // Save updated chat history including the assistant message
+          const finalChatHistory = [
+            ...chatHistory,
+            { role: 'assistant', content: result.message || '' }
+          ];
+          const savedSession = await saveChatSession(
+            userId,
+            sessionId,
+            finalChatHistory,
+            resumeText,
+            req.file?.originalname,
+            jobPosting
+          );
+
+          return res.json({
+            ...result,
+            createdResumeId: history.id,
+            createdResume: history,
+            sessionId: savedSession?.id || sessionId || null
+          });
+        } catch (error) {
+          console.error('Error creating resume history from toolcall:', error);
+          return res.status(500).json({
+            error: 'Resume Draft Creation Failed',
+            message: error.message || 'Unable to create resume draft from chatbot toolcall'
+          });
+        }
+      }
+
       // Handle toolcall (post fetch) - same as regular AI session
       if (result.toolcall === 'fetch_post' && result.postId) {
         try {

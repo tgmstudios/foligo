@@ -29,6 +29,7 @@ const mediaRoutes = require('./routes/media');
 const adminRoutes = require('./routes/admin');
 const adminSsoRoutes = require('./routes/admin-sso');
 const ssoAuthRoutes = require('./routes/sso-auth');
+const resumeRoutes = require('./routes/resume');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -263,6 +264,8 @@ app.use('/api/ai', authenticateToken, aiContentRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 // Media routes - most require auth, but /view endpoint is public
 app.use('/api', mediaRoutes);
+// Resume routes - require authentication
+app.use('/api/resume', authenticateToken, resumeRoutes);
 // Admin routes - require authentication and admin privileges
 app.use('/api/admin', authenticateToken, adminRoutes);
 app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);

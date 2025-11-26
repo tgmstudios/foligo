@@ -18,3 +18,4 @@ npx prisma generate
 
 echo "✅ Database migration completed!"
 
+
