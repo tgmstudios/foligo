@@ -10,6 +10,8 @@ Foligo transforms how professionals create portfolio content through cutting-edg
 
 - **Create portfolio content through AI-powered text conversations**
 - **Generate content using natural voice interactions**
+- **Build tailored resumes with AI-powered job matching**
+- **Get job application assistance with intelligent resume chatbot**
 - **Manage multiple projects with an intuitive dashboard**
 - **Publish sites with custom subdomains**
 - **Access content on iOS devices**
@@ -50,6 +52,8 @@ foligo/
 - **Content Editor**: Rich text editor with Quill for content creation
 - **AI Assistant**: Interactive AI chatbot for content generation
 - **Voice Assistant**: ElevenLabs voice-to-content integration
+- **Resume Generator**: AI-powered resume creation with job matching
+- **Job Assistant**: Conversational chatbot for resume optimization and job applications
 - **User Interface**: Modern, responsive design with Tailwind CSS
 - **Analytics**: Project performance metrics and charts
 - **Authentication**: JWT-based session management
@@ -101,6 +105,18 @@ ElevenLabs voice agent integration for hands-free content creation:
 - **Real-time Processing**: Instant content generation from voice input
 - **Conversational Interface**: AI agent conducts structured interviews
 - **Multi-format Output**: Generate various content types from voice input
+
+### Resume Generation & Job Assistant
+
+AI-powered resume creation and job application support:
+
+- **Resume Generator**: Create tailored resumes from portfolio content
+- **Job Matching**: AI analyzes job descriptions and matches relevant experience
+- **Resume Chatbot**: Interactive assistant for resume optimization and job application guidance
+- **Resume Templates**: Multiple layout styles (single column, two column, compact, academic)
+- **Content Extraction**: Parse existing resumes (PDF, DOC, DOCX) for analysis
+- **Portfolio Integration**: Automatically pull relevant projects and experiences
+- **Resume History**: Save and manage multiple resume drafts
 
 ## 🚦 Quick Start
 
@@ -308,6 +324,8 @@ API_BASE_URL=https://api.foligo.tech
 - `POST /api/ai/chat` - Chat with AI assistant
 - `POST /api/ai/clarifying-questions` - Get AI questions
 - `POST /api/ai/voice-webhook` - ElevenLabs voice webhook
+- `POST /api/ai/resume-chatbot` - Resume chatbot session
+- `POST /api/ai/resume/tailor` - Generate tailored resume content
 
 ### Sites
 - `GET /api/site/:subdomain` - Get site data
@@ -340,6 +358,25 @@ API_BASE_URL=https://api.foligo.tech
 - **BLOG**: Blog posts and articles with markdown support
 - **PROJECT**: Project descriptions and case studies
 - **EXPERIENCE**: Work experience and achievements
+- **SKILL**: Skills and proficiencies with categorization
+
+### Resume Generation Workflows
+
+#### AI Resume Generator
+1. User provides job description or selects target role
+2. AI analyzes job requirements and matches portfolio content
+3. User selects relevant projects and experiences
+4. AI generates tailored resume with appropriate sections
+5. User reviews and edits in visual resume editor
+6. Export resume in multiple formats (PDF, DOCX)
+
+#### Job Application Assistant
+1. User uploads existing resume or starts fresh
+2. User provides job posting or description
+3. AI chatbot analyzes resume and job requirements
+4. Interactive conversation to optimize resume content
+5. AI suggests improvements and highlights gaps
+6. Generate optimized resume draft for review
 
 ## 🔒 Security
 
