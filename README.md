@@ -540,7 +540,8 @@ Built by the Foligo Team
 ---
 
 **Version**: 1.0.0  
-**Last Updated**: 2024
+**Last Updated**: 2026
 
 For more information, visit [Foligo Documentation](https://api.foligo.tech/api-docs)
+
 
