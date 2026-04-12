@@ -32,6 +32,7 @@ foligo/
 ## 📦 Components
 
 ### 1. **API** (`/api`)
+
 **Backend REST API service** - Node.js + Express + PostgreSQL + Prisma + Redis
 
 - **Authentication & Authorization**: JWT-based auth with role-based access control
@@ -46,6 +47,7 @@ foligo/
 **Tech Stack**: Node.js, Express, Prisma ORM, PostgreSQL, Redis, JWT, Multer
 
 ### 2. **Dashboard** (`/dashboard`)
+
 **Admin Dashboard** - Vue.js 3 + TypeScript + Tailwind CSS
 
 - **Project Management**: Create and manage portfolio projects
@@ -61,6 +63,7 @@ foligo/
 **Tech Stack**: Vue.js 3, TypeScript, Vite, Pinia, Vue Router, Tailwind CSS, Quill, Chart.js
 
 ### 3. **Sites** (`/sites`)
+
 **Static Site Generator** - Nuxt.js with SSR
 
 - **Dynamic Subdomain Handling**: Automatically fetches site data by subdomain
@@ -74,6 +77,7 @@ foligo/
 **Tech Stack**: Nuxt.js, Vue.js, Tailwind CSS, SSR
 
 ### 4. **iOS App** (`/app`)
+
 **Mobile Application** - Swift + SwiftUI
 
 - **Native iOS Experience**: Full native SwiftUI implementation
@@ -302,11 +306,13 @@ API_BASE_URL=https://api.foligo.tech
 ## 📚 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `GET /api/auth/me` - Get current user
 
 ### Projects
+
 - `GET /api/projects` - List user projects
 - `POST /api/projects` - Create project
 - `GET /api/projects/:id` - Get project details
@@ -314,12 +320,14 @@ API_BASE_URL=https://api.foligo.tech
 - `DELETE /api/projects/:id` - Delete project
 
 ### Content
+
 - `GET /api/projects/:id/content` - List project content
 - `POST /api/projects/:id/content` - Create content
 - `PUT /api/content/:id` - Update content
 - `DELETE /api/content/:id` - Delete content
 
 ### AI Integration
+
 - `POST /api/ai/generate-content` - Generate content with AI
 - `POST /api/ai/chat` - Chat with AI assistant
 - `POST /api/ai/clarifying-questions` - Get AI questions
@@ -328,6 +336,7 @@ API_BASE_URL=https://api.foligo.tech
 - `POST /api/ai/resume/tailor` - Generate tailored resume content
 
 ### Sites
+
 - `GET /api/site/:subdomain` - Get site data
 - `GET /api/site/:subdomain/content/:slug` - Get content item
 
@@ -336,6 +345,7 @@ API_BASE_URL=https://api.foligo.tech
 ### Content Creation Workflows
 
 #### Text-Based AI Assistant
+
 1. User clicks "Use AI Assistant" in dashboard
 2. AI generates clarifying questions based on content type
 3. User answers questions to provide context
@@ -345,6 +355,7 @@ API_BASE_URL=https://api.foligo.tech
 7. User reviews and publishes
 
 #### Voice-Based AI Assistant
+
 1. User selects "Voice Mode"
 2. ElevenLabs conversation interface opens
 3. AI conducts structured interview (3 questions + final check)
@@ -363,6 +374,7 @@ API_BASE_URL=https://api.foligo.tech
 ### Resume Generation Workflows
 
 #### AI Resume Generator
+
 1. User provides job description or selects target role
 2. AI analyzes job requirements and matches portfolio content
 3. User selects relevant projects and experiences
@@ -371,6 +383,7 @@ API_BASE_URL=https://api.foligo.tech
 6. Export resume in multiple formats (PDF, DOCX)
 
 #### Job Application Assistant
+
 1. User uploads existing resume or starts fresh
 2. User provides job posting or description
 3. AI chatbot analyzes resume and job requirements
@@ -433,6 +446,7 @@ foligo/
 ### Available Scripts
 
 #### API
+
 ```bash
 npm run dev          # Start development server
 npm run build        # Generate Prisma client
@@ -443,6 +457,7 @@ npm run lint         # Lint code
 ```
 
 #### Dashboard
+
 ```bash
 npm run dev          # Start dev server
 npm run build        # Build for production
@@ -452,6 +467,7 @@ npm run format       # Format code
 ```
 
 #### Sites
+
 ```bash
 npm run dev          # Start dev server
 npm run build        # Build for production
@@ -497,6 +513,7 @@ npm run build
 ### DNS Configuration
 
 For sites with custom subdomains, configure DNS:
+
 - Point `*.foligo.tech` to the sites application
 - Point `api.foligo.tech` to the API server
 
@@ -543,5 +560,3 @@ Built by the Foligo Team
 **Last Updated**: 2026
 
 For more information, visit [Foligo Documentation](https://api.foligo.tech/api-docs)
-
-

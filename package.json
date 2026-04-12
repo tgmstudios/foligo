@@ -1,0 +1,14 @@
+{
+  "name": "foligo",
+  "private": true,
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter './api' --filter './dashboard' --filter './sites' run dev",
+    "dev:api": "pnpm --filter './api' run dev",
+    "dev:dashboard": "pnpm --filter './dashboard' run dev",
+    "dev:sites": "pnpm --filter './sites' run dev",
+    "install:all": "pnpm install",
+    "build": "pnpm --parallel --filter './api' --filter './dashboard' --filter './sites' run build",
+    "lint": "pnpm --parallel --filter './api' --filter './dashboard' run lint"
+  }
+}

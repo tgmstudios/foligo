@@ -1,18 +1,49 @@
 {
   "name": "Foligo Dev Environment",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "api",
+  "service": "workspace",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
-  "remoteUser": "root",
+  "remoteUser": "node",
   "overrideCommand": true,
+
   "forwardPorts": [9010, 9011, 9012, 9013, 9014, 9015, 9016],
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind"
-  ],
-  "settings": {
-    "terminal.integrated.defaultProfile.linux": "bash"
+  "portsAttributes": {
+    "9010": { "label": "Dashboard (Vite)" },
+    "9011": { "label": "Sites (Nuxt)" },
+    "9012": { "label": "API (Express)" },
+    "9013": { "label": "Adminer" },
+    "9014": { "label": "Redis" },
+    "9015": { "label": "MinIO S3" },
+    "9016": { "label": "MinIO Console" }
   },
-  "postCreateCommand": "ls /workspace && npm install --prefix /workspace/api"
+
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      },
+      "extensions": [
+        "Vue.volar",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "Prisma.prisma",
+        "ms-azuretools.vscode-docker",
+        "bradlc.vscode-tailwindcss",
+        "mikestead.dotenv"
+      ]
+    }
+  },
+
+  "postCreateCommand": "corepack enable && pnpm install && pnpm --filter './api' exec prisma generate",
+  "postStartCommand": "pnpm --filter './api' exec prisma migrate deploy 2>/dev/null; true"
 }

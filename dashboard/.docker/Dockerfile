@@ -1,44 +1,34 @@
 # Build stage
-FROM node:22-alpine as builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+RUN corepack enable
 
-# Install dependencies
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
 
-# Copy source code
+RUN pnpm install --frozen-lockfile
+
 COPY . .
 
-# Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Install envsubst
 RUN apk add --no-cache bash gettext
 
-# Copy nginx configuration
 COPY .docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy the env.js template
 COPY .docker/env.js.template /usr/share/nginx/html/env.js.template
 
-# Copy entrypoint script and ensure proper line endings
 COPY .docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh && \
-    sed -i 's/\r$//' /docker-entrypoint.sh && \
-    cat /docker-entrypoint.sh
+    sed -i 's/\r$//' /docker-entrypoint.sh
 
-# Expose web port
 EXPOSE 80
 
-# Use custom entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
