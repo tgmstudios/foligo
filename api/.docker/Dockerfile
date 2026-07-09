@@ -4,15 +4,19 @@ WORKDIR /usr/src/app
 
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace config + lockfile from monorepo root
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY api/package.json ./api/package.json
 
-COPY .docker/entrypoint.sh /docker-entrypoint.sh
+COPY api/.docker/entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh && \
     sed -i 's/\r$//' /docker-entrypoint.sh
 
-RUN pnpm install --frozen-lockfile
+# Install deps using workspace-aware pnpm
+RUN pnpm install --frozen-lockfile --filter foligo-api
 
-COPY . .
+COPY api/ ./api/
+WORKDIR /usr/src/app/api
 
 RUN pnpm exec prisma generate
 
