@@ -95,6 +95,16 @@ router.post('/register', [
   body('name').trim().isLength({ min: 1 })
 ], async (req, res) => {
   try {
+    // Gate: public sign-ups can be disabled via env var.
+    // SSO/OAuth account creation (sso-auth.js) is unaffected.
+    const allowSignups = process.env.ALLOW_PUBLIC_SIGNUPS !== 'false';
+    if (!allowSignups) {
+      return res.status(403).json({
+        error: 'Registration Disabled',
+        message: 'Public sign-ups are currently disabled. Please use SSO to create an account.'
+      });
+    }
+
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

@@ -30,6 +30,7 @@ const adminRoutes = require('./routes/admin');
 const adminSsoRoutes = require('./routes/admin-sso');
 const ssoAuthRoutes = require('./routes/sso-auth');
 const resumeRoutes = require('./routes/resume');
+const aiProviderRoutes = require('./routes/ai-providers');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -260,6 +261,8 @@ app.use('/api', authenticateToken, experienceRolesRoutes); // Experience roles r
 app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
 // app.use('/api/ai', authenticateToken, aiRoutes);
 app.use('/api/ai', authenticateToken, aiContentRoutes);
+// AI provider management + GoApply endpoints (model-agnostic)
+app.use('/api/ai', authenticateToken, aiProviderRoutes);
 // Old upload route deprecated - use /api/media instead
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 // Media routes - most require auth, but /view endpoint is public

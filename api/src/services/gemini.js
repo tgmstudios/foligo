@@ -1,8 +1,13 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+/**
+ * Gemini Service — AI-powered content generation for Foligo.
+ * 
+ * NOW MODEL-AGNOSTIC: all AI calls are routed through the unified AIManager.
+ * Defaults to Gemini but respects AI_DEFAULT_PROVIDER / AI_FALLBACK_CHAIN env vars.
+ * The public API is unchanged — routes don't need modification.
+ */
 const { createGeminiLogger } = require('./logger');
 const { fallbackQuestions, utilityPrompts } = require('./prompt-utils');
 const { MODEL_CONFIG, GENERATION_CONFIG, SAFETY_SETTINGS, SYSTEM_INSTRUCTIONS } = require('./gemini-config');
-const { retryWithBackoff } = require('./retry');
 const { GeminiConfigError, GeminiAPIError, GeminiParseError } = require('./errors');
 const {
   AI_CONTENT_CREATE_TOOLS,
@@ -11,48 +16,40 @@ const {
 } = require('./gemini-tools');
 const { buildConversationalSystemPrompt } = require('./conversation-prompts');
 const { buildResumeChatbotSystemPrompt } = require('./resume-chatbot-prompts');
+const ai = require('./ai/manager');  // ← model-agnostic AIManager
 
 class GeminiService {
   constructor() {
     this.logger = createGeminiLogger();
-    this.apiKey = process.env.GEMINI_API_KEY;
-    
-    // Fail fast if API key is missing
-    if (!this.apiKey) {
-      throw new GeminiConfigError('GEMINI_API_KEY not found in environment variables. Please configure the API key.');
-    }
-    
-    this.logger.info('Initializing Gemini service');
-    
+    this.logger.info('Initializing AI service (model-agnostic)', {
+      defaultProvider: process.env.AI_DEFAULT_PROVIDER || 'gemini',
+      fallback: process.env.AI_FALLBACK_CHAIN || 'gemini,opencode',
+    });
+  }
+
+  // ─── Internal helpers (replaces _callModelWithRetry) ──────────────
+
+  /** Simple text generation through AIManager. Keeps retry + logging. */
+  async _aiText(prompt, options = {}) {
+    const { context = 'AI call', ...genOpts } = options;
+    this.logger.debug(`_aiText: ${context}`, { promptLen: prompt.length });
     try {
-      this.genAI = new GoogleGenerativeAI(this.apiKey);
-      
-      // Initialize models with system instructions and safety settings
-      this.flashModel = this.genAI.getGenerativeModel({ 
-        model: MODEL_CONFIG.FLASH,
-        systemInstruction: SYSTEM_INSTRUCTIONS.FLASH,
-        safetySettings: SAFETY_SETTINGS
-      });
-      
-      this.proModel = this.genAI.getGenerativeModel({ 
-        model: MODEL_CONFIG.PRO,
-        systemInstruction: SYSTEM_INSTRUCTIONS.PRO,
-        safetySettings: SAFETY_SETTINGS
-      });
-      
-      this.chatModel = this.genAI.getGenerativeModel({ 
-        model: MODEL_CONFIG.FLASH,
-        systemInstruction: SYSTEM_INSTRUCTIONS.CHAT,
-        safetySettings: SAFETY_SETTINGS
-      });
-      
-      this.logger.info('Gemini service initialized successfully', {
-        flashModel: MODEL_CONFIG.FLASH,
-        proModel: MODEL_CONFIG.PRO
-      });
+      return await ai.generateText(prompt, genOpts);
     } catch (error) {
-      this.logger.error('Failed to initialize Gemini service', { error: error.message });
-      throw new GeminiConfigError('Failed to initialize Gemini models', error);
+      this.logger.error(`${context} failed`, { error: error.message });
+      throw new GeminiAPIError(`${context} failed: ${error.message}`, error);
+    }
+  }
+
+  /** Chat/tools generation through AIManager. */
+  async _aiChat(messages, options = {}) {
+    const { context = 'AI chat', ...genOpts } = options;
+    this.logger.debug(`_aiChat: ${context}`, { msgCount: messages.length });
+    try {
+      return await ai.generateChat(messages, genOpts);
+    } catch (error) {
+      this.logger.error(`${context} failed`, { error: error.message });
+      throw new GeminiAPIError(`${context} failed: ${error.message}`, error);
     }
   }
 
@@ -144,67 +141,28 @@ class GeminiService {
     return hashtags;
   }
 
-  /**
-   * Private: Make API call with retry logic
-   */
-  async _callModelWithRetry(model, contents, generationConfig, context = 'API call') {
-    return retryWithBackoff(
-      async () => {
-        try {
-          const result = await model.generateContent({
-            contents,
-            generationConfig
-          });
-          
-          const response = await result.response;
-          return response.text();
-        } catch (error) {
-          this.logger.error(`${context} failed`, { error: error.message });
-          throw new GeminiAPIError(`${context} failed: ${error.message}`, error);
-        }
-      },
-      { context },
-      this.logger
-    );
-  }
-
-  /**
-   * Generate content using flash model
-   */
+  // ─────────────────────────────────────────────────────────────────
+  // Simple text generation (replaces old _callModelWithRetry calls)
   async generateContent(prompt, options = {}) {
     const {
       temperature = GENERATION_CONFIG.DEFAULT.temperature,
-      topK = GENERATION_CONFIG.DEFAULT.topK,
-      topP = GENERATION_CONFIG.DEFAULT.topP,
       maxOutputTokens = GENERATION_CONFIG.DEFAULT.maxOutputTokens,
       _skipLog = false
     } = options;
 
-    const generationConfig = { temperature, topK, topP, maxOutputTokens };
-
     if (!_skipLog) {
-      this.logger.info('Flash model - Generate content', {
-        promptLength: prompt.length,
-        temperature
-      });
+      this.logger.info('Generate content', { promptLength: prompt.length, temperature });
       this.logger.debug('Prompt preview', { preview: prompt.substring(0, 300) });
     }
 
-    const responseText = await this._callModelWithRetry(
-      this.flashModel,
-      [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig,
-      'Generate content'
-    );
+    const text = await this._aiText(prompt, { temperature, maxTokens: maxOutputTokens, context: 'Generate content' });
     
     if (!_skipLog) {
-      this.logger.info('Flash model - Response received', { 
-        responseLength: responseText.length 
-      });
-      this.logger.debug('Response preview', { preview: responseText.substring(0, 200) });
+      this.logger.info('Response received', { responseLength: text.length });
+      this.logger.debug('Response preview', { preview: text.substring(0, 200) });
     }
     
-    return responseText;
+    return text;
   }
 
   /**
@@ -236,95 +194,47 @@ class GeminiService {
       // Pick tools based on mode (create vs edit)
       const toolsForMode = mode === 'edit' ? AI_CONTENT_EDIT_TOOLS : AI_CONTENT_CREATE_TOOLS;
 
-      // Initialize model with system instruction and tools
-      const sessionModel = this.genAI.getGenerativeModel({
-        model: MODEL_CONFIG.FLASH,
-        systemInstruction: systemPrompt,
-        tools: toolsForMode,
-        safetySettings: SAFETY_SETTINGS
-      });
-      
-      this.logger.debug('Model initialized', {
-        model: MODEL_CONFIG.FLASH,
-        toolsCount: toolsForMode?.[0]?.functionDeclarations?.length || 0
-      });
-      
-      // Start chat session with history
-      let historyFormatted = chatHistory.slice(-10).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
+      // Build message list from history — send all in one call via AIManager
+      const messages = chatHistory.slice(-10).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
       }));
-      
-      // Ensure history starts with 'user' role (Gemini API requirement)
-      // Remove messages from the beginning until we find a 'user' message
-      while (historyFormatted.length > 0 && historyFormatted[0].role !== 'user') {
-        historyFormatted.shift();
-      }
-      
-      this.logger.debug('Chat history formatted', {
+
+      // Ensure starts with 'user' role
+      while (messages.length > 0 && messages[0].role !== 'user') messages.shift();
+
+      this.logger.debug('Chat history prepared', {
         originalLength: chatHistory.length,
-        formattedLength: historyFormatted.length,
-        roles: historyFormatted.map(h => h.role).join(', ')
+        formattedLength: messages.length,
       });
-      
-      const chat = sessionModel.startChat({
-        history: historyFormatted,
-        generationConfig: GENERATION_CONFIG.CHAT
+
+      // Call through AIManager — provider handles model, tools, system prompt
+      const { text: responseText, functionCalls } = await this._aiChat(messages, {
+        tools: toolsForMode,
+        systemInstruction: systemPrompt,
+        temperature: GENERATION_CONFIG.CHAT.temperature,
+        maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens,
+        context: 'AI session',
       });
-      
-      // Get the last user message
-      const lastUserMessage = chatHistory[chatHistory.length - 1]?.content || '';
-      
-      this.logger.info('Sending message to model', { 
-        messageLength: lastUserMessage.length,
-        messagePreview: lastUserMessage.substring(0, 200) 
+
+      this.logger.debug('Response received', {
+        hasText: !!responseText,
+        textLength: responseText?.length || 0,
+        hasFunctionCalls: !!functionCalls,
+        functionCount: functionCalls?.length || 0,
       });
-      
-      // Send message and get response
-      const result = await chat.sendMessage(lastUserMessage);
-      const response = result.response;
-      
-      this.logger.debug('Raw response received', {
-        hasResponse: !!response,
-        hasCandidates: !!response.candidates,
-        candidatesCount: response.candidates?.length || 0
-      });
-      
-      // Log candidates and safety ratings for debugging
-      const candidates = response.candidates;
-      if (candidates && candidates.length > 0) {
-        const candidate = candidates[0];
-        this.logger.info('Response candidate details', {
-          finishReason: candidate.finishReason,
-          hasContent: !!candidate.content,
-          partsCount: candidate.content?.parts?.length || 0,
-          safetyRatings: candidate.safetyRatings?.map(r => ({ 
-            category: r.category, 
-            probability: r.probability,
-            blocked: r.blocked 
-          }))
+
+      // Check for function calls FIRST (structured response)
+      // Now in model-agnostic format: [{name, args}]
+      if (functionCalls && functionCalls.length > 0) {
+        this.logger.info('AI session - function call detected', {
+          functionName: functionCalls[0].name,
+          mode,
+          contentType,
+          argsPreview: JSON.stringify(functionCalls[0].args).substring(0, 200)
         });
-        
-        // Log parts for debugging
-        if (candidate.content?.parts) {
-          candidate.content.parts.forEach((part, idx) => {
-            this.logger.debug(`Response part ${idx}`, {
-              hasText: !!part.text,
-              textLength: part.text?.length || 0,
-              hasFunctionCall: !!part.functionCall,
-              functionName: part.functionCall?.name
-            });
-          });
-        }
-      } else {
-        this.logger.warn('No candidates in response', {
-          hasResponse: !!response,
-          responseKeys: response ? Object.keys(response) : []
-        });
+        return await this._handleFunctionCall({ name: functionCalls[0].name, args: functionCalls[0].args }, contentType);
       }
-      
-      // Check for function calls FIRST (this is the structured response)
-      const functionCalls = response.functionCalls();
       
       this.logger.debug('Checking for function calls', {
         hasFunctionCalls: !!functionCalls,
@@ -341,73 +251,32 @@ class GeminiService {
         return await this._handleFunctionCall(functionCalls[0], contentType);
       }
       
-      // If no function call, it's a regular conversational response (asking a question)
-      this.logger.debug('No function call, attempting to extract text');
-      
-      let responseText;
-      try {
-        responseText = response.text();
-        this.logger.debug('Text extracted successfully', {
-          textLength: responseText.length,
-          textPreview: responseText.substring(0, 100)
-        });
-      } catch (textError) {
-        this.logger.error('Failed to extract text from response', {
-          error: textError.message,
-          errorStack: textError.stack,
-          candidates: candidates?.length || 0,
-          finishReason: candidates?.[0]?.finishReason,
-          hasContent: !!candidates?.[0]?.content,
-          contentParts: candidates?.[0]?.content?.parts?.length || 0
-        });
-        responseText = '';
-      }
-      
-      // Warn if response is empty (this shouldn't happen)
+      // If no function call, it's a regular conversational response
+      this.logger.debug('No function call, returning text response');
+
+      // Warn if response is empty
       if (!responseText || responseText.trim().length === 0) {
-        const finishReason = candidates?.[0]?.finishReason;
-        
-        this.logger.error('CRITICAL: AI returned empty response', {
-          mode,
-          contentType,
+        this.logger.error('AI returned empty response', {
+          mode, contentType,
           chatHistoryLength: chatHistory.length,
-          lastUserMessageLength: lastUserMessage.length,
-          lastUserMessage: lastUserMessage.substring(0, 200),
-          candidatesCount: candidates?.length || 0,
-          finishReason: finishReason,
-          safetyRatings: candidates?.[0]?.safetyRatings,
           systemPromptLength: systemPrompt.length,
-          toolsProvided: !!toolsForMode
         });
-        
-        // Provide specific error messages based on finish reason
-        let errorMessage = "I apologize, but I ran into an issue. Please try again.";
-        
-        if (finishReason === 'MAX_TOKENS') {
-          errorMessage = "I tried to process too much information at once. Could you break that down into smaller chunks or give me fewer details at a time?";
-        } else if (finishReason === 'MALFORMED_FUNCTION_CALL') {
-          errorMessage = "I had trouble understanding your request. Could you rephrase that or provide the information in a different way?";
-        } else if (finishReason === 'SAFETY') {
-          errorMessage = "I couldn't process that request due to content policy. Please try rephrasing your request.";
-        }
-        
-        // Return a fallback message
         return {
-          message: errorMessage,
+          message: "I apologize, but I ran into an issue. Please try again.",
           done: false,
           contentType: contentType
         };
       }
-      
-      this.logger.info('AI session - conversational response', { 
+
+      this.logger.info('AI session - conversational response', {
         responseLength: responseText.length,
         responsePreview: responseText.substring(0, 100)
       });
-      
+
       return {
         message: responseText,
         done: false,
-        contentType: contentType // No change
+        contentType: contentType
       };
       
     } catch (error) {
@@ -549,13 +418,12 @@ class GeminiService {
         promptLength: prompt.length 
       });
       
-      // Generate content using pro model
-      const fullResponse = await this._callModelWithRetry(
-        this.proModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        GENERATION_CONFIG.CREATIVE,
-        'Content generation'
-      );
+      // Generate content via AIManager (model-agnostic)
+      const fullResponse = await this._aiText(prompt, {
+        temperature: GENERATION_CONFIG.CREATIVE.temperature,
+        maxTokens: GENERATION_CONFIG.CREATIVE.maxOutputTokens,
+        context: 'Content generation',
+      });
       
       this.logger.info('Content generated - FULL RESPONSE', { 
         responseLength: fullResponse.length,
@@ -767,12 +635,11 @@ class GeminiService {
       const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
       const prompt = utilityPrompts.extractTitle(contentType, conversationText);
       
-      const result = await this._callModelWithRetry(
-        this.flashModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        GENERATION_CONFIG.SHORT,
-        'Extract title'
-      );
+      const result = await this._aiText(prompt, {
+        temperature: GENERATION_CONFIG.SHORT.temperature,
+        maxTokens: GENERATION_CONFIG.SHORT.maxOutputTokens,
+        context: 'Extract title',
+      });
       
       let title = result.trim();
       
@@ -819,12 +686,11 @@ class GeminiService {
       
       const prompt = utilityPrompts.inferContentType(conversationText, infoText);
       
-      const result = await this._callModelWithRetry(
-        this.flashModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        GENERATION_CONFIG.VERY_PRECISE,
-        'Infer content type'
-      );
+      const result = await this._aiText(prompt, {
+        temperature: GENERATION_CONFIG.VERY_PRECISE.temperature,
+        maxTokens: GENERATION_CONFIG.VERY_PRECISE.maxOutputTokens,
+        context: 'Infer content type',
+      });
       
       const inferredType = result.trim().toUpperCase();
       
@@ -890,12 +756,11 @@ class GeminiService {
       const promptGenerator = utilityPrompts.extractMetadata[contentType] || utilityPrompts.extractMetadata['BLOG'];
       const prompt = promptGenerator(conversationText);
       
-      const result = await this._callModelWithRetry(
-        this.flashModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        GENERATION_CONFIG.PRECISE,
-        'Extract metadata'
-      );
+      const result = await this._aiText(prompt, {
+        temperature: GENERATION_CONFIG.PRECISE.temperature,
+        maxTokens: GENERATION_CONFIG.PRECISE.maxOutputTokens,
+        context: 'Extract metadata',
+      });
       
       // Clean and parse response
       let responseText = result.trim();
@@ -1001,12 +866,11 @@ class GeminiService {
       
       const prompt = utilityPrompts.shouldCreateMultiplePosts(conversationText, primaryType);
       
-      const result = await this._callModelWithRetry(
-        this.flashModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        GENERATION_CONFIG.VERY_PRECISE,
-        'Check multiple posts'
-      );
+      const result = await this._aiText(prompt, {
+        temperature: GENERATION_CONFIG.VERY_PRECISE.temperature,
+        maxTokens: GENERATION_CONFIG.VERY_PRECISE.maxOutputTokens,
+        context: 'Check multiple posts',
+      });
       
       const answer = result.trim().toLowerCase();
       const shouldCreate = answer.includes('yes') || hasIndicators;
@@ -1030,12 +894,11 @@ class GeminiService {
       const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
       const prompt = utilityPrompts.generateMultiplePosts(conversationText);
       
-      const result = await this._callModelWithRetry(
-        this.flashModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        GENERATION_CONFIG.PRECISE,
-        'Generate multiple posts'
-      );
+      const result = await this._aiText(prompt, {
+        temperature: GENERATION_CONFIG.PRECISE.temperature,
+        maxTokens: GENERATION_CONFIG.PRECISE.maxOutputTokens,
+        context: 'Generate multiple posts',
+      });
       
       // Extract JSON array
       let responseText = result.trim();
@@ -1254,139 +1117,17 @@ class GeminiService {
         fullPrompt: prompt
       });
       
-      // Generate links using flash model with direct call to get full response details
-      // Create a model instance without system instruction to save tokens
-      // Use a custom config optimized for link generation
-      // IMPORTANT: Use responseMimeType to force JSON output - this may help with empty responses
-      const linkGenerationConfig = {
-        temperature: 0.2, // Lower for more consistent JSON
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 8192, // Increased - the issue isn't token limit
-        responseMimeType: "application/json" // Force JSON response format
-      };
-      
-      this.logger.info('Link generation config', { 
-        config: linkGenerationConfig,
-        model: MODEL_CONFIG.FLASH
+      // Generate links via AIManager (model-agnostic, JSON output)
+      this.logger.info('Calling AI for post links', {
+        promptLength: prompt.length,
+        postsCount: postsToProcess.length,
       });
-      
-      // Create a model instance without system instruction for this task
-      // This saves tokens and avoids conflicts with the default system instruction
-      const linkModel = this.genAI.getGenerativeModel({
-        model: MODEL_CONFIG.FLASH,
-        safetySettings: SAFETY_SETTINGS
-        // No systemInstruction to save tokens
+
+      const responseText = await this._aiText(prompt, {
+        temperature: 0.2,
+        maxTokens: 8192,
+        context: 'Post links generation',
       });
-      
-      let responseText = '';
-      try {
-        this.logger.info('Calling Gemini API for post links', {
-          promptLength: prompt.length,
-          postsCount: postsToProcess.length,
-          maxOutputTokens: linkGenerationConfig.maxOutputTokens
-        });
-        
-        const result = await linkModel.generateContent({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: linkGenerationConfig
-        });
-        
-        this.logger.info('Gemini API call completed', {
-          hasResult: !!result,
-          hasResponse: !!result?.response
-        });
-        
-        const response = await result.response;
-        
-        // Check for safety blocks or other issues
-        const candidates = response.candidates;
-        if (!candidates || candidates.length === 0) {
-          this.logger.error('Post links generation returned no candidates', {
-            hasResponse: !!response,
-            responseKeys: response ? Object.keys(response) : []
-          });
-          throw new GeminiAPIError('No candidates returned from AI model');
-        }
-        
-        const candidate = candidates[0];
-        this.logger.info('Post links candidate details', {
-          finishReason: candidate.finishReason,
-          hasContent: !!candidate.content,
-          contentParts: candidate.content?.parts || [],
-          partsCount: candidate.content?.parts?.length || 0,
-          safetyRatings: candidate.safetyRatings?.map(r => ({ 
-            category: r.category, 
-            probability: r.probability,
-            blocked: r.blocked 
-          })),
-          // Log the actual content object structure
-          contentKeys: candidate.content ? Object.keys(candidate.content) : [],
-          contentRole: candidate.content?.role
-        });
-        
-        // Check if blocked by safety
-        if (candidate.finishReason === 'SAFETY') {
-          this.logger.error('Post links generation blocked by safety filters', {
-            safetyRatings: candidate.safetyRatings
-          });
-          throw new GeminiAPIError('Post links generation was blocked by safety filters');
-        }
-        
-        // Check for other finish reasons
-        if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-          this.logger.warn('Post links generation finished with unexpected reason', {
-            finishReason: candidate.finishReason
-          });
-          
-          // If MAX_TOKENS, the response might be truncated but still valid
-          if (candidate.finishReason === 'MAX_TOKENS') {
-            this.logger.warn('Response was truncated due to token limit');
-          }
-        }
-        
-        // Extract text from response
-        // Try response.text() first (handles most cases)
-        try {
-          responseText = response.text();
-        } catch (textError) {
-          // If that fails, try accessing parts directly
-          this.logger.warn('response.text() failed, trying to access parts directly', {
-            error: textError.message,
-            hasContent: !!candidate.content,
-            partsCount: candidate.content?.parts?.length || 0
-          });
-          
-          // Try to extract from parts directly
-          if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-            responseText = candidate.content.parts
-              .map(part => part.text || '')
-              .join('');
-          } else if (candidate.finishReason === 'MAX_TOKENS') {
-            // For MAX_TOKENS, the response might be in a different format
-            // Try to get any text that might exist
-            this.logger.warn('MAX_TOKENS with no parts, checking for alternative content format');
-            // Sometimes the text is available even when parts count is 0
-            // This is a fallback - if it still fails, we'll throw an error
-          }
-          
-          if (!responseText || responseText.trim().length === 0) {
-            this.logger.error('Failed to extract text from response', {
-              error: textError.message,
-              finishReason: candidate.finishReason,
-              hasContent: !!candidate.content,
-              partsCount: candidate.content?.parts?.length || 0
-            });
-            throw new GeminiAPIError('Failed to extract text from response', textError);
-          }
-        }
-      } catch (apiError) {
-        this.logger.error('Post links API call failed', {
-          error: apiError.message,
-          stack: apiError.stack
-        });
-        throw apiError;
-      }
       
       this.logger.info('Post links response received', { 
         responseLength: responseText.length,
@@ -1586,12 +1327,11 @@ Return only the X post text (no JSON, no quotes, no markdown, just plain text po
         maxOutputTokens: platform === 'linkedin' ? 2048 : 1024 // Increased tokens to prevent truncation
       };
 
-      const responseText = await this._callModelWithRetry(
-        this.flashModel,
-        [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig,
-        `Generate ${platform} post`
-      );
+      const responseText = await this._aiText(prompt, {
+        temperature: generationConfig.temperature,
+        maxTokens: generationConfig.maxOutputTokens,
+        context: `Generate ${platform} post`,
+      });
 
       // Clean up the response (remove any JSON formatting if present)
       let post = responseText.trim();
@@ -1854,73 +1594,49 @@ Return only the X post text (no JSON, no quotes, no markdown, just plain text po
       // Build system prompt for resume chatbot
       const systemPrompt = buildResumeChatbotSystemPrompt(resumeText, jobPosting, context);
 
-      // Initialize model with larger context window
-      const resumeModel = this.genAI.getGenerativeModel({
-        model: MODEL_CONFIG.FLASH,
-        systemInstruction: systemPrompt,
-        tools: AI_RESUME_CHATBOT_TOOLS, // Resume-specific tools (fetchExistingPost, createStructuredResumeDraft)
-        safetySettings: SAFETY_SETTINGS
-      });
-
-      // Format chat history
-      let historyFormatted = chatHistory.slice(-20).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
+      // Build messages from chat history
+      const messages = chatHistory.slice(-20).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
       }));
 
-      // Ensure history starts with 'user' role
-      while (historyFormatted.length > 0 && historyFormatted[0].role !== 'user') {
-        historyFormatted.shift();
-      }
+      // Ensure starts with 'user'
+      while (messages.length > 0 && messages[0].role !== 'user') messages.shift();
 
-      // Start chat session
-      const chat = resumeModel.startChat({
-        history: historyFormatted,
-        generationConfig: GENERATION_CONFIG.RESUME_CHATBOT
-      });
-
-      // Get the last user message or use initial prompt
-      const lastUserMessage = chatHistory.length > 0
-        ? chatHistory[chatHistory.length - 1]?.content || ''
-        : (resumeText && jobPosting
+      // If no messages, add initial prompt
+      if (messages.length === 0) {
+        const initialMsg = resumeText && jobPosting
           ? 'I have uploaded my resume and a job posting. Can you help me tailor my resume for this position?'
           : resumeText
           ? 'I have uploaded my resume. Can you help me improve it?'
           : jobPosting
           ? 'I have a job posting. Can you help me understand what they\'re looking for?'
-          : 'Hello! I need help with my resume and job applications.');
+          : 'Hello! I need help with my resume and job applications.';
+        messages.push({ role: 'user', content: initialMsg });
+      }
 
-      this.logger.info('Sending message to resume chatbot', {
-        messageLength: lastUserMessage.length
+      this.logger.info('Calling AI for resume chatbot', { msgCount: messages.length });
+
+      // Call through AIManager with tools + system prompt
+      const { text: responseText, functionCalls } = await this._aiChat(messages, {
+        tools: AI_RESUME_CHATBOT_TOOLS,
+        systemInstruction: systemPrompt,
+        temperature: GENERATION_CONFIG.RESUME_CHATBOT.temperature,
+        maxTokens: GENERATION_CONFIG.RESUME_CHATBOT.maxOutputTokens,
+        context: 'Resume chatbot session',
       });
 
-      // Send message and get response
-      const result = await chat.sendMessage(lastUserMessage);
-      const response = result.response;
-
       // Check for function calls (e.g., fetchExistingPost)
-      const functionCalls = response.functionCalls();
       if (functionCalls && functionCalls.length > 0) {
         this.logger.info('Resume chatbot - function call detected', {
           functionName: functionCalls[0].name
         });
-        return await this._handleFunctionCall(functionCalls[0], 'BLOG'); // Use BLOG as default content type
-      }
-
-      // Extract text response
-      let responseText;
-      try {
-        responseText = response.text();
-      } catch (textError) {
-        this.logger.error('Failed to extract text from resume chatbot response', {
-          error: textError.message
-        });
-        responseText = 'I apologize, but I encountered an issue. Please try again.';
+        return await this._handleFunctionCall({ name: functionCalls[0].name, args: functionCalls[0].args }, 'BLOG');
       }
 
       if (!responseText || responseText.trim().length === 0) {
         this.logger.error('Resume chatbot returned empty response');
-        responseText = 'I apologize, but I ran into an issue. Please try again.';
+        return { message: 'I apologize, but I ran into an issue. Please try again.', done: false };
       }
 
       this.logger.info('Resume chatbot - response received', {
