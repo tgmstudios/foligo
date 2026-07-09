@@ -10,7 +10,6 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY dashboard/package.json ./dashboard/package.json
 
 # Install deps using workspace-aware pnpm
-ENV PNPM_IGNORED_BUILDS=""
 RUN pnpm install --no-frozen-lockfile --filter foligo-dashboard
 
 COPY dashboard/ ./dashboard/
