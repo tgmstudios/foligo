@@ -5,11 +5,14 @@ WORKDIR /app
 
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace config + lockfile from monorepo root
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY dashboard/package.json ./dashboard/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter foligo-dashboard
 
-COPY . .
+COPY dashboard/ ./dashboard/
+WORKDIR /app/dashboard
 
 RUN pnpm run build
 
@@ -18,13 +21,13 @@ FROM nginx:alpine
 
 RUN apk add --no-cache bash gettext
 
-COPY .docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY dashboard/.docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dashboard/dist /usr/share/nginx/html
 
-COPY .docker/env.js.template /usr/share/nginx/html/env.js.template
+COPY dashboard/.docker/env.js.template /usr/share/nginx/html/env.js.template
 
-COPY .docker/docker-entrypoint.sh /docker-entrypoint.sh
+COPY dashboard/.docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh && \
     sed -i 's/\r$//' /docker-entrypoint.sh
 

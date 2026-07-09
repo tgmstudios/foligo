@@ -2,6 +2,9 @@
   "name": "foligo",
   "private": true,
   "packageManager": "pnpm@10.11.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma"]
+  },
   "scripts": {
     "dev": "pnpm --parallel --filter './api' --filter './dashboard' --filter './sites' run dev",
     "dev:api": "pnpm --filter './api' run dev",

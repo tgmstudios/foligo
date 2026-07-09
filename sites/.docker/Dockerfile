@@ -5,11 +5,14 @@ WORKDIR /app
 
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace config + lockfile from monorepo root
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY sites/package.json ./sites/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter foligo-sites
 
-COPY . .
+COPY sites/ ./sites/
+WORKDIR /app/sites
 
 RUN pnpm run build
 
@@ -20,11 +23,11 @@ WORKDIR /app
 
 RUN apk add --no-cache gettext su-exec
 
-COPY --from=build /app/.output ./.output
+COPY --from=build /app/sites/.output ./.output
 
-COPY .docker/env.js.template ./.output/public/env.js.template
+COPY sites/.docker/env.js.template ./.output/public/env.js.template
 
-COPY .docker/docker-entrypoint.sh /docker-entrypoint.sh
+COPY sites/.docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh && \
     sed -i 's/\r$//' /docker-entrypoint.sh
 
