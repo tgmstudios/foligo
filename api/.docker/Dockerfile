@@ -6,6 +6,7 @@ RUN corepack enable
 
 # Copy workspace config + lockfile from monorepo root
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json ./
 COPY api/package.json ./api/package.json
 
 COPY api/.docker/entrypoint.sh /docker-entrypoint.sh

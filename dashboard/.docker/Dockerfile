@@ -7,6 +7,7 @@ RUN corepack enable
 
 # Copy workspace config + lockfile from monorepo root
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json ./
 COPY dashboard/package.json ./dashboard/package.json
 
 # Install deps using workspace-aware pnpm
