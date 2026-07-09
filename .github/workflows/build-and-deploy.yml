@@ -164,7 +164,7 @@ jobs:
     - name: Redeploy Rancher
       run: |
         url='https://rancher.tgm.one'
-        cluster=c-jxhnr
+        cluster=c-lx99g
         token=${{ secrets.RANCHER_TOKEN }}
 
         redeploy() {
