@@ -9,6 +9,8 @@ RUN corepack enable
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY dashboard/package.json ./dashboard/package.json
 
+# Install deps using workspace-aware pnpm
+ENV PNPM_IGNORED_BUILDS=""
 RUN pnpm install --frozen-lockfile --filter foligo-dashboard
 
 COPY dashboard/ ./dashboard/

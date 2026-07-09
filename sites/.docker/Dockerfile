@@ -9,6 +9,8 @@ RUN corepack enable
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY sites/package.json ./sites/package.json
 
+# Install deps using workspace-aware pnpm
+ENV PNPM_IGNORED_BUILDS=""
 RUN pnpm install --frozen-lockfile --filter foligo-sites
 
 COPY sites/ ./sites/

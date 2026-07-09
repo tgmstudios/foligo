@@ -13,6 +13,7 @@ RUN chmod +x /docker-entrypoint.sh && \
     sed -i 's/\r$//' /docker-entrypoint.sh
 
 # Install deps using workspace-aware pnpm
+ENV PNPM_IGNORED_BUILDS=""
 RUN pnpm install --frozen-lockfile --filter foligo-api
 
 COPY api/ ./api/
