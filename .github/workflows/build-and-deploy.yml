@@ -167,51 +167,9 @@ jobs:
         cluster=c-lx99g
         token=${{ secrets.RANCHER_TOKEN }}
 
-        # Ensure AI env vars are set on the API deployment
-        ensure_env_vars() {
-            local namespace=$1
-            local app=$2
-            # Get current deployment
-            local body=$(curl -s -u "$token" \
-              -k "$url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app" \
-              -X GET \
-              -H 'Accept: application/json' \
-              -H 'Pragma: no-cache' \
-              -H 'Cache-Control: no-cache')
-
-            # Check if env vars already exist
-            local has_provider=$(echo "$body" | jq -r '.spec.template.spec.containers[0].env[]? | select(.name=="AI_DEFAULT_PROVIDER") | .name')
-            if [ -n "$has_provider" ]; then
-                echo "[$app] AI env vars already configured"
-                return
-            fi
-
-            # Inject timestamp to trigger redeploy + add env vars with jq
-            local ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            body=$(echo "$body" | jq \
-              --arg ts "$ts" \
-              --arg opencode_key "${{ secrets.OPENCODE_API_KEY }}" \
-              '.metadata.annotations["cattle.io/timestamp"] = $ts |
-               .spec.template.spec.containers[0].env += [
-                 {"name": "AI_DEFAULT_PROVIDER", "value": "opencode"},
-                 {"name": "AI_OPENCODE_ENDPOINT", "value": "https://opencode.ai/zen/go/v1"},
-                 {"name": "AI_OPENCODE_API_KEY", "value": $opencode_key},
-                 {"name": "AI_OPENCODE_MODEL", "value": "opencode-go"},
-                 {"name": "AI_FALLBACK_CHAIN", "value": "gemini,opencode"}
-               ]')
-
-            curl -s -u "$token" \
-              -k "$url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app" \
-              -X PUT \
-              -H 'Accept: application/json' \
-              -H 'Content-Type: application/json' \
-              --data-binary "$body" --compressed
-            echo "[$app] AI env vars injected + redeploy triggered"
-        }
-
         redeploy() {
             local app=$1
-            local pod_upgrade_body=$(curl -s -u "$token" \
+            pod_upgrade_body=$(curl -s -u "$token" \
             -k $url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app \
             -X GET \
             -H 'Accept: application/json' \
@@ -230,7 +188,7 @@ jobs:
         echo "${{ steps.extract_branch.outputs.branch }}"
         if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
             namespace=foligo
-            ensure_env_vars "foligo" "api"
+            redeploy "api"
             redeploy "dashboard"
             redeploy "sites"
         elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
