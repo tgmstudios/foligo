@@ -25,16 +25,14 @@
 
         <!-- Draggable Column -->
         <VueDraggable
-          v-model="column.jobs"
+          :model-value="column.jobs"
           :group="{ name: 'goapply-kanban', pull: true, put: true }"
           :animation="200"
           :sort="true"
           ghost-class="opacity-50"
           drag-class="shadow-lg rotate-1"
           class="space-y-2 min-h-[120px] p-2 rounded-lg bg-gray-800/50 border border-dashed border-gray-700 transition-colors"
-          :class="{ 'bg-gray-800/80 border-primary-500': isDragOver }"
           @change="(evt: any) => handleChange(evt, column.status)"
-          @end="handleDragEnd"
         >
           <div
             v-for="job in column.jobs"
@@ -53,6 +51,10 @@
               </svg>
               <span>{{ job.appliedAt ? formatDate(job.appliedAt) : '—' }}</span>
             </div>
+            <div v-if="job.notes" class="mt-2 pt-2 border-t border-gray-700">
+              <p class="text-xs text-gray-500 mb-1">Notes:</p>
+              <div class="text-xs text-gray-400 markdown-body prose-sm" v-html="renderMarkdown(job.notes)"></div>
+            </div>
           </div>
         </VueDraggable>
 
@@ -66,35 +68,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useGoApplyStore, type JobStatus, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
+import { marked } from 'marked'
 
 const store = useGoApplyStore()
-const isDragOver = ref(false)
 
 function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, yyyy')
 }
 
+function renderMarkdown(text: string) {
+  return marked.parse(text, { breaks: true })
+}
+
 async function handleChange(evt: any, newStatus: JobStatus) {
-  // evt contains info about what was moved: { added, removed, moved }
   if (evt.added) {
     const job: GoApplyJob = evt.added.element
     if (job.status !== newStatus) {
+      // Optimistic update
+      job.status = newStatus
       try {
         await store.updateJobStatus(job.id, newStatus)
       } catch {
-        // Revert will happen via store state — the local array is reactive but
-        // we need to force refresh since the PUT failed
+        // Revert on failure
         await store.fetchJobs()
       }
     }
   }
 }
-
-function handleDragEnd() {
-  isDragOver.value = false
-}
 </script>
+
+<style scoped>
+.markdown-body p { margin-bottom: 0.25rem; }
+.markdown-body ul { list-style-type: disc; padding-left: 1rem; }
+.markdown-body ol { list-style-type: decimal; padding-left: 1rem; }
+.markdown-body code { background: rgba(255,255,255,0.1); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8em; }
+.markdown-body pre { background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; overflow-x: auto; }
+.markdown-body a { color: #818cf8; text-decoration: underline; }
+.markdown-body strong { font-weight: 600; }
+.markdown-body blockquote { border-left: 2px solid #4b5563; padding-left: 0.75rem; color: #9ca3af; }
+</style>

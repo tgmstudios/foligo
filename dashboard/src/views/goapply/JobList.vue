@@ -49,6 +49,7 @@
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Position</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Applied</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Notes</th>
             <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -81,6 +82,10 @@
             </td>
             <td class="px-4 py-3 text-sm text-gray-400">
               {{ job.appliedAt ? formatDate(job.appliedAt) : '—' }}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-400">
+              <div v-if="job.notes" class="text-xs text-gray-400 markdown-body max-w-xs truncate" v-html="renderMarkdown(truncate(job.notes, 100))"></div>
+              <span v-else class="text-gray-600">—</span>
             </td>
             <td class="px-4 py-3 text-right">
               <div class="flex items-center justify-end gap-2">
@@ -123,6 +128,7 @@
 import { ref, computed } from 'vue'
 import { useGoApplyStore, JOB_STATUSES, STATUS_LABELS, STATUS_COLORS, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
+import { marked } from 'marked'
 import JobForm from '@/views/goapply/JobForm.vue'
 
 const store = useGoApplyStore()
@@ -156,6 +162,15 @@ function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, yyyy')
 }
 
+function renderMarkdown(text: string) {
+  return marked.parse(text, { breaks: true })
+}
+
+function truncate(text: string, maxLen: number) {
+  if (text.length <= maxLen) return text
+  return text.slice(0, maxLen) + '...'
+}
+
 function openCreateForm() {
   editingJob.value = null
   showForm.value = true
@@ -177,3 +192,14 @@ async function handleDelete(id: string) {
   }
 }
 </script>
+
+<style scoped>
+.markdown-body p { margin-bottom: 0.25rem; }
+.markdown-body ul { list-style-type: disc; padding-left: 1rem; }
+.markdown-body ol { list-style-type: decimal; padding-left: 1rem; }
+.markdown-body code { background: rgba(255,255,255,0.1); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8em; }
+.markdown-body pre { background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; overflow-x: auto; }
+.markdown-body a { color: #818cf8; text-decoration: underline; }
+.markdown-body strong { font-weight: 600; }
+.markdown-body blockquote { border-left: 2px solid #4b5563; padding-left: 0.75rem; color: #9ca3af; }
+</style>

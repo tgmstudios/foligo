@@ -77,13 +77,17 @@
 
         <!-- Notes -->
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Notes</label>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Notes (Markdown supported)</label>
           <textarea
             v-model="form.notes"
-            rows="3"
+            rows="6"
             class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Any notes about this job..."
           ></textarea>
+          <button type="button" @click="showPreview = !showPreview" class="text-xs text-primary-400 mt-1 hover:underline">
+            {{ showPreview ? 'Edit' : 'Preview' }}
+          </button>
+          <div v-if="showPreview && form.notes" class="mt-2 p-3 bg-gray-750 rounded border border-gray-600 text-sm text-gray-300 markdown-body" v-html="renderMarkdown(form.notes)"></div>
         </div>
 
         <!-- Actions -->
@@ -111,6 +115,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useGoApplyStore, JOB_STATUSES, STATUS_LABELS, type GoApplyJob, type JobFormData } from '@/stores/goapply'
+import { marked } from 'marked'
 
 const props = defineProps<{
   job: GoApplyJob | null
@@ -122,6 +127,7 @@ const emit = defineEmits<{
 }>()
 
 const store = useGoApplyStore()
+const showPreview = ref(false)
 
 const form = reactive<JobFormData>({
   company: props.job?.company || '',
@@ -146,4 +152,19 @@ async function handleSubmit() {
     // Error already handled by store
   }
 }
+
+function renderMarkdown(text: string) {
+  return marked.parse(text, { breaks: true })
+}
 </script>
+
+<style scoped>
+.markdown-body p { margin-bottom: 0.25rem; }
+.markdown-body ul { list-style-type: disc; padding-left: 1rem; }
+.markdown-body ol { list-style-type: decimal; padding-left: 1rem; }
+.markdown-body code { background: rgba(255,255,255,0.1); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8em; }
+.markdown-body pre { background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; overflow-x: auto; }
+.markdown-body a { color: #818cf8; text-decoration: underline; }
+.markdown-body strong { font-weight: 600; }
+.markdown-body blockquote { border-left: 2px solid #4b5563; padding-left: 0.75rem; color: #9ca3af; }
+</style>
