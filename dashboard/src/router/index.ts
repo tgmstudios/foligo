@@ -218,13 +218,14 @@ router.beforeEach(async (to, from, next) => {
   }
   
   // Check if route requires authentication
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  if (to.meta.requiresAuth && !authStore.token) {
+    // No token at all — redirect to login
     next('/login')
     return
   }
   
   // Check if route requires guest (not authenticated)
-  if (to.meta.requiresGuest && authStore.isAuthenticated) {
+  if (to.meta.requiresGuest && authStore.token) {
     next('/')
     return
   }
