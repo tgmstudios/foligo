@@ -175,7 +175,7 @@ jobs:
             local http_code
             http_code=$(curl -s -o /dev/stderr -w "%{http_code}" -u "$token" -k \
               -X PATCH \
-              -H "Content-Type: application/merge-patch+json" \
+              -H "Content-Type: application/strategic-merge-patch+json" \
               -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$ts\"}},\"spec\":{\"containers\":[{\"name\":\"$app\",\"image\":\"$image\",\"imagePullPolicy\":\"Always\"}]}}}}" \
               "$api_path")
             if [ "$http_code" = "200" ]; then
