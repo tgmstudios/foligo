@@ -1,0 +1,179 @@
+<template>
+  <div>
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[200px] max-w-xs">
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search jobs..."
+          class="w-full pl-9 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <svg class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+
+      <!-- Status Filter -->
+      <select
+        v-model="statusFilter"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="">All Statuses</option>
+        <option v-for="s in JOB_STATUSES" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
+      </select>
+
+      <!-- Add Button -->
+      <button
+        @click="openCreateForm"
+        class="ml-auto px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+      >
+        + Add Job
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div v-if="filteredJobs.length === 0 && !store.isLoading" class="text-center py-12 text-gray-400">
+      <p>No jobs found.</p>
+      <button @click="openCreateForm" class="mt-2 text-primary-400 hover:underline text-sm">
+        Add your first job
+      </button>
+    </div>
+
+    <div v-else class="card overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-700">
+        <thead class="bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Company</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Position</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Applied</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-700">
+          <tr
+            v-for="job in filteredJobs"
+            :key="job.id"
+            class="hover:bg-gray-750 transition-colors"
+          >
+            <td class="px-4 py-3 text-sm text-white font-medium">{{ job.company }}</td>
+            <td class="px-4 py-3 text-sm text-gray-300">
+              {{ job.position }}
+              <a
+                v-if="job.url"
+                :href="job.url"
+                target="_blank"
+                class="ml-1 text-primary-400 hover:underline"
+                title="Open job posting"
+              >
+                &#8599;
+              </a>
+            </td>
+            <td class="px-4 py-3">
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="STATUS_COLORS[job.status]"
+              >
+                {{ STATUS_LABELS[job.status] }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-400">
+              {{ job.appliedAt ? formatDate(job.appliedAt) : '—' }}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  @click="openEditForm(job)"
+                  class="p-1 text-gray-400 hover:text-white transition-colors"
+                  title="Edit"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  @click="handleDelete(job.id)"
+                  class="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                  title="Delete"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Job Form Modal -->
+    <JobForm
+      v-if="showForm"
+      :job="editingJob"
+      @close="showForm = false"
+      @saved="onSaved"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useGoApplyStore, JOB_STATUSES, STATUS_LABELS, STATUS_COLORS, type GoApplyJob } from '@/stores/goapply'
+import { format } from 'date-fns'
+import JobForm from '@/views/goapply/JobForm.vue'
+
+const store = useGoApplyStore()
+
+const search = ref('')
+const statusFilter = ref('')
+const showForm = ref(false)
+const editingJob = ref<GoApplyJob | null>(null)
+
+const filteredJobs = computed(() => {
+  let jobs = store.jobs
+
+  if (search.value) {
+    const q = search.value.toLowerCase()
+    jobs = jobs.filter(
+      (j) =>
+        j.company.toLowerCase().includes(q) ||
+        j.position.toLowerCase().includes(q) ||
+        (j.notes && j.notes.toLowerCase().includes(q))
+    )
+  }
+
+  if (statusFilter.value) {
+    jobs = jobs.filter((j) => j.status === statusFilter.value)
+  }
+
+  return jobs
+})
+
+function formatDate(dateString: string) {
+  return format(new Date(dateString), 'MMM d, yyyy')
+}
+
+function openCreateForm() {
+  editingJob.value = null
+  showForm.value = true
+}
+
+function openEditForm(job: GoApplyJob) {
+  editingJob.value = job
+  showForm.value = true
+}
+
+function onSaved() {
+  showForm.value = false
+  editingJob.value = null
+}
+
+async function handleDelete(id: string) {
+  if (confirm('Are you sure you want to delete this job?')) {
+    await store.deleteJob(id)
+  }
+}
+</script>

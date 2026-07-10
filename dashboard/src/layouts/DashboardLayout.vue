@@ -133,6 +133,10 @@
               <svg v-else-if="item.icon === 'AdminIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
+              <!-- GoApply Icon -->
+              <svg v-else-if="item.icon === 'GoApplyIcon'" class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
               <!-- Default Icon (fallback) -->
               <svg v-else class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
@@ -451,6 +455,12 @@ const navigation = computed(() => {
       icon: 'AnalyticsIcon'
     },
     {
+      name: 'GoApply',
+      href: '/goapply',
+      routeName: 'goapply-kanban',
+      icon: 'GoApplyIcon'
+    },
+    {
       name: 'Media Library',
       href: '/media',
       routeName: 'media-library',
@@ -499,7 +509,12 @@ const pageTitle = computed(() => {
     'admin-sso': 'SSO Providers',
     'resume-chatbot': 'Job Application Assistant',
     'resume-chatbot-session': 'Job Application Assistant',
-    'resume-generator': 'AI Resume Generator'
+    'resume-generator': 'AI Resume Generator',
+    'goapply-kanban': 'GoApply · Kanban',
+    'goapply-jobs': 'GoApply · Job List',
+    'goapply-answers': 'GoApply · Saved Answers',
+    'goapply-letters': 'GoApply · Cover Letters',
+    'goapply-profile': 'GoApply · Profile',
   }
   return routeNames[route.name as string] || 'Dashboard'
 })

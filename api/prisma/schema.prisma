@@ -29,6 +29,11 @@ model User {
   resumeChatSessions ResumeChatSession[]
   resumeTemplates    ResumeTemplate[]
   resumeHistory      ResumeHistory[]
+  jobApplications    JobApplication[]
+  userProfile        UserProfile?
+  savedAnswers       SavedAnswer[]
+  coverLetters       CoverLetter[]
+  generatedEmails    GeneratedEmail[]
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -444,4 +449,81 @@ model ResumeHistory {
   @@index([userId])
   @@index([createdAt])
   @@map("resume_history")
+}
+
+// GoApply - Job Application Tracker
+
+model JobApplication {
+  id        String    @id @default(uuid())
+  userId    String
+  company   String
+  position  String
+  url       String?
+  status    String    @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
+  notes     String?
+  appliedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("job_applications")
+}
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  fullName  String?
+  email     String?
+  phone     String?
+  location  String?
+  linkedin  String?
+  github    String?
+  portfolio String?
+  resumeUrl String?
+  skills    String? // JSON array stored as string
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model SavedAnswer {
+  id        String   @id @default(uuid())
+  userId    String
+  question  String
+  answer    String
+  category  String? // e.g., "experience", "education", "why-company"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("saved_answers")
+}
+
+model CoverLetter {
+  id          String   @id @default(uuid())
+  userId      String
+  jobId       String?
+  title       String
+  content     String
+  generatedBy String? // provider that generated it
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cover_letters")
+}
+
+model GeneratedEmail {
+  id        String   @id @default(uuid())
+  userId    String
+  to        String
+  subject   String
+  body      String
+  type      String   @default("follow-up") // follow-up, thank-you, introduction
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("generated_emails")
 }

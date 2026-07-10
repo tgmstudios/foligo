@@ -31,6 +31,7 @@ const adminSsoRoutes = require('./routes/admin-sso');
 const ssoAuthRoutes = require('./routes/sso-auth');
 const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
+const goapplyRoutes = require('./routes/goapply');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -269,6 +270,8 @@ app.use('/api/ai', authenticateToken, aiProviderRoutes);
 app.use('/api', mediaRoutes);
 // Resume routes - require authentication
 app.use('/api/resume', authenticateToken, resumeRoutes);
+// GoApply routes - require authentication
+app.use('/api/goapply', authenticateToken, goapplyRoutes);
 // Admin routes - require authentication and admin privileges
 app.use('/api/admin', authenticateToken, adminRoutes);
 app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);

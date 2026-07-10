@@ -20,6 +20,7 @@ import AdminUsersView from '@/views/admin/AdminUsersView.vue'
 import AdminProjectsView from '@/views/admin/AdminProjectsView.vue'
 import AdminContentView from '@/views/admin/AdminContentView.vue'
 import AdminSsoView from '@/views/admin/AdminSsoView.vue'
+import goapplyRoutes from '@/router/goapply'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -46,6 +47,12 @@ const router = createRouter({
       path: '/auth/callback',
       name: 'auth-callback',
       component: () => import('@/views/auth/AuthCallbackView.vue')
+    },
+    {
+      path: '/auth/link-device',
+      name: 'auth-link-device',
+      component: () => import('@/views/auth/LinkDevice.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/',
@@ -185,7 +192,8 @@ const router = createRouter({
           path: 'resume-generator',
           name: 'resume-generator',
           component: () => import('@/views/resume/ResumeGeneratorView.vue')
-        }
+        },
+        goapplyRoutes,
       ]
     },
     {

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -358,6 +359,141 @@ router.get('/me', async (req, res) => {
     res.status(500).json({
       error: 'Profile Retrieval Failed',
       message: 'Unable to retrieve user profile'
+    });
+  }
+});
+
+// =============================================================================
+// DEVICE CODE AUTH
+// =============================================================================
+
+/**
+ * POST /api/auth/device-code
+ * (authenticated) Generates a 6-character device code for cross-device login.
+ * Stores userId in Redis with 5min TTL.
+ */
+router.post('/device-code', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Generate a 6-character alphanumeric code
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    const key = `device_code:${code}`;
+
+    // Store userId in Redis with 5min TTL
+    await cache.set(key, userId, 300);
+
+    res.json({
+      deviceCode: code,
+      expiresIn: 300
+    });
+  } catch (error) {
+    console.error('Device code generation error:', error);
+    res.status(500).json({
+      error: 'Device Code Generation Failed',
+      message: 'Unable to generate device code'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/device-code/exchange
+ * (public, no auth) Exchanges a device code for a JWT token.
+ * Takes { deviceCode }, looks up userId in Redis, returns JWT.
+ * Deletes the code after successful exchange.
+ */
+router.post('/device-code/exchange', async (req, res) => {
+  try {
+    const { deviceCode } = req.body;
+
+    if (!deviceCode) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Device code is required'
+      });
+    }
+
+    const key = `device_code:${deviceCode}`;
+    const userId = await cache.get(key);
+
+    if (!userId) {
+      return res.status(401).json({
+        error: 'Invalid or Expired Code',
+        message: 'The device code is invalid or has expired'
+      });
+    }
+
+    // Delete the code (one-time use)
+    await cache.del(key);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    // Get user info
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        hasCompletedOnboarding: true,
+        isAdmin: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    res.json({
+      user,
+      token
+    });
+  } catch (error) {
+    console.error('Device code exchange error:', error);
+    res.status(500).json({
+      error: 'Device Code Exchange Failed',
+      message: 'Unable to exchange device code'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/device-code/external
+ * (authenticated) Accepts a device code from the foligo web page
+ * and stores it in Redis for the extension to exchange.
+ * Used by the foligo.tech/auth/link-device page content script.
+ */
+router.post('/device-code/external', authenticateToken, async (req, res) => {
+  try {
+    const { deviceCode } = req.body;
+
+    if (!deviceCode || deviceCode.length !== 6) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'A 6-character device code is required'
+      });
+    }
+
+    const userId = req.user.id;
+    const key = `device_code:${deviceCode}`;
+
+    // Store userId in Redis with 5min TTL
+    await cache.set(key, userId, 300);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('External device code error:', error);
+    res.status(500).json({
+      error: 'Device Code Registration Failed',
+      message: 'Unable to register device code'
     });
   }
 });
