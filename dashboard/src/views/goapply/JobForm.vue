@@ -52,6 +52,17 @@
           />
         </div>
 
+        <!-- Referred By -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Referred By</label>
+          <input
+            v-model="form.referredBy"
+            type="text"
+            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="e.g., John Smith"
+          />
+        </div>
+
         <!-- Status -->
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Status</label>
@@ -135,6 +146,8 @@ const form = reactive<JobFormData>({
   url: props.job?.url || '',
   notes: props.job?.notes || '',
   status: props.job?.status || 'saved',
+  referredBy: props.job?.referredBy || '',
+  sortOrder: props.job?.sortOrder ?? 0,
   appliedAt: props.job?.appliedAt
     ? new Date(props.job.appliedAt).toISOString().split('T')[0]
     : '',

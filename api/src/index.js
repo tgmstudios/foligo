@@ -32,6 +32,7 @@ const ssoAuthRoutes = require('./routes/sso-auth');
 const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
 const goapplyRoutes = require('./routes/goapply');
+const tokenRoutes = require('./routes/tokens');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -149,6 +150,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/sso', ssoAuthRoutes); // SSO authentication routes (public)
+app.use('/api/auth/tokens', tokenRoutes); // API token management (authenticated)
 app.use('/api/site', publicCors, siteRoutes); // Public site routes (no auth required)
 app.use('/api/ai/voice-webhook', publicCors, voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
 app.use('/api', publicCors, publicContentRoutes); // Public content GET endpoint (no auth required)

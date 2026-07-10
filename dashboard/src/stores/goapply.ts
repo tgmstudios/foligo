@@ -24,6 +24,8 @@ export interface GoApplyJob {
   url: string
   notes: string
   status: JobStatus
+  referredBy: string | null
+  sortOrder: number
   appliedAt: string | null
   createdAt: string
   updatedAt: string
@@ -66,6 +68,8 @@ export interface JobFormData {
   url: string
   notes: string
   status: JobStatus
+  referredBy: string
+  sortOrder: number
   appliedAt: string | null
 }
 
@@ -233,6 +237,16 @@ export const useGoApplyStore = defineStore('goapply', () => {
     return updateJob(id, { status } as any)
   }
 
+  async function reorderJobs(items: { id: string; sortOrder: number; status?: JobStatus }[]) {
+    try {
+      const { data } = await api.put('/goapply/jobs/reorder', { items })
+      return data
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to reorder jobs')
+      throw err
+    }
+  }
+
   async function deleteJob(id: string) {
     try {
       await api.delete(`/goapply/jobs/${id}`)
@@ -382,6 +396,7 @@ export const useGoApplyStore = defineStore('goapply', () => {
     createJob,
     updateJob,
     updateJobStatus,
+    reorderJobs,
     deleteJob,
 
     // answers

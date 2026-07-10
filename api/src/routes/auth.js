@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
@@ -309,16 +310,55 @@ router.get('/me', async (req, res) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let userId = null;
+
+    // Try JWT first
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (jwtError) {
+      // JWT failed — try API token
+      if (jwtError.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'Token Expired',
+          message: 'Please login again'
+        });
+      }
+      
+      if (jwtError.name === 'JsonWebTokenError') {
+        // Try API token lookup
+        const hash = crypto.createHash('sha256').update(token).digest('hex');
+        const apiToken = await prisma.apiToken.findFirst({
+          where: { hash },
+          select: { userId: true }
+        });
+        
+        if (apiToken) {
+          userId = apiToken.userId;
+          // Update lastUsedAt asynchronously (don't block response)
+          prisma.apiToken.update({
+            where: { id: apiToken.id },
+            data: { lastUsedAt: new Date() }
+          }).catch(() => {});
+        } else {
+          return res.status(401).json({
+            error: 'Invalid Token',
+            message: 'Please provide a valid token'
+          });
+        }
+      } else {
+        throw jwtError;
+      }
+    }
     
     // Try to get user from cache first
-    const cacheKey = `user:${decoded.userId}`;
+    const cacheKey = `user:${userId}`;
     let user = await cache.get(cacheKey);
 
     if (!user) {
       // Get user from database
       user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
+        where: { id: userId },
         select: {
           id: true,
           email: true,
@@ -343,18 +383,6 @@ router.get('/me', async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        error: 'Token Expired',
-        message: 'Please login again'
-      });
-    } else if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        error: 'Invalid Token',
-        message: 'Please provide a valid token'
-      });
-    }
-
     console.error('Get user profile error:', error);
     res.status(500).json({
       error: 'Profile Retrieval Failed',

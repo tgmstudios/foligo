@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { prisma } = require('../services/database');
 
 const authenticateToken = async (req, res, next) => {
@@ -10,6 +11,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
+    // First try JWT verification
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Get user from database
@@ -30,15 +32,50 @@ const authenticateToken = async (req, res, next) => {
     }
 
     req.user = user;
-    next();
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
-    } else if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
+    return next();
+  } catch (jwtError) {
+    // JWT verification failed — try API token authentication
+    if (jwtError.name === 'TokenExpiredError' || jwtError.name === 'JsonWebTokenError') {
+      try {
+        // Hash the provided token and look it up
+        const hash = crypto.createHash('sha256').update(token).digest('hex');
+        
+        const apiToken = await prisma.apiToken.findFirst({
+          where: { hash },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                isAdmin: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+        });
+
+        if (apiToken) {
+          // Update lastUsedAt
+          await prisma.apiToken.update({
+            where: { id: apiToken.id },
+            data: { lastUsedAt: new Date() },
+          });
+
+          req.user = apiToken.user;
+          return next();
+        }
+
+        // Neither JWT nor API token matched
+        return res.status(401).json({ error: 'Invalid token' });
+      } catch (apiTokenError) {
+        console.error('API token auth error:', apiTokenError);
+        return res.status(500).json({ error: 'Authentication error' });
+      }
     }
-    
-    console.error('Auth middleware error:', error);
+
+    console.error('Auth middleware error:', jwtError);
     return res.status(500).json({ error: 'Authentication error' });
   }
 };

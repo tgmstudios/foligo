@@ -1,50 +1,50 @@
 <template>
-  <div class="page">
-    <div class="card">
-      <div class="logo">Foligo</div>
+  <div class="min-h-screen flex items-center justify-center bg-gray-900 font-sans">
+    <div class="card p-10 max-w-md w-full text-center">
+      <div class="text-2xl font-extrabold text-white mb-6 tracking-tight">Foligo</div>
 
       <!-- No code -->
-      <div v-if="!code" class="state">
-        <h2>No Device Code</h2>
-        <p>Open this page from your GoApply extension to link your device.</p>
+      <div v-if="!code" class="flex flex-col items-center gap-3">
+        <h2 class="text-lg font-bold text-white m-0">No Device Code</h2>
+        <p class="text-sm text-gray-400 m-0 leading-relaxed">Open this page from your GoApply extension to link your device.</p>
       </div>
 
       <!-- Not logged in -->
-      <div v-else-if="!isLoggedIn" class="state">
-        <h2>Sign In Required</h2>
-        <p>You need to be signed into Foligo to link a device.</p>
-        <a :href="loginUrl" class="btn">Sign In to Foligo</a>
+      <div v-else-if="!isLoggedIn" class="flex flex-col items-center gap-3">
+        <h2 class="text-lg font-bold text-white m-0">Sign In Required</h2>
+        <p class="text-sm text-gray-400 m-0 leading-relaxed">You need to be signed into Foligo to link a device.</p>
+        <a :href="loginUrl" class="inline-flex items-center justify-center px-4 py-2 mt-2 text-sm font-semibold text-white bg-[#635BFF] hover:bg-[#5851DB] rounded-lg no-underline transition-colors">Sign In to Foligo</a>
       </div>
 
       <!-- Linking -->
-      <div v-else-if="status === 'linking'" class="state">
-        <div class="spinner" />
-        <h2>Linking Device</h2>
-        <p>Connecting your GoApply extension to Foligo...</p>
-        <code class="code-block">{{ code }}</code>
+      <div v-else-if="status === 'linking'" class="flex flex-col items-center gap-3">
+        <div class="w-8 h-8 border-3 border-gray-600 border-t-[#635BFF] rounded-full animate-spin" />
+        <h2 class="text-lg font-bold text-white m-0">Linking Device</h2>
+        <p class="text-sm text-gray-400 m-0 leading-relaxed">Connecting your GoApply extension to Foligo...</p>
+        <code class="text-2xl font-extrabold tracking-[6px] text-[#635BFF] bg-gray-700 rounded-lg px-4 py-2 font-mono">{{ code }}</code>
       </div>
 
       <!-- Success -->
-      <div v-else-if="status === 'success'" class="state">
-        <div class="icon-ring icon-success">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-else-if="status === 'success'" class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-green-900/40 flex items-center justify-center">
+          <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2>Connected!</h2>
-        <p>Your GoApply extension is now linked to your Foligo account. You can close this tab.</p>
+        <h2 class="text-lg font-bold text-white m-0">Connected!</h2>
+        <p class="text-sm text-gray-400 m-0 leading-relaxed">Your GoApply extension is now linked to your Foligo account. You can close this tab.</p>
       </div>
 
       <!-- Error -->
-      <div v-else-if="status === 'error'" class="state">
-        <div class="icon-ring icon-error">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-else-if="status === 'error'" class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-red-900/40 flex items-center justify-center">
+          <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <h2>Connection Failed</h2>
-        <p>{{ errorMessage }}</p>
-        <button @click="retry" class="btn">Try Again</button>
+        <h2 class="text-lg font-bold text-white m-0">Connection Failed</h2>
+        <p class="text-sm text-gray-400 m-0 leading-relaxed">{{ errorMessage }}</p>
+        <button @click="retry" class="inline-flex items-center justify-center px-4 py-2 mt-2 text-sm font-semibold text-white bg-[#635BFF] hover:bg-[#5851DB] rounded-lg border-0 cursor-pointer transition-colors">Try Again</button>
       </div>
     </div>
   </div>
@@ -134,95 +134,8 @@ onUnmounted(() => window.removeEventListener('message', handleContentScriptMessa
 </script>
 
 <style scoped>
-.page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #F6F9FC;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* Spinner border-width override — Tailwind's border-3 isn't standard, so use custom */
+.border-3 {
+  border-width: 3px;
 }
-.card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 2px 16px rgba(10, 37, 64, 0.08);
-  padding: 40px 32px;
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
-}
-.logo {
-  font-size: 24px;
-  font-weight: 800;
-  color: #0A2540;
-  margin-bottom: 24px;
-  letter-spacing: -0.5px;
-}
-.state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-h2 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0A2540;
-  margin: 0;
-}
-p {
-  font-size: 13px;
-  color: #6B7C93;
-  margin: 0;
-  line-height: 1.5;
-}
-.code-block {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 6px;
-  color: #635BFF;
-  background: #F0F4FF;
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-}
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #E0E6ED;
-  border-top-color: #635BFF;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.icon-ring {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.icon-success { background: #E6F7EE; }
-.icon-error { background: #FDE8EC; }
-.icon {
-  width: 24px;
-  height: 24px;
-}
-.icon-success .icon { color: #00A86B; }
-.icon-error .icon { color: #DF1B41; }
-.btn {
-  margin-top: 8px;
-  padding: 8px 20px;
-  background: #635BFF;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-block;
-}
-.btn:hover { background: #5851DB; }
 </style>

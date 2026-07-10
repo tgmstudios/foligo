@@ -34,6 +34,7 @@ model User {
   savedAnswers       SavedAnswer[]
   coverLetters       CoverLetter[]
   generatedEmails    GeneratedEmail[]
+  apiTokens          ApiToken[]
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -454,17 +455,19 @@ model ResumeHistory {
 // GoApply - Job Application Tracker
 
 model JobApplication {
-  id        String    @id @default(uuid())
-  userId    String
-  company   String
-  position  String
-  url       String?
-  status    String    @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
-  notes     String?
-  appliedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid())
+  userId     String
+  company    String
+  position   String
+  url        String?
+  status     String    @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
+  notes      String?
+  referredBy String?
+  sortOrder  Int       @default(0)
+  appliedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("job_applications")
 }
@@ -526,4 +529,22 @@ model GeneratedEmail {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("generated_emails")
+}
+
+// API Token - Long-lived tokens for programmatic access (e.g., Chrome extension)
+model ApiToken {
+  id         String    @id @default(uuid())
+  userId     String
+  name       String    // User-provided label for this token
+  prefix     String    // First 8 chars stored in plaintext for identification
+  hash       String    // SHA-256 hash of the full token
+  lastUsedAt DateTime? // When this token was last used for authentication
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([hash])
+  @@map("api_tokens")
 }

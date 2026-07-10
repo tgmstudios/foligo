@@ -99,7 +99,7 @@ router.get('/jobs', async (req, res) => {
 
     const jobs = await prisma.jobApplication.findMany({
       where,
-      orderBy: { updatedAt: 'desc' }
+      orderBy: [{ sortOrder: 'asc' }, { updatedAt: 'desc' }]
     });
 
     res.json(jobs);
@@ -116,7 +116,7 @@ router.get('/jobs', async (req, res) => {
 router.post('/jobs', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { company, position, url, status, notes, appliedAt } = req.body;
+    const { company, position, url, status, notes, appliedAt, referredBy, sortOrder } = req.body;
 
     if (!company || !position) {
       return res.status(400).json({
@@ -133,6 +133,8 @@ router.post('/jobs', async (req, res) => {
         url: url || null,
         status: status || 'saved',
         notes: notes || null,
+        referredBy: referredBy || null,
+        sortOrder: sortOrder ?? 0,
         appliedAt: appliedAt ? new Date(appliedAt) : null
       }
     });
@@ -152,7 +154,7 @@ router.put('/jobs/:id', async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { company, position, url, status, notes, appliedAt } = req.body;
+    const { company, position, url, status, notes, appliedAt, referredBy, sortOrder } = req.body;
 
     // Verify ownership
     const existing = await prisma.jobApplication.findFirst({
@@ -173,6 +175,8 @@ router.put('/jobs/:id', async (req, res) => {
     if (status !== undefined) data.status = status;
     if (notes !== undefined) data.notes = notes;
     if (appliedAt !== undefined) data.appliedAt = appliedAt ? new Date(appliedAt) : null;
+    if (referredBy !== undefined) data.referredBy = referredBy;
+    if (sortOrder !== undefined) data.sortOrder = sortOrder;
 
     const job = await prisma.jobApplication.update({
       where: { id },
@@ -185,6 +189,41 @@ router.put('/jobs/:id', async (req, res) => {
     res.status(500).json({
       error: 'Job Update Failed',
       message: 'Unable to update job application'
+    });
+  }
+});
+
+// PUT /api/goapply/jobs/reorder — bulk reorder (updates sortOrder + optional status)
+router.put('/jobs/reorder', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { items } = req.body; // [{ id, sortOrder, status? }]
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'items array is required'
+      });
+    }
+
+    // Verify ownership and update each job in a transaction
+    const results = await prisma.$transaction(
+      items.map((item) => {
+        const data = { sortOrder: item.sortOrder };
+        if (item.status) data.status = item.status;
+        return prisma.jobApplication.updateMany({
+          where: { id: item.id, userId },
+          data
+        });
+      })
+    );
+
+    res.json({ success: true, updated: results.length });
+  } catch (error) {
+    console.error('Bulk reorder error:', error);
+    res.status(500).json({
+      error: 'Reorder Failed',
+      message: 'Unable to reorder job applications'
     });
   }
 });
@@ -228,7 +267,7 @@ router.get('/kanban', async (req, res) => {
 
     const jobs = await prisma.jobApplication.findMany({
       where: { userId },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: [{ sortOrder: 'asc' }, { updatedAt: 'desc' }]
     });
 
     // Group by status
