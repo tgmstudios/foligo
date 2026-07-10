@@ -118,7 +118,7 @@ jobs:
           echo "[${app}] Updating to ${image}..."
           HTTP_CODE=$(curl -s -o /tmp/deploy_resp.txt -w "%{http_code}" \
             -X PATCH \
-            -H "Authorization: Bearer ${TOKEN}" \
+            -u "${TOKEN}" \
             -H "Content-Type: application/strategic-merge-patch+json" \
             -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"${TS}\"}},\"spec\":{\"containers\":[{\"name\":\"${app}\",\"image\":\"${image}\",\"imagePullPolicy\":\"Always\"}]}}}}" \
             "${RANCHER}/k8s/clusters/${CLUSTER}/v1/apps.deployments/${NS}/${app}")
