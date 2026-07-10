@@ -10,11 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Extract branch name
-      shell: bash
-      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-      id: extract_branch
-
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -27,12 +22,6 @@ jobs:
         registry: registry.tgm.one
         username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Generate API Tag Names
-      run: |
-        SHA=$(git rev-parse --short HEAD)
-        echo "TAG_COMMIT_API=api:${SHA}" >> $GITHUB_ENV
-        echo "SHORT_SHA=${SHA}" >> $GITHUB_ENV
 
     - name: Build and push API
       uses: docker/build-push-action@v6
@@ -41,7 +30,9 @@ jobs:
         platforms: linux/amd64,linux/arm64
         file: ./api/.docker/Dockerfile
         push: true
-        tags: registry.tgm.one/foligo/${{ env.TAG_COMMIT_API }}
+        tags: |
+          registry.tgm.one/foligo/api:latest
+          registry.tgm.one/foligo/api:${{ github.sha }}
         cache-from: type=registry,ref=registry.tgm.one/foligo/api:latest
         cache-to: type=inline
 
@@ -50,11 +41,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Extract branch name
-      shell: bash
-      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-      id: extract_branch
-
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -67,12 +53,6 @@ jobs:
         registry: registry.tgm.one
         username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Generate Dashboard Tag Names
-      run: |
-        SHA=$(git rev-parse --short HEAD)
-        echo "TAG_COMMIT_DASHBOARD=dashboard:${SHA}" >> $GITHUB_ENV
-        echo "SHORT_SHA=${SHA}" >> $GITHUB_ENV
 
     - name: Build and push Dashboard
       uses: docker/build-push-action@v6
@@ -81,7 +61,9 @@ jobs:
         platforms: linux/amd64,linux/arm64
         file: ./dashboard/.docker/Dockerfile
         push: true
-        tags: registry.tgm.one/foligo/${{ env.TAG_COMMIT_DASHBOARD }}
+        tags: |
+          registry.tgm.one/foligo/dashboard:latest
+          registry.tgm.one/foligo/dashboard:${{ github.sha }}
         cache-from: type=registry,ref=registry.tgm.one/foligo/dashboard:latest
         cache-to: type=inline
 
@@ -89,11 +71,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
-    - name: Extract branch name
-      shell: bash
-      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-      id: extract_branch
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -108,12 +85,6 @@ jobs:
         username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Generate Sites Tag Names
-      run: |
-        SHA=$(git rev-parse --short HEAD)
-        echo "TAG_COMMIT_SITES=sites:${SHA}" >> $GITHUB_ENV
-        echo "SHORT_SHA=${SHA}" >> $GITHUB_ENV
-
     - name: Build and push Sites
       uses: docker/build-push-action@v6
       with:
@@ -121,7 +92,9 @@ jobs:
         platforms: linux/amd64,linux/arm64
         file: ./sites/.docker/Dockerfile
         push: true
-        tags: registry.tgm.one/foligo/${{ env.TAG_COMMIT_SITES }}
+        tags: |
+          registry.tgm.one/foligo/sites:latest
+          registry.tgm.one/foligo/sites:${{ github.sha }}
         cache-from: type=registry,ref=registry.tgm.one/foligo/sites:latest
         cache-to: type=inline
 
@@ -133,7 +106,6 @@ jobs:
 
     - name: Deploy to Rancher
       run: |
-        SHA=$(git rev-parse --short HEAD)
         TOKEN="${{ secrets.RANCHER_TOKEN }}"
         CLUSTER="c-lx99g"
         RANCHER="https://rancher.tgm.one"
@@ -141,14 +113,14 @@ jobs:
         deploy() {
           local app=$1
           local ns=$2
-          local image="registry.tgm.one/foligo/${app}:${SHA}"
+          local image="registry.tgm.one/foligo/${app}:latest"
 
           echo "[${app}] Updating to ${image}..."
           HTTP_CODE=$(curl -s -o /tmp/deploy_resp.txt -w "%{http_code}" \
             -X PATCH \
-            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Authorization: Bearer ${TOKEN} \
             -H "Content-Type: application/strategic-merge-patch+json" \
-            -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$(date -u +%s)\"}},\"spec\":{\"containers\":[{\"name\":\"${app}\",\"image\":\"${image}\"}]}}}}" \
+            -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$(date -u +%s)\"}},\"spec\":{\"containers\":[{\"name\":\"${app}\",\"image\":\"${image}\",\"imagePullPolicy\":\"Always\"}]}}}}" \
             "${RANCHER}/k8s/clusters/${CLUSTER}/v1/apps.deployments/${ns}/${app}")
 
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
@@ -159,7 +131,7 @@ jobs:
           fi
         }
 
-        BRANCH=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}")
+        BRANCH="${GITHUB_REF#refs/heads/}"
         if [ "$BRANCH" = "main" ]; then
           NS=foligo
         elif [ "$BRANCH" = "staging" ]; then
