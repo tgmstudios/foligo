@@ -149,6 +149,42 @@ router.post('/jobs', async (req, res) => {
   }
 });
 
+// PUT /api/goapply/jobs/reorder — bulk reorder (updates sortOrder + optional status)
+// MUST be defined before /jobs/:id to prevent Express from matching "reorder" as an :id param
+router.put('/jobs/reorder', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { items } = req.body; // [{ id, sortOrder, status? }]
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'items array is required'
+      });
+    }
+
+    // Verify ownership and update each job in a transaction
+    const results = await prisma.$transaction(
+      items.map((item) => {
+        const data = { sortOrder: item.sortOrder };
+        if (item.status) data.status = item.status;
+        return prisma.jobApplication.updateMany({
+          where: { id: item.id, userId },
+          data
+        });
+      })
+    );
+
+    res.json({ success: true, updated: results.length });
+  } catch (error) {
+    console.error('Bulk reorder error:', error);
+    res.status(500).json({
+      error: 'Reorder Failed',
+      message: 'Unable to reorder job applications'
+    });
+  }
+});
+
 // PUT /api/goapply/jobs/:id — update job (status, notes, etc.)
 router.put('/jobs/:id', async (req, res) => {
   try {
@@ -189,41 +225,6 @@ router.put('/jobs/:id', async (req, res) => {
     res.status(500).json({
       error: 'Job Update Failed',
       message: 'Unable to update job application'
-    });
-  }
-});
-
-// PUT /api/goapply/jobs/reorder — bulk reorder (updates sortOrder + optional status)
-router.put('/jobs/reorder', async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { items } = req.body; // [{ id, sortOrder, status? }]
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'items array is required'
-      });
-    }
-
-    // Verify ownership and update each job in a transaction
-    const results = await prisma.$transaction(
-      items.map((item) => {
-        const data = { sortOrder: item.sortOrder };
-        if (item.status) data.status = item.status;
-        return prisma.jobApplication.updateMany({
-          where: { id: item.id, userId },
-          data
-        });
-      })
-    );
-
-    res.json({ success: true, updated: results.length });
-  } catch (error) {
-    console.error('Bulk reorder error:', error);
-    res.status(500).json({
-      error: 'Reorder Failed',
-      message: 'Unable to reorder job applications'
     });
   }
 });
