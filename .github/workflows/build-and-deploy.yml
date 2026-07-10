@@ -10,6 +10,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -22,6 +27,19 @@ jobs:
         registry: registry.tgm.one
         username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Generate API Tag Names
+      run: |
+        echo "${{ steps.extract_branch.outputs.branch }}"
+        if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
+          echo "TAG_LATEST_API=api:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_API=api:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
+          echo "TAG_LATEST_API=api-stage:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_API=api-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        else
+          exit 0
+        fi
 
     - name: Build and push API
       uses: docker/build-push-action@v6
@@ -31,15 +49,20 @@ jobs:
         file: ./api/.docker/Dockerfile
         push: true
         tags: |
-          registry.tgm.one/foligo/api:latest
-          registry.tgm.one/foligo/api:${{ github.sha }}
-        cache-from: type=registry,ref=registry.tgm.one/foligo/api:latest
+          registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
+          registry.tgm.one/foligo/${{ env.TAG_COMMIT_API }}
+        cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
         cache-to: type=inline
 
   build-dashboard:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -53,6 +76,19 @@ jobs:
         registry: registry.tgm.one
         username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Generate Website Tag Names
+      run: |
+        echo "${{ steps.extract_branch.outputs.branch }}"
+        if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
+          echo "TAG_LATEST_DASHBOARD=dashboard:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_DASHBOARD=dashboard:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
+          echo "TAG_LATEST_DASHBOARD=dashboard-stage:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_DASHBOARD=dashboard-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        else
+          exit 0
+        fi
 
     - name: Build and push Dashboard
       uses: docker/build-push-action@v6
@@ -62,15 +98,20 @@ jobs:
         file: ./dashboard/.docker/Dockerfile
         push: true
         tags: |
-          registry.tgm.one/foligo/dashboard:latest
-          registry.tgm.one/foligo/dashboard:${{ github.sha }}
-        cache-from: type=registry,ref=registry.tgm.one/foligo/dashboard:latest
+          registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
+          registry.tgm.one/foligo/${{ env.TAG_COMMIT_DASHBOARD }}
+        cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
         cache-to: type=inline
 
   build-sites:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -85,6 +126,19 @@ jobs:
         username: robot$foligo+github
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Generate Sites Tag Names
+      run: |
+        echo "${{ steps.extract_branch.outputs.branch }}"
+        if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
+          echo "TAG_LATEST_SITES=sites:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_SITES=sites:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
+          echo "TAG_LATEST_SITES=sites-stage:latest" >> $GITHUB_ENV
+          echo "TAG_COMMIT_SITES=sites-stage:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        else
+          exit 0
+        fi
+
     - name: Build and push Sites
       uses: docker/build-push-action@v6
       with:
@@ -93,54 +147,49 @@ jobs:
         file: ./sites/.docker/Dockerfile
         push: true
         tags: |
-          registry.tgm.one/foligo/sites:latest
-          registry.tgm.one/foligo/sites:${{ github.sha }}
-        cache-from: type=registry,ref=registry.tgm.one/foligo/sites:latest
+          registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
+          registry.tgm.one/foligo/${{ env.TAG_COMMIT_SITES }}
+        cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
         cache-to: type=inline
 
-  deploy:
+  deploy-rancher:
     needs: [build-api, build-dashboard, build-sites]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
 
-    - name: Deploy to Rancher
+    - name: Redeploy Rancher
       run: |
-        TOKEN="${{ secrets.RANCHER_TOKEN }}"
-        CLUSTER="c-lx99g"
-        RANCHER="https://rancher.tgm.one"
-        TS=$(date -u +%s)
+        url='https://rancher.tgm.one'
+        cluster=c-lx99g
+        token=${{ secrets.RANCHER_TOKEN }}
+        ts=$(date -u +%s)
 
-        deploy() {
-          local app=$1
-          local image="registry.tgm.one/foligo/${app}:latest"
-
-          echo "[${app}] Updating to ${image}..."
-          HTTP_CODE=$(curl -s -k -o /tmp/deploy_resp.txt -w "%{http_code}" \
-            -X PATCH \
-            -u "${TOKEN}" \
-            -H "Content-Type: application/strategic-merge-patch+json" \
-            -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"${TS}\"}},\"spec\":{\"containers\":[{\"name\":\"${app}\",\"image\":\"${image}\",\"imagePullPolicy\":\"Always\"}]}}}}" \
-            "${RANCHER}/k8s/clusters/${CLUSTER}/v1/apps.deployments/${NS}/${app}")
-
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "[${app}] OK"
-          else
-            echo "[${app}] FAIL (HTTP ${HTTP_CODE})"
-            cat /tmp/deploy_resp.txt
-          fi
+        redeploy() {
+            local app=$1
+            local image="registry.tgm.one/foligo/$app:latest"
+            curl -s -u "$token" -k \
+              -X PATCH \
+              -H "Content-Type: application/strategic-merge-patch+json" \
+              -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$ts\"}},\"spec\":{\"containers\":[{\"name\":\"$app\",\"image\":\"$image\",\"imagePullPolicy\":\"Always\"}]}}}}" \
+              "$url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app"
+            echo "[$app] → $image"
         }
 
-        BRANCH="${GITHUB_REF#refs/heads/}"
-        if [ "$BRANCH" = "main" ]; then
-          NS=foligo
-        elif [ "$BRANCH" = "staging" ]; then
-          NS=foligo-staging
+        echo "${{ steps.extract_branch.outputs.branch }}"
+        if [ ${{ steps.extract_branch.outputs.branch }} = "main" ]; then
+            namespace=foligo
+            redeploy "api"
+            redeploy "dashboard"
+            redeploy "sites"
+        elif [ ${{ steps.extract_branch.outputs.branch }} = "staging" ]; then
+            namespace=foligo-staging
+            redeploy "api"
+            redeploy "dashboard"
+            redeploy "sites"
         else
-          echo "Skipping deploy for branch: $BRANCH"
-          exit 0
+            exit 0
         fi
-
-        deploy "api"
-        deploy "dashboard"
-        deploy "sites"
