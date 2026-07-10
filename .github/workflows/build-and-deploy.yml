@@ -116,7 +116,7 @@ jobs:
           local image="registry.tgm.one/foligo/${app}:latest"
 
           echo "[${app}] Updating to ${image}..."
-          HTTP_CODE=$(curl -s -o /tmp/deploy_resp.txt -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -k -o /tmp/deploy_resp.txt -w "%{http_code}" \
             -X PATCH \
             -u "${TOKEN}" \
             -H "Content-Type: application/strategic-merge-patch+json" \
