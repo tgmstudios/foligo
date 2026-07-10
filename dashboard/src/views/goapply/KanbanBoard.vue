@@ -44,7 +44,8 @@
           drag-class="shadow-lg"
           class="space-y-2 min-h-[120px] p-2 rounded-lg bg-gray-800/50 border border-dashed border-gray-700 transition-colors"
           :class="{ 'cursor-default': isMobile }"
-          @change="(evt: any) => handleChange(evt, column.status, colIdx)"
+          @add="(evt: any) => handleAdd(evt, column.status, colIdx)"
+          @update="(evt: any) => handleUpdate(colIdx)"
           item-key="id"
         >
           <div
@@ -171,7 +172,7 @@ watch(() => store.jobs, (jobs) => {
     ...col,
     jobs: [...map[col.status]],  // shallow clone so VueDraggable can mutate
   }))
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
 function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, yyyy')
@@ -183,30 +184,17 @@ function renderMarkdown(text: string) {
 
 // ── Drag & Drop / Reorder ────────────────────────────────────────────
 
-async function handleChange(evt: any, newStatus: JobStatus, colIdx: number) {
-  if (evt.added) {
-    const job: GoApplyJob = evt.added.element
-    if (job.status !== newStatus) {
-      // Cross-column move: update status + recalculate sort orders
-      const oldStatus = job.status
-      job.status = newStatus
-      try {
-        // Recalculate sortOrders for the target column and save
-        await saveColumnOrder(colIdx)
-      } catch {
-        job.status = oldStatus
-        await store.fetchJobs()
-      }
-    } else {
-      // Moved within same column but added via pull/put (shouldn't happen often)
-      await saveColumnOrder(colIdx)
-    }
-  }
+// @add fires when an item is dragged FROM another list INTO this column.
+// Note: saveColumnOrder already sets status=column.status for every item,
+// so we don't need to read evt.data or manually mutate job.status.
+// The server will update both sortOrder and status via the bulk reorder endpoint.
+async function handleAdd(_evt: any, _newStatus: JobStatus, colIdx: number) {
+  await saveColumnOrder(colIdx)
+}
 
-  if (evt.moved) {
-    // Reordered within the same column
-    await saveColumnOrder(colIdx)
-  }
+// @update fires when item order changes within the same column
+async function handleUpdate(colIdx: number) {
+  await saveColumnOrder(colIdx)
 }
 
 async function saveColumnOrder(colIdx: number) {
