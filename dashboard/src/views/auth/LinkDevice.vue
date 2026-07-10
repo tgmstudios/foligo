@@ -49,7 +49,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { api } from '@/services/api'
+import api from '@/services/api'
 import squiggleLogo from '@/assets/logos/squiggle.svg'
 
 const route = useRoute()
