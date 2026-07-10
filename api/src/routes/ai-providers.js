@@ -40,11 +40,11 @@ router.post('/test-provider', authenticateToken, async (req, res) => {
 });
 
 /**
- * POST /api/ai/generate
+ * POST /api/ai/generate-text
  * Generic AI text generation endpoint for GoApply.
  * Body: { prompt, provider?, temperature?, maxTokens? }
  */
-router.post('/generate', authenticateToken, async (req, res) => {
+router.post('/generate-text', authenticateToken, async (req, res) => {
   try {
     const { prompt, provider, temperature, maxTokens } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing "prompt" field' });
