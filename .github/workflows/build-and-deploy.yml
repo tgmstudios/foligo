@@ -171,12 +171,19 @@ jobs:
         redeploy() {
             local app=$1
             local image="registry.tgm.one/foligo/$app:latest"
-            curl -s -u "$token" -k \
+            local api_path="$url/k8s/clusters/$cluster/apis/apps/v1/namespaces/$namespace/deployments/$app"
+            local http_code
+            http_code=$(curl -s -o /dev/stderr -w "%{http_code}" -u "$token" -k \
               -X PATCH \
-              -H "Content-Type: application/strategic-merge-patch+json" \
+              -H "Content-Type: application/merge-patch+json" \
               -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$ts\"}},\"spec\":{\"containers\":[{\"name\":\"$app\",\"image\":\"$image\",\"imagePullPolicy\":\"Always\"}]}}}}" \
-              "$url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app"
-            echo "[$app] → $image"
+              "$api_path")
+            if [ "$http_code" = "200" ]; then
+              echo "[$app] ✓ updated → $image (HTTP $http_code)"
+            else
+              echo "[$app] ✗ FAILED → HTTP $http_code" >&2
+              return 1
+            fi
         }
 
         echo "${{ steps.extract_branch.outputs.branch }}"
