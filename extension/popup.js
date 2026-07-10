@@ -279,7 +279,7 @@ async function loadAIProviders() {
   const select = $('aiProviderSelect');
   try {
     const { providers } = await GoApplyAPI.listAIProviders();
-    select.innerHTML = '<option value="">Foligo Default (Gemini)</option>';
+    select.innerHTML = '<option value="">Foligo Default (OpenCode)</option>';
     providers.forEach(p => {
       const status = p.configured ? '✓' : '✗';
       select.innerHTML += `<option value="${p.type}">${status} ${p.displayName}</option>`;
@@ -295,7 +295,7 @@ async function loadAIProviders() {
       $('aiProviderStatus').textContent = `Using: ${select.options[select.selectedIndex]?.text || val}`;
     }
   } catch(e) {
-    select.innerHTML = '<option value="">Foligo Default (Gemini)</option><option value="opencode">OpenCode Go</option><option value="ollama">Ollama</option>';
+    select.innerHTML = '<option value="">Foligo Default (OpenCode)</option><option value="opencode">OpenCode Go</option><option value="ollama">Ollama</option>';
   }
 }
 

@@ -169,11 +169,8 @@ export const useGoApplyStore = defineStore('goapply', () => {
   async function saveProfile(data: GoApplyProfile) {
     try {
       isSaving.value = true
-      const method = profile.value?.id ? 'put' : 'post'
-      const url = profile.value?.id
-        ? `/goapply/profile/${profile.value.id}`
-        : '/goapply/profile'
-      const { data: result } = await api[method](url, data)
+      // Backend uses PUT /api/goapply/profile (upsert)
+      const { data: result } = await api.put('/goapply/profile', data)
       profile.value = result
       toast.success('Profile saved')
       return result

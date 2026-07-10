@@ -41,10 +41,14 @@ class GeminiService {
     }
   }
 
-  /** Chat/tools generation through AIManager. */
+  /** Chat/tools generation through AIManager. Prefers Gemini for tool calling. */
   async _aiChat(messages, options = {}) {
     const { context = 'AI chat', ...genOpts } = options;
     this.logger.debug(`_aiChat: ${context}`, { msgCount: messages.length });
+    // When tools are requested, default to Gemini since OpenCode may not support function calling
+    if (genOpts.tools?.length && !genOpts.provider) {
+      genOpts.provider = 'gemini';
+    }
     try {
       return await ai.generateChat(messages, genOpts);
     } catch (error) {

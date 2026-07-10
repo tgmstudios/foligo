@@ -30,7 +30,7 @@
           :animation="200"
           :sort="true"
           ghost-class="opacity-50"
-          drag-class="shadow-lg rotate-1"
+          drag-class="shadow-lg"
           class="space-y-2 min-h-[120px] p-2 rounded-lg bg-gray-800/50 border border-dashed border-gray-700 transition-colors"
           @change="(evt: any) => handleChange(evt, column.status)"
           item-key="id"

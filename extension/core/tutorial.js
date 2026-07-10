@@ -9,13 +9,13 @@ const Tutorial = (() => {
 
   const STEPS = [
     {
-      title: 'Welcome to OneApply! 🎉',
+      title: 'Welcome to GoApply! 🎉',
       body: 'Autofill job applications, track your progress, and get AI-powered resume suggestions — all from one extension.',
       button: 'Get Started',
     },
     {
       title: 'Autofill Any Application',
-      body: 'When you open a job application (Lever, Greenhouse, Workday, etc.), the OneApply panel appears. Click "Autofill" to fill in your details instantly.',
+      body: 'When you open a job application (Lever, Greenhouse, Workday, etc.), the GoApply panel appears. Click "Autofill" to fill in your details instantly.',
       button: 'Next',
     },
     {
@@ -30,7 +30,7 @@ const Tutorial = (() => {
     },
     {
       title: 'You\'re All Set! 🚀',
-      body: 'Go to any job application and look for the OneApply panel in the bottom-right corner. Click the extension icon to check status or change settings.',
+      body: 'Go to any job application and look for the GoApply panel in the bottom-right corner. Click the extension icon to check status or change settings.',
       button: 'Start Applying',
     },
   ];

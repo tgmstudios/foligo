@@ -1,5 +1,5 @@
 /**
- * Boards — Inject "Track with OneApply" / "Quick Apply" buttons 
+ * Boards — Inject "Track with GoApply" / "Quick Apply" buttons 
  * onto job board listing pages (LinkedIn, Indeed, Handshake).
  */
 const Boards = (() => {
@@ -40,7 +40,7 @@ const Boards = (() => {
   function createTrackButton(board, jobUrl) {
     const btn = document.createElement('button');
     btn.className = 'sr-board-track-btn';
-    btn.innerHTML = '📋 Track with OneApply';
+    btn.innerHTML = '📋 Track with GoApply';
     btn.style.cssText = `
       display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 16px; border: 2px solid #635BFF; border-radius: 24px;
