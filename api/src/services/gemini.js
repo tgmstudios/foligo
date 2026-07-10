@@ -41,14 +41,10 @@ class GeminiService {
     }
   }
 
-  /** Chat/tools generation through AIManager. Prefers Gemini for tool calling. */
+  /** Chat/tools generation through AIManager. Provider chosen by AI_DEFAULT_PROVIDER env var. */
   async _aiChat(messages, options = {}) {
     const { context = 'AI chat', ...genOpts } = options;
     this.logger.debug(`_aiChat: ${context}`, { msgCount: messages.length });
-    // When tools are requested, default to Gemini since OpenCode may not support function calling
-    if (genOpts.tools?.length && !genOpts.provider) {
-      genOpts.provider = 'gemini';
-    }
     try {
       return await ai.generateChat(messages, genOpts);
     } catch (error) {
@@ -206,6 +202,16 @@ class GeminiService {
 
       // Ensure starts with 'user' role
       while (messages.length > 0 && messages[0].role !== 'user') messages.shift();
+
+      // Guard: empty history on initial create — inject a default starter message
+      if (messages.length === 0) {
+        messages.push({
+          role: 'user',
+          content: contentType
+            ? `I want to create ${contentType === 'BLOG' ? 'a blog post' : contentType === 'PROJECT' ? 'a project description' : contentType === 'EXPERIENCE' ? 'a work experience entry' : 'content'}.`
+            : 'Hi, I want to create some content.'
+        });
+      }
 
       this.logger.debug('Chat history prepared', {
         originalLength: chatHistory.length,
