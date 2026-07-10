@@ -94,6 +94,10 @@ class AIManager {
   async generateText(prompt, options = {}) {
     const { provider: reqProvider, ...genOpts } = options;
     const prov = await this.getHealthyProvider(reqProvider);
+    // Double token budget for reasoning models (they use tokens for chain-of-thought)
+    if (prov.isReasoningModel && !genOpts.maxTokens) {
+      genOpts.maxTokens = (prov.capabilities?.maxTokens || 4096) * 2;
+    }
     this.logger.debug(`generateText via ${prov.name}`, { promptLen: prompt.length });
     return prov.generateText(prompt, genOpts);
   }

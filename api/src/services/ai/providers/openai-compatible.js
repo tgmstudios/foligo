@@ -113,7 +113,14 @@ class OpenAICompatibleProvider extends BaseProvider {
       }));
     }
 
-    return { text: content, functionCalls };
+    return { text: content, functionCalls, isReasoning: !!choice.message?.reasoning_content && !choice.message?.content };
+  }
+
+  get isReasoningModel() {
+    // Detect reasoning models by name pattern
+    const model = this.modelName.toLowerCase();
+    return model.includes('deepseek-r') || model.includes('deepseek-v4') || 
+           model.includes('o1') || model.includes('o3') || model.includes('reasoning');
   }
 
   async healthCheck() {
