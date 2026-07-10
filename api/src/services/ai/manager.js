@@ -63,7 +63,7 @@ class AIManager {
 
   /**
    * Get a healthy provider — tries default, then fallback chain.
-   * Uses lazy health check (only tests on first failure).
+   * Tests each provider with a lightweight health check before returning.
    */
   async getHealthyProvider(requestedProvider = null) {
     const types = requestedProvider
@@ -73,11 +73,16 @@ class AIManager {
     for (const type of types) {
       const provider = this.getProvider(type);
       if (!provider) continue;
-      // Skip health check for providers we know just initialized successfully
       try {
+        // Lightweight health check — some providers support healthCheck()
+        if (typeof provider.healthCheck === 'function') {
+          await provider.healthCheck();
+        }
         return provider;
       } catch (e) {
-        this.logger.warn(`Provider "${type}" failed: ${e.message}`);
+        this.logger.warn(`Provider "${type}" health check failed: ${e.message}`);
+        // Remove from cache so next call re-creates
+        this._providers.delete(type);
       }
     }
 
