@@ -9,6 +9,13 @@
         <p>Open this page from your GoApply extension to link your device.</p>
       </div>
 
+      <!-- Not logged in -->
+      <div v-else-if="!isLoggedIn" class="state">
+        <h2>Sign In Required</h2>
+        <p>You need to be signed into Foligo to link a device.</p>
+        <a :href="loginUrl" class="btn">Sign In to Foligo</a>
+      </div>
+
       <!-- Linking -->
       <div v-else-if="status === 'linking'" class="state">
         <div class="spinner" />
@@ -44,13 +51,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const status = ref<'loading' | 'linking' | 'success' | 'error'>('loading')
 const code = ref('')
 const errorMessage = ref('')
+
+const isLoggedIn = computed(() => authStore.isAuthenticated)
+const loginUrl = computed(() => `/login?redirect=${encodeURIComponent(route.fullPath)}`)
+
+async function submitDeviceCode() {
+  status.value = 'linking'
+
+  try {
+    await api.post('/auth/device-code/external', {
+      deviceCode: code.value
+    })
+
+    status.value = 'success'
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || 'Unknown error'
+    status.value = 'error'
+
+    if (e?.response?.status === 401) {
+      errorMessage.value = 'You are not logged in. Please sign in to Foligo first, then try again.'
+    } else {
+      errorMessage.value = `Failed to link device: ${msg}`
+    }
+  }
+}
 
 function init() {
   const codeParam = route.query.code as string
@@ -60,9 +94,23 @@ function init() {
     return
   }
   code.value = codeParam.toUpperCase()
-  status.value = 'linking'
 
-  // Listen for the content script's result
+  // Check auth and submit
+  if (isLoggedIn.value) {
+    submitDeviceCode()
+  } else {
+    // Wait for auth store to initialize (it loads async)
+    const unwatch = setInterval(() => {
+      if (authStore.isAuthenticated) {
+        clearInterval(unwatch)
+        submitDeviceCode()
+      }
+    }, 500)
+    // Stop watching after 10s
+    setTimeout(() => clearInterval(unwatch), 10000)
+  }
+
+  // Also listen for content script fallback
   window.addEventListener('message', handleContentScriptMessage)
 }
 
@@ -72,14 +120,13 @@ function handleContentScriptMessage(event: MessageEvent) {
       status.value = 'success'
     } else {
       status.value = 'error'
-      errorMessage.value = event.data.error || 'Failed to link device. Make sure you\'re logged into Foligo.'
+      errorMessage.value = event.data.error || 'Failed to link device.'
     }
   }
 }
 
 function retry() {
-  status.value = 'linking'
-  window.location.reload()
+  submitDeviceCode()
 }
 
 onMounted(() => init())
@@ -174,6 +221,8 @@ p {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
 }
 .btn:hover { background: #5851DB; }
 </style>

@@ -411,22 +411,36 @@ router.post('/device-code/exchange', async (req, res) => {
   try {
     const { deviceCode } = req.body;
 
-    if (!deviceCode) {
+    if (!deviceCode || deviceCode.length !== 6) {
       return res.status(400).json({
         error: 'Validation Error',
-        message: 'Device code is required'
+        message: 'A 6-character device code is required'
       });
     }
 
     const key = `device_code:${deviceCode}`;
-    const userId = await cache.get(key);
+    const value = await cache.get(key);
 
-    if (!userId) {
-      return res.status(401).json({
-        error: 'Invalid or Expired Code',
-        message: 'The device code is invalid or has expired'
+    // If the code doesn't exist yet, register it as "pending"
+    // (the extension polls before the dashboard user has approved)
+    if (!value) {
+      await cache.set(key, 'pending', 300); // 5-min TTL
+      return res.status(202).json({
+        status: 'pending',
+        message: 'Waiting for dashboard approval'
       });
     }
+
+    // Still pending — dashboard user hasn't approved yet
+    if (value === 'pending') {
+      return res.status(202).json({
+        status: 'pending',
+        message: 'Waiting for dashboard approval'
+      });
+    }
+
+    // value is a userId — the dashboard user has approved!
+    const userId = value;
 
     // Delete the code (one-time use)
     await cache.del(key);
