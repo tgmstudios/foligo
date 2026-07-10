@@ -6,7 +6,7 @@ WORKDIR /app
 RUN corepack enable
 
 # Copy workspace config + lockfile from monorepo root
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY package.json ./
 COPY sites/package.json ./sites/package.json
 
@@ -16,7 +16,12 @@ RUN pnpm install --no-frozen-lockfile --filter foligo-sites
 COPY sites/ ./sites/
 WORKDIR /app/sites
 
-RUN pnpm run build
+# Turbo remote cache
+ARG TURBO_API
+ARG TURBO_TOKEN
+ENV TURBO_API=$TURBO_API
+ENV TURBO_TOKEN=$TURBO_TOKEN
+RUN pnpm exec turbo run build --filter=foligo-sites
 
 # Production stage
 FROM node:22-alpine

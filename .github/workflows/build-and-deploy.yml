@@ -53,6 +53,9 @@ jobs:
           registry.tgm.one/foligo/${{ env.TAG_COMMIT_API }}
         cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
         cache-to: type=inline
+        build-args: |
+          TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+          TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 
   build-dashboard:
     runs-on: tgmstudios-runners
@@ -102,6 +105,9 @@ jobs:
           registry.tgm.one/foligo/${{ env.TAG_COMMIT_DASHBOARD }}
         cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
         cache-to: type=inline
+        build-args: |
+          TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+          TURBO_TOKEN=*** secrets.TURBO_TOKEN }}
 
   build-sites:
     runs-on: tgmstudios-runners
@@ -151,6 +157,9 @@ jobs:
           registry.tgm.one/foligo/${{ env.TAG_COMMIT_SITES }}
         cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
         cache-to: type=inline
+        build-args: |
+          TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+          TURBO_TOKEN=*** secrets.TURBO_TOKEN }}
 
   deploy-rancher:
     needs: [build-api, build-dashboard, build-sites]

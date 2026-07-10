@@ -22,5 +22,8 @@
     "install:all": "pnpm install",
     "build": "pnpm --parallel --filter './api' --filter './dashboard' --filter './sites' run build",
     "lint": "pnpm --parallel --filter './api' --filter './dashboard' run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.4"
   }
 }

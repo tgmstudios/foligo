@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 RUN corepack enable
 
 # Copy workspace config + lockfile from monorepo root
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY package.json ./
 COPY api/package.json ./api/package.json
 
@@ -22,7 +22,12 @@ RUN pnpm install --no-frozen-lockfile --filter foligo-api
 COPY api/ ./api/
 WORKDIR /usr/src/app/api
 
-RUN pnpm exec prisma generate
+# Turbo remote cache
+ARG TURBO_API
+ARG TURBO_TOKEN
+ENV TURBO_API=$TURBO_API
+ENV TURBO_TOKEN=$TURBO_TOKEN
+RUN pnpm exec turbo run build --filter=foligo-api
 
 EXPOSE 3000
 

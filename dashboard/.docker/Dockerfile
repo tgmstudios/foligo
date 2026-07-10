@@ -9,7 +9,7 @@ WORKDIR /app
 RUN corepack enable
 
 # Copy workspace config + lockfile from monorepo root
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY package.json ./
 COPY dashboard/package.json ./dashboard/package.json
 
@@ -19,7 +19,12 @@ RUN pnpm install --no-frozen-lockfile --filter foligo-dashboard
 COPY dashboard/ ./dashboard/
 WORKDIR /app/dashboard
 
-RUN pnpm run build
+# Turbo remote cache
+ARG TURBO_API
+ARG TURBO_TOKEN
+ENV TURBO_API=$TURBO_API
+ENV TURBO_TOKEN=$TURBO_TOKEN
+RUN pnpm exec turbo run build --filter=foligo-dashboard
 
 # Production stage
 FROM nginx:alpine
