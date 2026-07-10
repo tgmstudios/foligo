@@ -1,6 +1,9 @@
 # Build stage
 FROM node:22-alpine AS builder
 
+# node-canvas build dependencies (alpine/musl)
+RUN apk add --no-cache python3 make g++ cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev
+
 WORKDIR /app
 
 RUN corepack enable
