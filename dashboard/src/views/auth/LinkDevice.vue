@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
       <!-- Logo -->
-      <img src="/logo.svg" alt="Foligo" class="h-10 mx-auto mb-6" />
+      <img :src="squiggleLogo" alt="Foligo" class="h-10 mx-auto mb-6" />
 
       <!-- Loading -->
       <div v-if="status === 'linking'" class="space-y-4">
@@ -50,6 +50,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/services/api'
+import squiggleLogo from '@/assets/logos/squiggle.svg'
 
 const route = useRoute()
 const status = ref<'loading' | 'linking' | 'success' | 'error'>('loading')
