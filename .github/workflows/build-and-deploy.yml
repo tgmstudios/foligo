@@ -109,24 +109,24 @@ jobs:
         TOKEN="${{ secrets.RANCHER_TOKEN }}"
         CLUSTER="c-lx99g"
         RANCHER="https://rancher.tgm.one"
+        TS=$(date -u +%s)
 
         deploy() {
           local app=$1
-          local ns=$2
           local image="registry.tgm.one/foligo/${app}:latest"
 
           echo "[${app}] Updating to ${image}..."
           HTTP_CODE=$(curl -s -o /tmp/deploy_resp.txt -w "%{http_code}" \
             -X PATCH \
-            -H "Authorization: Bearer ${TOKEN} \
+            -H "Authorization: Bearer ${TOKEN}" \
             -H "Content-Type: application/strategic-merge-patch+json" \
-            -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$(date -u +%s)\"}},\"spec\":{\"containers\":[{\"name\":\"${app}\",\"image\":\"${image}\",\"imagePullPolicy\":\"Always\"}]}}}}" \
-            "${RANCHER}/k8s/clusters/${CLUSTER}/v1/apps.deployments/${ns}/${app}")
+            -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"${TS}\"}},\"spec\":{\"containers\":[{\"name\":\"${app}\",\"image\":\"${image}\",\"imagePullPolicy\":\"Always\"}]}}}}" \
+            "${RANCHER}/k8s/clusters/${CLUSTER}/v1/apps.deployments/${NS}/${app}")
 
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "[${app}] ✓ Deployed (HTTP ${HTTP_CODE})"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "[${app}] OK"
           else
-            echo "[${app}] ✗ Failed (HTTP ${HTTP_CODE})"
+            echo "[${app}] FAIL (HTTP ${HTTP_CODE})"
             cat /tmp/deploy_resp.txt
           fi
         }
@@ -137,10 +137,10 @@ jobs:
         elif [ "$BRANCH" = "staging" ]; then
           NS=foligo-staging
         else
-          echo "Skipping deploy for branch: ${BRANCH}"
+          echo "Skipping deploy for branch: $BRANCH"
           exit 0
         fi
 
-        deploy "api" "$NS"
-        deploy "dashboard" "$NS"
-        deploy "sites" "$NS"
+        deploy "api"
+        deploy "dashboard"
+        deploy "sites"
