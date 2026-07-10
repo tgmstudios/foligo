@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head><title>Simplify Replica Test Page</title></head>
+<body>
+<h1>Test: Regular Form</h1>
+<form id="regular-form">
+  <label>Full name <input name="name" placeholder="Full name"></label><br>
+  <label>Email <input type="email" name="email" placeholder="Email"></label><br>
+  <label>Phone <input type="tel" name="phone" placeholder="Phone"></label><br>
+  <label>LinkedIn <input name="linkedin" placeholder="LinkedIn URL"></label><br>
+  <button type="submit">Submit</button>
+</form>
+
+<h1>Test: Shadow DOM Form (simulating Workday)</h1>
+<div id="shadow-host"></div>
+
+<script>
+// Create a shadow DOM form simulating Workday's web components
+const host = document.getElementById('shadow-host');
+const shadow = host.attachShadow({ mode: 'open' });
+shadow.innerHTML = `
+  <style>
+    input { border: 1px solid #ccc; padding: 8px; margin: 4px; }
+  </style>
+  <div data-automation-id="formField-legalName-firstName">
+    <label>First Name</label>
+    <input type="text" data-automation-id="firstName" placeholder="Legal First Name">
+  </div>
+  <div data-automation-id="formField-legalName-lastName">
+    <label>Last Name</label>
+    <input type="text" data-automation-id="lastName" placeholder="Legal Last Name">
+  </div>
+  <div data-automation-id="formField-email">
+    <label>Email</label>
+    <input type="text" data-automation-id="email" placeholder="Email Address" name="emailAddress">
+  </div>
+  <div data-automation-id="formField-phone">
+    <label>Phone</label>
+    <input type="tel" data-automation-id="phone" placeholder="Phone Number">
+  </div>
+  <button data-automation-id="submitButton">Submit Application</button>
+`;
+
+console.log('[TEST] Shadow DOM form created with ' + 
+  shadow.querySelectorAll('input').length + ' inputs');
+
+// Nested shadow DOM test (simulating ADP's sdf-input pattern)
+const nestedHost = document.createElement('div');
+nestedHost.id = 'nested-shadow-host';
+document.body.appendChild(nestedHost);
+const nestedShadow = nestedHost.attachShadow({ mode: 'open' });
+nestedShadow.innerHTML = `
+  <adp-form-group data-name="emailAddress">
+    <sdf-input></sdf-input>
+  </adp-form-group>
+`;
+const sdfInput = nestedShadow.querySelector('sdf-input');
+if (sdfInput) {
+  const innerShadow = sdfInput.attachShadow({ mode: 'open' });
+  innerShadow.innerHTML = '<input type="email" placeholder="ADP Email (nested shadow)">';
+  console.log('[TEST] Nested shadow DOM (ADP style) created');
+}
+</script>
+
+<h1>Test: SPA Form without &lt;form&gt; tag</h1>
+<div class="application-form">
+  <div class="form-group">
+    <label>Full Name</label>
+    <input type="text" name="applicant_name" placeholder="Your full name">
+  </div>
+  <div class="form-group">
+    <label>Email Address</label>
+    <input type="email" name="applicant_email" placeholder="you@example.com">
+  </div>
+  <div class="form-group">
+    <label>GitHub</label>
+    <input type="url" name="github_url" placeholder="https://github.com/you">
+  </div>
+  <select name="visa">
+    <option>Select...</option>
+    <option>Yes - I need sponsorship</option>
+    <option>No - I don't need sponsorship</option>
+  </select>
+</div>
+
+<p style="margin-top:40px; color:green; font-weight:bold;">
+  ✅ Test page ready. Open browser console to run detection tests.
+</p>
+</body>
+</html>

@@ -6,7 +6,7 @@
 
     <div v-else class="flex gap-4 overflow-x-auto pb-4" style="min-height: 60vh">
       <div
-        v-for="column in store.kanbanColumns"
+        v-for="column in localColumns"
         :key="column.status"
         class="flex-shrink-0 w-72"
       >
@@ -25,7 +25,7 @@
 
         <!-- Draggable Column -->
         <VueDraggable
-          :model-value="column.jobs"
+          v-model="column.jobs"
           :group="{ name: 'goapply-kanban', pull: true, put: true }"
           :animation="200"
           :sort="true"
@@ -33,6 +33,7 @@
           drag-class="shadow-lg rotate-1"
           class="space-y-2 min-h-[120px] p-2 rounded-lg bg-gray-800/50 border border-dashed border-gray-700 transition-colors"
           @change="(evt: any) => handleChange(evt, column.status)"
+          item-key="id"
         >
           <div
             v-for="job in column.jobs"
@@ -68,12 +69,29 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { useGoApplyStore, type JobStatus, type GoApplyJob } from '@/stores/goapply'
+import { useGoApplyStore, JOB_STATUSES, KANBAN_COLUMNS, type JobStatus, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
 import { marked } from 'marked'
 
 const store = useGoApplyStore()
+
+// Local reactive copy that VueDraggable can mutate directly
+const localColumns = ref<{ status: JobStatus; label: string; color: string; jobs: GoApplyJob[] }[]>([])
+
+// Sync from store → local when jobs load
+watch(() => store.jobs, (jobs) => {
+  const map: Record<string, GoApplyJob[]> = {}
+  for (const s of JOB_STATUSES) map[s] = []
+  for (const job of jobs) {
+    if (map[job.status]) map[job.status].push(job)
+  }
+  localColumns.value = KANBAN_COLUMNS.map(col => ({
+    ...col,
+    jobs: [...map[col.status]],  // shallow clone so VueDraggable can mutate
+  }))
+}, { immediate: true, deep: true })
 
 function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, yyyy')
@@ -87,12 +105,14 @@ async function handleChange(evt: any, newStatus: JobStatus) {
   if (evt.added) {
     const job: GoApplyJob = evt.added.element
     if (job.status !== newStatus) {
+      const oldStatus = job.status
       // Optimistic update
       job.status = newStatus
       try {
         await store.updateJobStatus(job.id, newStatus)
       } catch {
         // Revert on failure
+        job.status = oldStatus
         await store.fetchJobs()
       }
     }
