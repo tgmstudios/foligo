@@ -2,3 +2,9 @@
 .pnpm-store
 node_modules
 */node_modules
+
+# graphify non-committable artifacts
+.graphify/branch.json
+.graphify/worktree.json
+.graphify/needs_update
+.graphify/cache/
