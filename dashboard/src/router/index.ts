@@ -52,7 +52,7 @@ const router = createRouter({
       path: '/auth/link-device',
       name: 'auth-link-device',
       component: () => import('@/views/auth/LinkDevice.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false }
     },
     {
       path: '/',

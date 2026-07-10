@@ -18,7 +18,6 @@
 
   if (!deviceCode || deviceCode.length < 4) {
     console.log('[FoligoAuth] No valid device code in URL');
-    // Show a message to the user
     showMessage('No device code found in URL. Please try again from the extension.', 'error');
     return;
   }
@@ -35,7 +34,9 @@
 
     if (resp.ok) {
       console.log('[FoligoAuth] Device code submitted successfully');
-      showMessage('✓ Device linked! You can close this tab and return to the extension.', 'success');
+
+      // Notify the Vue page via postMessage
+      window.postMessage({ type: 'foligo-device-link', success: true }, window.location.origin);
 
       // Notify the extension (if popup is open)
       try {
@@ -46,10 +47,29 @@
     } else {
       const err = await resp.text();
       console.error('[FoligoAuth] Submission failed:', resp.status, err);
-      showMessage(`Failed to link device: ${resp.status}. Make sure you're logged into Foligo.`, 'error');
+
+      window.postMessage({
+        type: 'foligo-device-link',
+        success: false,
+        error: resp.status === 401
+          ? 'You are not logged in. Please log in to Foligo first, then try again.'
+          : `Server error (${resp.status}). Please try again.`
+      }, window.location.origin);
+
+      showMessage(
+        resp.status === 401
+          ? 'You are not logged in. Please log in to Foligo first.'
+          : `Failed to link device: ${resp.status}`,
+        'error'
+      );
     }
   } catch (e) {
     console.error('[FoligoAuth] Network error:', e);
+    window.postMessage({
+      type: 'foligo-device-link',
+      success: false,
+      error: 'Network error. Check your connection and try again.'
+    }, window.location.origin);
     showMessage('Network error. Check your connection and try again.', 'error');
   }
 
@@ -60,13 +80,14 @@
 
     const div = document.createElement('div');
     div.id = 'foligo-auth-msg';
+    const bg = type === 'success' ? '#00A86B' : '#DF1B41';
     div.style.cssText = `
-      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-      padding: 12px 24px; border-radius: 8px; font-family: -apple-system, sans-serif;
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      padding: 14px 28px; border-radius: 10px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px; font-weight: 600; z-index: 99999; text-align: center;
-      max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      background: ${type === 'success' ? '#00A86B' : '#DF1B41'};
-      color: white;
+      max-width: 420px; box-shadow: 0 4px 20px rgba(10,37,64,0.15);
+      background: ${bg}; color: white;
     `;
     div.textContent = text;
     document.body.appendChild(div);
