@@ -99,7 +99,10 @@ class AIManager {
       genOpts.maxTokens = (prov.capabilities?.maxTokens || 4096) * 2;
     }
     this.logger.debug(`generateText via ${prov.name}`, { promptLen: prompt.length });
-    return prov.generateText(prompt, genOpts);
+    const result = await prov.generateText(prompt, genOpts);
+    // Normalize: some providers return string, others return { text, reasoning }
+    if (typeof result === 'string') return { text: result, reasoning: null };
+    return result;
   }
 
   /**

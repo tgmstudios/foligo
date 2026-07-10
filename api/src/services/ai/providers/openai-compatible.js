@@ -93,8 +93,9 @@ class OpenAICompatibleProvider extends BaseProvider {
   async generateText(prompt, options = {}) {
     const data = await this._call([{ role: 'user', content: prompt }], options);
     const msg = data.choices?.[0]?.message || {};
-    // Reasoning models (deepseek-v4-pro, o1, etc.) put output in reasoning_content
-    return msg.content || msg.reasoning_content || '';
+    const reasoning = msg.reasoning_content || null;
+    const text = msg.content || reasoning || '';
+    return { text, reasoning };
   }
 
   async generateChat(messages, options = {}) {
@@ -102,7 +103,8 @@ class OpenAICompatibleProvider extends BaseProvider {
     const choice = data.choices?.[0];
     if (!choice) throw new Error(`[${this.name}] No response from model`);
 
-    const content = choice.message?.content || choice.message?.reasoning_content || null;
+    const reasoning = choice.message?.reasoning_content || null;
+    const content = choice.message?.content || reasoning || null;
 
     // Extract function/tool calls if present
     let functionCalls = null;
@@ -113,7 +115,7 @@ class OpenAICompatibleProvider extends BaseProvider {
       }));
     }
 
-    return { text: content, functionCalls, isReasoning: !!choice.message?.reasoning_content && !choice.message?.content };
+    return { text: content, reasoning, functionCalls };
   }
 
   get isReasoningModel() {

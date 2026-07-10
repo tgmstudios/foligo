@@ -49,8 +49,8 @@ router.post('/generate-text', authenticateToken, async (req, res) => {
     const { prompt, provider, temperature, maxTokens } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing "prompt" field' });
 
-    const text = await ai.generateText(prompt, { provider, temperature, maxTokens });
-    res.json({ text });
+    const result = await ai.generateText(prompt, { provider, temperature, maxTokens });
+    res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Generation failed', message: error.message });
   }
@@ -100,8 +100,8 @@ Requirements:
 - Do not fabricate experience — use "[Your experience with X]" placeholders where appropriate
 - Format with "Dear Hiring Manager," opening and "Sincerely," closing`;
 
-    const text = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 2048 });
-    res.json({ text });
+    const result = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 4096 });
+    res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Cover letter generation failed', message: error.message });
   }
@@ -129,8 +129,8 @@ ${resumeText}
 
 TAILORED RESUME:`;
 
-    const text = await ai.generateText(prompt, { provider, temperature: 0.5, maxTokens: 4096 });
-    res.json({ text });
+    const result = await ai.generateText(prompt, { provider, temperature: 0.5, maxTokens: 8192 });
+    res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Resume tailoring failed', message: error.message });
   }
@@ -156,8 +156,8 @@ router.post('/email', authenticateToken, async (req, res) => {
     };
 
     const prompt = templates[type] || templates['follow-up'];
-    const text = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 1024 });
-    res.json({ text });
+    const result = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 2048 });
+    res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Email generation failed', message: error.message });
   }
@@ -183,8 +183,8 @@ ${question}
 
 ANSWER (2-4 sentences):`;
 
-    const text = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 512 });
-    res.json({ text });
+    const result = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 1024 });
+    res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Answer generation failed', message: error.message });
   }
