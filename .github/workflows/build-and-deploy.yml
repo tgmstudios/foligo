@@ -166,23 +166,35 @@ jobs:
         url='https://rancher.tgm.one'
         cluster=c-lx99g
         token=${{ secrets.RANCHER_TOKEN }}
+        sha=$(echo "${{ github.sha }}" | cut -c1-7)
 
         redeploy() {
             local app=$1
-            pod_upgrade_body=$(curl -s -u "$token" \
-            -k $url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app \
-            -X GET \
-            -H 'Accept: application/json' \
-            -H 'Content-Type: application/json' \
-            -H 'Pragma: no-cache' \
-            -H 'Cache-Control: no-cache' 2>&1 | sed  "s/\"cattle\\.io\\/timestamp\"\\:\\\"[0-9T:Z-]*\\\"/\"cattle\\.io\\/timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"/g")
+            local image="registry.tgm.one/foligo/$app:$sha"
 
-            curl -u "$token" \
-            -k -s $url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app \
-            -X PUT \
-            -H 'Accept: application/json' \
-            -H 'Content-Type: application/json' \
-            --data-binary "$pod_upgrade_body" --compressed
+            # Get current deployment
+            local body=$(curl -s -u "$token" \
+              -k "$url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app" \
+              -X GET \
+              -H 'Accept: application/json' \
+              -H 'Pragma: no-cache' \
+              -H 'Cache-Control: no-cache')
+
+            # Update image to SHA-tagged version + bump timestamp
+            local ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            body=$(echo "$body" | jq \
+              --arg img "$image" \
+              --arg ts "$ts" \
+              '.spec.template.spec.containers[0].image = $img |
+               .metadata.annotations["cattle.io/timestamp"] = $ts')
+
+            curl -s -u "$token" \
+              -k "$url/k8s/clusters/$cluster/v1/apps.deployments/$namespace/$app" \
+              -X PUT \
+              -H 'Accept: application/json' \
+              -H 'Content-Type: application/json' \
+              --data-binary "$body" --compressed
+            echo "[$app] → $image"
         }
 
         echo "${{ steps.extract_branch.outputs.branch }}"
