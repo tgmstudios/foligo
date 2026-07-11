@@ -177,22 +177,6 @@ const router = createRouter({
           component: () => import('@/views/media/MediaLibraryView.vue'),
           props: true
         },
-        {
-          path: 'resume-chatbot',
-          name: 'resume-chatbot',
-          component: () => import('@/views/resume/ResumeChatbotView.vue')
-        },
-        {
-          path: 'resume-chatbot/:sessionId',
-          name: 'resume-chatbot-session',
-          component: () => import('@/views/resume/ResumeChatbotView.vue'),
-          props: true
-        },
-        {
-          path: 'resume-generator',
-          name: 'resume-generator',
-          component: () => import('@/views/resume/ResumeGeneratorView.vue')
-        },
         goapplyRoutes,
       ]
     },

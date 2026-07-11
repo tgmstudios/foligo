@@ -145,7 +145,7 @@
             </router-link>
           </template>
         </div>
-        
+
         <!-- AI Assistants Section -->
         <div v-if="!isSettingsRoute" class="mt-8 pt-6 border-t border-gray-700">
           <div class="px-3 mb-3">
@@ -153,34 +153,14 @@
           </div>
           <div class="space-y-1">
             <router-link
-              to="/resume-chatbot"
-              class="sidebar-item"
-              :class="['resume-chatbot', 'resume-chatbot-session'].includes(String($route.name)) ? 'sidebar-item-active' : 'sidebar-item-inactive'"
-            >
-              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Job Assistant</span>
-            </router-link>
-            <router-link
               to="/goapply"
               class="sidebar-item"
-              :class="$route.name === 'goapply-kanban' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
+              :class="String($route.name).startsWith('goapply') ? 'sidebar-item-active' : 'sidebar-item-inactive'"
             >
               <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
               <span>GoApply</span>
-            </router-link>
-            <router-link
-              to="/resume-generator"
-              class="sidebar-item"
-              :class="$route.name === 'resume-generator' ? 'sidebar-item-active' : 'sidebar-item-inactive'"
-            >
-              <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Resume Generator</span>
             </router-link>
           </div>
         </div>
@@ -511,11 +491,11 @@ const pageTitle = computed(() => {
     'admin-projects': 'Portfolio Management',
     'admin-content': 'Content Management',
     'admin-sso': 'SSO Providers',
-    'resume-chatbot': 'Job Application Assistant',
-    'resume-chatbot-session': 'Job Application Assistant',
-    'resume-generator': 'AI Resume Generator',
     'goapply-kanban': 'GoApply · Kanban',
     'goapply-jobs': 'GoApply · Job List',
+    'goapply-assistant': 'GoApply · Job Assistant',
+    'goapply-assistant-session': 'GoApply · Job Assistant',
+    'goapply-resume': 'GoApply · Resume Generator',
     'goapply-answers': 'GoApply · Saved Answers',
     'goapply-letters': 'GoApply · Cover Letters',
     'goapply-profile': 'GoApply · Profile',

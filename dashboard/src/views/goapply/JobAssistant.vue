@@ -722,12 +722,12 @@ const startChat = async () => {
         currentSessionId.value = response.data.sessionId
         // Update URL to deep-link to this chat
         router.replace({
-          name: 'resume-chatbot-session',
+          name: 'goapply-assistant-session',
           params: { sessionId: response.data.sessionId }
         })
       } else {
         // No session yet, keep base route
-        router.replace({ name: 'resume-chatbot' })
+        router.replace({ name: 'goapply-assistant' })
       }
       
       // Setup code block buttons
@@ -814,7 +814,7 @@ const sendMessage = async () => {
       // If this is a new or different session, sync URL so refresh returns here
       if (changed || route.params.sessionId !== newSessionId) {
         router.replace({
-          name: 'resume-chatbot-session',
+          name: 'goapply-assistant-session',
           params: { sessionId: newSessionId }
         })
       }
@@ -825,7 +825,7 @@ const sendMessage = async () => {
       lastCreatedResume.value = {
         resumeId: response.data.createdResumeId,
         generatorRoute: {
-          path: '/resume-generator',
+          path: '/goapply/resume',
           query: { resumeId: response.data.createdResumeId }
         }
       }
@@ -1011,7 +1011,7 @@ const resumeChat = async (sessionId: string) => {
     // If route doesn't already reflect this session, update it
     if (route.params.sessionId !== sessionId) {
       router.push({
-        name: 'resume-chatbot-session',
+        name: 'goapply-assistant-session',
         params: { sessionId }
       })
     }
@@ -1069,7 +1069,7 @@ const startNewChat = () => {
   }
 
    // Reset URL back to base resume chatbot route
-  router.replace({ name: 'resume-chatbot' })
+  router.replace({ name: 'goapply-assistant' })
 }
 
 // Delete a chat session
@@ -1213,7 +1213,7 @@ const copyChatLink = async () => {
     toast.info('No active chat to link to yet')
     return
   }
-  const linkPath = `/resume-chatbot/${currentSessionId.value}`
+  const linkPath = `/goapply/assistant/${currentSessionId.value}`
   try {
     await navigator.clipboard.writeText(linkPath)
     toast.success('Chat link copied to clipboard')

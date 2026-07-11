@@ -41,6 +41,8 @@ const store = useGoApplyStore()
 const tabs = [
   { label: 'Kanban', route: '/goapply/kanban' },
   { label: 'Job List', route: '/goapply/jobs' },
+  { label: 'Job Assistant', route: '/goapply/assistant' },
+  { label: 'Resume Generator', route: '/goapply/resume' },
   { label: 'Saved Answers', route: '/goapply/saved-answers' },
   { label: 'Cover Letters', route: '/goapply/cover-letters' },
   { label: 'Profile', route: '/goapply/profile' },

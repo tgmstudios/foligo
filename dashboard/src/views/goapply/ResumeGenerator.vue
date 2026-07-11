@@ -520,7 +520,7 @@ const handleLoadFromHistory = async (item: any) => {
 
     // Sync URL so refresh returns to this resume
     router.replace({
-      name: 'resume-generator',
+      name: 'goapply-resume',
       query: { resumeId: item.id }
     })
   } catch (error) {

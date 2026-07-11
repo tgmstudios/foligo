@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API: Debug (pnpm run dev)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/api",
+      "envFile": "${workspaceFolder}/api/.env",
+      "env": { "NODE_OPTIONS": "--inspect=0" },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "autoAttachChildProcesses": true,
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Dashboard: Launch Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:80",
+      "webRoot": "${workspaceFolder}/dashboard",
+      "preLaunchTask": "dashboard: dev"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack: API + Dashboard",
+      "configurations": ["API: Debug (pnpm run dev)", "Dashboard: Launch Chrome"],
+      "stopAll": true
+    }
+  ]
+}

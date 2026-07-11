@@ -23,11 +23,4 @@ module.exports = {
 
   // Direct access to manager for advanced use
   manager: aim,
-
-  // Re-export provider classes for direct instantiation
-  providers: {
-    Gemini: require('./providers/gemini'),
-    OpenAI: require('./providers/openai-compatible'),
-    Anthropic: require('./providers/anthropic'),
-  },
 };

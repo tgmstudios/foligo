@@ -60,7 +60,7 @@ const allowedOrigins = [
   'https://foligo.tech',
   'https://www.foligo.tech',
   /^https:\/\/.*\.foligo\.tech$/,
-  /^http:\/\/localhost:\d+$/ // Allow any localhost port for development
+  /^http:\/\/localhost(:\d+)?$/ // Allow any localhost port for development (browsers omit :80)
 ];
 
 const corsOrigins = allowedOrigins.concat(additionalCorsOrigins);

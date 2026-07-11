@@ -72,7 +72,7 @@ IMPORTANT: Return ONLY valid JSON, no markdown, no code blocks.`;
 
     try {
       const provider = params.provider || null; // null = Foligo default
-      let text = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 8192, provider });
+      let { text } = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 8192, provider });
 
       // Clean up markdown code blocks
       text = text.trim();
@@ -133,7 +133,7 @@ Requirements:
 Return ONLY the improved text, no markdown, no explanations.`;
 
     try {
-      let text = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 1024 });
+      let { text } = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 1024 });
       text = text.trim();
       if (text.startsWith('```')) text = text.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
       return text;

@@ -22,8 +22,12 @@
     "lint:fix": "eslint src/ --fix"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.12",
+    "@ai-sdk/google": "^4.0.12",
+    "@ai-sdk/openai-compatible": "^3.0.7",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.7.1",
+    "ai": "^7.0.21",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "docxtemplater": "^3.67.5",
@@ -49,7 +53,8 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "uuid": "^9.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",

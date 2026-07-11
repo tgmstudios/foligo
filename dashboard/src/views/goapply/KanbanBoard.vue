@@ -172,7 +172,7 @@ watch(() => store.jobs, (jobs) => {
     ...col,
     jobs: [...map[col.status]],  // shallow clone so VueDraggable can mutate
   }))
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, yyyy')

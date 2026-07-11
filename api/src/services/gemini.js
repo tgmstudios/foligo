@@ -5,7 +5,7 @@
  * Defaults to Gemini but respects AI_DEFAULT_PROVIDER / AI_FALLBACK_CHAIN env vars.
  * The public API is unchanged — routes don't need modification.
  */
-const { createGeminiLogger } = require('./logger');
+const { createAILogger } = require('./logger');
 const { fallbackQuestions, utilityPrompts } = require('./prompt-utils');
 const { MODEL_CONFIG, GENERATION_CONFIG, SAFETY_SETTINGS, SYSTEM_INSTRUCTIONS } = require('./gemini-config');
 const { GeminiConfigError, GeminiAPIError, GeminiParseError } = require('./errors');
@@ -20,7 +20,7 @@ const ai = require('./ai/manager');  // ← model-agnostic AIManager
 
 class GeminiService {
   constructor() {
-    this.logger = createGeminiLogger();
+    this.logger = createAILogger({ service: 'content-ai' });
     this.logger.info('Initializing AI service (model-agnostic)', {
       defaultProvider: process.env.AI_DEFAULT_PROVIDER || 'gemini',
       fallback: process.env.AI_FALLBACK_CHAIN || 'gemini,opencode',
@@ -34,7 +34,8 @@ class GeminiService {
     const { context = 'AI call', ...genOpts } = options;
     this.logger.debug(`_aiText: ${context}`, { promptLen: prompt.length });
     try {
-      return await ai.generateText(prompt, genOpts);
+      const { text } = await ai.generateText(prompt, genOpts);
+      return text;
     } catch (error) {
       this.logger.error(`${context} failed`, { error: error.message });
       throw new GeminiAPIError(`${context} failed: ${error.message}`, error);

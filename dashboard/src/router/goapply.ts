@@ -20,6 +20,22 @@ const goapplyRoutes: RouteRecordRaw = {
       component: () => import('@/views/goapply/JobList.vue'),
     },
     {
+      path: 'assistant',
+      name: 'goapply-assistant',
+      component: () => import('@/views/goapply/JobAssistant.vue'),
+    },
+    {
+      path: 'assistant/:sessionId',
+      name: 'goapply-assistant-session',
+      component: () => import('@/views/goapply/JobAssistant.vue'),
+      props: true,
+    },
+    {
+      path: 'resume',
+      name: 'goapply-resume',
+      component: () => import('@/views/goapply/ResumeGenerator.vue'),
+    },
+    {
       path: 'saved-answers',
       name: 'goapply-answers',
       component: () => import('@/views/goapply/SavedAnswers.vue'),

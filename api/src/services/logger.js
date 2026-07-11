@@ -69,13 +69,15 @@ const logger = winston.createLogger({
   exitOnError: false
 });
 
-// Create child logger for Gemini service with context
-const createGeminiLogger = (context = {}) => {
-  return logger.child({ service: 'gemini', ...context });
+// Create child logger for the AI service with context.
+// Service defaults to 'ai' — actual provider (gemini, opencode, etc.) is
+// chosen at runtime by AIManager and logged per-call, not baked into this tag.
+const createAILogger = (context = {}) => {
+  return logger.child({ service: 'ai', ...context });
 };
 
 module.exports = {
   logger,
-  createGeminiLogger
+  createAILogger
 };
 

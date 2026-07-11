@@ -46,7 +46,7 @@ Return JSON:
 Return ONLY valid JSON, no markdown, no code blocks.`;
 
     try {
-      let text = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 4096, provider });
+      let { text } = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 4096, provider });
 
       text = text.trim();
       if (text.startsWith('```json')) text = text.replace(/^```json\n?/, '').replace(/\n?```$/, '');

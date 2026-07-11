@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dashboard: free-port-80",
+      "type": "shell",
+      "command": "fuser -k 80/tcp 2>/dev/null; true",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "debug"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dashboard: dev",
+      "type": "shell",
+      "command": "pnpm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/dashboard"
+      },
+      "isBackground": true,
+      "dependsOn": ["dashboard: free-port-80"],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "debug"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in|Local:"
+        }
+      }
+    }
+  ]
+}
