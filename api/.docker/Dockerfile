@@ -1,7 +1,11 @@
 FROM node:22-bookworm-slim
 
-# Prisma engine needs OpenSSL
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Prisma engine needs OpenSSL; fontconfig + libssl are runtime deps for tectonic (LaTeX compiler)
+RUN apt-get update -y && apt-get install -y openssl ca-certificates curl fontconfig && rm -rf /var/lib/apt/lists/*
+
+# Tectonic — self-contained LaTeX engine used to compile resume documents to PDF (api/src/services/latex-compiler.js)
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh && \
+    mv tectonic /usr/local/bin/tectonic
 
 WORKDIR /usr/src/app
 
@@ -28,6 +32,11 @@ ARG TURBO_TOKEN
 ENV TURBO_API=$TURBO_API
 ENV TURBO_TOKEN=$TURBO_TOKEN
 RUN pnpm exec turbo run build --filter=foligo-api
+
+# Pre-warm tectonic's TeX package bundle cache at build time by compiling the
+# starter template once, so the first real request doesn't need outbound
+# network access (tectonic normally fetches+caches packages on first use).
+RUN tectonic src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup && rm -rf /tmp/tectonic-warmup
 
 EXPOSE 3000
 

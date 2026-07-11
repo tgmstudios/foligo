@@ -81,5 +81,5 @@ aiApi.interceptors.response.use(
   handleResponseError
 )
 
-export { aiApi }
+export { aiApi, API_URL }
 export default api

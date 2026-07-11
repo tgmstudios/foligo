@@ -1,13 +1,17 @@
 /**
  * Foligo Device-Code Auth Bridge
- * Injected on foligo.tech/* pages. Detects /auth/link-device?code=XXXXXX
- * and submits the device code to the Foligo API using the page's
- * authenticated session cookies.
+ * Injected on foligo.tech and local dev web app pages. Detects
+ * /auth/link-device?code=XXXXXX and submits the device code to the
+ * configured Foligo API, authenticated with the JWT the dashboard
+ * keeps in localStorage.
  */
 (async function FoligoAuthBridge() {
   'use strict';
 
-  const API_BASE = 'https://api.foligo.tech';
+  // GoApplyAPI is injected by core/api.js, which the manifest loads on
+  // every page before this script runs — it resolves whichever server
+  // endpoint (production/local/custom) the user has configured.
+  const { api: API_BASE } = await GoApplyAPI.getEndpoints();
 
   // Only act on the link-device page
   const path = window.location.pathname;
@@ -22,13 +26,29 @@
     return;
   }
 
+  // Foligo's auth is a JWT kept in localStorage (see dashboard/src/services/api.ts),
+  // not a cookie — read it the same way the dashboard's own axios client does.
+  const authToken = window.localStorage.getItem('auth_token');
+  if (!authToken) {
+    console.log('[FoligoAuth] No auth_token in localStorage — user is not logged in');
+    window.postMessage({
+      type: 'foligo-device-link',
+      success: false,
+      error: 'You are not logged in. Please log in to Foligo first, then try again.'
+    }, window.location.origin);
+    showMessage('You are not logged in. Please log in to Foligo first.', 'error');
+    return;
+  }
+
   console.log('[FoligoAuth] Submitting device code:', deviceCode);
 
   try {
-    const resp = await fetch(`${API_BASE}/api/auth/device-code-external`, {
+    const resp = await fetch(`${API_BASE}/api/auth/device-code/external`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // send foligo.tech session cookies
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
       body: JSON.stringify({ deviceCode }),
     });
 

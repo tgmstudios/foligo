@@ -169,6 +169,13 @@ const Filler = (() => {
   }
 
   // ─── Value resolution ────────────────────────────────────────────
+  //
+  // fieldName is whatever Detector/Finder came up with — either one of the
+  // canonical taxonomy keys from config/remoteConfig.json's inputSelectors
+  // (e.g. "birthday_MM", "work_auth_us", "linkedin_2") or a generic
+  // label-derived name from Finder.categorizeByLabel (e.g. "current_title").
+  // Both need to resolve against the flat profile object the server returns
+  // from GET /api/goapply/profile.
 
   const DEFAULT_VALUES = {
     first_name: '', last_name: '', full_name: '',
@@ -183,23 +190,245 @@ const Filler = (() => {
     race: 'Prefer not to say', gender: 'Prefer not to say',
     veteran: 'I am not a protected veteran', disability: 'Prefer not to say',
     resume: '', cover_letter: '',
+    // Personal Information
+    middle_name: '', preferred_name: '', username: '', pronouns: 'Prefer not to say',
+    phone_type: 'Mobile',
+    // Location
+    address: '', address_2: '', postal_code: '',
+    // Education
+    discipline: '', language: '',
+    // Experience
+    currently_working: '',
+    // EEO / voluntary disclosures
+    ethnicity: 'Prefer not to say', hispanic: 'Prefer not to say',
+    lgbt: 'Prefer not to say', over18: '', over21: '',
+    has_drivers_license: '',
+    // Work Authorization
+    work_auth_us: '', sponsorship: '',
+    // Social & Links
+    twitter: '', behance: '', dribbble: '',
+    // Other
+    referred_by: '', source: '',
   };
 
-  let cachedProfile = null;
+  // Every alias list is checked in order against the profile object returned
+  // by GET /api/goapply/profile; the first present (truthy or boolean) value
+  // wins. Covers both the canonical ATS taxonomy names (config/remoteConfig.json)
+  // and the generic label-derived names from Finder.categorizeByLabel.
+  const ALIASES = {
+    full_name: ['name', 'fullName'],
+    legal_name: ['legalName', 'name'],
+    first_name: ['firstName'],
+    last_name: ['lastName'],
+    middle_name: ['middleName'],
+    preferred_name: ['preferredName'],
+    preferred_first_name: ['preferredName', 'firstName'],
+    preferred_last_name: ['lastName'],
+    username: ['username', 'email'],
+    email: ['email'],
+    email_confirm: ['email'],
+    phone: ['phone'],
+    phone_stripped: ['phone'],
+    phone_type: ['phoneType'],
+    phone_country: ['phoneCountry'],
+    pronouns: ['pronouns'],
 
-  async function loadProfile() {
-    if (cachedProfile) return cachedProfile;
-    try {
-      const stored = await chrome.storage.local.get('profile');
-      cachedProfile = stored.profile || {};
-      return cachedProfile;
-    } catch (e) {
-      cachedProfile = {};
-      return cachedProfile;
+    location: ['location'],
+    country: ['country', 'location'],
+    country_location: ['country', 'location'],
+    in_country: ['country'],
+    state: ['state'],
+    city: ['city'],
+    address: ['address', 'location'],
+    address_2: ['address2'],
+    address_type: ['address'],
+    zip: ['postalCode'],
+    postal_code: ['postalCode'],
+
+    resume: ['resumeUrl'],
+    cover_letter: ['coverLetter'],
+    coverLetter: ['coverLetter'],
+
+    education: ['educationSummary'],
+    education_summary: ['educationSummary'],
+    school: ['school'],
+    degree: ['highestDegree'],
+    highestDegree: ['highestDegree'],
+    discipline: ['discipline'],
+    gpa: ['gpa'],
+    language: ['language'],
+    language_preferred: ['language'],
+    languages: ['language'],
+    languages_text: ['language'],
+
+    experience: ['experienceSummary'],
+    experience_summary: ['experienceSummary'],
+    current_company: ['currentCompany'],
+    current_company_name: ['currentCompany'],
+    current_title: ['currentTitle', 'title'],
+    current_job_title: ['currentTitle'],
+    title: ['currentTitle'],
+    years_experience: ['yearsExperience'],
+    currently_working: ['currentlyWorking'],
+    current_employee: ['currentlyWorking'],
+
+    gender: ['gender'],
+    gender_checkable: ['gender'],
+    race: ['ethnicity'],
+    ethnicity: ['ethnicity'],
+    multiple_ethnicities: ['ethnicity'],
+    ethnicity_checkable: ['ethnicity'],
+    visible_minority: ['ethnicity'],
+    hispanic: ['hispanicLatino'],
+    veteran: ['veteranStatus'],
+    veteran_v2: ['veteranStatus'],
+    armed_forces: ['veteranStatus'],
+    disability: ['disabilityStatus'],
+    disability_v2: ['disabilityStatus'],
+    lgbt: ['lgbtStatus'],
+    lgbt_v2: ['lgbtStatus'],
+    transgender: ['lgbtStatus'],
+    over18: ['over18'],
+    over21: ['over21'],
+    has_drivers_license: ['hasDriversLicense'],
+
+    work_authorization: ['workAuthUS', 'workAuth'],
+    work_auth: ['workAuthUS', 'workAuth'],
+    work_auth_us: ['workAuthUS'],
+    need_sponsorship: ['sponsorshipRequired'],
+    sponsorship: ['sponsorshipRequired'],
+
+    linkedin: ['linkedin'],
+    github: ['github'],
+    portfolio: ['portfolio'],
+    website: ['website', 'portfolio'],
+    websites: ['website', 'portfolio'],
+    additional_url: ['website', 'portfolio'],
+    twitter: ['twitter'],
+    behance: ['behance'],
+    dribbble: ['dribbble'],
+
+    skill: ['skills'],
+    skills: ['skills'],
+    salary: ['desiredSalary'],
+    salary_requirements: ['desiredSalary'],
+    referral: ['referredBy'],
+    referred_by: ['referredBy'],
+    source: ['source'],
+    source_description: ['source'],
+    source_other: ['source'],
+  };
+
+  // Fields whose canonical name is itself a numbered duplicate on the same
+  // form (e.g. a second LinkedIn or email box) — strip the suffix and
+  // resolve as the base field so both boxes get the same value.
+  const NUMBERED_SUFFIX_RE = /_(\d+)$/;
+
+  // Fields composed from more than one profile value.
+  const COMPOSERS = {
+    city_state: p => [p.city, p.state].filter(Boolean).join(', '),
+    city_state_full: p => [p.city, p.state].filter(Boolean).join(', ') || p.location || '',
+  };
+
+  // ─── Date-variant fields (birthday_MM, current_date_slashes_MMDDYYYY, …) ──
+  // The config asks for dozens of date format variants; we store one
+  // canonical value (profile.birthday) or compute today's date, then format
+  // on demand instead of persisting every variant.
+
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  const pad2 = n => String(n).padStart(2, '0');
+
+  function formatDateVariant(d, variant) {
+    if (!d || isNaN(d.getTime())) return '';
+    const MM = pad2(d.getMonth() + 1), DD = pad2(d.getDate()), YYYY = String(d.getFullYear());
+    switch (variant) {
+      case '': return `${YYYY}-${MM}-${DD}`;
+      case 'YYYY': return YYYY;
+      case 'MM': return MM;
+      case 'M': return String(d.getMonth() + 1);
+      case 'DD': return DD;
+      case 'D': return String(d.getDate());
+      case 'month_text': return MONTH_NAMES[d.getMonth()];
+      case 'slashes_MDYYYY': return `${d.getMonth() + 1}/${d.getDate()}/${YYYY}`;
+      case 'slashes_MMDDYYYY': return `${MM}/${DD}/${YYYY}`;
+      case 'slashes_MDDYY': return `${d.getMonth() + 1}/${DD}/${YYYY.slice(-2)}`;
+      case 'dashes_DDMMYYYY': return `${DD}-${MM}-${YYYY}`;
+      default: return `${YYYY}-${MM}-${DD}`;
     }
   }
 
-  function invalidateCache() { cachedProfile = null; }
+  const DATE_FIELD_RE = new RegExp(
+    '^(birthday|current_date)(?:_(YYYY|MM|M|DD|D|month_text|' +
+    'slashes_MDYYYY|slashes_MMDDYYYY|slashes_MDDYY|dashes_DDMMYYYY))?$'
+  );
+
+  function resolveDateField(fieldName, profile) {
+    const m = DATE_FIELD_RE.exec(fieldName);
+    if (!m) return undefined;
+    const [, base, variant = ''] = m;
+    const d = base === 'current_date' ? new Date() : (profile.birthday ? new Date(profile.birthday) : null);
+    if (!d) return '';
+    return formatDateVariant(d, variant);
+  }
+
+  function boolToYesNo(v) {
+    return v === true ? 'Yes' : v === false ? 'No' : '';
+  }
+
+  function resolveFromProfile(fieldName, profile) {
+    if (profile[fieldName] !== undefined && profile[fieldName] !== null && profile[fieldName] !== '') {
+      return typeof profile[fieldName] === 'boolean' ? boolToYesNo(profile[fieldName]) : profile[fieldName];
+    }
+    const dateValue = resolveDateField(fieldName, profile);
+    if (dateValue !== undefined) return dateValue;
+    if (COMPOSERS[fieldName]) {
+      const composed = COMPOSERS[fieldName](profile);
+      if (composed) return composed;
+    }
+    if (ALIASES[fieldName]) {
+      for (const alias of ALIASES[fieldName]) {
+        const v = profile[alias];
+        if (v !== undefined && v !== null && v !== '') {
+          return typeof v === 'boolean' ? boolToYesNo(v) : v;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  let cachedProfile = null;
+  let cachedProfileAt = 0;
+  const PROFILE_TTL_MS = 10 * 60 * 1000;
+
+  async function loadProfile() {
+    if (cachedProfile && (Date.now() - cachedProfileAt) < PROFILE_TTL_MS) return cachedProfile;
+    let stored = {};
+    try {
+      stored = await chrome.storage.local.get(['profile', 'profileFetchedAt']);
+    } catch (e) { /* storage unavailable */ }
+
+    const isStale = !stored.profileFetchedAt || (Date.now() - stored.profileFetchedAt) > PROFILE_TTL_MS;
+    if (isStale && typeof GoApplyAPI !== 'undefined') {
+      try {
+        const remote = await GoApplyAPI.getGoApplyProfile();
+        if (remote) {
+          cachedProfile = remote;
+          cachedProfileAt = Date.now();
+          try { await chrome.storage.local.set({ profile: remote, profileFetchedAt: cachedProfileAt }); } catch (e) {}
+          return cachedProfile;
+        }
+      } catch (e) {
+        // Not authenticated / offline — fall back to whatever's cached locally.
+      }
+    }
+
+    cachedProfile = stored.profile || {};
+    cachedProfileAt = Date.now();
+    return cachedProfile;
+  }
+
+  function invalidateCache() { cachedProfile = null; cachedProfileAt = 0; }
 
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -208,29 +437,17 @@ const Filler = (() => {
   }
 
   function resolveValueSync(fieldName, profile = {}) {
-    if (profile[fieldName]) return profile[fieldName];
-    const aliases = {
-      full_name: ['full_name', 'name'],
-      first_name: ['first_name', 'firstName'],
-      last_name: ['last_name', 'lastName'],
-      email: ['email', 'emailAddress'],
-      phone: ['phone', 'phoneNumber', 'mobile'],
-      city: ['city', 'cityName'],
-      state: ['state', 'stateName'],
-      country: ['country', 'countryName'],
-      location: ['location', 'current_location'],
-      linkedin: ['linkedin', 'linkedin_url'],
-      github: ['github', 'github_url'],
-      website: ['website', 'portfolio', 'website_url'],
-      current_company: ['current_company', 'company'],
-      current_title: ['current_title', 'title', 'job_title'],
-      salary: ['salary', 'desired_compensation', 'desired_salary'],
-    };
-    if (aliases[fieldName]) {
-      for (const alias of aliases[fieldName]) {
-        if (profile[alias]) return profile[alias];
-      }
+    const direct = resolveFromProfile(fieldName, profile);
+    if (direct !== undefined) return direct;
+
+    const numbered = NUMBERED_SUFFIX_RE.exec(fieldName);
+    if (numbered) {
+      const base = fieldName.slice(0, numbered.index);
+      const baseValue = resolveFromProfile(base, profile);
+      if (baseValue !== undefined) return baseValue;
+      if (DEFAULT_VALUES[base] !== undefined) return DEFAULT_VALUES[base];
     }
+
     return DEFAULT_VALUES[fieldName] || '';
   }
 

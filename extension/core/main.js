@@ -68,9 +68,8 @@
   async function fullAutofill() {
     if (!foundFields.length) { UI.showToast('No fillable fields'); return; }
     
-    const stored = await chrome.storage.local.get('profile');
-    const profile = stored.profile || {};
-    
+    const profile = await Filler.loadProfile();
+
     let filled = 0, skipped = 0;
     for (let i = 0; i < foundFields.length; i++) {
       const f = foundFields[i];

@@ -344,7 +344,7 @@
             <div class="flex flex-col pr-3">
               <span class="font-semibold">Resume draft created</span>
               <span class="text-primary-100/80">
-                Open it in the Resume Generator to tweak and export, or copy a direct link to this chat.
+                Open it in the Resume Editor to keep refining and export, or copy a direct link to this chat.
               </span>
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
@@ -352,7 +352,7 @@
                 @click="openCreatedResumeInGenerator"
                 class="px-3 py-1 bg-primary-500 hover:bg-primary-400 text-white rounded-md text-xs font-medium transition-colors"
               >
-                Open in generator
+                Open in editor
               </button>
               <button
                 @click="copyChatLink"
@@ -820,16 +820,15 @@ const sendMessage = async () => {
       }
     }
 
-    // If a resume draft was created via toolcall, remember it so we can link to the generator
+    // If a resume draft was created via toolcall, remember it so we can link to the editor
     if (response.data.createdResumeId) {
       lastCreatedResume.value = {
         resumeId: response.data.createdResumeId,
         generatorRoute: {
-          path: '/goapply/resume',
-          query: { resumeId: response.data.createdResumeId }
+          path: `/goapply/resume/${response.data.createdResumeId}`
         }
       }
-      toast.success('Resume draft created. You can open it in the Resume Generator to edit and export.')
+      toast.success('Resume draft created. You can open it in the Resume Editor to keep refining and export it.')
     }
 
     // Setup code block buttons for new message

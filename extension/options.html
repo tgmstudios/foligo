@@ -16,6 +16,17 @@ h1{font-size:24px;font-weight:700;color:#0A2540;margin-bottom:4px}
 .btn-sm{padding:8px 16px;font-size:12px}
 .info-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;color:#6B7C93}
 .status-dot{width:8px;height:8px;border-radius:50%}.dot-on{background:#00A86B}.dot-off{background:#E0E6ED}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;font-weight:600;color:#6B7C93;margin-bottom:4px}
+.field input[type=text]{width:100%;padding:8px;border:1px solid #E0E6ED;border-radius:6px;font-size:12px;font-family:inherit}
+.env-options{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.env-option{display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid #E0E6ED;border-radius:8px;cursor:pointer}
+.env-option:has(input:checked){border-color:#635BFF;background:#F0F0FF}
+.env-option .env-title{font-weight:600;color:#0A2540;font-size:13px}
+.env-option .env-urls{font-size:11px;color:#6B7C93;font-family:monospace}
+.custom-fields{display:none;margin-top:4px;padding-left:24px}
+.custom-fields.show{display:block}
+.save-msg{font-size:11px;margin-top:8px;display:none}
 </style></head><body>
 <div class="logo">⚡</div>
 <h1>GoApply by Foligo</h1>
@@ -28,36 +39,41 @@ h1{font-size:24px;font-weight:700;color:#0A2540;margin-bottom:4px}
 </div>
 
 <div class="card">
+  <div class="card-title">🌐 Server Endpoint</div>
+  <p style="margin-bottom:10px">Choose which backend the extension talks to. Use Local Dev when running the API and dashboard from this repo, or Custom to point at a staging deploy.</p>
+  <div class="env-options" id="envOptions">
+    <label class="env-option">
+      <input type="radio" name="env" value="production">
+      <div><div class="env-title">Production</div><div class="env-urls">api.foligo.tech · foligo.tech</div></div>
+    </label>
+    <label class="env-option">
+      <input type="radio" name="env" value="local">
+      <div><div class="env-title">Local Dev</div><div class="env-urls">localhost:3000 · localhost</div></div>
+    </label>
+    <label class="env-option">
+      <input type="radio" name="env" value="custom">
+      <div style="flex:1">
+        <div class="env-title">Custom</div>
+        <div class="env-urls">Enter your own API and web URLs</div>
+        <div class="custom-fields" id="customFields">
+          <div class="field"><label>API Base URL</label><input type="text" id="customApi" placeholder="https://api.example.com"></div>
+          <div class="field"><label>Web Base URL</label><input type="text" id="customWeb" placeholder="https://app.example.com"></div>
+        </div>
+      </div>
+    </label>
+  </div>
+  <button class="btn btn-primary" id="saveEnvBtn" style="width:100%">Save Server Settings</button>
+  <p class="save-msg" id="saveMsg"></p>
+</div>
+
+<div class="card">
   <div class="card-title">📋 What GoApply Does</div>
   <p>This extension autofills job applications in your browser. Your profile, resumes, cover letters, AI features, and job tracking are all managed on your Foligo dashboard — giving you one place for everything.</p>
 </div>
 
-<a href="https://foligo.tech/dashboard/settings" class="btn btn-foligo" target="_blank" style="width:100%">⚙ Open Foligo Dashboard →</a>
-<p style="font-size:10px;color:#6B7C93;margin-top:8px">foligo.tech/dashboard · Manage profile, resumes, AI, Kanban board</p>
+<a href="#" id="openDashboardLink" class="btn btn-foligo" target="_blank" style="width:100%">⚙ Open Foligo Dashboard →</a>
+<p style="font-size:10px;color:#6B7C93;margin-top:8px" id="dashboardHint">foligo.tech/dashboard · Manage profile, resumes, AI, Kanban board</p>
 
-<script>
-(async () => {
-  try {
-    const stored = await chrome.storage.local.get('foligoToken');
-    if (stored.foligoToken) {
-      const resp = await fetch('https://api.foligo.tech/goapply/profile', {
-        headers: { 'Authorization': 'Bearer ' + stored.foligoToken }
-      });
-      if (resp.ok) {
-        document.getElementById('syncDot').className = 'status-dot dot-on';
-        document.getElementById('syncStatus').textContent = 'Connected';
-      } else {
-        document.getElementById('syncDot').className = 'status-dot dot-off';
-        document.getElementById('syncStatus').textContent = 'Disconnected — sign in from the extension popup';
-      }
-    } else {
-      document.getElementById('syncDot').className = 'status-dot dot-off';
-      document.getElementById('syncStatus').textContent = 'Not connected — sign in from extension popup';
-    }
-  } catch(e) {
-    document.getElementById('syncDot').className = 'status-dot dot-off';
-    document.getElementById('syncStatus').textContent = 'Cannot reach Foligo';
-  }
-})();
-</script>
+<script src="core/api.js"></script>
+<script src="options.js"></script>
 </body></html>

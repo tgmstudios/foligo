@@ -33,7 +33,13 @@ const goapplyRoutes: RouteRecordRaw = {
     {
       path: 'resume',
       name: 'goapply-resume',
-      component: () => import('@/views/goapply/ResumeGenerator.vue'),
+      component: () => import('@/views/goapply/ResumeEditor.vue'),
+    },
+    {
+      path: 'resume/:id',
+      name: 'goapply-resume-doc',
+      component: () => import('@/views/goapply/ResumeEditor.vue'),
+      props: true,
     },
     {
       path: 'saved-answers',

@@ -134,6 +134,7 @@ ${jobPosting}
   - You need more details about their work to tailor resume suggestions
   - You want to reference specific achievements or technologies mentioned in their portfolio
   - The excerpt doesn't provide enough detail for your advice
+- **createStructuredResumeDraft**: Only call this when the user explicitly asks you to generate/create/build a resume (not just advice) and you have enough information to write one. It hands off to the agentic LaTeX resume editor, so \`resumeContent\` must be a complete, valid, compilable LaTeX document (\\documentclass through \\end{document}) — no placeholders. The user will continue refining it with an editing agent afterward, so a solid first draft is enough; it doesn't need to be perfect.
 
 ### PORTFOLIO CONTEXT ###
 This user has the following portfolio content available. When referencing posts in your responses, ALWAYS use the post TITLE, never the ID. The IDs are only for internal use with the fetchExistingPost tool. You can use the fetchExistingPost tool to get full content if needed.

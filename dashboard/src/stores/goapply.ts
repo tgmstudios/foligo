@@ -15,6 +15,68 @@ export interface GoApplyProfile {
   github: string
   portfolio: string
   skills: string[]
+
+  // Personal Information
+  firstName?: string
+  lastName?: string
+  middleName?: string
+  preferredName?: string
+  legalName?: string
+  username?: string
+  phoneType?: string
+  phoneCountry?: string
+  birthday?: string
+  pronouns?: string
+
+  // Location
+  address?: string
+  address2?: string
+  city?: string
+  state?: string
+  country?: string
+  postalCode?: string
+
+  // Education
+  highestDegree?: string
+  school?: string
+  discipline?: string
+  gpa?: string
+  educationSummary?: string
+  language?: string
+
+  // Experience
+  currentCompany?: string
+  currentTitle?: string
+  currentlyWorking?: boolean
+  experienceSummary?: string
+  yearsExperience?: string
+
+  // EEO / voluntary disclosures
+  gender?: string
+  ethnicity?: string
+  hispanicLatino?: string
+  veteranStatus?: string
+  disabilityStatus?: string
+  lgbtStatus?: string
+  over18?: boolean
+  over21?: boolean
+  hasDriversLicense?: boolean
+
+  // Work Authorization
+  workAuthUS?: string
+  workAuth?: string
+  sponsorshipRequired?: string
+
+  // Social & Links
+  twitter?: string
+  behance?: string
+  dribbble?: string
+  website?: string
+
+  // Other
+  desiredSalary?: string
+  referredBy?: string
+  source?: string
 }
 
 export interface GoApplyJob {

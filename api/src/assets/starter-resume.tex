@@ -1,0 +1,52 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titlespacing*{\section}{0pt}{10pt}{6pt}
+
+\newcommand{\resumeItem}[1]{\item #1}
+\newcommand{\resumeEntry}[3]{
+  \textbf{#1} \hfill #2 \\
+  \textit{#3}
+}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE \textbf{Your Name}} \\
+  \vspace{2pt}
+  your.email@example.com \; $\vert$ \; (555) 555-5555 \; $\vert$ \; City, State \; $\vert$ \; \href{https://linkedin.com/in/yourname}{linkedin.com/in/yourname}
+\end{center}
+
+\section*{Summary}
+A brief 2-3 sentence summary of your professional background and what you're looking for. This is a great place for the assistant to tailor language to a specific job description.
+
+\section*{Experience}
+\resumeEntry{Company Name}{Month Year -- Month Year}{Job Title, Location}
+\begin{itemize}[leftmargin=1.2em, itemsep=1pt, topsep=2pt]
+  \resumeItem{Describe an accomplishment with a measurable result.}
+  \resumeItem{Describe another responsibility or achievement.}
+\end{itemize}
+
+\section*{Projects}
+\resumeEntry{Project Name}{Month Year}{Technologies used}
+\begin{itemize}[leftmargin=1.2em, itemsep=1pt, topsep=2pt]
+  \resumeItem{What the project does and the impact it had.}
+\end{itemize}
+
+\section*{Education}
+\resumeEntry{University Name}{Month Year -- Month Year}{Degree, Field of Study}
+
+\section*{Skills}
+\textbf{Languages:} \\
+\textbf{Frameworks:} \\
+\textbf{Tools:}
+
+\end{document}

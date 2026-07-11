@@ -39,7 +39,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://foligo.tech/*"],
+      "matches": ["https://foligo.tech/*", "http://localhost/*", "http://127.0.0.1/*"],
       "js": ["content_script/foligo-auth.js"],
       "run_at": "document_idle"
     }

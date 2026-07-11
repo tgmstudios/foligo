@@ -21,7 +21,7 @@
  *   - Model listing for UIs
  */
 
-const { generateText: sdkGenerateText } = require('ai');
+const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
 const { createProvider, listProviders } = require('./providers');
 const { createAILogger } = require('../logger');
 const { SAFETY_SETTINGS } = require('../gemini-config');
@@ -171,6 +171,73 @@ class AIManager {
         tools,
       });
     });
+  }
+
+  /**
+   * Stream a chat completion, driving a multi-step agentic tool-calling loop.
+   * Yields raw `ai` SDK `fullStream` parts (text-delta, reasoning-delta, tool-call,
+   * tool-result, tool-error, finish, ...) so callers can forward them (e.g. as SSE)
+   * as they arrive.
+   *
+   * Fallback only applies *before* the first chunk arrives — once a provider has
+   * started streaming, a later failure is yielded as an `{ type: 'error' }` part
+   * rather than silently retried, since a partial response may already be visible
+   * to the caller.
+   *
+   * @param {Array<{role:string, content:string}>} messages
+   * @param {object} options — { temperature, maxTokens, tools, systemInstruction, maxSteps, provider }
+   * @returns {AsyncGenerator<object>}
+   */
+  async *streamChat(messages, options = {}) {
+    const { provider: reqProvider, systemInstruction, tools, maxSteps, temperature, maxTokens } = options;
+    const types = reqProvider
+      ? [reqProvider]
+      : [this._defaultProvider, ...this._fallbackChain.filter(p => p !== this._defaultProvider)];
+
+    let lastError;
+    for (const type of types) {
+      const prov = this.getProvider(type);
+      if (!prov) continue;
+
+      const result = sdkStreamText({
+        model: prov.model,
+        system: systemInstruction,
+        messages,
+        tools,
+        stopWhen: stepCountIs(maxSteps ?? 6),
+        temperature,
+        maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
+        providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },
+      });
+
+      const iterator = result.fullStream[Symbol.asyncIterator]();
+      let first;
+      try {
+        first = await iterator.next();
+      } catch (e) {
+        lastError = e;
+        this.logger.warn(`Provider "${type}" stream failed before first chunk, trying next: ${e.message}`);
+        this._providers.delete(type);
+        continue;
+      }
+
+      this.logger.debug(`streamChat via ${prov.name}`, { msgCount: messages.length });
+      if (!first.done) yield first.value;
+
+      try {
+        while (true) {
+          const { value, done } = await iterator.next();
+          if (done) break;
+          yield value;
+        }
+      } catch (e) {
+        this.logger.warn(`Provider "${type}" stream failed mid-stream: ${e.message}`);
+        yield { type: 'error', error: e.message || String(e) };
+      }
+      return;
+    }
+
+    throw new Error(`No healthy AI provider available for streaming. Tried: ${types.join(', ')}. Last error: ${lastError?.message}`);
   }
 
   /**

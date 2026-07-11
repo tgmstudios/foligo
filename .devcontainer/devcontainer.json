@@ -44,6 +44,6 @@
     }
   },
 
-  "postCreateCommand": "corepack enable && pnpm install && pnpm --filter './api' exec prisma generate",
+  "postCreateCommand": "corepack enable && pnpm install && pnpm --filter './api' exec prisma generate && (mkdir -p ~/.local/bin && curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh && mv tectonic ~/.local/bin/tectonic)",
   "postStartCommand": "pnpm --filter './api' exec prisma migrate deploy 2>/dev/null; true"
 }

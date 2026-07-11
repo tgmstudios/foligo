@@ -64,6 +64,19 @@ const Finder = (() => {
       { names: ['work_authorization'], re: /authori[sz]|eligible.*work|right.*work/i },
       { names: ['relocate'], re: /relocat|willing.*move/i },
       { names: ['travel'], re: /travel|willing.*commit|meet.*person/i },
+      { names: ['sponsorship'], re: /sponsorship|require.*sponsor|will.*need.*sponsor/i },
+      { names: ['lgbt'], re: /lgbt|sexual\s*orientation/i },
+      { names: ['over18'], re: /18\s*years|over\s*18|at\s*least\s*18/i },
+      { names: ['over21'], re: /21\s*years|over\s*21|at\s*least\s*21/i },
+      { names: ['birthday'], re: /birth\s*date|date\s*of\s*birth|birthday/i },
+      { names: ['pronouns'], re: /pronoun/i },
+      { names: ['username'], re: /^username$|user\s*name/i },
+      { names: ['currently_working'], re: /currently\s*(work|employ)|present(ly)?\s*employ/i },
+      { names: ['twitter'], re: /twitter|^x\s*\(?formerly/i },
+      { names: ['behance'], re: /behance/i },
+      { names: ['dribbble'], re: /dribbble/i },
+      { names: ['referred_by'], re: /referred\s*by|who.*referred/i },
+      { names: ['has_drivers_license'], re: /driver.?s?\s*licen[cs]e/i },
     ];
 
     for (const { names, re } of patterns) {

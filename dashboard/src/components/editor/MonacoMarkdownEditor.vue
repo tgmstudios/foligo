@@ -127,8 +127,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import * as monaco from 'monaco-editor'
-import loader from '@monaco-editor/loader'
+import { monaco, loader } from '@/lib/monaco'
 import { marked } from 'marked'
 
 interface Props {
@@ -225,12 +224,6 @@ const insertMarkdown = (before: string, after: string = '') => {
 
 const initializeMonaco = async () => {
   if (!monacoContainer.value) return
-
-  // Configure Monaco
-  loader.config({ 
-    'vs/nls': { availableLanguages: { '*': 'en' } },
-    paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }
-  })
 
   const monacoInstance = await loader.init()
   

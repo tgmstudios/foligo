@@ -8,3 +8,7 @@ node_modules
 .graphify/worktree.json
 .graphify/needs_update
 .graphify/cache/
+
+# Third-party extensions kept locally for reference/reverse-engineering only —
+# never ship a competitor's packaged extension as part of our repo.
+extension/vendor/

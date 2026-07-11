@@ -347,21 +347,17 @@ class GeminiService {
         };
 
       case 'createStructuredResumeDraft':
-        // Resume chatbot: create a saved resume draft that the resume generator can edit later.
-        // IMPORTANT: No additional AI is called on the server; the provided resumeData is used as-is.
+        // Resume chatbot: create a saved resume document that the agentic resume editor can open.
+        // IMPORTANT: No additional AI is called on the server; the provided resumeContent LaTeX is used as-is.
         return {
           done: true,
-          toolcall: 'create_resume_history',
+          toolcall: 'create_resume_document',
           resume: {
             name: args.name,
-            layoutStyle: args.layoutStyle || null,
-            resumeSize: args.resumeSize || 'medium',
             jobDescription: args.jobDescription || '',
-            contentItemIds: Array.isArray(args.contentItemIds) ? args.contentItemIds : [],
-            templateId: args.templateId || null,
-            resumeData: args.resumeData || {}
+            resumeContent: args.resumeContent
           },
-          message: "Great, I've created a structured resume draft with that layout. You can open it in the Resume Generator to tweak and export it."
+          message: "Great, I've created a resume draft. You can open it in the Resume Editor to keep refining and export it."
         };
       
       default:

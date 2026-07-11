@@ -13,6 +13,44 @@ router.use(authenticateToken);
 // PROFILE
 // =============================================================================
 
+// The `skills` column stores a JSON-encoded array as text, and the DB
+// column is named `fullName` — but the dashboard's GoApplyProfile
+// contract uses `name` and expects `skills` as a real array. Translate
+// at the boundary so callers never see the storage representation.
+function serializeProfile(profile) {
+  if (!profile) return null;
+  const { fullName, skills, ...rest } = profile;
+  let parsedSkills = [];
+  if (skills) {
+    try {
+      const parsed = JSON.parse(skills);
+      if (Array.isArray(parsed)) parsedSkills = parsed;
+    } catch (e) {
+      // Legacy/corrupted value — surface as empty rather than propagate garbage
+      parsedSkills = [];
+    }
+  }
+  return { ...rest, name: fullName, skills: parsedSkills };
+}
+
+// Everything beyond the original core fields (name/email/phone/location/
+// linkedin/github/portfolio/resumeUrl/skills) mirrors the extension's
+// autofill field taxonomy (Personal Info, Location, Education, Experience,
+// EEO, Work Authorization, Social & Links, Other) 1:1 with matching Prisma
+// columns, so it can pass straight through without translation.
+const PROFILE_PASSTHROUGH_FIELDS = [
+  'firstName', 'lastName', 'middleName', 'preferredName', 'legalName', 'username',
+  'phoneType', 'phoneCountry', 'birthday', 'pronouns',
+  'address', 'address2', 'city', 'state', 'country', 'postalCode',
+  'highestDegree', 'school', 'discipline', 'gpa', 'educationSummary', 'language',
+  'currentCompany', 'currentTitle', 'currentlyWorking', 'experienceSummary', 'yearsExperience',
+  'gender', 'ethnicity', 'hispanicLatino', 'veteranStatus', 'disabilityStatus', 'lgbtStatus',
+  'over18', 'over21', 'hasDriversLicense',
+  'workAuthUS', 'workAuth', 'sponsorshipRequired',
+  'twitter', 'behance', 'dribbble', 'website',
+  'desiredSalary', 'referredBy', 'source',
+];
+
 // GET /api/goapply/profile — get logged-in user's profile
 router.get('/profile', async (req, res) => {
   try {
@@ -22,11 +60,7 @@ router.get('/profile', async (req, res) => {
       where: { userId }
     });
 
-    if (!profile) {
-      return res.json(null);
-    }
-
-    res.json(profile);
+    res.json(serializeProfile(profile));
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({
@@ -41,15 +75,22 @@ router.put('/profile', async (req, res) => {
   try {
     const userId = req.user.id;
     const {
-      fullName, email, phone, location,
+      name, email, phone, location,
       linkedin, github, portfolio, resumeUrl, skills
     } = req.body;
+
+    const skillsJson = skills !== undefined ? JSON.stringify(Array.isArray(skills) ? skills : []) : undefined;
+
+    const passthrough = {};
+    for (const field of PROFILE_PASSTHROUGH_FIELDS) {
+      if (req.body[field] !== undefined) passthrough[field] = req.body[field];
+    }
 
     const profile = await prisma.userProfile.upsert({
       where: { userId },
       create: {
         userId,
-        fullName: fullName || null,
+        fullName: name || null,
         email: email || null,
         phone: phone || null,
         location: location || null,
@@ -57,10 +98,11 @@ router.put('/profile', async (req, res) => {
         github: github || null,
         portfolio: portfolio || null,
         resumeUrl: resumeUrl || null,
-        skills: skills ? (typeof skills === 'string' ? skills : JSON.stringify(skills)) : null
+        skills: skillsJson ?? null,
+        ...passthrough
       },
       update: {
-        fullName: fullName !== undefined ? (fullName || null) : undefined,
+        fullName: name !== undefined ? (name || null) : undefined,
         email: email !== undefined ? (email || null) : undefined,
         phone: phone !== undefined ? (phone || null) : undefined,
         location: location !== undefined ? (location || null) : undefined,
@@ -68,11 +110,12 @@ router.put('/profile', async (req, res) => {
         github: github !== undefined ? (github || null) : undefined,
         portfolio: portfolio !== undefined ? (portfolio || null) : undefined,
         resumeUrl: resumeUrl !== undefined ? (resumeUrl || null) : undefined,
-        skills: skills !== undefined ? (typeof skills === 'string' ? skills : JSON.stringify(skills)) : undefined
+        skills: skillsJson,
+        ...passthrough
       }
     });
 
-    res.json(profile);
+    res.json(serializeProfile(profile));
   } catch (error) {
     console.error('Upsert profile error:', error);
     res.status(500).json({

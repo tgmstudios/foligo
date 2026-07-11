@@ -27,8 +27,7 @@ model User {
   projectAccess      ProjectAccess[]
   media              Media[]
   resumeChatSessions ResumeChatSession[]
-  resumeTemplates    ResumeTemplate[]
-  resumeHistory      ResumeHistory[]
+  resumeDocuments    ResumeDocument[]
   jobApplications    JobApplication[]
   userProfile        UserProfile?
   savedAnswers       SavedAnswer[]
@@ -410,46 +409,27 @@ model ResumeChatSession {
   @@map("resume_chat_sessions")
 }
 
-// Resume Template - Stores user's DOCX templates
-model ResumeTemplate {
-  id           String   @id @default(uuid())
-  userId       String
-  name         String // User-provided template name
-  templatePath String // Path to stored template file
-  fileName     String // Original filename
-  description  String? // Optional description
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relationships
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ResumeHistory ResumeHistory[]
-
-  @@index([userId])
-  @@index([createdAt])
-  @@map("resume_templates")
-}
-
-// Resume Generation History - Stores generated resume data and settings
-model ResumeHistory {
+// Resume Document - LaTeX-first agentic resume editor documents.
+// The `content` field is the single source of truth (LaTeX source); chatHistory
+// stores the agent conversation that produced/edited it so re-opening a document
+// resumes the same agentic thread.
+model ResumeDocument {
   id             String   @id @default(uuid())
   userId         String
-  name           String // User-provided name for this resume
-  templateId     String? // Reference to ResumeTemplate if used
-  jobDescription String // Job description used
-  resumeData     Json // Generated resume data (summary, projects, etc.)
-  contentItemIds Json? // IDs of content items used
-  resumeSize     String // small, medium, or large
+  name           String // User-provided name for this document
+  content        String   @db.Text // LaTeX source
+  jobDescription String?  @db.Text // Job description this resume is tailored for
+  chatHistory    Json     @default("[]") // [{ role, content, toolCalls? }]
+  pdfPath        String? // Path to the last compiled PDF, if any
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relationships
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template ResumeTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
-  @@map("resume_history")
+  @@map("resume_documents")
 }
 
 // GoApply - Job Application Tracker
@@ -473,8 +453,8 @@ model JobApplication {
 }
 
 model UserProfile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
+  id        String  @id @default(uuid())
+  userId    String  @unique
   fullName  String?
   email     String?
   phone     String?
@@ -484,6 +464,70 @@ model UserProfile {
   portfolio String?
   resumeUrl String?
   skills    String? // JSON array stored as string
+
+  // Personal Information
+  firstName     String?
+  lastName      String?
+  middleName    String?
+  preferredName String?
+  legalName     String?
+  username      String?
+  phoneType     String? // Mobile, Home, Work
+  phoneCountry  String? // e.g. "US"
+  birthday      String? // ISO date (YYYY-MM-DD)
+  pronouns      String?
+
+  // Location
+  address    String?
+  address2   String?
+  city       String?
+  state      String?
+  country    String?
+  postalCode String?
+
+  // Education
+  highestDegree    String?
+  school           String?
+  discipline       String?
+  gpa              String?
+  educationSummary String?
+  language         String?
+
+  // Experience
+  currentCompany    String?
+  currentTitle      String?
+  currentlyWorking  Boolean?
+  experienceSummary String?
+  yearsExperience   String?
+
+  // EEO / voluntary disclosures — default to "Prefer not to say" at the
+  // filler layer, never inferred or defaulted server-side.
+  gender            String?
+  ethnicity         String?
+  hispanicLatino    String?
+  veteranStatus     String?
+  disabilityStatus  String?
+  lgbtStatus        String?
+  over18            Boolean?
+  over21            Boolean?
+  hasDriversLicense Boolean?
+
+  // Work Authorization
+  workAuthUS          String?
+  workAuth            String? // generic / non-US authorization status
+  sponsorshipRequired String?
+
+  // Social & Links
+  twitter  String?
+  behance  String?
+  dribbble String?
+  website  String?
+
+  // Other
+  desiredSalary String?
+  referredBy    String?
+  source        String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -535,9 +579,9 @@ model GeneratedEmail {
 model ApiToken {
   id         String    @id @default(uuid())
   userId     String
-  name       String    // User-provided label for this token
-  prefix     String    // First 8 chars stored in plaintext for identification
-  hash       String    // SHA-256 hash of the full token
+  name       String // User-provided label for this token
+  prefix     String // First 8 chars stored in plaintext for identification
+  hash       String // SHA-256 hash of the full token
   lastUsedAt DateTime? // When this token was last used for authentication
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt

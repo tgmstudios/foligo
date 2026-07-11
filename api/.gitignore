@@ -104,6 +104,9 @@ uploads/
 # Resume templates directory
 templates/
 
+# Compiled resume PDFs
+/generated/
+
 # Database
 *.db
 *.sqlite

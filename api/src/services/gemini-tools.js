@@ -65,48 +65,11 @@ const AI_RESUME_CHATBOT_TOOLS = {
     }),
   }),
   createStructuredResumeDraft: tool({
-    description: 'Call this when the user explicitly asks you to generate a resume in a specific layout/format and you have gathered ALL the information needed. This function creates a saved resume draft (in the resume generator history) from the conversation WITHOUT using any additional AI on the server. You MUST fully populate all text fields (no placeholders like "TBD" or "fill in").',
+    description: 'Call this when the user explicitly asks you to generate a resume and you have gathered ALL the information needed. This creates a saved resume document (opened in the agentic LaTeX resume editor) from the conversation WITHOUT using any additional AI on the server. You MUST produce a complete, valid, compilable LaTeX document — no placeholders like "TBD" or "fill in".',
     inputSchema: z.object({
-      name: z.string().describe('A short descriptive name for this resume draft (e.g. "Senior Backend Engineer - Stripe", "Two-column FAANG template for Staff role").'),
-      layoutStyle: z.string().describe('High-level layout style requested by the user (e.g. "single_column", "two_column_modern", "compact_bullet_heavy", "academic"). This will be stored with the draft so the user can pick a matching template later.'),
-      resumeSize: z.enum(['small', 'medium', 'large']).describe('Overall length/density of the resume: small (lean), medium (default), or large (very detailed).'),
+      name: z.string().describe('A short descriptive name for this resume draft (e.g. "Senior Backend Engineer - Stripe").'),
       jobDescription: z.string().describe('The job description or target role this resume is tailored for. Include it verbatim or as provided by the user.'),
-      contentItemIds: z.array(z.string()).describe('Optional IDs of portfolio content items (projects/experiences) that this resume is based on. Use IDs from the portfolio context if the user referenced specific items.').optional(),
-      templateId: z.string().describe('Optional existing resume template ID to associate with this draft, if the user picked a specific template from their library.').optional(),
-      resumeData: z.object({
-        summary: z.string().describe('Executive summary at the top of the resume, already tailored to the job.'),
-        education: z.array(z.object({
-          institution: z.string(),
-          degree: z.string(),
-          details: z.string().optional(),
-          date: z.string().optional(),
-          enabled: z.boolean().describe('Whether to show this entry by default.').optional(),
-        })).describe('Education section entries.').optional(),
-        experience: z.array(z.object({
-          company: z.string(),
-          location: z.string().optional(),
-          description: z.string().optional(),
-          enabled: z.boolean().describe('Whether to show this company block by default.').optional(),
-          roles: z.array(z.object({
-            title: z.string(),
-            dateRange: z.string(),
-            enabled: z.boolean().describe('Whether to show this role block by default.').optional(),
-            bullets: z.array(z.string()).describe('Bullet points describing impact/responsibilities, already written in final resume-ready form.'),
-          })).describe('Roles/positions held at this company.'),
-        })).describe('Work / experience section entries.').optional(),
-        projects: z.array(z.object({
-          title: z.string(),
-          enabled: z.boolean().describe('Whether to show this project by default.').optional(),
-          bullets: z.array(z.string()).describe('Bullet points describing the project, technologies, and impact.'),
-        })).describe('Projects section entries.').optional(),
-        proficiencies: z.array(z.object({
-          category: z.string(),
-          enabled: z.boolean().describe('Whether to show this category by default.').optional(),
-          skills: z.array(z.string()).describe('Individual skills in this category.'),
-        })).describe('Grouped skills / proficiencies section.').optional(),
-        honors: z.array(z.string()).describe('Honors / awards / leadership bullet lines.').optional(),
-        layoutStyle: z.string().describe('Echo of layout style to make it easy for the editor to know how this resume was intended to look.').optional(),
-      }).describe('The fully structured resume content that will be used by the resume generator. You MUST completely fill in all text fields here; the server will NOT call any AI to modify it.'),
+      resumeContent: z.string().describe('The complete LaTeX source for the resume (including \\documentclass and \\begin{document}...\\end{document}), fully populated from the conversation. This is the exact content that will be opened in the resume editor.'),
     }),
   }),
 };

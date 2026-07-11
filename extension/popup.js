@@ -110,7 +110,10 @@ async function loadKanban() {
   }
 }
 
-$('openDashboardBtn').addEventListener('click', () => chrome.tabs.create({ url: 'https://foligo.tech/dashboard/jobs' }));
+$('openDashboardBtn').addEventListener('click', async () => {
+  const { web } = await GoApplyAPI.getEndpoints();
+  chrome.tabs.create({ url: `${web}/dashboard/jobs` });
+});
 
 // ─── ACCOUNT TAB ────────────────────────────────────────────────────
 let devicePollInterval = null;
@@ -182,7 +185,8 @@ $('connectDeviceBtn').addEventListener('click', async () => {
   });
 
   // Open the Foligo link-device page
-  chrome.tabs.create({ url: `https://foligo.tech/auth/link-device?code=${code}` });
+  const { web } = await GoApplyAPI.getEndpoints();
+  chrome.tabs.create({ url: `${web}/auth/link-device?code=${code}` });
 
   // Show the device code UI and start polling
   showDeviceCodeUI(code);
@@ -261,7 +265,10 @@ $('signOutBtn').addEventListener('click', async () => {
 
 // ─── Foligo links ────────────────────────────────────────────────────
 
-$('openFoligoBtn').addEventListener('click', () => chrome.tabs.create({ url: 'https://foligo.tech/dashboard/settings' }));
+$('openFoligoBtn').addEventListener('click', async () => {
+  const { web } = await GoApplyAPI.getEndpoints();
+  chrome.tabs.create({ url: `${web}/goapply/profile` });
+});
 $('syncNowBtn').addEventListener('click', async () => {
   $('syncNowBtn').disabled = true; $('syncNowBtn').textContent = 'Syncing...';
   try {
@@ -344,6 +351,19 @@ window.addEventListener('beforeunload', () => {
   stopPolling();
 });
 
+// ─── Server endpoint label ───────────────────────────────────────────
+$('openSettingsLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.runtime.openOptionsPage();
+});
+
+async function showEnvLabel() {
+  const { env } = await GoApplyAPI.getEnvironment();
+  const labels = { production: 'Production', local: 'Local Dev', custom: 'Custom' };
+  $('envLabel').textContent = labels[env] || env;
+}
+
 // ─── Init ───────────────────────────────────────────────────────────
 checkPage();
 checkAuth().then(auth => { if (auth) loadKanban().catch(()=>{}); });
+showEnvLabel();

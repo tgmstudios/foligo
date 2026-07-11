@@ -1602,72 +1602,30 @@ router.post('/resume-chatbot/session',
         context
       );
 
-      // Handle toolcall: create a saved resume draft in resume history (no extra AI)
-      if (result.toolcall === 'create_resume_history' && result.resume) {
+      // Handle toolcall: create a saved resume document for the agentic LaTeX editor (no extra AI)
+      if (result.toolcall === 'create_resume_document' && result.resume) {
         try {
           const {
             name,
-            layoutStyle,
-            resumeSize = 'medium',
             jobDescription: jdFromTool = '',
-            contentItemIds = [],
-            templateId,
-            resumeData
+            resumeContent
           } = result.resume;
 
           const effectiveJobDescription = jdFromTool || jobPosting || '';
 
-          if (!name || !effectiveJobDescription || !resumeData) {
+          if (!name || !resumeContent) {
             return res.status(400).json({
               error: 'Invalid Resume Draft',
-              message: 'The AI tool call did not provide all required resume fields (name, jobDescription, resumeData).'
+              message: 'The AI tool call did not provide all required resume fields (name, resumeContent).'
             });
           }
 
-          // If a templateId was provided, verify it belongs to the current user
-          let validatedTemplateId = null;
-          if (templateId) {
-            const template = await prisma.resumeTemplate.findFirst({
-              where: {
-                id: templateId,
-                userId
-              }
-            });
-
-            if (!template) {
-              return res.status(404).json({
-                error: 'Template Not Found',
-                message: 'The specified resume template does not exist or does not belong to the current user.'
-              });
-            }
-
-            validatedTemplateId = templateId;
-          }
-
-          // Attach layoutStyle into resumeData so the generator/editor can use it later
-          const resumeDataWithLayout = {
-            ...resumeData,
-            layoutStyle: resumeData.layoutStyle || layoutStyle || null
-          };
-
-          const history = await prisma.resumeHistory.create({
+          const document = await prisma.resumeDocument.create({
             data: {
               userId,
               name,
-              templateId: validatedTemplateId,
-              jobDescription: effectiveJobDescription,
-              resumeData: resumeDataWithLayout,
-              contentItemIds: contentItemIds.length > 0 ? contentItemIds : null,
-              resumeSize
-            },
-            include: {
-              template: {
-                select: {
-                  id: true,
-                  name: true,
-                  fileName: true
-                }
-              }
+              content: resumeContent,
+              jobDescription: effectiveJobDescription || null
             }
           });
 
@@ -1687,12 +1645,12 @@ router.post('/resume-chatbot/session',
 
           return res.json({
             ...result,
-            createdResumeId: history.id,
-            createdResume: history,
+            createdResumeId: document.id,
+            createdResume: document,
             sessionId: savedSession?.id || sessionId || null
           });
         } catch (error) {
-          console.error('Error creating resume history from toolcall:', error);
+          console.error('Error creating resume document from toolcall:', error);
           return res.status(500).json({
             error: 'Resume Draft Creation Failed',
             message: error.message || 'Unable to create resume draft from chatbot toolcall'

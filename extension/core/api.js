@@ -4,7 +4,47 @@
  * AI is model-agnostic — provider can be selected per-request.
  */
 const GoApplyAPI = (() => {
-  const BASE_URL = 'https://api.foligo.tech';
+  // ─── Server Endpoints ───────────────────────────────────────────
+  // Lets the extension point at production, a local dev stack, or a
+  // custom pair of URLs (e.g. a staging deploy) instead of hardcoding
+  // api.foligo.tech everywhere.
+  const ENVIRONMENTS = {
+    production: { api: 'https://api.foligo.tech', web: 'https://foligo.tech' },
+    local: { api: 'http://localhost:3000', web: 'http://localhost' },
+  };
+  const DEFAULT_ENV = 'production';
+
+  async function getEnvironment() {
+    try {
+      const stored = await chrome.storage.local.get(['goapplyEnv', 'goapplyCustomEndpoints']);
+      const env = stored.goapplyEnv || DEFAULT_ENV;
+      if (env === 'custom') {
+        const custom = stored.goapplyCustomEndpoints;
+        if (custom?.api && custom?.web) return { env, ...custom };
+        return { env: DEFAULT_ENV, ...ENVIRONMENTS[DEFAULT_ENV] };
+      }
+      return { env, ...(ENVIRONMENTS[env] || ENVIRONMENTS[DEFAULT_ENV]) };
+    } catch (e) {
+      return { env: DEFAULT_ENV, ...ENVIRONMENTS[DEFAULT_ENV] };
+    }
+  }
+
+  async function getEndpoints() {
+    const { api, web } = await getEnvironment();
+    return { api, web };
+  }
+
+  async function setEnvironment(env) {
+    if (env !== 'custom' && !ENVIRONMENTS[env]) throw new Error(`Unknown environment: ${env}`);
+    await chrome.storage.local.set({ goapplyEnv: env });
+  }
+
+  async function setCustomEndpoints(api, web) {
+    await chrome.storage.local.set({
+      goapplyEnv: 'custom',
+      goapplyCustomEndpoints: { api: api.replace(/\/+$/, ''), web: web.replace(/\/+$/, '') },
+    });
+  }
 
   async function getToken() {
     try {
@@ -32,6 +72,7 @@ const GoApplyAPI = (() => {
     const token = await getToken();
     if (!token) throw new Error('Not authenticated. Open Foligo dashboard to sign in.');
 
+    const { api: BASE_URL } = await getEndpoints();
     const url = `${BASE_URL}${path}`;
     const headers = {
       'Content-Type': 'application/json',
@@ -53,6 +94,11 @@ const GoApplyAPI = (() => {
 
   // ─── Profile ────────────────────────────────────────────────────
   async function getProfile() { return request('/api/auth/me'); }
+  // Full GoApply profile — every field the extension can autofill (Personal
+  // Info, Location, Education, Experience, EEO, Work Authorization, Social &
+  // Links, Other). Distinct from getProfile()/'/api/auth/me', which only
+  // returns basic account identity.
+  async function getGoApplyProfile() { return request('/api/goapply/profile'); }
   async function syncProfile(profile) { return request('/api/goapply/profile', { method: 'PUT', body: JSON.stringify(profile) }); }
 
   // ─── Jobs ───────────────────────────────────────────────────────
@@ -130,6 +176,7 @@ const GoApplyAPI = (() => {
    * Public endpoint — no auth required.
    */
   async function exchangeDeviceCode(deviceCode) {
+    const { api: BASE_URL } = await getEndpoints();
     const url = `${BASE_URL}/api/auth/device-code/exchange`;
     const resp = await fetch(url, {
       method: 'POST',
@@ -156,10 +203,12 @@ const GoApplyAPI = (() => {
   }
 
   return {
+    ENVIRONMENTS,
+    getEnvironment, getEndpoints, setEnvironment, setCustomEndpoints,
     getToken, setToken, checkAuth,
     getAIPreference, setAIPreference,
     listAIProviders, testAIProvider,
-    getProfile, syncProfile,
+    getProfile, getGoApplyProfile, syncProfile,
     getJobs, trackJob, updateJob, deleteJob,
     getKanban, reorderCards,
     getCoverLetters, saveCoverLetter, setDefaultCoverLetter,
