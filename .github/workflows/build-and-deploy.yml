@@ -52,6 +52,7 @@ jobs:
           cache-to: type=registry,ref=registry.tgm.one/foligo/api:buildcache,mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+            TURBO_TEAM=foligo
           secrets: |
             TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 
@@ -102,6 +103,7 @@ jobs:
           cache-to: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache,mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+            TURBO_TEAM=foligo
           secrets: |
             TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 
@@ -152,6 +154,7 @@ jobs:
           cache-to: type=registry,ref=registry.tgm.one/foligo/sites:buildcache,mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+            TURBO_TEAM=foligo
           secrets: |
             TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 

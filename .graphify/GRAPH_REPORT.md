@@ -1,14 +1,14 @@
 # Graph Report - .  (2026-07-12)
 
 ## Corpus Check
-- 288 files · ~277,687 words
+- 288 files · ~277,690 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1124 nodes · 2289 edges · 69 communities detected
+- 1125 nodes · 2291 edges · 70 communities detected
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 41 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
-- Edge kinds: MODIFIES: 790 · contains: 644 · imports_from: 299 · imports: 134 · PARENT_OF: 125 · ON_BRANCH: 118 · calls: 71 · method: 65 · uses: 7 · connects_to: 4 · implements: 4 · handles: 3 · inherits: 3 · serves: 3 · entry_point: 2 · manages: 2 · accesses: 1 · built_with: 1 · configures: 1 · consumes: 1 · deployed_with: 1 · edits: 1 · enables: 1 · generates: 1 · implemented_by: 1 · includes: 1 · orchestrates: 1 · related_to: 1 · routes: 1 · tracks: 1 · ui_for: 1
+- Edge kinds: MODIFIES: 790 · contains: 644 · imports_from: 299 · imports: 134 · PARENT_OF: 126 · ON_BRANCH: 119 · calls: 71 · method: 65 · uses: 7 · connects_to: 4 · implements: 4 · handles: 3 · inherits: 3 · serves: 3 · entry_point: 2 · manages: 2 · accesses: 1 · built_with: 1 · configures: 1 · consumes: 1 · deployed_with: 1 · edits: 1 · enables: 1 · generates: 1 · implemented_by: 1 · includes: 1 · orchestrates: 1 · related_to: 1 · routes: 1 · tracks: 1 · ui_for: 1
 
 
 ## Input Scope
@@ -19,7 +19,7 @@
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `46a699b`
+- Built from Git commit: `09f486f`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
 1. `prisma` - 28 edges
@@ -76,12 +76,12 @@ Nodes (25): 150821f remove old code, 4286262 good ai, { buildContextString, getC
 }, { buildConversationalSystemPrompt } (+17 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.12
-Nodes (28): main, 02f5b3e fix: move jobs/reorder route before jobs/:id, 1ab15d2 fix: kanban drag-drop uses @add/@update instead of @change, 2b2b612 chore: remove .graphify artifacts, 3358248 fix, 391098a feat: add TurboRepo with remote cache for faster CI builds, 404f746 Final Changes, 40faf8f Script and Start html files (+20 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.14
 Nodes (1): GeminiService
+
+### Community 7 - "Community 7"
+Cohesion: 0.13
+Nodes (26): main, 09f486f fix: install Tectonic on arm64 builds, 156116a dashboard fix, 3358248 fix, 3b00f25 fix, 3c7f32e fix, 40faf8f Script and Start html files, 40fd685 other options (+18 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.09
@@ -220,8 +220,8 @@ Cohesion: 0.47
 Nodes (8): blogGenerationPrompt(), { buildContextString }, buildDateTimeContext(), buildSourceOfTruth(), editGenerationPrompt(), experienceGenerationPrompt(), projectGenerationPrompt(), skillGenerationPrompt()
 
 ### Community 49 - "Community 49"
-Cohesion: 0.29
-Nodes (7): 0541f93 cors fix, 2457110 fixed, 3c7f32e fix, 8a75c5b new api stuff, 9e83a1d fix sites, b8bcbcf site fix, f6601e5 use markdown renderer
+Cohesion: 0.25
+Nodes (8): 02f5b3e fix: move jobs/reorder route before jobs/:id, 1ab15d2 fix: kanban drag-drop uses @add/@update instead of @change, 2b2b612 chore: remove .graphify artifacts, 391098a feat: add TurboRepo with remote cache for faster CI builds, 577f1c6 ci: switch to self-hosted ARC runners (tgmstudios-runners), 5f2a237 Fix AIManager fallback chain with real health checks, 91c072c Add graphify knowledge graph and AGENTS.md, e52477f Fix empty chat history crash and remove hardcoded Gemini for function calling
 
 ### Community 50 - "Community 50"
 Cohesion: 0.25
@@ -241,15 +241,15 @@ Nodes (4): axios, aiApi, api, toast
 
 ### Community 56 - "Community 56"
 Cohesion: 0.29
-Nodes (7): 156116a dashboard fix, 3b00f25 fix, 73e954c npm install, 76b0a6d downgrade, 7e80672 prod entrypoint, c188ac8 gitignore, eef22fa tsc
+Nodes (6): express_validator, { body, validationResult }, { cache }, express, { prisma }, router
 
 ### Community 57 - "Community 57"
 Cohesion: 0.29
-Nodes (6): express_validator, { body, validationResult }, { cache }, express, { prisma }, router
+Nodes (6): { body, validationResult, query }, { cache }, express, { prisma }, { requireAdmin }, router
 
 ### Community 58 - "Community 58"
 Cohesion: 0.29
-Nodes (6): { body, validationResult, query }, { cache }, express, { prisma }, { requireAdmin }, router
+Nodes (6): { authorizeProjectAccess }, { body, validationResult }, { cache }, express, { prisma }, router
 
 ### Community 59 - "Community 59"
 Cohesion: 0.29
@@ -272,65 +272,69 @@ Cohesion: 0.29
 Nodes (6): { authorizeProjectAccess }, { body, validationResult }, { cache }, express, { prisma }, router
 
 ### Community 64 - "Community 64"
-Cohesion: 0.29
-Nodes (6): { authorizeProjectAccess }, { body, validationResult }, { cache }, express, { prisma }, router
-
-### Community 65 - "Community 65"
 Cohesion: 0.33
 Nodes (6): compile(), crypto, os, path, runTectonic(), { spawn }
 
-### Community 66 - "Community 66"
+### Community 65 - "Community 65"
 Cohesion: 0.40
 Nodes (3): resumeAdapter, adapters, registerAdapter()
 
-### Community 67 - "Community 67"
+### Community 66 - "Community 66"
 Cohesion: 0.33
 Nodes (4): bcryptjs, bcrypt, prisma, { PrismaClient }
 
-### Community 68 - "Community 68"
+### Community 67 - "Community 67"
 Cohesion: 0.33
 Nodes (3): AgenticChatCallbacks, AgenticChatMessage, ToolActivity
 
-### Community 69 - "Community 69"
+### Community 68 - "Community 68"
 Cohesion: 0.40
 Nodes (4): PostgreSQL Database, Prisma ORM, connectDatabase(), { PrismaClient }
 
-### Community 70 - "Community 70"
+### Community 69 - "Community 69"
 Cohesion: 0.33
 Nodes (1): TemplateSelector
+
+### Community 72 - "Community 72"
+Cohesion: 0.50
+Nodes (4): 0541f93 cors fix, 2457110 fixed, 8a75c5b new api stuff, 9e83a1d fix sites
 
 ### Community 73 - "Community 73"
 Cohesion: 0.40
 Nodes (5): 15c176e fix: OpenCode reasoning model support + route collision fix, 2e0b15f feat: expose reasoning alongside AI output + switch to deepseek-v4-pro, 49075f5 feat: move GoApply to AI Assistants sidebar + fix kanban drag-save + markdown notes, 7641985 fix: reasoning model detection + auto-double token budget, c935419 fix: remove double-token for reasoning models (caused 504 timeouts)
 
 ### Community 74 - "Community 74"
+Cohesion: 0.40
+Nodes (5): 404f746 Final Changes, 8ad0083 final, ab25160 Merge branch 'main' of https://github.com/tgmstudios/foligo, c038a1b added bad site, dec7f43 pushing demo site
+
+### Community 75 - "Community 75"
 Cohesion: 0.60
 Nodes (3): start(), startup(), tryActivate()
 
-### Community 78 - "Community 78"
+### Community 79 - "Community 79"
 Cohesion: 0.50
 Nodes (1): e23aa71 Good for prod
 
-### Community 79 - "Community 79"
+### Community 80 - "Community 80"
 Cohesion: 0.83
 Nodes (2): loadEnvForm(), toggleCustomFields()
 
-### Community 82 - "Community 82"
+### Community 83 - "Community 83"
 Cohesion: 0.67
 Nodes (1): MERMAID_THEME_VARIABLES
 
-### Community 84 - "Community 84"
+### Community 85 - "Community 85"
 Cohesion: 1.00
 Nodes (1): docxtemplater
 
-### Community 85 - "Community 85"
+### Community 86 - "Community 86"
 Cohesion: 1.00
 Nodes (1): pizzip
 
 ## Knowledge Gaps
 - **378 isolated node(s):** `{ PrismaClient }`, `prisma`, `express`, `cors`, `helmet` (+373 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 7`** (1 nodes): `GeminiService`
+- **Thin community `Community 6`** (1 nodes): `GeminiService`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 16`** (2 nodes): `f883c97 LATEX Editor`, `useCommandPaletteStore`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -342,23 +346,23 @@ Nodes (1): pizzip
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 44`** (1 nodes): `config`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `TemplateSelector`
+- **Thin community `Community 69`** (1 nodes): `TemplateSelector`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `e23aa71 Good for prod`
+- **Thin community `Community 79`** (1 nodes): `e23aa71 Good for prod`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (2 nodes): `loadEnvForm()`, `toggleCustomFields()`
+- **Thin community `Community 80`** (2 nodes): `loadEnvForm()`, `toggleCustomFields()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `MERMAID_THEME_VARIABLES`
+- **Thin community `Community 83`** (1 nodes): `MERMAID_THEME_VARIABLES`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (1 nodes): `docxtemplater`
+- **Thin community `Community 85`** (1 nodes): `docxtemplater`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `pizzip`
+- **Thin community `Community 86`** (1 nodes): `pizzip`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `GeminiService` connect `Community 7` to `Community 5`?**
+- **Why does `GeminiService` connect `Community 6` to `Community 5`?**
   _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Why does `AIManager` connect `Community 23` to `Community 40`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._

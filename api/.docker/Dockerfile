@@ -38,7 +38,9 @@ WORKDIR /usr/src/app/api
 
 # Turbo remote cache
 ARG TURBO_API
+ARG TURBO_TEAM
 ENV TURBO_API=$TURBO_API
+ENV TURBO_TEAM=$TURBO_TEAM
 RUN --mount=type=secret,id=TURBO_TOKEN \
     TURBO_TOKEN="$(cat /run/secrets/TURBO_TOKEN)" \
     pnpm exec turbo run build --filter=foligo-api
