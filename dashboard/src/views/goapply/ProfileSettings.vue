@@ -35,6 +35,24 @@
           <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">
             {{ section.title }}
           </h4>
+
+          <!-- Link to (or quick-create) existing portfolio Education / Job entries so
+               these fields don't have to be retyped from scratch. -->
+          <div v-if="section.title === 'Education'" class="mb-4">
+            <ExperienceLinker
+              category="EDUCATION"
+              v-model="form.linkedEducation"
+              @linked="seedEducationFields"
+            />
+          </div>
+          <div v-else-if="section.title === 'Experience'" class="mb-4">
+            <ExperienceLinker
+              category="JOB"
+              v-model="form.linkedJobs"
+              @linked="seedJobFields"
+            />
+          </div>
+
           <div class="grid grid-cols-2 gap-4">
             <div v-for="f in section.fields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
@@ -121,39 +139,7 @@
         <!-- Skills -->
         <div>
           <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Skills</h4>
-          <div class="flex flex-wrap gap-2 mb-2">
-            <span
-              v-for="(skill, idx) in form.skills"
-              :key="idx"
-              class="inline-flex items-center gap-1 px-3 py-1 bg-primary-600/20 text-primary-300 rounded-full text-xs font-medium"
-            >
-              {{ skill }}
-              <button
-                @click="removeSkill(idx)"
-                class="text-primary-300 hover:text-white transition-colors"
-              >
-                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </span>
-          </div>
-          <div class="flex gap-2">
-            <input
-              v-model="skillInput"
-              type="text"
-              class="flex-1 input"
-              placeholder="Add a skill..."
-              @keydown.enter.prevent="addSkill"
-            />
-            <button
-              type="button"
-              @click="addSkill"
-              class="px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Add
-            </button>
-          </div>
+          <SkillsPicker v-model="form.skills" />
         </div>
 
         <!-- Submit -->
@@ -172,8 +158,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, watch, ref } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import { useGoApplyStore, type GoApplyProfile } from '@/stores/goapply'
+import type { Content } from '@/stores/projects'
+import ExperienceLinker from '@/components/goapply/ExperienceLinker.vue'
+import SkillsPicker from '@/components/goapply/SkillsPicker.vue'
 
 const store = useGoApplyStore()
 
@@ -186,9 +175,9 @@ const form = reactive<GoApplyProfile>({
   github: '',
   portfolio: '',
   skills: [],
+  linkedJobs: [],
+  linkedEducation: [],
 })
-
-const skillInput = ref('')
 
 // Field groups mirror the extension's autofill field taxonomy (Personal Info,
 // Location, Education, Experience, Work Authorization, Social & Links, Other)
@@ -300,20 +289,33 @@ watch(
     if (!p) return
     Object.assign(form, p)
     form.skills = [...(p.skills || [])]
+    form.linkedJobs = [...(p.linkedJobs || [])]
+    form.linkedEducation = [...(p.linkedEducation || [])]
   },
   { immediate: true }
 )
 
-function addSkill() {
-  const s = skillInput.value.trim()
-  if (s && !form.skills.includes(s)) {
-    form.skills.push(s)
+// Linking a job/education entry (or quick-creating one) seeds the flat autofill fields
+// from it once, so the browser extension keeps working without knowing about linked
+// portfolio objects. Fields stay freely editable afterwards — this doesn't re-run on
+// every render, only when a new link is added.
+function seedJobFields(item: Content) {
+  const role = item.roles?.[0]
+  form.currentCompany = item.title
+  if (role) {
+    form.currentTitle = role.title
+    form.currentlyWorking = role.isCurrent
+  } else {
+    form.currentlyWorking = item.isOngoing ?? form.currentlyWorking
   }
-  skillInput.value = ''
 }
 
-function removeSkill(idx: number) {
-  form.skills.splice(idx, 1)
+function seedEducationFields(item: Content) {
+  const role = item.roles?.[0]
+  form.school = item.title
+  if (role) {
+    form.discipline = role.title
+  }
 }
 
 async function handleSave() {
