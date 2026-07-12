@@ -50,9 +50,20 @@ RUN --mount=type=secret,id=TURBO_TOKEN \
 # Pre-warm tectonic's TeX package bundle cache at build time by compiling the
 # starter template once, so the first real request doesn't need outbound
 # network access (tectonic normally fetches+caches packages on first use).
+# The upstream bundle service occasionally drops requests, and Tectonic does
+# not retry them itself, so retry the complete warmup before failing the build.
 RUN mkdir -p /tmp/tectonic-warmup && \
-    tectonic --bundle "$TECTONIC_BUNDLE_URL" \
-      src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup && \
+    success=0 && \
+    for attempt in 1 2 3 4 5; do \
+      if tectonic --bundle "$TECTONIC_BUNDLE_URL" \
+        src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup; then \
+        success=1; \
+        break; \
+      fi; \
+      echo "Tectonic bundle warmup failed (attempt ${attempt}/5)" >&2; \
+      sleep $((attempt * 5)); \
+    done && \
+    test "$success" -eq 1 && \
     rm -rf /tmp/tectonic-warmup
 
 EXPOSE 3000
