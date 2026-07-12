@@ -94,7 +94,7 @@ router.get('/documents', async (req, res) => {
     const documents = await prisma.resumeDocument.findMany({
       where: { userId: req.user.id },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, name: true, jobDescription: true, createdAt: true, updatedAt: true },
+      select: { id: true, name: true, jobDescription: true, linkedJobId: true, createdAt: true, updatedAt: true },
     });
     res.json(documents);
   } catch (error) {
@@ -174,6 +174,8 @@ router.patch('/documents/:id', [
   body('name').optional().trim().isLength({ min: 1, max: 255 }),
   body('content').optional().isString(),
   body('jobDescription').optional({ nullable: true }).isString(),
+  body('linkedJobId').optional({ nullable: true }).isString(),
+  body('kind').optional().isIn(['autosave', 'manual']),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -186,16 +188,73 @@ router.patch('/documents/:id', [
       return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
     }
 
+    if (req.body.linkedJobId) {
+      const job = await prisma.jobApplication.findFirst({ where: { id: req.body.linkedJobId, userId: req.user.id } });
+      if (!job) {
+        return res.status(400).json({ error: 'Validation Error', message: 'linkedJobId does not refer to one of your tracked jobs' });
+      }
+    }
+
     const data = {};
     if (req.body.name !== undefined) data.name = req.body.name;
     if (req.body.content !== undefined) data.content = req.body.content;
     if (req.body.jobDescription !== undefined) data.jobDescription = req.body.jobDescription;
+    if (req.body.linkedJobId !== undefined) data.linkedJobId = req.body.linkedJobId;
 
-    const document = await prisma.resumeDocument.update({ where: { id: req.params.id }, data });
-    res.json(document);
+    // Manual saves (the default, for backward compatibility with callers that
+    // don't pass `kind`) snapshot the pre-update content as a revision before
+    // writing — autosave ticks deliberately skip this so the revision list
+    // only fills up with meaningful checkpoints, not every debounce tick.
+    const kind = req.body.kind || 'manual';
+    let revisionId;
+    let document;
+    if (kind === 'manual' && req.body.content !== undefined) {
+      [{ id: revisionId }, document] = await prisma.$transaction([
+        prisma.resumeDocumentRevision.create({
+          data: { documentId: existing.id, content: existing.content, jobDescription: existing.jobDescription },
+          select: { id: true },
+        }),
+        prisma.resumeDocument.update({ where: { id: req.params.id }, data }),
+      ]);
+    } else {
+      document = await prisma.resumeDocument.update({ where: { id: req.params.id }, data });
+    }
+
+    res.json({ ...document, revisionId });
   } catch (error) {
     console.error('Update resume document error:', error);
     res.status(500).json({ error: 'Failed to update document', message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/resume/documents/{id}/clone:
+ *   post:
+ *     summary: Duplicate a resume document (content + job description, fresh chat history)
+ *     tags: [Resume]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/documents/:id/clone', async (req, res) => {
+  try {
+    const source = await prisma.resumeDocument.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+    if (!source) {
+      return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
+    }
+
+    const clone = await prisma.resumeDocument.create({
+      data: {
+        userId: req.user.id,
+        name: `${source.name} (copy)`,
+        content: source.content,
+        jobDescription: source.jobDescription,
+        chatHistory: [],
+      },
+    });
+    res.json(clone);
+  } catch (error) {
+    console.error('Clone resume document error:', error);
+    res.status(500).json({ error: 'Failed to clone document', message: error.message });
   }
 });
 
@@ -291,6 +350,7 @@ router.get('/documents/:id/pdf', async (req, res) => {
  */
 router.post('/documents/:id/chat', [
   body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
+  body('provider').optional().isString(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -336,7 +396,7 @@ router.post('/documents/:id/chat', [
       portfolioContext,
     });
 
-    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 6 })) {
+    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 6, provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           assistantText += part.text;
@@ -369,6 +429,15 @@ router.post('/documents/:id/chat', [
       { role: 'assistant', content: assistantText },
     ];
 
+    // The agent may have rewritten the document via a tool call — snapshot the
+    // pre-turn content as a revision (same as a manual save) before persisting,
+    // so an unwanted agent rewrite is undoable from the History popup.
+    if (doc.content !== document.content) {
+      await prisma.resumeDocumentRevision.create({
+        data: { documentId: document.id, content: document.content, jobDescription: document.jobDescription },
+      });
+    }
+
     await prisma.resumeDocument.update({
       where: { id: document.id },
       data: { content: doc.content, chatHistory: finalChatHistory },
@@ -394,6 +463,97 @@ router.post('/documents/:id/chat', [
     send({ type: 'error', message: error.message || 'Agent request failed' });
   } finally {
     res.end();
+  }
+});
+
+/**
+ * @swagger
+ * /api/resume/documents/{id}/revisions:
+ *   get:
+ *     summary: List revision snapshots for a resume document (lightweight, no content)
+ *     tags: [Resume]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get('/documents/:id/revisions', async (req, res) => {
+  try {
+    const document = await prisma.resumeDocument.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+    if (!document) {
+      return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
+    }
+    const revisions = await prisma.resumeDocumentRevision.findMany({
+      where: { documentId: document.id },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, createdAt: true },
+    });
+    res.json(revisions);
+  } catch (error) {
+    console.error('List resume revisions error:', error);
+    res.status(500).json({ error: 'Failed to fetch revisions', message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/resume/documents/{id}/revisions/{revisionId}:
+ *   get:
+ *     summary: Get a single revision's full content
+ *     tags: [Resume]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get('/documents/:id/revisions/:revisionId', async (req, res) => {
+  try {
+    const document = await prisma.resumeDocument.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+    if (!document) {
+      return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
+    }
+    const revision = await prisma.resumeDocumentRevision.findFirst({
+      where: { id: req.params.revisionId, documentId: document.id },
+    });
+    if (!revision) {
+      return res.status(404).json({ error: 'Not Found', message: 'Revision does not exist' });
+    }
+    res.json(revision);
+  } catch (error) {
+    console.error('Get resume revision error:', error);
+    res.status(500).json({ error: 'Failed to fetch revision', message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/resume/documents/{id}/revisions/{revisionId}/restore:
+ *   post:
+ *     summary: Restore a resume document to a past revision (snapshots the current state first, so this is itself undoable)
+ *     tags: [Resume]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/documents/:id/revisions/:revisionId/restore', async (req, res) => {
+  try {
+    const document = await prisma.resumeDocument.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+    if (!document) {
+      return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
+    }
+    const revision = await prisma.resumeDocumentRevision.findFirst({
+      where: { id: req.params.revisionId, documentId: document.id },
+    });
+    if (!revision) {
+      return res.status(404).json({ error: 'Not Found', message: 'Revision does not exist' });
+    }
+
+    const [, updated] = await prisma.$transaction([
+      prisma.resumeDocumentRevision.create({
+        data: { documentId: document.id, content: document.content, jobDescription: document.jobDescription },
+      }),
+      prisma.resumeDocument.update({
+        where: { id: document.id },
+        data: { content: revision.content, jobDescription: revision.jobDescription },
+      }),
+    ]);
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Restore resume revision error:', error);
+    res.status(500).json({ error: 'Failed to restore revision', message: error.message });
   }
 });
 

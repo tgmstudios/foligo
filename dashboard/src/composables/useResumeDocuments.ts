@@ -6,6 +6,7 @@ export interface ResumeDocumentSummary {
   id: string
   name: string
   jobDescription: string | null
+  linkedJobId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -14,6 +15,16 @@ export interface ResumeDocument extends ResumeDocumentSummary {
   content: string
   chatHistory: Array<{ role: 'user' | 'assistant'; content: string }>
   pdfPath: string | null
+}
+
+export interface ResumeDocumentRevisionSummary {
+  id: string
+  createdAt: string
+}
+
+export interface ResumeDocumentRevisionDetail extends ResumeDocumentRevisionSummary {
+  content: string
+  jobDescription: string | null
 }
 
 export function useResumeDocuments() {
@@ -45,10 +56,14 @@ export function useResumeDocuments() {
     return response.data
   }
 
-  async function updateDocument(id: string, data: { name?: string; content?: string; jobDescription?: string | null }) {
+  async function updateDocument(
+    id: string,
+    data: { name?: string; content?: string; jobDescription?: string | null; linkedJobId?: string | null },
+    kind?: 'autosave' | 'manual'
+  ) {
     isSaving.value = true
     try {
-      const response = await api.patch(`/resume/documents/${id}`, data)
+      const response = await api.patch(`/resume/documents/${id}`, kind ? { ...data, kind } : data)
       await fetchDocuments()
       return response.data
     } catch (error: any) {
@@ -57,6 +72,12 @@ export function useResumeDocuments() {
     } finally {
       isSaving.value = false
     }
+  }
+
+  async function cloneDocument(id: string): Promise<ResumeDocument> {
+    const response = await api.post(`/resume/documents/${id}/clone`)
+    await fetchDocuments()
+    return response.data
   }
 
   async function deleteDocument(id: string) {
@@ -68,6 +89,21 @@ export function useResumeDocuments() {
       toast.error(error.response?.data?.message || 'Failed to delete resume')
       throw error
     }
+  }
+
+  async function listRevisions(id: string): Promise<ResumeDocumentRevisionSummary[]> {
+    const response = await api.get(`/resume/documents/${id}/revisions`)
+    return response.data
+  }
+
+  async function getRevision(id: string, revisionId: string): Promise<ResumeDocumentRevisionDetail> {
+    const response = await api.get(`/resume/documents/${id}/revisions/${revisionId}`)
+    return response.data
+  }
+
+  async function restoreRevision(id: string, revisionId: string): Promise<ResumeDocument> {
+    const response = await api.post(`/resume/documents/${id}/revisions/${revisionId}/restore`)
+    return response.data
   }
 
   async function compileDocument(id: string): Promise<{ pdfUrl: string } | { error: string; log?: string }> {
@@ -102,7 +138,11 @@ export function useResumeDocuments() {
     createDocument,
     loadDocument,
     updateDocument,
+    cloneDocument,
     deleteDocument,
     compileDocument,
+    listRevisions,
+    getRevision,
+    restoreRevision,
   }
 }

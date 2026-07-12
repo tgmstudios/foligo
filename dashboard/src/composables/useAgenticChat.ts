@@ -36,7 +36,11 @@ function uid() {
  * prefixed "data: "). Generic over the endpoint so it can be reused by any
  * agentic-editor instance, not just the resume editor.
  */
-export function useAgenticChat(getChatUrl: () => string, callbacks: AgenticChatCallbacks = {}) {
+export function useAgenticChat(
+  getChatUrl: () => string,
+  callbacks: AgenticChatCallbacks = {},
+  getProvider: () => string | undefined = () => undefined
+) {
   const messages = ref<AgenticChatMessage[]>([])
   const streaming = ref(false)
 
@@ -120,7 +124,7 @@ export function useAgenticChat(getChatUrl: () => string, callbacks: AgenticChatC
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ message: userText }),
+        body: JSON.stringify({ message: userText, provider: getProvider() }),
       })
 
       if (!response.ok || !response.body) {

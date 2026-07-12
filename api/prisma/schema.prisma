@@ -123,6 +123,10 @@ model Content {
   parentContent Content?         @relation("ContentRevisions", fields: [revisionOf], references: [id], onDelete: Cascade)
   postOrder     PostOrder?
 
+  // Reverse side of GoApply's UserProfile links (see UserProfile.linkedJobs/linkedEducation)
+  profileJobLinks       UserProfile[] @relation("ProfileLinkedJobs")
+  profileEducationLinks UserProfile[] @relation("ProfileLinkedEducation")
+
   @@index([revisionOf])
   @@index([status])
   @@map("content")
@@ -421,33 +425,55 @@ model ResumeDocument {
   jobDescription String?  @db.Text // Job description this resume is tailored for
   chatHistory    Json     @default("[]") // [{ role, content, toolCalls? }]
   pdfPath        String? // Path to the last compiled PDF, if any
+  linkedJobId    String? // Tracked job application this resume is tailored for, if any
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relationships
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedJob JobApplication?          @relation(fields: [linkedJobId], references: [id], onDelete: SetNull)
+  revisions ResumeDocumentRevision[]
 
   @@index([userId])
   @@index([createdAt])
+  @@index([linkedJobId])
   @@map("resume_documents")
+}
+
+// Point-in-time snapshots of a ResumeDocument's content, created on manual
+// saves and completed agent chat turns (not on autosave ticks) so both kinds
+// of edit are undoable from the Studio's History popup.
+model ResumeDocumentRevision {
+  id             String   @id @default(uuid())
+  documentId     String
+  content        String   @db.Text
+  jobDescription String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  document ResumeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("resume_document_revisions")
 }
 
 // GoApply - Job Application Tracker
 
 model JobApplication {
-  id         String    @id @default(uuid())
+  id         String           @id @default(uuid())
   userId     String
   company    String
   position   String
   url        String?
-  status     String    @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
+  status     String           @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
   notes      String?
   referredBy String?
-  sortOrder  Int       @default(0)
+  sortOrder  Int              @default(0)
   appliedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumes    ResumeDocument[]
 
   @@map("job_applications")
 }
@@ -531,6 +557,11 @@ model UserProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Links into the portfolio product so GoApply can reuse existing Content(EXPERIENCE)
+  // items (jobs/education) instead of requiring the user to retype them.
+  linkedJobs      Content[] @relation("ProfileLinkedJobs")
+  linkedEducation Content[] @relation("ProfileLinkedEducation")
 
   @@map("user_profiles")
 }

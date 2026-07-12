@@ -1,0 +1,82 @@
+
+<template>
+  <div class="relative flex flex-col items-center py-2 space-y-1">
+    <button
+      @click.stop="commandPaletteStore.open()"
+      class="w-9 h-9 flex items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+      title="Search (⌘K)"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </button>
+
+    <button
+      @click.stop="toggle('documents')"
+      class="w-9 h-9 flex items-center justify-center rounded-md transition-colors"
+      :class="open === 'documents' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+      title="Other resumes"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    </button>
+
+    <button
+      v-if="adapter.supportsMediaImport"
+      @click.stop="toggle('media')"
+      class="w-9 h-9 flex items-center justify-center rounded-md transition-colors"
+      :class="open === 'media' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+      title="Media library"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </button>
+
+    <div v-if="open" @click.stop>
+      <OtherDocumentsFlyout
+        v-if="open === 'documents'"
+        :adapter="adapter"
+        :active-id="documentId"
+        @select="(id) => { $emit('switch-document', id); open = null }"
+      />
+      <MediaPickerPopover
+        v-else-if="open === 'media'"
+        @select="(media) => { adapter.onMediaSelected?.(media); open = null }"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import type { EditorStudioAdapter } from '@/studio/types'
+import OtherDocumentsFlyout from '@/components/studio/OtherDocumentsFlyout.vue'
+import MediaPickerPopover from '@/components/studio/MediaPickerPopover.vue'
+import { useCommandPaletteStore } from '@/stores/commandPalette'
+
+const commandPaletteStore = useCommandPaletteStore()
+
+defineProps<{
+  adapter: EditorStudioAdapter
+  documentId: string
+}>()
+
+defineEmits<{
+  (e: 'switch-document', id: string): void
+}>()
+
+const open = ref<'documents' | 'media' | null>(null)
+
+function toggle(panel: 'documents' | 'media') {
+  open.value = open.value === panel ? null : panel
+}
+
+function closeOnOutsideClick() {
+  open.value = null
+}
+
+onMounted(() => window.addEventListener('click', closeOnOutsideClick))
+onUnmounted(() => window.removeEventListener('click', closeOnOutsideClick))
+</script>

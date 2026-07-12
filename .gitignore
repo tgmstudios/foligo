@@ -12,3 +12,6 @@ node_modules
 # Third-party extensions kept locally for reference/reverse-engineering only —
 # never ship a competitor's packaged extension as part of our repo.
 extension/vendor/
+
+# Database dumps
+.dumps

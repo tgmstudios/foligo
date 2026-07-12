@@ -2,8 +2,13 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import api, { aiApi } from '@/services/api'
+import type { Content } from '@/stores/projects'
 
 // ── Types ──────────────────────────────────────────────────────────────
+
+// 'JOB' and 'EDUCATION' are the two experienceCategory values GoApply links against —
+// Content also allows 'CERTIFICATION' but that has no home on the GoApply profile yet.
+export type LinkableExperienceCategory = 'JOB' | 'EDUCATION'
 
 export interface GoApplyProfile {
   id?: string
@@ -15,6 +20,8 @@ export interface GoApplyProfile {
   github: string
   portfolio: string
   skills: string[]
+  linkedJobs?: Content[]
+  linkedEducation?: Content[]
 
   // Personal Information
   firstName?: string
@@ -248,6 +255,50 @@ export const useGoApplyStore = defineStore('goapply', () => {
     }
   }
 
+  // Search the user's own portfolio Content(EXPERIENCE) items for the "link existing"
+  // pickers — not tied to isLoading/isSaving since it's a debounced, in-place search.
+  async function searchExperience(category: LinkableExperienceCategory, q: string) {
+    try {
+      const { data } = await api.get('/goapply/experience', { params: { category, q } })
+      return (data || []) as Content[]
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to search experience')
+      return []
+    }
+  }
+
+  async function linkJobs(contentIds: string[]) {
+    try {
+      const { data } = await api.put('/goapply/profile/jobs', { contentIds })
+      profile.value = data
+      return data
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update linked jobs')
+      throw err
+    }
+  }
+
+  async function linkEducation(contentIds: string[]) {
+    try {
+      const { data } = await api.put('/goapply/profile/education', { contentIds })
+      profile.value = data
+      return data
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update linked education')
+      throw err
+    }
+  }
+
+  async function createGlobalSkill(name: string, category?: string) {
+    try {
+      const { data } = await api.post('/goapply/skills', { name, category })
+      return data as { id: string; name: string; category: string | null }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to create skill')
+      throw err
+    }
+  }
+
   // ── Jobs ───────────────────────────────────────────────────────────
   async function fetchJobs() {
     try {
@@ -452,6 +503,10 @@ export const useGoApplyStore = defineStore('goapply', () => {
     // profile
     fetchProfile,
     saveProfile,
+    searchExperience,
+    linkJobs,
+    linkEducation,
+    createGlobalSkill,
 
     // jobs
     fetchJobs,

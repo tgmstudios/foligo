@@ -55,6 +55,17 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      // Editor Studio: a full-page, chrome-free editor — deliberately a top-level
+      // sibling of the DashboardLayout route below (not nested under it, and not
+      // nested under goapply.ts's /goapply children) so it renders with no
+      // dashboard sidebar/header, same pattern as /login.
+      path: '/goapply/resume/:id/studio',
+      name: 'goapply-resume-studio',
+      component: () => import('@/views/studio/EditorStudioView.vue'),
+      props: true,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/',
       component: DashboardLayout,
       meta: { requiresAuth: true },
