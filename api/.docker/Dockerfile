@@ -1,11 +1,21 @@
 FROM node:22-bookworm-slim
 
 # Prisma engine needs OpenSSL; fontconfig + libssl are runtime deps for tectonic (LaTeX compiler)
-RUN apt-get update -y && apt-get install -y openssl ca-certificates curl fontconfig && rm -rf /var/lib/apt/lists/*
+RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      openssl ca-certificates curl fontconfig && \
+    rm -rf /var/lib/apt/lists/*
 
 # Tectonic — self-contained LaTeX engine used to compile resume documents to PDF (api/src/services/latex-compiler.js)
-RUN curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh && \
-    mv tectonic /usr/local/bin/tectonic
+ARG TECTONIC_VERSION=0.16.9
+ARG TECTONIC_SHA256=f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1
+RUN curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
+      -o /tmp/tectonic.tar.gz \
+      "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-aarch64-unknown-linux-musl.tar.gz" && \
+    echo "${TECTONIC_SHA256}  /tmp/tectonic.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/tectonic.tar.gz -C /usr/local/bin tectonic && \
+    rm /tmp/tectonic.tar.gz && \
+    tectonic --version
 
 WORKDIR /usr/src/app
 

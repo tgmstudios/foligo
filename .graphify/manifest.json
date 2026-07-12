@@ -940,8 +940,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783886646458.75,
-    "hash": "95c637afe96ec17b3ddf039828e40750"
+    "mtime": 1783889965318.9077,
+    "hash": "1d13f05bbc9a9a4fa984f8726c7952a6"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1086,5 +1086,69 @@
   "sites/public/squiggle.svg": {
     "mtime": 1761764392431.6013,
     "hash": "094b19ab150581e628d742c2d74a1224"
+  },
+  "api/src/routes/admin-ai-models.js": {
+    "mtime": 1783886508318.8628,
+    "hash": "0a51bdc358686dd243fb7904425ee511"
+  },
+  "api/src/services/ai/model-config.js": {
+    "mtime": 1783885962476.7266,
+    "hash": "5053e6943cf0d630f02c50d67e8274b1"
+  },
+  "api/src/services/content-editor-tools.js": {
+    "mtime": 1783879931217.6719,
+    "hash": "81e5384fc1a4fd3e72689b2f92762f9d"
+  },
+  "dashboard/src/components/common/ListActionIcon.vue": {
+    "mtime": 1783886500253.5667,
+    "hash": "87d041398a65eb6c0a0dc4954a0084d3"
+  },
+  "dashboard/src/components/editor/MarkdownCodeEditor.vue": {
+    "mtime": 1783884646215.4993,
+    "hash": "b5e39d787792ffe66f300fee618cf846"
+  },
+  "dashboard/src/components/studio/InsertMenuFlyout.vue": {
+    "mtime": 1783882680668.0344,
+    "hash": "6326011d92af6731adbe0c9f3e5f44e4"
+  },
+  "dashboard/src/components/studio/MarkdownPreview.vue": {
+    "mtime": 1783885234666.25,
+    "hash": "22964cbeccba28b1735aa3db059b0394"
+  },
+  "dashboard/src/lib/markdownMermaid.ts": {
+    "mtime": 1783880203070.9573,
+    "hash": "f26e85299eef01e1a5968f443791b1a0"
+  },
+  "dashboard/src/studio/adapters/content/index.ts": {
+    "mtime": 1783882442855.433,
+    "hash": "95d838a1938e808def002fb744770188"
+  },
+  "dashboard/src/views/admin/AdminAiModelsView.vue": {
+    "mtime": 1783886582555.0488,
+    "hash": "886b2541b9a7392bba12eee24c83acbb"
+  },
+  "dashboard/src/views/admin/AdminContentDetailView.vue": {
+    "mtime": 1783886311738.8792,
+    "hash": "567b4c1129c5b5bd292acb48309e0879"
+  },
+  "dashboard/src/views/admin/AdminProjectDetailView.vue": {
+    "mtime": 1783886311738.8792,
+    "hash": "de0b7cff371637f3eb6abbb068b190de"
+  },
+  "dashboard/src/views/admin/AdminUserDetailView.vue": {
+    "mtime": 1783886311735.0967,
+    "hash": "507ebb8d5261c846ea32fca2ae102a9f"
+  },
+  "dashboard/src/views/studio/ContentStudioView.vue": {
+    "mtime": 1783884560424.9204,
+    "hash": "2fa7d6c3c952aff46753d4288e2229d9"
+  },
+  ".github/workflows/build-and-deploy.yml": {
+    "mtime": 1783889802838.9507,
+    "hash": "2395b3bbfa3b20e20f219ba08a533f77"
+  },
+  "api/.graphify/GRAPH_REPORT.md": {
+    "mtime": 1783885905408.2598,
+    "hash": "57b597f49862ac0de1b2a5747c7da8cb"
   }
 }
