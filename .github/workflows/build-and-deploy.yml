@@ -15,9 +15,6 @@ jobs:
         run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
         id: extract_branch
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -45,16 +42,17 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           file: ./api/.docker/Dockerfile
           push: true
           tags: |
             registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
             registry.tgm.one/foligo/${{ env.TAG_COMMIT_API }}
-          cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
-          cache-to: type=inline
+          cache-from: type=registry,ref=registry.tgm.one/foligo/api:buildcache
+          cache-to: type=registry,ref=registry.tgm.one/foligo/api:buildcache,mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+          secrets: |
             TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 
   build-dashboard:
@@ -66,9 +64,6 @@ jobs:
         shell: bash
         run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
         id: extract_branch
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -97,17 +92,18 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           file: ./dashboard/.docker/Dockerfile
           push: true
           tags: |
             registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
             registry.tgm.one/foligo/${{ env.TAG_COMMIT_DASHBOARD }}
-          cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
-          cache-to: type=inline
+          cache-from: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache
+          cache-to: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache,mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
-            TURBO_TOKEN=*** secrets.TURBO_TOKEN }}
+          secrets: |
+            TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 
   build-sites:
     runs-on: tgmstudios-runners
@@ -118,9 +114,6 @@ jobs:
         shell: bash
         run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
         id: extract_branch
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -149,17 +142,18 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           file: ./sites/.docker/Dockerfile
           push: true
           tags: |
             registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
             registry.tgm.one/foligo/${{ env.TAG_COMMIT_SITES }}
-          cache-from: type=registry,ref=registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
-          cache-to: type=inline
+          cache-from: type=registry,ref=registry.tgm.one/foligo/sites:buildcache
+          cache-to: type=registry,ref=registry.tgm.one/foligo/sites:buildcache,mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
-            TURBO_TOKEN=*** secrets.TURBO_TOKEN }}
+          secrets: |
+            TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
 
   deploy-rancher:
     needs: [build-api, build-dashboard, build-sites]

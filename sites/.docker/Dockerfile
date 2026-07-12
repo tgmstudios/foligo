@@ -11,17 +11,17 @@ COPY package.json ./
 COPY sites/package.json ./sites/package.json
 
 # Install deps using workspace-aware pnpm
-RUN pnpm install --no-frozen-lockfile --filter foligo-sites
+RUN pnpm install --frozen-lockfile --filter foligo-sites
 
 COPY sites/ ./sites/
 WORKDIR /app/sites
 
 # Turbo remote cache
 ARG TURBO_API
-ARG TURBO_TOKEN
 ENV TURBO_API=$TURBO_API
-ENV TURBO_TOKEN=$TURBO_TOKEN
-RUN pnpm exec turbo run build --filter=foligo-sites
+RUN --mount=type=secret,id=TURBO_TOKEN \
+    TURBO_TOKEN="$(cat /run/secrets/TURBO_TOKEN)" \
+    pnpm exec turbo run build --filter=foligo-sites
 
 # Production stage
 FROM node:22-alpine

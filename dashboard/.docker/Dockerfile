@@ -14,17 +14,17 @@ COPY package.json ./
 COPY dashboard/package.json ./dashboard/package.json
 
 # Install deps using workspace-aware pnpm
-RUN pnpm install --no-frozen-lockfile --filter foligo-dashboard
+RUN pnpm install --frozen-lockfile --filter foligo-dashboard
 
 COPY dashboard/ ./dashboard/
 WORKDIR /app/dashboard
 
 # Turbo remote cache
 ARG TURBO_API
-ARG TURBO_TOKEN
 ENV TURBO_API=$TURBO_API
-ENV TURBO_TOKEN=$TURBO_TOKEN
-RUN pnpm exec turbo run build --filter=foligo-dashboard
+RUN --mount=type=secret,id=TURBO_TOKEN \
+    TURBO_TOKEN="$(cat /run/secrets/TURBO_TOKEN)" \
+    pnpm exec turbo run build --filter=foligo-dashboard
 
 # Production stage
 FROM nginx:alpine
