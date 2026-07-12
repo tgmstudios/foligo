@@ -279,7 +279,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {{ isGeneratingLinks ? 'Linking Posts...' : 'Link Posts with AI' }}
+              {{ isGeneratingLinks ? 'Finding Similar Posts...' : 'Link Similar Posts' }}
             </button>
           </div>
         </div>
@@ -346,7 +346,7 @@ import { useProjectStore, type Project } from '@/stores/projects'
 import { format, formatDistanceToNow } from 'date-fns'
 import { formatContentType } from '@/utils'
 import { useToast } from 'vue-toastification'
-import { aiApi } from '@/services/api'
+import api from '@/services/api'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
@@ -413,9 +413,7 @@ const handleCreatePostLinks = async () => {
   isGeneratingLinks.value = true
 
   try {
-    const response = await aiApi.post('/ai/post-links', {
-      projectId: project.id
-    })
+    const response = await api.post(`/projects/${project.id}/content-links/similar`)
 
     if (response.data.success) {
       const { created, skipped } = response.data
@@ -424,14 +422,14 @@ const handleCreatePostLinks = async () => {
         // Refresh projects to show updated links
         await projectStore.fetchProjects()
       } else if (skipped > 0) {
-        toast.info('All suggested links already exist')
+        toast.info('All similar posts are already linked')
       } else {
         toast.info('No meaningful links found between your posts')
       }
     }
   } catch (error: any) {
-    console.error('Failed to generate post links:', error)
-    const errorMessage = error.response?.data?.message || error.message || 'Failed to generate post links'
+    console.error('Failed to link similar posts:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to link similar posts'
     toast.error(errorMessage)
   } finally {
     isGeneratingLinks.value = false

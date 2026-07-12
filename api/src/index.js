@@ -34,6 +34,7 @@ const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
 const goapplyRoutes = require('./routes/goapply');
 const tokenRoutes = require('./routes/tokens');
+const { publicRouter: publicAnalyticsRoutes, router: analyticsRoutes } = require('./routes/analytics');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -76,6 +77,9 @@ const publicCors = cors({
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+// Analytics ingestion must accept browser requests from configured third-party sites.
+// Property-level origin enforcement happens inside the ingestion route.
+app.use('/api/analytics/events', publicCors, express.json({ limit: '256kb' }), publicAnalyticsRoutes);
 app.use(cors({
   origin: corsOrigins,
   credentials: true
@@ -255,6 +259,7 @@ app.get('/api/media/:id/view', mediaCorsWithMethods, async (req, res) => {
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
+app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api', authenticateToken, contentRoutes); // Protected content routes
 app.use('/api', authenticateToken, contentLinksRoutes); // Content links routes
 app.use('/api', authenticateToken, contentTagsRoutes); // Content tags routes

@@ -48,7 +48,6 @@
       "api/src/services/latex-compiler.js",
       "api/src/services/logger.js",
       "api/src/services/minio.js",
-      "api/src/services/post-links-prompts.js",
       "api/src/services/prompt-utils.js",
       "api/src/services/redis.js",
       "api/src/services/resume-chatbot-prompts.js",
@@ -297,8 +296,8 @@
     ],
     "video": []
   },
-  "total_files": 288,
-  "total_words": 277690,
+  "total_files": 287,
+  "total_words": 279125,
   "needs_graph": true,
   "warning": null,
   "skipped_sensitive": [
@@ -307,7 +306,7 @@
   "graphifyignore_patterns": 10,
   "git": {
     "source_owner": "git",
-    "source_hash": "09f486f320aa96bf7c410c3eff462e340bfbad07",
+    "source_hash": "bf9587fdd3d856e5d0e9d4db47e9b3f27eb2b49a",
     "branches": [
       "main"
     ],
@@ -320,13 +319,13 @@
     "source": "default-auto",
     "root": ".",
     "git_root": ".",
-    "head": "09f486f320aa96bf7c410c3eff462e340bfbad07",
+    "head": "bf9587fdd3d856e5d0e9d4db47e9b3f27eb2b49a",
     "candidate_count": 410,
-    "included_count": 288,
-    "excluded_untracked_count": 0,
-    "excluded_ignored_count": 113064,
+    "included_count": 287,
+    "excluded_untracked_count": 6,
+    "excluded_ignored_count": 120556,
     "excluded_sensitive_count": 1,
-    "missing_committed_count": 0,
+    "missing_committed_count": 1,
     "warnings": [],
     "recommendation": "Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder."
   }

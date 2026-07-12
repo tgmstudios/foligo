@@ -31,7 +31,8 @@ RUN chmod +x /docker-entrypoint.sh && \
     sed -i 's/\r$//' /docker-entrypoint.sh
 
 # Install deps using workspace-aware pnpm
-RUN pnpm install --frozen-lockfile --filter foligo-api
+RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true \
+    pnpm install --frozen-lockfile --filter foligo-api
 
 COPY api/ ./api/
 WORKDIR /usr/src/app/api
@@ -48,7 +49,9 @@ RUN --mount=type=secret,id=TURBO_TOKEN \
 # Pre-warm tectonic's TeX package bundle cache at build time by compiling the
 # starter template once, so the first real request doesn't need outbound
 # network access (tectonic normally fetches+caches packages on first use).
-RUN tectonic src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup && rm -rf /tmp/tectonic-warmup
+RUN mkdir -p /tmp/tectonic-warmup && \
+    tectonic src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup && \
+    rm -rf /tmp/tectonic-warmup
 
 EXPOSE 3000
 

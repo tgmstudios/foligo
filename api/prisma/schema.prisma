@@ -53,16 +53,56 @@ model Project {
   siteConfig SiteConfig?
 
   // Relationships
-  owner      User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members    ProjectAccess[]
-  content    Content[]
-  media      Media[]
-  tags       ContentTag[]    @relation("ProjectTags")
-  meta       ContentMeta[]
-  skills     Skill[]         @relation("ProjectSkills")
-  postOrders PostOrder[]
+  owner             User               @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members           ProjectAccess[]
+  content           Content[]
+  media             Media[]
+  tags              ContentTag[]       @relation("ProjectTags")
+  meta              ContentMeta[]
+  skills            Skill[]            @relation("ProjectSkills")
+  postOrders        PostOrder[]
+  analyticsProperty AnalyticsProperty?
 
   @@map("projects")
+}
+
+model AnalyticsProperty {
+  id             String   @id @default(uuid())
+  projectId      String   @unique
+  writeKeyHash   String   @unique
+  writeKeyPrefix String
+  allowedOrigins String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  events  AnalyticsEvent[]
+
+  @@map("analytics_properties")
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(uuid())
+  propertyId  String
+  name        String
+  occurredAt  DateTime
+  receivedAt  DateTime @default(now())
+  visitorHash String?
+  sessionHash String?
+  url         String?
+  path        String?
+  title       String?
+  referrer    String?
+  country     String?
+  device      String?
+  metadata    Json?
+
+  property AnalyticsProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, occurredAt])
+  @@index([propertyId, name, occurredAt])
+  @@index([propertyId, path, occurredAt])
+  @@map("analytics_events")
 }
 
 model ProjectAccess {

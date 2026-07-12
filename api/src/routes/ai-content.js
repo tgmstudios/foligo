@@ -21,6 +21,7 @@ const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
 const { authorizeProjectAccess, authenticateToken } = require('../middleware/auth');
 const geminiService = require('../services/gemini');
+const { findSimilarPostPairs } = require('../services/post-similarity');
 
 // Configure multer for resume uploads
 const upload = multer({
@@ -1277,7 +1278,7 @@ async function matchOrCreateTags(tags, projectId) {
  * @swagger
  * /api/ai/post-links:
  *   post:
- *     summary: Generate and create post links using AI
+ *     summary: Find and create links between similar posts
  *     tags: [AI Content Generation]
  *     security:
  *       - bearerAuth: []
@@ -1344,7 +1345,7 @@ router.post('/post-links', [
       });
     }
 
-    // Get all posts for the project with titles, excerpts, skills, and tags
+    // Get all post text and curated metadata used by the similarity scorer.
     const posts = await prisma.content.findMany({
       where: {
         projectId: projectId,
@@ -1355,6 +1356,7 @@ router.post('/post-links', [
         id: true,
         title: true,
         excerpt: true,
+        content: true,
         contentType: true,
         linkedSkills: {
           select: {
@@ -1379,8 +1381,8 @@ router.post('/post-links', [
       });
     }
 
-    // Generate links using AI
-    const result = await geminiService.generatePostLinks(posts);
+    // Keep this legacy URL compatible while using the deterministic scorer.
+    const result = { links: findSimilarPostPairs(posts) };
 
     // Create links in database
     const createdLinks = [];

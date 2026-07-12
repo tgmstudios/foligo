@@ -3,8 +3,88 @@ const { body, validationResult } = require('express-validator');
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
 const { authorizeProjectAccess } = require('../middleware/auth');
+const { findSimilarPostPairs } = require('../services/post-similarity');
 
 const router = express.Router();
+
+router.post('/projects/:projectId/content-links/similar', authorizeProjectAccess('EDITOR'), async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const posts = await prisma.content.findMany({
+      where: {
+        projectId,
+        status: { not: 'REVISION' },
+        revisionOf: null
+      },
+      select: {
+        id: true,
+        title: true,
+        excerpt: true,
+        content: true,
+        linkedSkills: { select: { name: true } },
+        tags: { select: { name: true } }
+      }
+    });
+
+    if (posts.length < 2) {
+      return res.status(400).json({
+        error: 'Insufficient Posts',
+        message: 'You need at least 2 posts to find similar content'
+      });
+    }
+
+    const candidates = findSimilarPostPairs(posts);
+    const existingLinks = await prisma.contentLink.findMany({
+      where: {
+        sourceType: 'content',
+        targetType: 'content',
+        OR: [
+          { sourceId: { in: posts.map(post => post.id) } },
+          { targetId: { in: posts.map(post => post.id) } }
+        ]
+      },
+      select: { sourceId: true, targetId: true }
+    });
+    const pairKey = (left, right) => [left, right].sort().join(':');
+    const existingPairs = new Set(existingLinks.map(link => pairKey(link.sourceId, link.targetId)));
+    const suggestions = candidates.filter(candidate => !existingPairs.has(pairKey(candidate.sourceId, candidate.targetId)));
+    const links = [];
+
+    for (const suggestion of suggestions) {
+      const [sourceId, targetId] = [suggestion.sourceId, suggestion.targetId].sort();
+      try {
+        const link = await prisma.contentLink.create({
+          data: {
+            sourceId,
+            targetId,
+            sourceType: 'content',
+            targetType: 'content',
+            linkType: 'similar'
+          }
+        });
+        links.push({ ...link, similarity: suggestion.score, signals: suggestion.signals });
+      } catch (error) {
+        if (error.code !== 'P2002') throw error;
+      }
+    }
+
+    await cache.del(`project:${projectId}`);
+    await cache.del(`project:${projectId}:content`);
+
+    res.json({
+      success: true,
+      created: links.length,
+      skipped: candidates.length - links.length,
+      links
+    });
+  } catch (error) {
+    console.error('Post similarity linking error:', error);
+    res.status(500).json({
+      error: 'Similarity Linking Failed',
+      message: 'Unable to link similar posts'
+    });
+  }
+});
 
 /**
  * Helper function to normalize link direction (ensures consistent ordering)
@@ -303,5 +383,4 @@ router.delete('/content-links/:id', async (req, res) => {
 });
 
 module.exports = router;
-
 

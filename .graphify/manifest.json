@@ -8,8 +8,8 @@
     "hash": "cf402d163e0971f0732181b8d8de4aa2"
   },
   "api/src/index.js": {
-    "mtime": 1783885743558.5474,
-    "hash": "940b006b8b10071e72c0b02d12884562"
+    "mtime": 1783891025913.6123,
+    "hash": "73035ef8bcf3e06c12c6cf08cccdf98a"
   },
   "api/src/middleware/auth.js": {
     "mtime": 1783700040582.5876,
@@ -28,8 +28,8 @@
     "hash": "12f12849f706b8c3b7d7b9bd10c88501"
   },
   "api/src/routes/ai-content.js": {
-    "mtime": 1783744656694.5115,
-    "hash": "ba7f3380469763d64c0be8e5c3d899bb"
+    "mtime": 1783891052072.6462,
+    "hash": "7c7265376a935cbebe9fe662635b753d"
   },
   "api/src/routes/ai-providers.js": {
     "mtime": 1783886508318.8628,
@@ -44,8 +44,8 @@
     "hash": "a2422c300d9bcd97d958dffb9212e6a0"
   },
   "api/src/routes/content-links.js": {
-    "mtime": 1763329647127.4553,
-    "hash": "55631fbc1cc09f040570934f912c45c3"
+    "mtime": 1783890933726.118,
+    "hash": "94ee26fc1fd70a311be22beb73df0614"
   },
   "api/src/routes/content-meta.js": {
     "mtime": 1763329644264.6348,
@@ -160,8 +160,8 @@
     "hash": "84340758f1daf5822926fee1a7b6d497"
   },
   "api/src/services/gemini.js": {
-    "mtime": 1783885799866.6282,
-    "hash": "872a07d182ea0b78144fbb9b468021f4"
+    "mtime": 1783891037143.3296,
+    "hash": "4844c7733754328198236d4909ab67be"
   },
   "api/src/services/latex-compiler.js": {
     "mtime": 1783744358350.0767,
@@ -174,10 +174,6 @@
   "api/src/services/minio.js": {
     "mtime": 1763329659357.786,
     "hash": "dc9a7baaf7ebb92fb7cef5af3774d898"
-  },
-  "api/src/services/post-links-prompts.js": {
-    "mtime": 1763329711089.2683,
-    "hash": "2165629567d8ba5a0a9b6df787e0f5f7"
   },
   "api/src/services/prompt-utils.js": {
     "mtime": 1763320638851.5378,
@@ -356,8 +352,8 @@
     "hash": "d536377021d9fb36c5a370eab4ecf2eb"
   },
   "dashboard/src/layouts/DashboardLayout.vue": {
-    "mtime": 1783886249798.9602,
-    "hash": "100aada797f3eaa4f0258990b501c95b"
+    "mtime": 1783891452792.3667,
+    "hash": "c234075c8d15a79a3642bd03ad42e86b"
   },
   "dashboard/src/lib/monaco.ts": {
     "mtime": 1783746272269.3135,
@@ -444,8 +440,8 @@
     "hash": "c6a1637cdc6228a8f0735297016f8318"
   },
   "dashboard/src/views/analytics/AnalyticsView.vue": {
-    "mtime": 1761764390800.8013,
-    "hash": "9122ec58f42460bacfd4264b3bb8d4c3"
+    "mtime": 1783891477473.9216,
+    "hash": "cd47bbc4460499be3058667e8d903d09"
   },
   "dashboard/src/views/auth/AuthCallbackView.vue": {
     "mtime": 1763241597398.418,
@@ -480,8 +476,8 @@
     "hash": "6cfefbfd86d12b2f574af2704819c227"
   },
   "dashboard/src/views/dashboard/DashboardView.vue": {
-    "mtime": 1783886500261.1304,
-    "hash": "321b679fb5a0d7202a16fb8ac16e9cce"
+    "mtime": 1783890960937.3225,
+    "hash": "a40c362ab1c7dbe43fb8c36a7d07f9e7"
   },
   "dashboard/src/views/goapply/CoverLetters.vue": {
     "mtime": 1783658179946.6484,
@@ -940,8 +936,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783890380445.0454,
-    "hash": "a94a6fca57aa6e5e7e8c5ff2ad738b0c"
+    "mtime": 1783891501427.383,
+    "hash": "0c0aeb44d89fc3b03be3ecdaa4f3d719"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1028,8 +1024,8 @@
     "hash": "aaf9632234d1c606aa58ef9b279483c9"
   },
   "pnpm-lock.yaml": {
-    "mtime": 1783882500845.7634,
-    "hash": "b951eeb98e34881a7986a494db74c7b9"
+    "mtime": 1783890863530.6797,
+    "hash": "96c3cd203f29ea58c619794d6e25bcd1"
   },
   "pnpm-workspace.yaml": {
     "mtime": 1776035307111.8552,
