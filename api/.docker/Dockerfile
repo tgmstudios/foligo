@@ -10,6 +10,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
 ARG TECTONIC_VERSION=0.16.9
 ARG TECTONIC_SHA256=f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1
 ENV TECTONIC_BUNDLE_URL=https://data1.fullyjustified.net/tlextras-2022.0r0.tar
+# The statically linked musl binary does not reliably discover Debian's CA
+# store on ARM64. Point its TLS stack at the certificates installed above.
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs
 RUN curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
       -o /tmp/tectonic.tar.gz \
       "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-aarch64-unknown-linux-musl.tar.gz" && \
