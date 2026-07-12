@@ -11,6 +11,7 @@
       "api/src/routes/admin.js",
       "api/src/routes/ai-content.js",
       "api/src/routes/ai-providers.js",
+      "api/src/routes/analytics.js",
       "api/src/routes/auth.js",
       "api/src/routes/content-blocks.js",
       "api/src/routes/content-links.js",
@@ -37,6 +38,8 @@
       "api/src/services/ai/manager.js",
       "api/src/services/ai/model-config.js",
       "api/src/services/ai/providers/index.js",
+      "api/src/services/analytics.js",
+      "api/src/services/analytics.test.js",
       "api/src/services/content-editor-tools.js",
       "api/src/services/content-generation-prompts.js",
       "api/src/services/conversation-prompts.js",
@@ -48,6 +51,8 @@
       "api/src/services/latex-compiler.js",
       "api/src/services/logger.js",
       "api/src/services/minio.js",
+      "api/src/services/post-similarity.js",
+      "api/src/services/post-similarity.test.js",
       "api/src/services/prompt-utils.js",
       "api/src/services/redis.js",
       "api/src/services/resume-chatbot-prompts.js",
@@ -265,6 +270,7 @@
       "api/docs/AI_MIGRATION_GUIDE.md",
       "api/docs/AI_PROMPT_REFACTORING.md",
       "api/docs/AI_REFACTORING_SUMMARY.md",
+      "api/docs/ANALYTICS_INTEGRATION.md",
       "api/docs/API_DOCUMENTATION.md",
       "api/docs/ENHANCED_ENDPOINTS_SUMMARY.md",
       "api/docs/FUNCTION_CALLING_FLOW.md",
@@ -296,8 +302,8 @@
     ],
     "video": []
   },
-  "total_files": 287,
-  "total_words": 279125,
+  "total_files": 293,
+  "total_words": 282584,
   "needs_graph": true,
   "warning": null,
   "skipped_sensitive": [
@@ -306,7 +312,7 @@
   "graphifyignore_patterns": 10,
   "git": {
     "source_owner": "git",
-    "source_hash": "bf9587fdd3d856e5d0e9d4db47e9b3f27eb2b49a",
+    "source_hash": "743a9d0db01a2dac2ecee779171470bc84c0df6d",
     "branches": [
       "main"
     ],
@@ -319,13 +325,13 @@
     "source": "default-auto",
     "root": ".",
     "git_root": ".",
-    "head": "bf9587fdd3d856e5d0e9d4db47e9b3f27eb2b49a",
-    "candidate_count": 410,
-    "included_count": 287,
-    "excluded_untracked_count": 6,
-    "excluded_ignored_count": 120556,
+    "head": "743a9d0db01a2dac2ecee779171470bc84c0df6d",
+    "candidate_count": 415,
+    "included_count": 293,
+    "excluded_untracked_count": 0,
+    "excluded_ignored_count": 120567,
     "excluded_sensitive_count": 1,
-    "missing_committed_count": 1,
+    "missing_committed_count": 0,
     "warnings": [],
     "recommendation": "Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder."
   }

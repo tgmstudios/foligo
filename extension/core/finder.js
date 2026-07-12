@@ -164,10 +164,16 @@ const Finder = (() => {
           const elId = element.id || element.name;
           if (!foundIds.has(elId + fieldName)) {
             foundIds.add(elId + fieldName);
+            const configuredMethod = resolved.method || platformConfig.defaultMethod;
+            const method = element.tagName === 'SELECT'
+              ? 'select'
+              : (element.type === 'checkbox' || element.type === 'radio')
+                ? 'selectCheckboxOrRadio'
+                : configuredMethod || 'default';
             foundFields.push({
               fieldName,
               element,
-              method: resolved.method || platformConfig.defaultMethod || 'default',
+              method,
               container
             });
           }
@@ -214,7 +220,7 @@ const Finder = (() => {
       
       let method = 'default';
       if (target.type === 'file') method = 'uploadResume';
-      if (target.tagName === 'SELECT') method = 'selectCheckboxOrRadio';
+      if (target.tagName === 'SELECT') method = 'select';
       if (target.type === 'checkbox' || target.type === 'radio') method = 'selectCheckboxOrRadio';
       
       fields.push({
@@ -256,7 +262,7 @@ const Finder = (() => {
       
       let method = 'default';
       if (el.type === 'file') method = 'uploadResume';
-      if (el.tagName === 'SELECT') method = 'selectCheckboxOrRadio';
+      if (el.tagName === 'SELECT') method = 'select';
       
       fields.push({
         fieldName: primaryName,

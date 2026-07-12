@@ -1,37 +1,37 @@
 # Graph Report - .  (2026-07-12)
 
 ## Corpus Check
-- 287 files · ~279,125 words
+- 293 files · ~282,584 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1132 nodes · 2299 edges · 69 communities detected
+- 1169 nodes · 2378 edges · 71 communities detected
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 41 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
-- Edge kinds: MODIFIES: 789 · contains: 651 · imports_from: 299 · imports: 134 · PARENT_OF: 127 · ON_BRANCH: 120 · calls: 71 · method: 65 · uses: 7 · connects_to: 4 · implements: 4 · handles: 3 · inherits: 3 · serves: 3 · entry_point: 2 · manages: 2 · accesses: 1 · built_with: 1 · configures: 1 · consumes: 1 · deployed_with: 1 · edits: 1 · enables: 1 · generates: 1 · implemented_by: 1 · includes: 1 · orchestrates: 1 · related_to: 1 · routes: 1 · tracks: 1 · ui_for: 1
+- Edge kinds: MODIFIES: 801 · contains: 682 · imports_from: 307 · imports: 151 · PARENT_OF: 128 · ON_BRANCH: 121 · calls: 80 · method: 65 · uses: 7 · connects_to: 4 · implements: 4 · handles: 3 · inherits: 3 · serves: 3 · entry_point: 2 · manages: 2 · accesses: 1 · built_with: 1 · configures: 1 · consumes: 1 · deployed_with: 1 · edits: 1 · enables: 1 · generates: 1 · implemented_by: 1 · includes: 1 · orchestrates: 1 · related_to: 1 · routes: 1 · tracks: 1 · ui_for: 1
 
 
 ## Input Scope
 - Requested: auto
 - Resolved: committed (source: default-auto)
-- Included files: 287 · Candidates: 410
-- Excluded: 6 untracked · 120556 ignored · 1 sensitive · 1 missing committed
+- Included files: 293 · Candidates: 415
+- Excluded: 0 untracked · 120567 ignored · 1 sensitive · 0 missing committed
 - Recommendation: Use --scope all or graphify.yaml inputs.corpus for a knowledge-base folder.
 
 ## Graph Freshness
-- Built from Git commit: `bf9587f`
+- Built from Git commit: `743a9d0`
 - Compare this hash to `git rev-parse HEAD` before trusting freshness-sensitive graph output.
 ## God Nodes (most connected - your core abstractions)
-1. `prisma` - 28 edges
+1. `prisma` - 29 edges
 2. `GeminiService` - 27 edges
 3. `express` - 25 edges
 4. `cache` - 19 edges
 5. `express_validator` - 17 edges
-6. `AIManager` - 14 edges
-7. `authorizeProjectAccess()` - 13 edges
+6. `authorizeProjectAccess()` - 14 edges
+7. `AIManager` - 14 edges
 8. `SiteApiService` - 12 edges
 9. `AI Integration` - 9 edges
-10. `checkAuth()` - 8 edges
+10. `findSimilarPostPairs()` - 8 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Portfolio Generation` --uses--> `Portfolio Templates`  [INFERRED]
@@ -47,63 +47,74 @@
 
 ## Communities
 
-### Community 33 - "Community 33"
-Cohesion: 0.18
-Nodes (8): { PrismaClient }, prisma, express, router, { PrismaClient }, prisma, client, express
+### Community 81 - "Community 81"
+Cohesion: 0.50
+Nodes (2): { PrismaClient }, prisma
 
-### Community 1 - "Community 1"
+### Community 2 - "Community 2"
 Cohesion: 0.03
-Nodes (57): express, cors, helmet, morgan, rateLimit, swaggerUi, swaggerJsdoc, authRoutes (+49 more)
+Nodes (58): express, cors, helmet, morgan, rateLimit, swaggerUi, swaggerJsdoc, authRoutes (+50 more)
 
-### Community 10 - "Community 10"
+### Community 8 - "Community 8"
 Cohesion: 0.11
 Nodes (20): jwt, crypto, { prisma }, authenticateToken(), express, router, ai, { authenticateToken } (+12 more)
 
-### Community 54 - "Community 54"
+### Community 56 - "Community 56"
 Cohesion: 0.25
 Nodes (7): authorizeProjectAccess(), express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
-### Community 20 - "Community 20"
+### Community 18 - "Community 18"
 Cohesion: 0.14
 Nodes (14): requireAdmin(), express, { body, validationResult }, { prisma }, { requireAdmin }, { encrypt, decrypt }, https, http (+6 more)
 
-### Community 2 - "Community 2"
+### Community 3 - "Community 3"
 Cohesion: 0.15
 Nodes (15): Window, 1596c73 Voice mode, 16a008d Dark mode, 245df8e Merge branch 'main' of https://github.com/tgmstudios/foligo, 29df55c AI Multistep, 81238cb Dashboard improvements, 893cac6 updates, 8b7636e Merge branch 'main' of https://github.com/tgmstudios/foligo (+7 more)
 
-### Community 14 - "Community 14"
+### Community 11 - "Community 11"
 Cohesion: 0.12
 Nodes (16): express, { body, validationResult }, { prisma }, { requireAdmin }, { encrypt }, { ensureBootstrapModels, VALID_MODEL_TYPES, VALID_PROVIDER_TYPES }, ai, router (+8 more)
 
-### Community 59 - "Community 59"
+### Community 60 - "Community 60"
 Cohesion: 0.29
 Nodes (6): express, { body, validationResult, query }, { prisma }, { cache }, { requireAdmin }, router
 
 ### Community 12 - "Community 12"
-Cohesion: 0.09
-Nodes (15): express, { body, validationResult }, multer, mammoth, pdfParseModule, { prisma }, { cache }, { authorizeProjectAccess, authenticateToken } (+7 more)
+Cohesion: 0.10
+Nodes (14): express, { body, validationResult }, multer, mammoth, pdfParseModule, { prisma }, { cache }, { authorizeProjectAccess, authenticateToken } (+6 more)
 
-### Community 16 - "Community 16"
-Cohesion: 0.11
-Nodes (16): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router, express, router (+8 more)
+### Community 17 - "Community 17"
+Cohesion: 0.19
+Nodes (14): express, { Prisma }, { authorizeProjectAccess }, {
+  MAX_BATCH_SIZE,
+  hash,
+  createWriteKey,
+  normalizeOrigin,
+  originAllowed,
+  normalizeEvent,
+}, publicRouter, router, crypto, hash() (+6 more)
 
-### Community 46 - "Community 46"
+### Community 27 - "Community 27"
+Cohesion: 0.15
+Nodes (10): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router, redis, redis (+2 more)
+
+### Community 50 - "Community 50"
 Cohesion: 0.22
 Nodes (7): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, { findSimilarPostPairs }, router
-
-### Community 60 - "Community 60"
-Cohesion: 0.29
-Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
 ### Community 61 - "Community 61"
 Cohesion: 0.29
 Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
-### Community 3 - "Community 3"
-Cohesion: 0.07
-Nodes (28): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, ai, { createContentEditorTools }, router (+20 more)
-
 ### Community 62 - "Community 62"
+Cohesion: 0.29
+Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
+
+### Community 9 - "Community 9"
+Cohesion: 0.10
+Nodes (18): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, ai, { createContentEditorTools }, router (+10 more)
+
+### Community 63 - "Community 63"
 Cohesion: 0.29
 Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
@@ -111,65 +122,57 @@ Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authori
 Cohesion: 0.07
 Nodes (25): express, jwt, { prisma }, { cache }, { authenticateToken }, router, PROFILE_PASSTHROUGH_FIELDS, EXPERIENCE_INCLUDE (+17 more)
 
-### Community 8 - "Community 8"
+### Community 7 - "Community 7"
 Cohesion: 0.09
 Nodes (22): express, multer, { v4: uuidv4 }, path, { body, validationResult }, { prisma }, { uploadFile, deleteFile, getFileUrl, minioClient, BUCKET_NAME }, { authenticateToken, authorizeProjectAccess } (+14 more)
-
-### Community 63 - "Community 63"
-Cohesion: 0.29
-Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
 ### Community 64 - "Community 64"
 Cohesion: 0.29
 Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
-### Community 9 - "Community 9"
-Cohesion: 0.09
-Nodes (17): express, { body, validationResult }, path, { prisma }, ai, latexCompiler, { createResumeEditorTools }, router (+9 more)
-
 ### Community 65 - "Community 65"
 Cohesion: 0.29
 Nodes (6): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router
 
-### Community 58 - "Community 58"
-Cohesion: 0.29
-Nodes (6): express, { body, validationResult }, { prisma }, { cache }, router, express_validator
+### Community 15 - "Community 15"
+Cohesion: 0.10
+Nodes (14): express, { body, validationResult }, path, { prisma }, ai, latexCompiler, { createResumeEditorTools }, router (+6 more)
+
+### Community 23 - "Community 23"
+Cohesion: 0.14
+Nodes (12): express, { body, validationResult }, { prisma }, { cache }, { authorizeProjectAccess }, router, express, { body, validationResult } (+4 more)
+
+### Community 25 - "Community 25"
+Cohesion: 0.15
+Nodes (11): express, router, { PrismaClient }, prisma, express, router, geminiService, { prisma } (+3 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.33
 Nodes (4): { PrismaClient }, bcrypt, prisma, bcryptjs
 
-### Community 21 - "Community 21"
-Cohesion: 0.15
-Nodes (11): ai, AIService, aim, { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs }, { createProvider, listProviders }, { resolveModel, ensureBootstrapModels }, { createAILogger }, { SAFETY_SETTINGS } (+3 more)
+### Community 35 - "Community 35"
+Cohesion: 0.18
+Nodes (9): ai, AIService, AI Integration, Google Gemini AI, ElevenLabs Voice, Resume Generator, Voice Webhook, AI Function Calling (+1 more)
 
-### Community 26 - "Community 26"
+### Community 42 - "Community 42"
+Cohesion: 0.20
+Nodes (8): aim, { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs }, { createProvider, listProviders }, { resolveModel, ensureBootstrapModels }, { createAILogger }, { SAFETY_SETTINGS }, { resolveModel }, { createGeminiLogger }
+
+### Community 22 - "Community 22"
 Cohesion: 0.29
 Nodes (1): AIManager
 
-### Community 35 - "Community 35"
+### Community 38 - "Community 38"
 Cohesion: 0.24
 Nodes (10): { createGoogleGenerativeAI }, { createAnthropic }, { createOpenAICompatible }, PRESETS, OPENAI_COMPATIBLE_LABEL, createProvider(), listProviders(), GeminiProvider (+2 more)
 
-### Community 47 - "Community 47"
-Cohesion: 0.47
-Nodes (8): { buildContextString }, buildDateTimeContext(), buildSourceOfTruth(), projectGenerationPrompt(), experienceGenerationPrompt(), blogGenerationPrompt(), skillGenerationPrompt(), editGenerationPrompt()
+### Community 1 - "Community 1"
+Cohesion: 0.05
+Nodes (53): { buildContextString }, buildDateTimeContext(), buildSourceOfTruth(), projectGenerationPrompt(), experienceGenerationPrompt(), blogGenerationPrompt(), skillGenerationPrompt(), editGenerationPrompt() (+45 more)
 
-### Community 22 - "Community 22"
-Cohesion: 0.20
-Nodes (12): { buildContextString, getCurrentDateTime }, buildConversationalSystemPrompt(), buildEditModePrompt(), { tool }, { z }, AI_CONTENT_CREATE_TOOLS, AI_CONTENT_EDIT_TOOLS, AI_RESUME_CHATBOT_TOOLS (+4 more)
-
-### Community 72 - "Community 72"
-Cohesion: 0.40
-Nodes (4): { PrismaClient }, connectDatabase(), Prisma ORM, PostgreSQL Database
-
-### Community 36 - "Community 36"
-Cohesion: 0.25
-Nodes (5): GeminiError, GeminiConfigError, GeminiAPIError, GeminiParseError, GeminiValidationError
-
-### Community 7 - "Community 7"
-Cohesion: 0.11
-Nodes (21): { HarmBlockThreshold, HarmCategory }, MODEL_CONFIG, GENERATION_CONFIG, SAFETY_SETTINGS, SYSTEM_INSTRUCTIONS, RETRY_CONFIG, { createAILogger }, { fallbackQuestions, utilityPrompts } (+13 more)
+### Community 74 - "Community 74"
+Cohesion: 0.50
+Nodes (3): { PrismaClient }, Prisma ORM, PostgreSQL Database
 
 ### Community 5 - "Community 5"
 Cohesion: 0.14
@@ -179,87 +182,99 @@ Nodes (1): GeminiService
 Cohesion: 0.33
 Nodes (6): { spawn }, os, path, crypto, compile(), runTectonic()
 
-### Community 40 - "Community 40"
+### Community 45 - "Community 45"
 Cohesion: 0.20
 Nodes (9): winston, customFormat, consoleTransport, fileTransport, errorFileTransport, logger, createAILogger(), createGeminiLogger() (+1 more)
 
-### Community 34 - "Community 34"
+### Community 37 - "Community 37"
 Cohesion: 0.20
 Nodes (9): Minio, minioClient, ensureBucket(), uploadFile(), deleteFile(), getFileUrl(), minio, MinIO Media Storage (+1 more)
 
-### Community 67 - "Community 67"
-Cohesion: 0.43
-Nodes (6): { GeminiAPIError }, { RETRY_CONFIG }, isRetryableError(), calculateDelay(), sleep(), retryWithBackoff()
+### Community 21 - "Community 21"
+Cohesion: 0.20
+Nodes (14): { TfIdf }, { WordTokenizer }, PorterStemmer, { words: englishStopWords }, stopWords, tokenizer, normalizeText(), tokenize() (+6 more)
 
-### Community 15 - "Community 15"
+### Community 79 - "Community 79"
+Cohesion: 0.50
+Nodes (2): { findSimilarPostPairs }, 743a9d0 feat: add analytics and content similarity
+
+### Community 82 - "Community 82"
+Cohesion: 0.50
+Nodes (3): { tool }, { z }, createResumeEditorTools()
+
+### Community 16 - "Community 16"
 Cohesion: 0.15
-Nodes (7): goapplyRoutes, for, 2fe136f feat: GoApply — kanban, jobs, device auth, dashboard pages, extension login, 7aa68eb Agentic editor and PDF Latex support, 8dcf942 AI Fixes, deepseek support, AI Merged into goapply, bde1fd9 More AI Repairs, vue_router
+Nodes (6): goapplyRoutes, for, 7aa68eb Agentic editor and PDF Latex support, 8dcf942 AI Fixes, deepseek support, AI Merged into goapply, bde1fd9 More AI Repairs, vue_router
 
-### Community 38 - "Community 38"
+### Community 41 - "Community 41"
 Cohesion: 0.29
 Nodes (6): ResumeDocumentSummary, ResumeDocument, ResumeDocumentRevisionSummary, ResumeDocumentRevisionDetail, useResumeDocuments(), documentsApi
 
-### Community 13 - "Community 13"
+### Community 10 - "Community 10"
 Cohesion: 0.18
 Nodes (4): router, 2f0b6d3 SSO support, 782c5fd fix: prevent router redirect loop on page load, ae8be0a Refactored the content editor to use the new Editor Studio. Refactored admin dashboard
 
-### Community 27 - "Community 27"
+### Community 26 - "Community 26"
 Cohesion: 0.22
 Nodes (2): 3f7125f A lot of new stuff, b75351a temp
 
-### Community 70 - "Community 70"
-Cohesion: 0.33
-Nodes (4): 2437013 media library changes, 78f04b9 new readme, a3400e5 Enhance README with new features and setup details, f572f42 switch to pnpm
+### Community 43 - "Community 43"
+Cohesion: 0.20
+Nodes (8): 0692194 fix: add onlyBuiltDependencies to .npmrc for pnpm 10+ compat, 18576fb fix: Dockerfile monorepo context for pnpm-lock.yaml, 2437013 media library changes, 78f04b9 new readme, a3400e5 Enhance README with new features and setup details, b6526e1 feat: model-agnostic AI layer + signup gate, b8c2cc4 fix: monorepo Dockerfiles + pnpm build scripts approval, f572f42 switch to pnpm
 
-### Community 19 - "Community 19"
-Cohesion: 0.13
+### Community 14 - "Community 14"
+Cohesion: 0.11
 Nodes (2): useCommandPaletteStore, f883c97 LATEX Editor
 
-### Community 43 - "Community 43"
-Cohesion: 0.22
-Nodes (2): Content, StudioDocumentSummary
-
-### Community 71 - "Community 71"
+### Community 69 - "Community 69"
 Cohesion: 0.33
 Nodes (3): ToolActivity, AgenticChatMessage, AgenticChatCallbacks
 
-### Community 23 - "Community 23"
+### Community 20 - "Community 20"
 Cohesion: 0.15
 Nodes (12): Project, SiteConfig, ProjectMember, ContentLink, ContentTag, ContentMeta, ContentBlock, ExperienceRole (+4 more)
 
-### Community 82 - "Community 82"
+### Community 85 - "Community 85"
 Cohesion: 0.67
 Nodes (1): MERMAID_THEME_VARIABLES
 
-### Community 29 - "Community 29"
+### Community 30 - "Community 30"
 Cohesion: 0.21
 Nodes (11): app, pinia, authStore, User, LoginCredentials, RegisterData, useAuthStore, index_css (+3 more)
 
-### Community 18 - "Community 18"
-Cohesion: 0.13
-Nodes (5): toast, api, Media, MediaListResponse, axios
+### Community 58 - "Community 58"
+Cohesion: 0.29
+Nodes (4): toast, api, aiApi, axios
+
+### Community 39 - "Community 39"
+Cohesion: 0.18
+Nodes (2): Media, MediaListResponse
 
 ### Community 24 - "Community 24"
-Cohesion: 0.13
-Nodes (14): aiApi, LinkableExperienceCategory, GoApplyProfile, GoApplyJob, JobStatus, SavedAnswer, CoverLetter, JobFormData (+6 more)
+Cohesion: 0.14
+Nodes (13): LinkableExperienceCategory, GoApplyProfile, GoApplyJob, JobStatus, SavedAnswer, CoverLetter, JobFormData, JOB_STATUSES (+5 more)
 
-### Community 25 - "Community 25"
-Cohesion: 0.18
-Nodes (10): resumeAdapter, adapters, registerAdapter(), StudioSaveKind, StudioSaveResult, StudioMetaFieldSchema, StudioRevisionSummary, StudioRevisionDetail (+2 more)
+### Community 28 - "Community 28"
+Cohesion: 0.19
+Nodes (9): Content, StudioDocumentSummary, StudioSaveKind, StudioSaveResult, StudioMetaFieldSchema, StudioRevisionSummary, StudioRevisionDetail, StudioQuickAction (+1 more)
 
-### Community 41 - "Community 41"
+### Community 67 - "Community 67"
+Cohesion: 0.40
+Nodes (3): resumeAdapter, adapters, registerAdapter()
+
+### Community 46 - "Community 46"
 Cohesion: 0.20
 Nodes (1): config
 
-### Community 17 - "Community 17"
-Cohesion: 0.12
-Nodes (11): 0c55f26 feat: kanban drag-drop save + edit buttons + mobile + referredBy + API tokens + link-device theme, 15c176e fix: OpenCode reasoning model support + route collision fix, 2e0b15f feat: expose reasoning alongside AI output + switch to deepseek-v4-pro, 49075f5 feat: move GoApply to AI Assistants sidebar + fix kanban drag-save + markdown notes, 4df342b fix: device linking — use dashboard auth directly + exchange 202 for pending, 7641985 fix: reasoning model detection + auto-double token budget, 8726fb0 fix: use default import for api in LinkDevice.vue, b76ca3c fix(ci): use strategic-merge-patch+json to preserve env vars (+3 more)
+### Community 19 - "Community 19"
+Cohesion: 0.17
+Nodes (7): 0c55f26 feat: kanban drag-drop save + edit buttons + mobile + referredBy + API tokens + link-device theme, 2fe136f feat: GoApply — kanban, jobs, device auth, dashboard pages, extension login, 4df342b fix: device linking — use dashboard auth directly + exchange 202 for pending, 8726fb0 fix: use default import for api in LinkDevice.vue, b76ca3c fix(ci): use strategic-merge-patch+json to preserve env vars, d2a255c fix: correct logo import in LinkDevice.vue, e660a95 fix: add canvas build deps for alpine dashboard Dockerfile
 
 ### Community 6 - "Community 6"
 Cohesion: 0.09
 Nodes (12): GoApplyAPI, Banners, Boards, Consent, Detector, Filler, Finder, Tracker (+4 more)
 
-### Community 76 - "Community 76"
+### Community 75 - "Community 75"
 Cohesion: 0.60
 Nodes (3): startup(), tryActivate(), start()
 
@@ -267,104 +282,108 @@ Nodes (3): startup(), tryActivate(), start()
 Cohesion: 0.83
 Nodes (2): loadEnvForm(), toggleCustomFields()
 
-### Community 28 - "Community 28"
+### Community 29 - "Community 29"
 Cohesion: 0.28
 Nodes (10): setStatus(), checkPage(), COLORS, checkAuth(), showAuthedState(), showDisconnectedState(), showDeviceCodeUI(), startPolling() (+2 more)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.06
-Nodes (14): TEMPLATE_STYLES, TEMPLATE_CONFIGS, siteApi, 16d2394 final, 69c514a Basic site loading, 8393c63 Merge branch 'main' of https://github.com/tgmstudios/foligo, c5eb237 WEBSITE, d4b0a64 tes (+6 more)
+Nodes (16): TEMPLATE_STYLES, TEMPLATE_CONFIGS, siteApi, 16d2394 final, 5345604 Fix App Icon, 69c514a Basic site loading, 8393c63 Merge branch 'main' of https://github.com/tgmstudios/foligo, c5eb237 WEBSITE (+8 more)
 
-### Community 50 - "Community 50"
+### Community 52 - "Community 52"
 Cohesion: 0.29
 Nodes (7): 0541f93 cors fix, 2457110 fixed, 3c7f32e fix, 8a75c5b new api stuff, 9e83a1d fix sites, b8bcbcf site fix, f6601e5 use markdown renderer
 
-### Community 73 - "Community 73"
+### Community 70 - "Community 70"
 Cohesion: 0.33
 Nodes (1): TemplateSelector
 
-### Community 32 - "Community 32"
+### Community 33 - "Community 33"
 Cohesion: 0.17
 Nodes (1): SiteApiService
 
-### Community 48 - "Community 48"
-Cohesion: 0.25
-Nodes (8): 0210da7 fix: use --no-frozen-lockfile to allow pnpm to resolve build scripts, 0692194 fix: add onlyBuiltDependencies to .npmrc for pnpm 10+ compat, 18576fb fix: Dockerfile monorepo context for pnpm-lock.yaml, 3c9693e fix: set PNPM_IGNORED_BUILDS='' in all Dockerfiles, 517d7df fix: expand onlyBuiltDependencies to cover all workspace packages, b8c2cc4 fix: monorepo Dockerfiles + pnpm build scripts approval, c8125cb fix: add all needed build deps to pnpm.onlyBuiltDependencies, f0e9169 fix: copy root package.json into Docker build context
-
-### Community 49 - "Community 49"
-Cohesion: 0.25
-Nodes (8): 02f5b3e fix: move jobs/reorder route before jobs/:id, 1ab15d2 fix: kanban drag-drop uses @add/@update instead of @change, 2b2b612 chore: remove .graphify artifacts, 391098a feat: add TurboRepo with remote cache for faster CI builds, 577f1c6 ci: switch to self-hosted ARC runners (tgmstudios-runners), 5f2a237 Fix AIManager fallback chain with real health checks, 91c072c Add graphify knowledge graph and AGENTS.md, e52477f Fix empty chat history crash and remove hardcoded Gemini for function calling
-
-### Community 11 - "Community 11"
-Cohesion: 0.15
-Nodes (22): 09f486f fix: install Tectonic on arm64 builds, 3358248 fix, 404f746 Final Changes, 40faf8f Script and Start html files, 40fd685 other options, 46a699b ci: optimize arm64 Docker builds, 485c30b test, 5345604 Fix App Icon (+14 more)
-
-### Community 56 - "Community 56"
-Cohesion: 0.29
-Nodes (7): 156116a dashboard fix, 3b00f25 fix, 73e954c npm install, 76b0a6d downgrade, 7e80672 prod entrypoint, c188ac8 gitignore, eef22fa tsc
-
-### Community 69 - "Community 69"
-Cohesion: 0.33
-Nodes (6): 1b5ddea feat: auto-inject AI env vars (OpenCode + fallback chain) on deploy, 3087038 fix: install openssl for Prisma engine in API Dockerfile, 413498b fix: pin deployment to SHA-tagged image, not :latest, 646d8ac fix: use PATCH instead of GET/PUT for deploy (Rancher API compat), 8c303a1 revert: remove CI env var injection — envs stay in K8s, f42d726 fix: use correct Rancher cluster ID (c-lx99g, not c-jxhnr)
+### Community 34 - "Community 34"
+Cohesion: 0.18
+Nodes (11): 0210da7 fix: use --no-frozen-lockfile to allow pnpm to resolve build scripts, 1b5ddea feat: auto-inject AI env vars (OpenCode + fallback chain) on deploy, 3087038 fix: install openssl for Prisma engine in API Dockerfile, 3c9693e fix: set PNPM_IGNORED_BUILDS='' in all Dockerfiles, 413498b fix: pin deployment to SHA-tagged image, not :latest, 517d7df fix: expand onlyBuiltDependencies to cover all workspace packages, 646d8ac fix: use PATCH instead of GET/PUT for deploy (Rancher API compat), 8c303a1 revert: remove CI env var injection — envs stay in K8s (+3 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.25
+Nodes (8): 02f5b3e fix: move jobs/reorder route before jobs/:id, 1ab15d2 fix: kanban drag-drop uses @add/@update instead of @change, 2b2b612 chore: remove .graphify artifacts, 391098a feat: add TurboRepo with remote cache for faster CI builds, 577f1c6 ci: switch to self-hosted ARC runners (tgmstudios-runners), 5f2a237 Fix AIManager fallback chain with real health checks, 91c072c Add graphify knowledge graph and AGENTS.md, e52477f Fix empty chat history crash and remove hardcoded Gemini for function calling
+
+### Community 13 - "Community 13"
+Cohesion: 0.16
+Nodes (20): 09f486f fix: install Tectonic on arm64 builds, 3358248 fix, 404f746 Final Changes, 40faf8f Script and Start html files, 40fd685 other options, 46a699b ci: optimize arm64 Docker builds, 485c30b test, 8ad0083 final (+12 more)
+
+### Community 59 - "Community 59"
+Cohesion: 0.29
+Nodes (7): 156116a dashboard fix, 3b00f25 fix, 73e954c npm install, 76b0a6d downgrade, 7e80672 prod entrypoint, c188ac8 gitignore, eef22fa tsc
+
+### Community 73 - "Community 73"
+Cohesion: 0.40
+Nodes (5): 15c176e fix: OpenCode reasoning model support + route collision fix, 2e0b15f feat: expose reasoning alongside AI output + switch to deepseek-v4-pro, 49075f5 feat: move GoApply to AI Assistants sidebar + fix kanban drag-save + markdown notes, 7641985 fix: reasoning model detection + auto-double token budget, c935419 fix: remove double-token for reasoning models (caused 504 timeouts)
+
+### Community 53 - "Community 53"
+Cohesion: 0.25
 Nodes (8): 2130f77 fix: revert deploy to working basic-auth pattern, add :latest + force pull, 2b34879 fix: load api.js in popup context so account connect UI works, 9cff0d3 fix: add -k flag for Rancher self-signed cert, ba00164 fix: use -u basic auth instead of Bearer for Rancher API, c1c1833 fix(ci): use K8s native API path instead of broken Steve API PATCH, ccd62cc fix: link-device page - no duplicate API call, Foligo colors, no auth required, postMessage bridge, f645d9c fix: CI pushes latest tag, deploy uses Bearer auth with imagePullPolicy Always, fd79a40 fix: deploy script with proper bash syntax, pre-computed timestamp, no nested date
 
-### Community 85 - "Community 85"
+### Community 87 - "Community 87"
 Cohesion: 1.00
 Nodes (1): docxtemplater
 
-### Community 86 - "Community 86"
+### Community 88 - "Community 88"
 Cohesion: 1.00
 Nodes (1): pizzip
 
-### Community 57 - "Community 57"
-Cohesion: 0.29
-Nodes (7): AI Integration, Google Gemini AI, ElevenLabs Voice, Resume Generator, Voice Webhook, AI Function Calling, Resume Chatbot
+### Community 36 - "Community 36"
+Cohesion: 0.18
+Nodes (11): Portfolio Generation, Content Blocks, Static Site Generator, Subdomain Routing, Markdown Editor, iOS SwiftUI App, Content Revisions, Portfolio Templates (+3 more)
 
 ## Knowledge Gaps
-- **381 isolated node(s):** `{ PrismaClient }`, `prisma`, `express`, `cors`, `helmet` (+376 more)
+- **394 isolated node(s):** `{ PrismaClient }`, `prisma`, `express`, `cors`, `helmet` (+389 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 26`** (1 nodes): `AIManager`
+- **Thin community `Community 81`** (2 nodes): `{ PrismaClient }`, `prisma`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 22`** (1 nodes): `AIManager`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 5`** (1 nodes): `GeminiService`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 27`** (2 nodes): `3f7125f A lot of new stuff`, `b75351a temp`
+- **Thin community `Community 79`** (2 nodes): `{ findSimilarPostPairs }`, `743a9d0 feat: add analytics and content similarity`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 19`** (2 nodes): `useCommandPaletteStore`, `f883c97 LATEX Editor`
+- **Thin community `Community 26`** (2 nodes): `3f7125f A lot of new stuff`, `b75351a temp`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 43`** (2 nodes): `Content`, `StudioDocumentSummary`
+- **Thin community `Community 14`** (2 nodes): `useCommandPaletteStore`, `f883c97 LATEX Editor`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `MERMAID_THEME_VARIABLES`
+- **Thin community `Community 85`** (1 nodes): `MERMAID_THEME_VARIABLES`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 41`** (1 nodes): `config`
+- **Thin community `Community 39`** (2 nodes): `Media`, `MediaListResponse`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 46`** (1 nodes): `config`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 80`** (2 nodes): `loadEnvForm()`, `toggleCustomFields()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `TemplateSelector`
+- **Thin community `Community 70`** (1 nodes): `TemplateSelector`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 32`** (1 nodes): `SiteApiService`
+- **Thin community `Community 33`** (1 nodes): `SiteApiService`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `docxtemplater`
+- **Thin community `Community 87`** (1 nodes): `docxtemplater`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (1 nodes): `pizzip`
+- **Thin community `Community 88`** (1 nodes): `pizzip`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `GeminiService` connect `Community 5` to `Community 7`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
-- **Why does `AIManager` connect `Community 26` to `Community 21`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `SiteApiService` connect `Community 32` to `Community 0`?**
+- **Why does `GeminiService` connect `Community 5` to `Community 1`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Why does `AIManager` connect `Community 22` to `Community 42`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `SiteApiService` connect `Community 33` to `Community 0`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **What connects `{ PrismaClient }`, `prisma`, `express` to the rest of the system?**
-  _381 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.03389830508474576 - nodes in this community are weakly interconnected._
-- **Should `Community 10` be split into smaller, more focused modules?**
+  _394 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.03333333333333333 - nodes in this community are weakly interconnected._
+- **Should `Community 8` be split into smaller, more focused modules?**
   _Cohesion score 0.1067193675889328 - nodes in this community are weakly interconnected._
-- **Should `Community 20` be split into smaller, more focused modules?**
+- **Should `Community 18` be split into smaller, more focused modules?**
   _Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected._

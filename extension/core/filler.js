@@ -88,6 +88,19 @@ const Filler = (() => {
   }
 
   function fillSelect(element, value) {
+    if (element.tagName === 'SELECT') {
+      const wanted = normalizeChoice(value);
+      const options = Array.from(element.options);
+      const option = options.find(opt => normalizeChoice(opt.value) === wanted || normalizeChoice(opt.textContent) === wanted)
+        || options.find(opt => normalizeChoice(opt.textContent).includes(wanted) || wanted.includes(normalizeChoice(opt.textContent)));
+      if (!option) throw new Error(`No matching option for "${value}"`);
+      element.focus();
+      setNativeValue(element, option.value);
+      element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      element.blur();
+      return;
+    }
     element.focus();
     element.click();
     setTimeout(() => {
@@ -107,6 +120,15 @@ const Filler = (() => {
     }, 100);
   }
 
+  function normalizeChoice(value) {
+    return String(value ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\b(i am|i have|i do|identify as)\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function fillClick(element, _value) {
     element.focus();
     element.click();
@@ -115,6 +137,25 @@ const Filler = (() => {
   }
 
   function fillCheckbox(element, value) {
+    if (element.type === 'radio') {
+      const group = element.name
+        ? Array.from(document.querySelectorAll(`input[type="radio"][name="${CSS.escape(element.name)}"]`))
+        : [element];
+      const wanted = normalizeChoice(value);
+      const match = group.find(radio => {
+        const label = radio.labels ? Array.from(radio.labels).map(l => l.textContent).join(' ') : '';
+        return [radio.value, label, radio.getAttribute('aria-label')]
+          .filter(Boolean)
+          .some(candidate => {
+            const normalized = normalizeChoice(candidate);
+            return normalized === wanted || normalized.includes(wanted) || wanted.includes(normalized);
+          });
+      });
+      if (!match) throw new Error(`No matching radio option for "${value}"`);
+      if (!match.checked) match.click();
+      match.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
     const shouldCheck = value === true || value === 'true' || value === 'yes' || value === 'on';
     if (element.checked !== shouldCheck) {
       element.click();
@@ -280,10 +321,13 @@ const Filler = (() => {
     ethnicity_checkable: ['ethnicity'],
     visible_minority: ['ethnicity'],
     hispanic: ['hispanicLatino'],
+    hispanic_ethnicity: ['hispanicLatino'],
     veteran: ['veteranStatus'],
+    veteran_status: ['veteranStatus'],
     veteran_v2: ['veteranStatus'],
     armed_forces: ['veteranStatus'],
     disability: ['disabilityStatus'],
+    disability_status: ['disabilityStatus'],
     disability_v2: ['disabilityStatus'],
     lgbt: ['lgbtStatus'],
     lgbt_v2: ['lgbtStatus'],
@@ -475,6 +519,7 @@ const Filler = (() => {
         case 'react': fillReact(element, value); break;
         case 'dijit': fillDijit(element, value); break;
         case 'selectCheckboxOrRadio': fillCheckbox(element, value); break;
+        case 'select': fillSelect(element, value); break;
         case 'click': fillClick(element, value); break;
         case 'defaultWithoutBlur': 
           element.focus(); setNativeValue(element, value);

@@ -38,6 +38,7 @@
     <div class="flex gap-2">
       <div class="relative flex-1">
         <input
+          ref="searchInput"
           v-model="query"
           type="text"
           class="input"
@@ -105,6 +106,7 @@ const emit = defineEmits<{
 const store = useGoApplyStore()
 
 const query = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
 const results = ref<Content[]>([])
 const isSearching = ref(false)
 const showResults = ref(false)
@@ -157,6 +159,7 @@ async function persist(items: Content[]) {
 function addItem(item: Content) {
   query.value = ''
   showResults.value = false
+  searchInput.value?.blur()
   persist([...props.modelValue, item])
   emit('linked', item)
 }

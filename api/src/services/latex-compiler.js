@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const TECTONIC_BIN = process.env.TECTONIC_BIN || 'tectonic';
+const TECTONIC_BUNDLE_URL = process.env.TECTONIC_BUNDLE_URL;
 const COMPILE_TIMEOUT_MS = 30000;
 
 /**
@@ -42,7 +43,13 @@ async function compile(source) {
 
 function runTectonic(texPath, workDir) {
   return new Promise((resolve) => {
-    const proc = spawn(TECTONIC_BIN, ['--outdir', workDir, texPath], {
+    const args = [];
+    if (TECTONIC_BUNDLE_URL) {
+      args.push('--bundle', TECTONIC_BUNDLE_URL);
+    }
+    args.push('--outdir', workDir, texPath);
+
+    const proc = spawn(TECTONIC_BIN, args, {
       cwd: workDir,
       timeout: COMPILE_TIMEOUT_MS,
     });

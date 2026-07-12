@@ -9,6 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
 # Tectonic — self-contained LaTeX engine used to compile resume documents to PDF (api/src/services/latex-compiler.js)
 ARG TECTONIC_VERSION=0.16.9
 ARG TECTONIC_SHA256=f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1
+ENV TECTONIC_BUNDLE_URL=https://data1.fullyjustified.net/tlextras-2022.0r0.tar
 RUN curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
       -o /tmp/tectonic.tar.gz \
       "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-aarch64-unknown-linux-musl.tar.gz" && \
@@ -50,7 +51,8 @@ RUN --mount=type=secret,id=TURBO_TOKEN \
 # starter template once, so the first real request doesn't need outbound
 # network access (tectonic normally fetches+caches packages on first use).
 RUN mkdir -p /tmp/tectonic-warmup && \
-    tectonic src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup && \
+    tectonic --bundle "$TECTONIC_BUNDLE_URL" \
+      src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup && \
     rm -rf /tmp/tectonic-warmup
 
 EXPOSE 3000

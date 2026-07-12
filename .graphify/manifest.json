@@ -64,8 +64,8 @@
     "hash": "97b8de0617c75a23a8e9b358513f5ff1"
   },
   "api/src/routes/goapply.js": {
-    "mtime": 1783882011085.3406,
-    "hash": "145a3755c70279fdc3c7f411178bb69d"
+    "mtime": 1783892557209.757,
+    "hash": "d56e13a4da84d452405089f0db260f89"
   },
   "api/src/routes/media.js": {
     "mtime": 1763329661524.3982,
@@ -164,8 +164,8 @@
     "hash": "4844c7733754328198236d4909ab67be"
   },
   "api/src/services/latex-compiler.js": {
-    "mtime": 1783744358350.0767,
-    "hash": "a00262d707b617e4acce68a24761dae1"
+    "mtime": 1783893092033.38,
+    "hash": "07cf97ef800c4d2f464bc591ce066e68"
   },
   "api/src/services/logger.js": {
     "mtime": 1783727943876.4082,
@@ -268,8 +268,8 @@
     "hash": "34d61b8cafa9f48ed0ce4dab17a44213"
   },
   "dashboard/src/components/goapply/ExperienceLinker.vue": {
-    "mtime": 1783879743619.459,
-    "hash": "d1e03f02444beb377b03e98fb8107af9"
+    "mtime": 1783892708756.665,
+    "hash": "cad18db49b9f3ce3d3186917b53214b9"
   },
   "dashboard/src/components/goapply/ExperienceQuickCreateModal.vue": {
     "mtime": 1783879718973.0046,
@@ -504,8 +504,8 @@
     "hash": "f92ae15bc041234aeb0cb13ecdc0ed97"
   },
   "dashboard/src/views/goapply/ProfileSettings.vue": {
-    "mtime": 1783882145775.7332,
-    "hash": "46d4d294b6c741a42bedafb2f12065b5"
+    "mtime": 1783893033639.503,
+    "hash": "b39a137d6e11672e90210d086d0cb7ea"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
     "mtime": 1783880604595.1096,
@@ -592,12 +592,12 @@
     "hash": "da241b6e5600f1a3b491cbaa1295ec6f"
   },
   "extension/core/filler.js": {
-    "mtime": 1783746269840.6794,
-    "hash": "2353bdacbd6c0ea08eaef8310366b806"
+    "mtime": 1783893033639.503,
+    "hash": "f40ed0154ad5a506af4746411a4646cb"
   },
   "extension/core/finder.js": {
-    "mtime": 1783746330190.7922,
-    "hash": "bac2adac13682313dbb56a3c552191ea"
+    "mtime": 1783893033639.503,
+    "hash": "20997b62e569f8f55e241e692355fd71"
   },
   "extension/core/main.js": {
     "mtime": 1783746277759.564,
@@ -936,8 +936,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783891501427.383,
-    "hash": "0c0aeb44d89fc3b03be3ecdaa4f3d719"
+    "mtime": 1783892760032.7007,
+    "hash": "a36f489eb0e2dfd9ecb94de278a12d55"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1146,5 +1146,29 @@
   "api/.graphify/GRAPH_REPORT.md": {
     "mtime": 1783885905408.2598,
     "hash": "57b597f49862ac0de1b2a5747c7da8cb"
+  },
+  "api/src/routes/analytics.js": {
+    "mtime": 1783891025913.6123,
+    "hash": "868035d28ebed8118b2de4be5bb24b2b"
+  },
+  "api/src/services/analytics.js": {
+    "mtime": 1783890972909.259,
+    "hash": "ff647f5141d39236a16a6c1f1e5077bf"
+  },
+  "api/src/services/analytics.test.js": {
+    "mtime": 1783891141924.6072,
+    "hash": "715959be8affe34440fb7cdc9e7da7c6"
+  },
+  "api/src/services/post-similarity.js": {
+    "mtime": 1783891256344.4194,
+    "hash": "957726155120b4585109bf53608dcb60"
+  },
+  "api/src/services/post-similarity.test.js": {
+    "mtime": 1783891232394.405,
+    "hash": "fd2ddfd49751e68ab5d86ae3ac353b24"
+  },
+  "api/docs/ANALYTICS_INTEGRATION.md": {
+    "mtime": 1783891141917.051,
+    "hash": "4ddee04d91b23bffd5ee78d6369043d3"
   }
 }

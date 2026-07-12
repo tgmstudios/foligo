@@ -171,6 +171,7 @@ router.get('/experience', async (req, res) => {
         projectId: { in: projectIds },
         contentType: 'EXPERIENCE',
         experienceCategory: category,
+        revisionOf: null,
         ...(q ? { title: { contains: q, mode: 'insensitive' } } : {})
       },
       include: EXPERIENCE_INCLUDE,

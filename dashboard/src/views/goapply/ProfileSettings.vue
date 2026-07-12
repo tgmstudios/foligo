@@ -53,7 +53,14 @@
           <div class="grid grid-cols-2 gap-4">
             <div v-for="f in section.fields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
+              <select v-if="f.options" v-model="(form as any)[f.key]" class="input">
+                <option value="">{{ f.emptyLabel || 'Select an option' }}</option>
+                <option v-for="option in f.options" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
               <input
+                v-else
                 v-model="(form as any)[f.key]"
                 :type="f.type || 'text'"
                 class="input"
@@ -73,9 +80,14 @@
             "Prefer not to say" by default.
           </p>
           <div class="grid grid-cols-2 gap-4">
-            <div v-for="f in eeoTextFields" :key="f.key">
+            <div v-for="f in eeoFields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
-              <input v-model="(form as any)[f.key]" type="text" class="input" placeholder="Prefer not to say" />
+              <select v-model="(form as any)[f.key]" class="input">
+                <option value="">Prefer not to say</option>
+                <option v-for="option in f.options" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-1">Over 18</label>
@@ -175,7 +187,19 @@ interface FieldDef {
   label: string
   type?: string
   placeholder?: string
+  emptyLabel?: string
+  options?: SelectOption[]
 }
+
+interface SelectOption {
+  value: string
+  label: string
+}
+
+const YES_NO_OPTIONS: SelectOption[] = [
+  { value: 'Yes', label: 'Yes' },
+  { value: 'No', label: 'No' },
+]
 
 const sections: { title: string; fields: FieldDef[] }[] = [
   {
@@ -186,10 +210,21 @@ const sections: { title: string; fields: FieldDef[] }[] = [
       { key: 'middleName', label: 'Middle Name' },
       { key: 'preferredName', label: 'Preferred Name' },
       { key: 'username', label: 'Username' },
-      { key: 'phoneType', label: 'Phone Type', placeholder: 'Mobile' },
+      { key: 'phoneType', label: 'Phone Type', options: [
+        { value: 'Mobile', label: 'Mobile' },
+        { value: 'Home', label: 'Home' },
+        { value: 'Work', label: 'Work' },
+        { value: 'Other', label: 'Other' },
+      ] },
       { key: 'phoneCountry', label: 'Phone Country', placeholder: 'US' },
       { key: 'birthday', label: 'Birthday', type: 'date' },
-      { key: 'pronouns', label: 'Pronouns', placeholder: 'she/her' },
+      { key: 'pronouns', label: 'Pronouns', emptyLabel: 'Prefer not to say', options: [
+        { value: 'she/her', label: 'She / Her' },
+        { value: 'he/him', label: 'He / Him' },
+        { value: 'they/them', label: 'They / Them' },
+        { value: 'she/they', label: 'She / They' },
+        { value: 'he/they', label: 'He / They' },
+      ] },
     ],
   },
   {
@@ -206,9 +241,9 @@ const sections: { title: string; fields: FieldDef[] }[] = [
   {
     title: 'Work Authorization',
     fields: [
-      { key: 'workAuthUS', label: 'Authorized to Work in the US', placeholder: 'Yes' },
+      { key: 'workAuthUS', label: 'Authorized to Work in the US', emptyLabel: 'Select an answer', options: YES_NO_OPTIONS },
       { key: 'workAuth', label: 'Work Authorization (Other Country)' },
-      { key: 'sponsorshipRequired', label: 'Require Sponsorship', placeholder: 'No' },
+      { key: 'sponsorshipRequired', label: 'Require Sponsorship', emptyLabel: 'Select an answer', options: YES_NO_OPTIONS },
     ],
   },
   {
@@ -230,13 +265,31 @@ const sections: { title: string; fields: FieldDef[] }[] = [
   },
 ]
 
-const eeoTextFields: FieldDef[] = [
-  { key: 'gender', label: 'Gender' },
-  { key: 'ethnicity', label: 'Ethnicity' },
-  { key: 'hispanicLatino', label: 'Hispanic / Latino' },
-  { key: 'veteranStatus', label: 'Veteran Status' },
-  { key: 'disabilityStatus', label: 'Disability Status' },
-  { key: 'lgbtStatus', label: 'LGBT+' },
+const eeoFields: FieldDef[] = [
+  { key: 'gender', label: 'Gender', options: [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+    { value: 'Non-binary', label: 'Non-binary' },
+    { value: 'Other', label: 'Other' },
+  ] },
+  { key: 'ethnicity', label: 'Race / Ethnicity', options: [
+    { value: 'American Indian or Alaska Native', label: 'American Indian or Alaska Native' },
+    { value: 'Asian', label: 'Asian' },
+    { value: 'Black or African American', label: 'Black or African American' },
+    { value: 'Native Hawaiian or Other Pacific Islander', label: 'Native Hawaiian or Other Pacific Islander' },
+    { value: 'White', label: 'White' },
+    { value: 'Two or more races', label: 'Two or more races' },
+  ] },
+  { key: 'hispanicLatino', label: 'Hispanic / Latino', options: YES_NO_OPTIONS },
+  { key: 'veteranStatus', label: 'Veteran Status', options: [
+    { value: 'I am a protected veteran', label: 'I am a protected veteran' },
+    { value: 'I am not a protected veteran', label: 'I am not a protected veteran' },
+  ] },
+  { key: 'disabilityStatus', label: 'Disability Status', options: [
+    { value: 'Yes, I have a disability', label: 'Yes, I have a disability' },
+    { value: 'No, I do not have a disability', label: 'No, I do not have a disability' },
+  ] },
+  { key: 'lgbtStatus', label: 'LGBT+', options: YES_NO_OPTIONS },
 ]
 
 // Tri-state (yes/no/unset) selects backed by Boolean|undefined fields

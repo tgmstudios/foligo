@@ -4,8 +4,11 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".output/**", ".nuxt/**", "node_modules/.prisma/**"],
+      "outputs": ["dist/**", ".output/**", ".nuxt/**"],
       "cache": true
+    },
+    "foligo-api#build": {
+      "cache": false
     },
     "dev": {
       "cache": false,
