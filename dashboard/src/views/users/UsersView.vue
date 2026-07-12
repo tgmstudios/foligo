@@ -74,16 +74,20 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
                   @click="viewUser(user)"
-                  class="text-primary-600 hover:text-primary-500 mr-3"
+                  class="p-1.5 text-primary-600 hover:text-primary-500 mr-1"
+                  title="View user"
+                  aria-label="View user"
                 >
-                  View
+                  <ListActionIcon name="view" />
                 </button>
                 <button
                   v-if="user.id !== authStore.user?.id"
                   @click="confirmDeleteUser(user)"
-                  class="text-danger-600 hover:text-danger-500"
+                  class="p-1.5 text-danger-600 hover:text-danger-500"
+                  title="Delete user"
+                  aria-label="Delete user"
                 >
-                  Delete
+                  <ListActionIcon name="delete" />
                 </button>
               </td>
             </tr>
@@ -159,6 +163,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { format } from 'date-fns'

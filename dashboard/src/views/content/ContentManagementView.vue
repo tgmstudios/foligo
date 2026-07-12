@@ -141,9 +141,11 @@
           <div class="flex items-center space-x-2 ml-4">
             <router-link
               :to="`/portfolios/${content.projectId}/content/${content.id}/edit`"
-              class="text-primary-600 hover:text-primary-500 text-sm"
+              class="p-1.5 text-primary-600 hover:text-primary-500 transition-colors"
+              title="Edit content"
+              aria-label="Edit content"
             >
-              Edit
+              <ListActionIcon name="edit" />
             </router-link>
             <button
               @click="deleteContent(content)"
@@ -170,6 +172,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useProjectStore, type Content, type Project } from '@/stores/projects'
 import { format } from 'date-fns'

@@ -82,16 +82,20 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   @click.stop="$router.push(`/admin/users/${user.id}`)"
-                  class="text-primary-400 hover:text-primary-300 mr-4"
+                  class="p-1.5 text-primary-400 hover:text-primary-300 mr-1"
+                  title="View user"
+                  aria-label="View user"
                 >
-                  View
+                  <ListActionIcon name="view" />
                 </button>
                 <button
                   @click.stop="handleDeleteUser(user)"
-                  class="text-red-400 hover:text-red-300"
+                  class="p-1.5 text-red-400 hover:text-red-300"
+                  title="Delete user"
+                  aria-label="Delete user"
                   :disabled="user.id === currentUserId"
                 >
-                  Delete
+                  <ListActionIcon name="delete" />
                 </button>
               </td>
             </tr>
@@ -131,6 +135,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -217,4 +222,3 @@ onMounted(() => {
   fetchUsers()
 })
 </script>
-

@@ -28,6 +28,7 @@ const revisionsRoutes = require('./routes/revisions');
 const mediaRoutes = require('./routes/media');
 const adminRoutes = require('./routes/admin');
 const adminSsoRoutes = require('./routes/admin-sso');
+const adminAiModelRoutes = require('./routes/admin-ai-models');
 const ssoAuthRoutes = require('./routes/sso-auth');
 const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
@@ -277,6 +278,7 @@ app.use('/api/goapply', authenticateToken, goapplyRoutes);
 // Admin routes - require authentication and admin privileges
 app.use('/api/admin', authenticateToken, adminRoutes);
 app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);
+app.use('/api/admin/ai-models', authenticateToken, adminAiModelRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

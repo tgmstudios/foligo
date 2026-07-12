@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import api, { aiApi } from '@/services/api'
-import type { Content } from '@/stores/projects'
+import type { Content, Skill } from '@/stores/projects'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -19,9 +19,9 @@ export interface GoApplyProfile {
   linkedin: string
   github: string
   portfolio: string
-  skills: string[]
-  linkedJobs?: Content[]
-  linkedEducation?: Content[]
+  linkedJobs: Content[]
+  linkedEducation: Content[]
+  linkedSkills: Skill[]
 
   // Personal Information
   firstName?: string
@@ -43,20 +43,21 @@ export interface GoApplyProfile {
   country?: string
   postalCode?: string
 
-  // Education
+  language?: string
+
+  // Education & Experience — fully derived server-side from linkedEducation/linkedJobs
+  // (see api/src/routes/goapply.js computeDerivedFields). Read-only: editing happens by
+  // changing the linked entries, not these fields directly.
   highestDegree?: string
   school?: string
   discipline?: string
-  gpa?: string
   educationSummary?: string
-  language?: string
-
-  // Experience
   currentCompany?: string
   currentTitle?: string
   currentlyWorking?: boolean
   experienceSummary?: string
   yearsExperience?: string
+  skills?: string[]
 
   // EEO / voluntary disclosures
   gender?: string
@@ -292,9 +293,20 @@ export const useGoApplyStore = defineStore('goapply', () => {
   async function createGlobalSkill(name: string, category?: string) {
     try {
       const { data } = await api.post('/goapply/skills', { name, category })
-      return data as { id: string; name: string; category: string | null }
+      return data as Skill
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to create skill')
+      throw err
+    }
+  }
+
+  async function linkSkills(skillIds: string[]) {
+    try {
+      const { data } = await api.put('/goapply/profile/skills', { skillIds })
+      profile.value = data
+      return data
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update linked skills')
       throw err
     }
   }
@@ -507,6 +519,7 @@ export const useGoApplyStore = defineStore('goapply', () => {
     linkJobs,
     linkEducation,
     createGlobalSkill,
+    linkSkills,
 
     // jobs
     fetchJobs,

@@ -81,15 +81,19 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   @click.stop="$router.push(`/admin/projects/${project.id}`)"
-                  class="text-primary-400 hover:text-primary-300 mr-4"
+                  class="p-1.5 text-primary-400 hover:text-primary-300 mr-1"
+                  title="View portfolio"
+                  aria-label="View portfolio"
                 >
-                  View
+                  <ListActionIcon name="view" />
                 </button>
                 <button
                   @click.stop="handleDeleteProject(project)"
-                  class="text-red-400 hover:text-red-300"
+                  class="p-1.5 text-red-400 hover:text-red-300"
+                  title="Delete portfolio"
+                  aria-label="Delete portfolio"
                 >
-                  Delete
+                  <ListActionIcon name="delete" />
                 </button>
               </td>
             </tr>
@@ -129,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -206,4 +211,3 @@ onMounted(() => {
   fetchProjects()
 })
 </script>
-

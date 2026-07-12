@@ -107,7 +107,7 @@ const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<ResumeDocumentSummary | null>(null)
 
 function openStudio(id: string) {
-  router.push({ name: 'goapply-resume-studio', params: { id } })
+  router.push({ name: 'studio-resume', params: { id } })
 }
 
 async function handleNew() {

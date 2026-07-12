@@ -299,9 +299,10 @@ model Skill {
   updatedAt DateTime @updatedAt
 
   // Relationships
-  projects    Project[]        @relation("ProjectSkills")
-  experiences ExperienceRole[] @relation("ExperienceSkills")
-  content     Content[]        @relation("ContentSkills")
+  projects     Project[]        @relation("ProjectSkills")
+  experiences  ExperienceRole[] @relation("ExperienceSkills")
+  content      Content[]        @relation("ContentSkills")
+  profileLinks UserProfile[]    @relation("ProfileLinkedSkills")
 
   @@unique([name, category])
   @@index([name])
@@ -348,6 +349,46 @@ model SsoProvider {
   updatedAt             DateTime @updatedAt
 
   @@map("sso_providers")
+}
+
+// Administrator-managed language models. A model is assigned to either the
+// latency-oriented QUICK pool or the quality-oriented LONG pool; one enabled
+// model in each pool can be selected as its default.
+model AiModel {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  providerType String
+  model        String
+  endpoint     String?
+  apiKey       String?
+  headers      Json?
+  modelType    String   @default("QUICK")
+  enabled      Boolean  @default(true)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([modelType, enabled])
+  @@map("ai_models")
+}
+
+// Voice AI configuration. Foligo currently supports ElevenLabs, but keeps the
+// record separate from text models because its agent/voice settings differ.
+model VoiceProvider {
+  id       String  @id @default(uuid())
+  name     String  @default("ElevenLabs")
+  provider String  @unique @default("elevenlabs")
+  agentId  String
+  voiceId  String?
+  modelId  String?
+  apiKey   String?
+  enabled  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("voice_providers")
 }
 
 // Media - Media files stored in MinIO, tied to users and projects
@@ -489,7 +530,6 @@ model UserProfile {
   github    String?
   portfolio String?
   resumeUrl String?
-  skills    String? // JSON array stored as string
 
   // Personal Information
   firstName     String?
@@ -511,20 +551,9 @@ model UserProfile {
   country    String?
   postalCode String?
 
-  // Education
-  highestDegree    String?
-  school           String?
-  discipline       String?
-  gpa              String?
-  educationSummary String?
-  language         String?
-
-  // Experience
-  currentCompany    String?
-  currentTitle      String?
-  currentlyWorking  Boolean?
-  experienceSummary String?
-  yearsExperience   String?
+  // Education — highestDegree/school/discipline/gpa/educationSummary all now live on
+  // linkedEducation Content items instead of being duplicated here.
+  language String?
 
   // EEO / voluntary disclosures — default to "Prefer not to say" at the
   // filler layer, never inferred or defaulted server-side.
@@ -558,10 +587,11 @@ model UserProfile {
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Links into the portfolio product so GoApply can reuse existing Content(EXPERIENCE)
-  // items (jobs/education) instead of requiring the user to retype them.
+  // Links into the portfolio product so GoApply fully relies on existing Content/Skill
+  // objects (jobs/education/skills) instead of duplicating their data as flat text.
   linkedJobs      Content[] @relation("ProfileLinkedJobs")
   linkedEducation Content[] @relation("ProfileLinkedEducation")
+  linkedSkills    Skill[]   @relation("ProfileLinkedSkills")
 
   @@map("user_profiles")
 }

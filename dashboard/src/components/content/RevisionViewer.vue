@@ -47,21 +47,27 @@
           <div class="flex items-center space-x-2">
             <button
               @click.stop="previewRevision(revision)"
-              class="text-sm text-primary-400 hover:text-primary-300"
+              class="p-1.5 text-primary-400 hover:text-primary-300"
+              title="Preview revision"
+              aria-label="Preview revision"
             >
-              Preview
+              <ListActionIcon name="view" />
             </button>
             <button
               @click.stop="restoreRevision(revision)"
-              class="text-sm text-green-400 hover:text-green-300"
+              class="p-1.5 text-green-400 hover:text-green-300"
+              title="Restore revision"
+              aria-label="Restore revision"
             >
-              Restore
+              <ListActionIcon name="restore" />
             </button>
             <button
               @click.stop="deleteRevision(revision.id)"
-              class="text-sm text-red-400 hover:text-red-300"
+              class="p-1.5 text-red-400 hover:text-red-300"
+              title="Delete revision"
+              aria-label="Delete revision"
             >
-              Delete
+              <ListActionIcon name="delete" />
             </button>
           </div>
         </div>
@@ -130,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/services/api'
 import { marked } from 'marked'
@@ -229,4 +236,3 @@ onMounted(() => {
   fetchRevisions()
 })
 </script>
-

@@ -30,29 +30,26 @@
           </div>
         </div>
 
+        <!-- Education — fully driven by linking (or quick-creating) existing portfolio
+             entries; highestDegree/school/discipline/etc. are derived from these, not
+             retyped here. -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Education</h4>
+          <ExperienceLinker category="EDUCATION" v-model="form.linkedEducation" />
+        </div>
+
+        <!-- Experience — same deal: currentCompany/currentTitle/etc. are derived from
+             whichever linked job is current (or most recent). -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Experience</h4>
+          <ExperienceLinker category="JOB" v-model="form.linkedJobs" />
+        </div>
+
         <!-- Generated sections -->
         <div v-for="section in sections" :key="section.title">
           <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">
             {{ section.title }}
           </h4>
-
-          <!-- Link to (or quick-create) existing portfolio Education / Job entries so
-               these fields don't have to be retyped from scratch. -->
-          <div v-if="section.title === 'Education'" class="mb-4">
-            <ExperienceLinker
-              category="EDUCATION"
-              v-model="form.linkedEducation"
-              @linked="seedEducationFields"
-            />
-          </div>
-          <div v-else-if="section.title === 'Experience'" class="mb-4">
-            <ExperienceLinker
-              category="JOB"
-              v-model="form.linkedJobs"
-              @linked="seedJobFields"
-            />
-          </div>
-
           <div class="grid grid-cols-2 gap-4">
             <div v-for="f in section.fields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
@@ -79,14 +76,6 @@
             <div v-for="f in eeoTextFields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
               <input v-model="(form as any)[f.key]" type="text" class="input" placeholder="Prefer not to say" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Currently Employed</label>
-              <select v-model="currentlyWorkingModel" class="input">
-                <option value="">Prefer not to say</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-1">Over 18</label>
@@ -139,7 +128,7 @@
         <!-- Skills -->
         <div>
           <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Skills</h4>
-          <SkillsPicker v-model="form.skills" />
+          <SkillsPicker v-model="form.linkedSkills" />
         </div>
 
         <!-- Submit -->
@@ -160,7 +149,6 @@
 <script setup lang="ts">
 import { reactive, computed, watch } from 'vue'
 import { useGoApplyStore, type GoApplyProfile } from '@/stores/goapply'
-import type { Content } from '@/stores/projects'
 import ExperienceLinker from '@/components/goapply/ExperienceLinker.vue'
 import SkillsPicker from '@/components/goapply/SkillsPicker.vue'
 
@@ -174,9 +162,9 @@ const form = reactive<GoApplyProfile>({
   linkedin: '',
   github: '',
   portfolio: '',
-  skills: [],
   linkedJobs: [],
   linkedEducation: [],
+  linkedSkills: [],
 })
 
 // Field groups mirror the extension's autofill field taxonomy (Personal Info,
@@ -216,23 +204,6 @@ const sections: { title: string; fields: FieldDef[] }[] = [
     ],
   },
   {
-    title: 'Education',
-    fields: [
-      { key: 'highestDegree', label: 'Highest Degree', placeholder: "Bachelor's" },
-      { key: 'school', label: 'School' },
-      { key: 'discipline', label: 'Field of Study' },
-      { key: 'gpa', label: 'GPA' },
-    ],
-  },
-  {
-    title: 'Experience',
-    fields: [
-      { key: 'currentCompany', label: 'Current Company' },
-      { key: 'currentTitle', label: 'Current Title' },
-      { key: 'yearsExperience', label: 'Years of Experience' },
-    ],
-  },
-  {
     title: 'Work Authorization',
     fields: [
       { key: 'workAuthUS', label: 'Authorized to Work in the US', placeholder: 'Yes' },
@@ -269,7 +240,7 @@ const eeoTextFields: FieldDef[] = [
 ]
 
 // Tri-state (yes/no/unset) selects backed by Boolean|undefined fields
-function boolSelectModel(key: 'currentlyWorking' | 'over18' | 'over21' | 'hasDriversLicense') {
+function boolSelectModel(key: 'over18' | 'over21' | 'hasDriversLicense') {
   return computed<string>({
     get: () => (form[key] === true ? 'yes' : form[key] === false ? 'no' : ''),
     set: (v: string) => {
@@ -277,49 +248,32 @@ function boolSelectModel(key: 'currentlyWorking' | 'over18' | 'over21' | 'hasDri
     },
   })
 }
-const currentlyWorkingModel = boolSelectModel('currentlyWorking')
 const over18Model = boolSelectModel('over18')
 const over21Model = boolSelectModel('over21')
 const hasDriversLicenseModel = boolSelectModel('hasDriversLicense')
 
-// Populate form when profile loads
+// Populate form when profile loads. highestDegree/school/currentCompany/skills/etc.
+// come along in `p` as server-derived values (see computeDerivedFields in
+// api/src/routes/goapply.js) — they're read-only display data, not part of `form`.
 watch(
   () => store.profile,
   (p) => {
     if (!p) return
     Object.assign(form, p)
-    form.skills = [...(p.skills || [])]
     form.linkedJobs = [...(p.linkedJobs || [])]
     form.linkedEducation = [...(p.linkedEducation || [])]
+    form.linkedSkills = [...(p.linkedSkills || [])]
   },
   { immediate: true }
 )
 
-// Linking a job/education entry (or quick-creating one) seeds the flat autofill fields
-// from it once, so the browser extension keeps working without knowing about linked
-// portfolio objects. Fields stay freely editable afterwards — this doesn't re-run on
-// every render, only when a new link is added.
-function seedJobFields(item: Content) {
-  const role = item.roles?.[0]
-  form.currentCompany = item.title
-  if (role) {
-    form.currentTitle = role.title
-    form.currentlyWorking = role.isCurrent
-  } else {
-    form.currentlyWorking = item.isOngoing ?? form.currentlyWorking
-  }
-}
-
-function seedEducationFields(item: Content) {
-  const role = item.roles?.[0]
-  form.school = item.title
-  if (role) {
-    form.discipline = role.title
-  }
-}
-
 async function handleSave() {
-  await store.saveProfile({ ...form })
+  // linkedJobs/linkedEducation/linkedSkills are persisted immediately by
+  // ExperienceLinker/SkillsPicker via their own endpoints — don't round-trip those
+  // (or the derived highestDegree/school/currentCompany/etc. fields) through the flat
+  // profile PUT, which no longer accepts them.
+  const { linkedJobs, linkedEducation, linkedSkills, ...rest } = form
+  await store.saveProfile(rest as GoApplyProfile)
 }
 </script>
 

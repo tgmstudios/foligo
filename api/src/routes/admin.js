@@ -446,6 +446,19 @@ router.get('/projects/:id', async (req, res) => {
             }
           }
         },
+        content: {
+          where: { revisionOf: null },
+          select: {
+            id: true,
+            title: true,
+            contentType: true,
+            status: true,
+            excerpt: true,
+            createdAt: true,
+            updatedAt: true
+          },
+          orderBy: { updatedAt: 'desc' }
+        },
         siteConfig: true,
         _count: {
           select: {
@@ -938,4 +951,3 @@ router.get('/stats', async (req, res) => {
 });
 
 module.exports = router;
-

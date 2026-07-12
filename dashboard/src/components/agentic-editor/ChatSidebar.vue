@@ -2,7 +2,7 @@
   <div class="chat-sidebar flex-1 flex flex-col min-h-0">
     <div class="flex-1 overflow-y-auto p-4 space-y-4" ref="scrollContainer">
       <div v-if="messages.length === 0" class="text-center py-10 text-gray-400 text-sm px-4">
-        Ask the agent to draft a section, tailor the resume to a job description, or tweak wording — it'll edit the document directly.
+        {{ emptyStateText }}
       </div>
 
       <div
@@ -86,7 +86,7 @@
           @keydown.enter.ctrl.exact="newline"
           @keydown.enter.meta.exact="newline"
           :disabled="streaming"
-          placeholder="Ask the agent to edit your resume…"
+          :placeholder="placeholder"
           rows="1"
           class="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[40px] max-h-[160px] text-sm leading-relaxed"
         ></textarea>
@@ -109,10 +109,15 @@ import { ref, nextTick, watch } from 'vue'
 import { marked } from 'marked'
 import type { AgenticChatMessage } from '@/composables/useAgenticChat'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   messages: AgenticChatMessage[]
   streaming: boolean
-}>()
+  placeholder?: string
+  emptyStateText?: string
+}>(), {
+  placeholder: 'Ask the agent to edit this document…',
+  emptyStateText: 'Ask the agent to draft a section, make an edit, or tweak wording — it\'ll edit the document directly.',
+})
 
 const emit = defineEmits<{
   (e: 'send', message: string): void
@@ -137,6 +142,8 @@ const TOOL_LABELS: Record<string, { running: string; done: string; error: string
   write_resume: { running: 'Writing document…', done: 'Document rewritten', error: 'Write failed' },
   edit_resume_section: { running: 'Editing section…', done: 'Edit applied', error: 'Edit failed' },
   fetch_portfolio_item: { running: 'Fetching portfolio item…', done: 'Portfolio item fetched', error: 'Fetch failed' },
+  write_content: { running: 'Writing content…', done: 'Content rewritten', error: 'Write failed' },
+  edit_content_section: { running: 'Editing section…', done: 'Edit applied', error: 'Edit failed' },
 }
 
 function toolLabel(tc: { toolName: string; status: string }) {

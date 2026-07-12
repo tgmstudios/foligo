@@ -82,6 +82,8 @@
           v-model="selectedProvider"
           :messages="chat.messages.value"
           :streaming="chat.streaming.value"
+          placeholder="Ask the agent to edit your resume…"
+          empty-state-text="Ask the agent to draft a section, tailor the resume to a job description, or tweak wording — it'll edit the document directly."
           @send="chat.sendMessage"
         />
       </div>
@@ -91,7 +93,7 @@
       <StudioLeftToolbar
         :adapter="adapter"
         :document-id="documentId"
-        @switch-document="(id) => router.push({ name: 'goapply-resume-studio', params: { id } })"
+        @switch-document="(id) => router.push({ name: 'studio-resume', params: { id } })"
       />
     </template>
   </StudioShell>

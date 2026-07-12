@@ -184,6 +184,17 @@
         </div>
         <p class="text-gray-400 text-sm">Configure OpenID/OAuth2 SSO providers</p>
       </router-link>
+
+      <router-link
+        to="/admin/ai-models"
+        class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-primary-500 transition-colors cursor-pointer"
+      >
+        <div class="flex items-center mb-4">
+          <div class="h-10 w-10 bg-cyan-600 rounded-lg flex items-center justify-center mr-4 text-xl">✦</div>
+          <h3 class="text-lg font-semibold text-white">AI Models</h3>
+        </div>
+        <p class="text-gray-400 text-sm">Configure quick and long-generation models and their defaults</p>
+      </router-link>
     </div>
   </div>
 </template>
@@ -231,4 +242,3 @@ onMounted(() => {
   fetchStats()
 })
 </script>
-

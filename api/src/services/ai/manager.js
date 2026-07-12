@@ -23,6 +23,7 @@
 
 const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
 const { createProvider, listProviders } = require('./providers');
+const { resolveModel, ensureBootstrapModels } = require('./model-config');
 const { createAILogger } = require('../logger');
 const { SAFETY_SETTINGS } = require('../gemini-config');
 
@@ -40,17 +41,28 @@ class AIManager {
    * @param {string} type — provider type
    * @param {object} overrides — optional config overrides
    */
-  getProvider(type = null, overrides = {}) {
-    const key = type || this._defaultProvider;
+  async getProvider(selection = null, overrides = {}, modelType = 'QUICK') {
+    let resolved = null;
+    try {
+      resolved = await resolveModel(selection, modelType);
+    } catch (error) {
+      // Environment configuration remains a safe bootstrap/fallback while a
+      // migration is being deployed or before an administrator adds models.
+      this.logger.warn(`Database AI model lookup failed; using environment configuration: ${error.message}`);
+    }
+    const type = resolved?.providerType || selection || this._defaultProvider;
+    const mergedOverrides = { ...(resolved?.overrides || {}), ...overrides };
+    const key = resolved?.key || type;
 
     // If overrides provided, don't cache — create fresh (for custom endpoints)
-    if (Object.keys(overrides).length > 0) {
-      return createProvider(key, overrides);
+    if (Object.keys(mergedOverrides).length > 0 && !resolved) {
+      return createProvider(type, mergedOverrides);
     }
 
     if (!this._providers.has(key)) {
       try {
-        const provider = createProvider(key);
+        const provider = createProvider(type, mergedOverrides);
+        provider.cacheKey = key;
         this._providers.set(key, provider);
         this.logger.info(`Provider "${key}" initialized: ${provider.displayName}`);
       } catch (e) {
@@ -72,14 +84,12 @@ class AIManager {
    * and still fail on a real request (e.g. malformed tool schema, upstream
    * rejecting a specific payload), so fallback has to cover real failures too.
    */
-  async _withFallback(requestedProvider, fn) {
-    const types = requestedProvider
-      ? [requestedProvider]
-      : [this._defaultProvider, ...this._fallbackChain.filter(p => p !== this._defaultProvider)];
+  async _withFallback(requestedProvider, modelType, fn) {
+    const types = requestedProvider ? [requestedProvider] : [null, ...this._fallbackChain];
 
     let lastError;
     for (const type of types) {
-      const provider = this.getProvider(type);
+      const provider = await this.getProvider(type, {}, modelType);
       if (!provider) continue;
       try {
         return await fn(provider);
@@ -87,7 +97,7 @@ class AIManager {
         lastError = e;
         this.logger.warn(`Provider "${type}" call failed, trying next in chain: ${e.message}`);
         // Drop the cached instance in case it's the source of the failure
-        this._providers.delete(type);
+      this._providers.delete(provider?.cacheKey || type);
       }
     }
 
@@ -131,8 +141,8 @@ class AIManager {
    * @returns {Promise<{text:string, reasoning:string|null}>}
    */
   async generateText(prompt, options = {}) {
-    const { provider: reqProvider, ...genOpts } = options;
-    return this._withFallback(reqProvider, async (prov) => {
+    const { provider: reqProvider, modelType = 'QUICK', ...genOpts } = options;
+    return this._withFallback(reqProvider, modelType, async (prov) => {
       this.logger.debug(`generateText via ${prov.name}`, { promptLen: prompt.length });
       const { text, reasoning } = await this._callModel(prov, {
         ...genOpts,
@@ -149,8 +159,8 @@ class AIManager {
    * @returns {Promise<{text:string|null, functionCalls:Array|null}>}
    */
   async generateChat(messages, options = {}) {
-    const { provider: reqProvider, systemInstruction, ...genOpts } = options;
-    return this._withFallback(reqProvider, (prov) => {
+    const { provider: reqProvider, modelType = 'QUICK', systemInstruction, ...genOpts } = options;
+    return this._withFallback(reqProvider, modelType, (prov) => {
       this.logger.debug(`generateChat via ${prov.name}`, { msgCount: messages.length });
       return this._callModel(prov, { ...genOpts, messages, system: systemInstruction });
     });
@@ -161,8 +171,8 @@ class AIManager {
    * @returns {Promise<{text:string|null, functionCalls:Array|null}>}
    */
   async generateWithTools(prompt, tools, options = {}) {
-    const { provider: reqProvider, systemInstruction, ...genOpts } = options;
-    return this._withFallback(reqProvider, (prov) => {
+    const { provider: reqProvider, modelType = 'QUICK', systemInstruction, ...genOpts } = options;
+    return this._withFallback(reqProvider, modelType, (prov) => {
       this.logger.debug(`generateWithTools via ${prov.name}`, { toolCount: Object.keys(tools || {}).length });
       return this._callModel(prov, {
         ...genOpts,
@@ -189,14 +199,12 @@ class AIManager {
    * @returns {AsyncGenerator<object>}
    */
   async *streamChat(messages, options = {}) {
-    const { provider: reqProvider, systemInstruction, tools, maxSteps, temperature, maxTokens } = options;
-    const types = reqProvider
-      ? [reqProvider]
-      : [this._defaultProvider, ...this._fallbackChain.filter(p => p !== this._defaultProvider)];
+    const { provider: reqProvider, modelType = 'QUICK', systemInstruction, tools, maxSteps, temperature, maxTokens } = options;
+    const types = reqProvider ? [reqProvider] : [null, ...this._fallbackChain];
 
     let lastError;
     for (const type of types) {
-      const prov = this.getProvider(type);
+      const prov = await this.getProvider(type, {}, modelType);
       if (!prov) continue;
 
       const result = sdkStreamText({
@@ -244,7 +252,28 @@ class AIManager {
    * List all configured providers with status.
    */
   async listProviders() {
+    try {
+      await ensureBootstrapModels();
+      const models = await require('../database').prisma.aiModel.findMany({
+        where: { enabled: true }, orderBy: [{ modelType: 'asc' }, { name: 'asc' }],
+      });
+      if (models.length) return models.map(model => ({
+        type: model.id,
+        slug: model.slug,
+        displayName: model.name,
+        model: model.model,
+        modelType: model.modelType,
+        isDefault: model.isDefault,
+        configured: true,
+      }));
+    } catch (error) {
+      this.logger.warn(`Could not list database AI models: ${error.message}`);
+    }
     return listProviders();
+  }
+
+  clearProviderCache() {
+    this._providers.clear();
   }
 
   /**
@@ -254,7 +283,7 @@ class AIManager {
   async testProvider(type) {
     const start = Date.now();
     try {
-      const provider = this.getProvider(type);
+      const provider = await this.getProvider(type);
       if (!provider) return { ok: false, latency: 0, error: 'Not configured' };
       await this._callModel(provider, { messages: [{ role: 'user', content: 'pong' }], maxTokens: 5 });
       return { ok: true, latency: Date.now() - start };

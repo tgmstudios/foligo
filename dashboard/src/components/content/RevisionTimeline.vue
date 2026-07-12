@@ -110,17 +110,19 @@
                         <div class="flex items-center space-x-2 ml-4">
                           <button
                             @click.stop="previewRevision(revision)"
-                            class="px-3 py-1.5 text-sm bg-gray-600 text-gray-300 rounded hover:bg-gray-500 transition-colors"
+                            class="p-2 text-gray-300 rounded hover:bg-gray-600 transition-colors"
                             title="Preview this revision"
+                            aria-label="Preview this revision"
                           >
-                            Preview
+                            <ListActionIcon name="view" />
                           </button>
                           <button
                             @click.stop="restoreRevision(revision)"
-                            class="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                            class="p-2 text-green-400 rounded hover:bg-green-950/40 transition-colors"
                             title="Restore this revision"
+                            aria-label="Restore this revision"
                           >
-                            Restore
+                            <ListActionIcon name="restore" />
                           </button>
                         </div>
                       </div>
@@ -215,6 +217,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/services/api'
 import { marked } from 'marked'
@@ -414,4 +417,3 @@ onMounted(() => {
   color: #9ca3af;
 }
 </style>
-

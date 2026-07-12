@@ -78,15 +78,19 @@
             <div class="flex items-center space-x-2">
               <button
                 @click="editProvider(provider)"
-                class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                class="p-2 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors"
+                title="Edit provider"
+                aria-label="Edit provider"
               >
-                Edit
+                <ListActionIcon name="edit" />
               </button>
               <button
                 @click="deleteProvider(provider)"
-                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                class="p-2 text-red-400 rounded-lg hover:bg-red-950/40 hover:text-red-300 transition-colors"
+                title="Delete provider"
+                aria-label="Delete provider"
               >
-                Delete
+                <ListActionIcon name="delete" />
               </button>
             </div>
           </div>
@@ -318,6 +322,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import api from '@/services/api'
@@ -534,4 +539,3 @@ onMounted(() => {
   fetchProviders()
 })
 </script>
-

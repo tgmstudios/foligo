@@ -11,7 +11,13 @@
         <option v-for="p in configuredProviders" :key="p.type" :value="p.type">{{ p.displayName }}</option>
       </select>
     </div>
-    <ChatSidebar :messages="messages" :streaming="streaming" @send="(msg) => $emit('send', msg)" />
+    <ChatSidebar
+      :messages="messages"
+      :streaming="streaming"
+      :placeholder="placeholder"
+      :empty-state-text="emptyStateText"
+      @send="(msg) => $emit('send', msg)"
+    />
   </div>
 </template>
 
@@ -24,6 +30,8 @@ import api from '@/services/api'
 defineProps<{
   messages: AgenticChatMessage[]
   streaming: boolean
+  placeholder?: string
+  emptyStateText?: string
 }>()
 
 defineEmits<{

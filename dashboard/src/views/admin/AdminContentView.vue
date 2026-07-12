@@ -110,15 +110,19 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   @click.stop="$router.push(`/admin/content/${item.id}`)"
-                  class="text-primary-400 hover:text-primary-300 mr-4"
+                  class="p-1.5 text-primary-400 hover:text-primary-300 mr-1"
+                  title="View content"
+                  aria-label="View content"
                 >
-                  View
+                  <ListActionIcon name="view" />
                 </button>
                 <button
                   @click.stop="handleDeleteContent(item)"
-                  class="text-red-400 hover:text-red-300"
+                  class="p-1.5 text-red-400 hover:text-red-300"
+                  title="Delete content"
+                  aria-label="Delete content"
                 >
-                  Delete
+                  <ListActionIcon name="delete" />
                 </button>
               </td>
             </tr>
@@ -158,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -249,4 +254,3 @@ onMounted(() => {
   fetchContent()
 })
 </script>
-

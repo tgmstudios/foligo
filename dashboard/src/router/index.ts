@@ -20,6 +20,10 @@ import AdminUsersView from '@/views/admin/AdminUsersView.vue'
 import AdminProjectsView from '@/views/admin/AdminProjectsView.vue'
 import AdminContentView from '@/views/admin/AdminContentView.vue'
 import AdminSsoView from '@/views/admin/AdminSsoView.vue'
+import AdminAiModelsView from '@/views/admin/AdminAiModelsView.vue'
+import AdminUserDetailView from '@/views/admin/AdminUserDetailView.vue'
+import AdminProjectDetailView from '@/views/admin/AdminProjectDetailView.vue'
+import AdminContentDetailView from '@/views/admin/AdminContentDetailView.vue'
 import goapplyRoutes from '@/router/goapply'
 
 const router = createRouter({
@@ -54,16 +58,29 @@ const router = createRouter({
       component: () => import('@/views/auth/LinkDevice.vue'),
       meta: { requiresAuth: false }
     },
+    // Editor Studio: full-page, chrome-free editors living under one global
+    // /studio namespace — deliberately top-level siblings of the DashboardLayout
+    // route below (not nested under it) so they render with no dashboard
+    // sidebar/header, same pattern as /login. One route per content-type adapter.
     {
-      // Editor Studio: a full-page, chrome-free editor — deliberately a top-level
-      // sibling of the DashboardLayout route below (not nested under it, and not
-      // nested under goapply.ts's /goapply children) so it renders with no
-      // dashboard sidebar/header, same pattern as /login.
-      path: '/goapply/resume/:id/studio',
-      name: 'goapply-resume-studio',
+      // No `props: true` — both Studio views read route.params directly via
+      // useRoute() and have multi-root (fragment) templates, so Vue Router's
+      // prop-fallthrough would otherwise warn about un-inheritable attrs.
+      path: '/studio/resume/:id',
+      name: 'studio-resume',
       component: () => import('@/views/studio/EditorStudioView.vue'),
-      props: true,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/studio/content/:projectId/:id',
+      name: 'studio-content',
+      component: () => import('@/views/studio/ContentStudioView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      // Back-compat for the old resume Studio URL.
+      path: '/goapply/resume/:id/studio',
+      redirect: (to) => ({ name: 'studio-resume', params: { id: to.params.id } })
     },
     {
       path: '/',
@@ -138,9 +155,21 @@ const router = createRouter({
           meta: { requiresAdmin: true }
         },
         {
+          path: 'admin/users/:id',
+          name: 'admin-user-detail',
+          component: AdminUserDetailView,
+          meta: { requiresAdmin: true }
+        },
+        {
           path: 'admin/projects',
           name: 'admin-projects',
           component: AdminProjectsView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/projects/:id',
+          name: 'admin-project-detail',
+          component: AdminProjectDetailView,
           meta: { requiresAdmin: true }
         },
         {
@@ -150,9 +179,21 @@ const router = createRouter({
           meta: { requiresAdmin: true }
         },
         {
+          path: 'admin/content/:id',
+          name: 'admin-content-detail',
+          component: AdminContentDetailView,
+          meta: { requiresAdmin: true }
+        },
+        {
           path: 'admin/sso',
           name: 'admin-sso',
           component: AdminSsoView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/ai-models',
+          name: 'admin-ai-models',
+          component: AdminAiModelsView,
           meta: { requiresAdmin: true }
         },
         {

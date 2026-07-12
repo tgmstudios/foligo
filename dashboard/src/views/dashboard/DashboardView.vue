@@ -136,9 +136,11 @@
                 <div class="flex items-center space-x-2">
                   <router-link
                     :to="`/portfolios/${content.projectId}/content/${content.id}/edit`"
-                    class="text-primary-600 hover:text-primary-500 text-sm font-medium"
+                    class="p-1.5 text-primary-600 hover:text-primary-500 transition-colors"
+                    title="Edit content"
+                    aria-label="Edit content"
                   >
-                    Edit
+                    <ListActionIcon name="edit" />
                   </router-link>
                 </div>
               </div>
@@ -337,6 +339,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Project } from '@/stores/projects'

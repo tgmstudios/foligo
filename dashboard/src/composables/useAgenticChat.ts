@@ -97,6 +97,13 @@ export function useAgenticChat(
   async function sendMessage(userText: string) {
     if (streaming.value || !userText.trim()) return
 
+    // Captured before this turn's messages are pushed — some backends (e.g.
+    // Content, which has no server-side chat storage like ResumeDocument
+    // does) rely on the client resending prior turns each request.
+    const history = messages.value
+      .filter((m) => m.content)
+      .map((m) => ({ role: m.role, content: m.content }))
+
     const userMsg: AgenticChatMessage = { id: uid(), role: 'user', content: userText }
     const assistantMsg: AgenticChatMessage = {
       id: uid(),
@@ -124,7 +131,7 @@ export function useAgenticChat(
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ message: userText, provider: getProvider() }),
+        body: JSON.stringify({ message: userText, provider: getProvider(), history }),
       })
 
       if (!response.ok || !response.body) {

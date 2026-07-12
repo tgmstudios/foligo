@@ -7,6 +7,14 @@
           <h1 class="text-2xl font-bold text-white">Edit Content</h1>
         </div>
         <div class="flex items-center space-x-3">
+          <button
+            type="button"
+            @click="deleteContent"
+            :disabled="isDeleting || isSaving"
+            class="px-4 py-2 rounded-md text-sm font-medium border border-red-700/60 bg-red-600/10 text-red-300 hover:bg-red-600/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ isDeleting ? 'Deleting...' : 'Delete' }}
+          </button>
           <select
             v-model="editForm.status"
             :class="[
@@ -301,116 +309,78 @@
 
         <!-- Markdown Editor -->
         <div class="card">
-          <div class="p-6 border-b border-gray-600">
-            <h3 class="text-lg font-medium text-white">Content</h3>
-            <p class="text-sm text-gray-400 mt-1">Write your content in Markdown</p>
+          <div class="p-6 border-b border-gray-600 flex items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-medium text-white">Content</h3>
+              <p class="text-sm text-gray-400 mt-1">Write your content in Markdown</p>
+            </div>
+            <div class="flex rounded-lg bg-gray-700 p-1" role="group" aria-label="Content view">
+              <button
+                type="button"
+                :aria-pressed="contentView === 'edit'"
+                :class="[
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  contentView === 'edit'
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'text-gray-300 hover:text-white'
+                ]"
+                @click="contentView = 'edit'"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                :aria-pressed="contentView === 'preview'"
+                :class="[
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  contentView === 'preview'
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'text-gray-300 hover:text-white'
+                ]"
+                @click="contentView = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
           </div>
           
-          <MarkdownEditor
-            v-model="editForm.content"
-            :project-id="content.projectId"
-            @save="handleMarkdownSave"
-            @cancel="goBack"
-          />
+          <div class="h-[600px]">
+            <MarkdownCodeEditor
+              v-if="contentView === 'edit'"
+              v-model="editForm.content"
+              :project-id="content.projectId"
+              @save="handleMarkdownSave"
+            />
+            <MarkdownPreview
+              v-else
+              :content="editForm.content"
+            />
+          </div>
         </div>
       </div>
 
       <!-- Right Sidebar -->
       <div class="lg:col-span-1">
-        <!-- AI Content Assistant -->
+        <!-- Editor Studio -->
         <div class="card p-6 mb-6">
           <div class="text-center mb-4">
             <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM14 13a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z" />
               </svg>
             </div>
-            <h3 class="text-lg font-medium text-white">AI Content Assistant</h3>
-            <p class="text-sm text-gray-400">Let's create amazing {{ content.type.toLowerCase() }} content together</p>
+            <h3 class="text-lg font-medium text-white">Editor Studio</h3>
+            <p class="text-sm text-gray-400">A full-page editor with a live preview, revision history, and an AI assistant that edits directly</p>
           </div>
-
-          <!-- AI Chat Interface -->
-          <div v-if="aiPhase !== 'start' && !isGeneratingAI" class="space-y-4">
-            <!-- Chat Messages -->
-            <div class="h-64 overflow-y-auto border border-gray-600 rounded-lg p-3 space-y-3 bg-gray-800">
-              <div
-                v-for="message in aiMessages"
-                :key="message.id"
-                :class="[
-                  'flex',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                ]"
-              >
-                <div
-                  :class="[
-                    'max-w-xs px-3 py-2 rounded-lg text-sm',
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-white border border-gray-600'
-                  ]"
-                >
-                  <p>{{ message.content }}</p>
-                </div>
-              </div>
-              
-              <!-- Typing Indicator -->
-              <div v-if="isAITyping" class="flex justify-start">
-                <div class="bg-gray-800 text-white max-w-xs px-3 py-2 rounded-lg border border-gray-600">
-                  <div class="flex space-x-1">
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Chat Input -->
-            <div v-if="aiPhase === 'chat'" class="flex space-x-2">
-              <input
-                v-model="currentAIMessage"
-                @keypress.enter="sendAIMessage"
-                type="text"
-                placeholder="Type your response..."
-                class="flex-1 px-3 py-2 text-sm border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                :disabled="isAITyping"
-              />
-              <button
-                @click="sendAIMessage"
-                :disabled="!currentAIMessage.trim() || isAITyping"
-                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Send
-              </button>
-            </div>
-
-          </div>
-
-          <!-- Generating Content Loader (Replaces Chat) -->
-          <div v-if="isGeneratingAI" class="space-y-3">
-            <div class="text-center py-8">
-              <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-white spin-reverse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </div>
-              <h4 class="text-lg font-medium text-white mb-2">Generating Your Content</h4>
-              <p class="text-sm text-gray-400">This may take a minute...</p>
-            </div>
-          </div>
-
-          <!-- Start Button -->
-          <div v-if="aiPhase === 'start'" class="text-center">
-            <button
-              @click="selectAIMode('text')"
-              class="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center space-x-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              <span>Start AI Assistant</span>
-            </button>
-          </div>
+          <button
+            @click="openEditorStudio"
+            class="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center space-x-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span>Switch to Editor Studio</span>
+          </button>
         </div>
 
         <!-- Content Stats -->
@@ -526,57 +496,6 @@
 
     <div v-else class="text-center py-12">
       <div class="text-gray-400">Loading content...</div>
-    </div>
-
-    <!-- AI Generated Content Modal -->
-    <div v-if="generatedAIContent" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" @click="denyAIContent"></div>
-        
-        <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-          <!-- Header -->
-          <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-6 pb-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
-                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 class="text-lg leading-6 font-medium text-white">
-                    AI Generated Content
-                  </h3>
-                  <p class="text-sm text-blue-100">Review and decide whether to apply this content</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Content Display -->
-          <div class="bg-gray-800 px-6 py-4">
-            <div class="border border-gray-600 rounded-lg p-4 max-h-96 overflow-y-auto bg-gray-900">
-              <div class="prose prose-sm max-w-none ai-content-preview" v-html="renderedAIContent"></div>
-            </div>
-          </div>
-
-          <!-- Footer Actions -->
-          <div class="bg-gray-800 px-6 py-4 flex justify-end space-x-3">
-            <button
-              @click="denyAIContent"
-              class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-800"
-            >
-              Deny
-            </button>
-            <button
-              @click="applyAIContent"
-              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-            >
-              Apply to Editor
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Revision Timeline Modal -->
@@ -717,7 +636,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
-import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
+import MarkdownCodeEditor from '@/components/editor/MarkdownCodeEditor.vue'
+import MarkdownPreview from '@/components/studio/MarkdownPreview.vue'
 import TagManager from '@/components/content/TagManager.vue'
 import SkillsManager from '@/components/content/SkillsManager.vue'
 import ContentBlocksEditor from '@/components/content/ContentBlocksEditor.vue'
@@ -727,7 +647,6 @@ import RevisionTimeline from '@/components/content/RevisionTimeline.vue'
 import FeaturedImageSelector from '@/components/content/FeaturedImageSelector.vue'
 import type { Content, Project, ContentTag, Skill } from '@/stores/projects'
 import { format } from 'date-fns'
-import { marked } from 'marked'
 import { useToast } from 'vue-toastification'
 import api, { aiApi } from '@/services/api'
 
@@ -739,18 +658,9 @@ const toast = useToast()
 const content = ref<Content | null>(null)
 const project = ref<Project | null>(null)
 const isSaving = ref(false)
+const isDeleting = ref(false)
 const showRevisionTimeline = ref(false)
-
-// AI Assistant State
-const aiPhase = ref<'start' | 'chat' | 'generated'>('start')
-const aiMessages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
-const currentAIMessage = ref('')
-const generatedAIContent = ref('')
-const isGeneratingAI = ref(false)
-const isAITyping = ref(false)
-const questionCount = ref(0)
-const maxQuestions = 4
-const aiInteractionMode = ref<'text' | 'voice' | null>(null)
+const contentView = ref<'edit' | 'preview'>('preview')
 
 // Social Post Generator State
 const isGeneratingSocialPosts = ref(false)
@@ -797,14 +707,6 @@ const characterCount = computed(() => {
   return editForm.content?.length || 0
 })
 
-const renderedAIContent = computed(() => {
-  return marked(generatedAIContent.value || '')
-})
-
-const canGenerateContent = computed(() => {
-  return questionCount.value >= maxQuestions && aiMessages.value.length > 0
-})
-
 const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'MMM d, yyyy')
 }
@@ -829,163 +731,9 @@ const getStatusDropdownClass = (status: string) => {
   return classes[status || 'DRAFT'] || classes.DRAFT
 }
 
-// AI Assistant State
-const sessionDone = ref(false)
-
-// AI Assistant Methods
-const selectAIMode = (mode: 'text' | 'voice') => {
-  aiInteractionMode.value = mode
-  startAIAssistant()
-}
-const startAIAssistant = async () => {
-  aiPhase.value = 'chat'
-  questionCount.value = 0
-  sessionDone.value = false
-  
-  isAITyping.value = true
-  
-  try {
-    const initialInfo = {
-      title: editForm.title,
-      content: editForm.content,
-      excerpt: editForm.excerpt,
-      metadata: editForm.metadata
-    }
-    
-    const response = await aiApi.post('/ai/session', {
-      mode: 'edit',
-      contentType: content.value?.type || 'BLOG',
-      initialInfo,
-      chatHistory: []
-    })
-    
-    const initialMessage = {
-      id: Date.now().toString(),
-      role: 'assistant' as const,
-      content: response.data.message
-    }
-    
-    aiMessages.value.push(initialMessage)
-    
-    if (response.data.done) {
-      sessionDone.value = true
-    }
-  } catch (error) {
-    console.error('Failed to start AI assistant:', error)
-    const fallbackMessage = {
-      id: Date.now().toString(),
-      role: 'assistant' as const,
-      content: 'Hi! I\'m here to help you edit your content. What would you like to focus on?'
-    }
-    aiMessages.value.push(fallbackMessage)
-  } finally {
-    isAITyping.value = false
-  }
-}
-
-const generateAIContent = async () => {
-  if (!sessionDone.value) return
-  
-  isGeneratingAI.value = true
-  aiPhase.value = 'chat' // Show generating state in chat interface
-  
-  try {
-    const chatHistory = aiMessages.value.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }))
-    
-    const response = await aiApi.post('/ai/generate', {
-      mode: 'edit',
-      contentType: content.value?.type || 'BLOG',
-      chatHistory,
-      currentContent: editForm.content,
-      changes: ''
-    })
-    
-    generatedAIContent.value = response.data.content
-    // Modal will show automatically when generatedAIContent has value
-  } catch (error) {
-    console.error('Content generation error:', error)
-  } finally {
-    isGeneratingAI.value = false
-  }
-}
-
-const sendAIMessage = async () => {
-  if (!currentAIMessage.value.trim() || isAITyping.value) return
-  
-  const userMessage = {
-    id: Date.now().toString(),
-    role: 'user' as const,
-    content: currentAIMessage.value.trim()
-  }
-  
-  aiMessages.value.push(userMessage)
-  const messageToSend = currentAIMessage.value.trim()
-  currentAIMessage.value = ''
-  isAITyping.value = true
-  
-  try {
-    const initialInfo = {
-      title: editForm.title,
-      content: editForm.content,
-      excerpt: editForm.excerpt,
-      metadata: editForm.metadata
-    }
-    
-    const chatHistory = aiMessages.value.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }))
-    
-    const response = await aiApi.post('/ai/session', {
-      mode: 'edit',
-      contentType: content.value?.type || 'BLOG',
-      initialInfo,
-      chatHistory
-    })
-    
-    const assistantMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant' as const,
-      content: response.data.message
-    }
-    
-    aiMessages.value.push(assistantMessage)
-    
-    // Check if the session is done
-    if (response.data.done) {
-      sessionDone.value = true
-      await generateAIContent()
-    }
-  } catch (error) {
-    console.error('Chat error:', error)
-    const errorMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant' as const,
-      content: 'Sorry, I encountered an error. Please try again.'
-    }
-    aiMessages.value.push(errorMessage)
-  } finally {
-    isAITyping.value = false
-  }
-}
-
-const applyAIContent = () => {
-  editForm.content = generatedAIContent.value
-  denyAIContent()
-}
-
-const denyAIContent = () => {
-  aiPhase.value = 'start'
-  // Reset AI state
-  aiMessages.value = []
-  currentAIMessage.value = ''
-  generatedAIContent.value = ''
-  questionCount.value = 0
-  sessionDone.value = false
-  aiInteractionMode.value = null
+const openEditorStudio = () => {
+  if (!content.value) return
+  router.push({ name: 'studio-content', params: { projectId: content.value.projectId, id: content.value.id } })
 }
 
 // Social Post Generator Methods
@@ -1149,6 +897,27 @@ const handleMarkdownSave = async (contentValue: string) => {
   await saveContent()
 }
 
+const deleteContent = async () => {
+  if (!content.value || isDeleting.value) return
+
+  const contentToDelete = content.value
+  if (!window.confirm(`Are you sure you want to delete "${contentToDelete.title}"? This action cannot be undone.`)) {
+    return
+  }
+
+  try {
+    isDeleting.value = true
+    await projectStore.deleteContent(contentToDelete.id)
+    toast.success('Content deleted')
+    await router.push(`/portfolios/${contentToDelete.projectId}`)
+  } catch (error: any) {
+    console.error('Failed to delete content:', error)
+    toast.error(error.response?.data?.message || 'Failed to delete content')
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 const saveContent = async () => {
   if (!content.value) return
 
@@ -1216,145 +985,12 @@ const saveContent = async () => {
 
 // Status is now managed through the status dropdown in the header
 
-const goBack = () => {
-  router.push(`/portfolios/${route.params.projectId}`)
-}
-
 onMounted(() => {
   loadContent()
 })
 </script>
 
 <style scoped>
-.ai-content-preview {
-  @apply text-white;
-}
-
-:deep(.ai-content-preview) {
-  color: white !important;
-}
-
-:deep(.ai-content-preview h1),
-:deep(.ai-content-preview h1 *),
-.ai-content-preview h1,
-.ai-content-preview h1 * {
-  @apply text-2xl font-bold mb-4;
-  color: white !important;
-}
-
-:deep(.ai-content-preview h2),
-:deep(.ai-content-preview h2 *),
-.ai-content-preview h2,
-.ai-content-preview h2 * {
-  @apply text-xl font-semibold mb-3;
-  color: white !important;
-}
-
-:deep(.ai-content-preview h3),
-:deep(.ai-content-preview h3 *),
-.ai-content-preview h3,
-.ai-content-preview h3 * {
-  @apply text-lg font-medium mb-2;
-  color: white !important;
-}
-
-:deep(.ai-content-preview h4),
-:deep(.ai-content-preview h4 *),
-.ai-content-preview h4,
-.ai-content-preview h4 * {
-  @apply text-base font-medium mb-2;
-  color: white !important;
-}
-
-:deep(.ai-content-preview h5),
-:deep(.ai-content-preview h5 *),
-.ai-content-preview h5,
-.ai-content-preview h5 * {
-  @apply text-sm font-medium mb-2;
-  color: white !important;
-}
-
-:deep(.ai-content-preview h6),
-:deep(.ai-content-preview h6 *),
-.ai-content-preview h6,
-.ai-content-preview h6 * {
-  @apply text-sm font-medium mb-2;
-  color: white !important;
-}
-
-:deep(.ai-content-preview p),
-:deep(.ai-content-preview p *),
-.ai-content-preview p,
-.ai-content-preview p * {
-  @apply mb-4;
-  color: white !important;
-}
-
-:deep(.ai-content-preview strong),
-:deep(.ai-content-preview strong *),
-.ai-content-preview strong,
-.ai-content-preview strong * {
-  @apply font-bold;
-  color: white !important;
-}
-
-.ai-content-preview em {
-  @apply italic text-gray-200;
-}
-
-.ai-content-preview strong em,
-.ai-content-preview em strong {
-  @apply font-bold italic text-white;
-}
-
-.ai-content-preview code {
-  @apply bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-100 border border-gray-700;
-}
-
-.ai-content-preview pre {
-  @apply bg-gray-800 p-4 rounded overflow-x-auto border border-gray-700;
-}
-
-.ai-content-preview pre code {
-  @apply bg-transparent p-0 border-0 text-gray-100;
-}
-
-.ai-content-preview a {
-  @apply text-blue-400 hover:text-blue-300 underline;
-}
-
-.ai-content-preview ul, .ai-content-preview ol {
-  @apply text-white mb-4 list-disc list-outside ml-6;
-}
-
-.ai-content-preview ol {
-  @apply list-decimal;
-}
-
-.ai-content-preview li {
-  @apply mb-1 text-white;
-}
-
-.ai-content-preview blockquote {
-  @apply border-l-4 border-blue-500 pl-4 italic text-white my-4 bg-gray-900/50 py-2;
-}
-
-.ai-content-preview hr {
-  @apply border-gray-600 my-6;
-}
-
-.ai-content-preview table {
-  @apply w-full mb-4 border-collapse;
-}
-
-.ai-content-preview th {
-  @apply bg-gray-800 border border-gray-700 px-4 py-2 text-left font-semibold text-white;
-}
-
-.ai-content-preview td {
-  @apply border border-gray-700 px-4 py-2 text-white;
-}
-
 /* Status dropdown - only color code the select button, not the options */
 select[class*="getStatusDropdownClass"] option,
 select option {

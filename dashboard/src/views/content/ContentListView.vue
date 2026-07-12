@@ -154,9 +154,11 @@
               </div>
               <router-link
                 :to="getEditRoute(item)"
-                class="text-primary-400 hover:text-primary-300 text-sm font-medium"
+                class="p-1.5 text-primary-400 hover:text-primary-300 transition-colors"
+                title="Edit"
+                aria-label="Edit"
               >
-                Edit
+                <ListActionIcon name="edit" />
               </router-link>
               <button
                 @click.stop="deleteItem(item)"
@@ -207,9 +209,11 @@
           <div class="flex items-center space-x-2 ml-4" @click.stop>
             <router-link
               :to="getEditRoute(item)"
-              class="text-primary-400 hover:text-primary-300 text-sm font-medium"
+              class="p-1.5 text-primary-400 hover:text-primary-300 transition-colors"
+              title="Edit"
+              aria-label="Edit"
             >
-              Edit
+              <ListActionIcon name="edit" />
             </router-link>
             <button
               @click.stop="deleteItem(item)"
@@ -235,6 +239,7 @@
 </template>
 
 <script setup lang="ts">
+import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore, type Content, type Project } from '@/stores/projects'
@@ -592,4 +597,3 @@ const moveItemDown = (index: number) => {
   updatePostOrder(newOrder)
 }
 </script>
-

@@ -3,8 +3,75 @@ const { body, validationResult } = require('express-validator');
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
 const { authorizeProjectAccess } = require('../middleware/auth');
+const ai = require('../services/ai/manager');
+const { createContentEditorTools } = require('../services/content-editor-tools');
 
 const router = express.Router();
+
+/**
+ * Snapshot the current state of a Content row as a revision before it gets
+ * overwritten. Shared by the manual-fields update route and the AI chat
+ * route so both save paths produce the exact same revision shape/behavior —
+ * every update revisions (there's no autosave-vs-manual distinction for
+ * Content the way there is for ResumeDocument).
+ */
+async function snapshotContentRevision(existingContent) {
+  if (existingContent.status === 'REVISION') return;
+
+  const latestRevision = await prisma.content.findFirst({
+    where: { revisionOf: existingContent.id },
+    orderBy: { revisionNumber: 'desc' },
+    select: { revisionNumber: true },
+  });
+  const nextRevisionNumber = latestRevision ? latestRevision.revisionNumber + 1 : 1;
+
+  const currentTags = await prisma.contentTag.findMany({
+    where: { content: { some: { id: existingContent.id } } },
+  });
+  const currentSkills = await prisma.skill.findMany({
+    where: { content: { some: { id: existingContent.id } } },
+  });
+
+  const createdRevision = await prisma.content.create({
+    data: {
+      projectId: existingContent.projectId,
+      type: existingContent.type,
+      contentType: existingContent.contentType,
+      title: existingContent.title,
+      slug: `${existingContent.slug || 'content'}-rev-${nextRevisionNumber}`,
+      excerpt: existingContent.excerpt,
+      content: existingContent.content,
+      metadata: existingContent.metadata,
+      order: existingContent.order,
+      status: 'REVISION',
+      revisionOf: existingContent.id,
+      revisionNumber: nextRevisionNumber,
+      revisedAt: new Date(),
+      startDate: existingContent.startDate,
+      endDate: existingContent.endDate,
+      isOngoing: existingContent.isOngoing,
+      featuredImage: existingContent.featuredImage,
+      projectLinks: existingContent.projectLinks,
+      contributors: existingContent.contributors,
+      experienceCategory: existingContent.experienceCategory,
+      location: existingContent.location,
+      locationType: existingContent.locationType,
+    },
+  });
+
+  if (currentTags.length > 0) {
+    await prisma.content.update({
+      where: { id: createdRevision.id },
+      data: { tags: { connect: currentTags.map((tag) => ({ id: tag.id })) } },
+    });
+  }
+  if (currentSkills.length > 0) {
+    await prisma.content.update({
+      where: { id: createdRevision.id },
+      data: { linkedSkills: { connect: currentSkills.map((skill) => ({ id: skill.id })) } },
+    });
+  }
+}
 
 /**
  * @swagger
@@ -622,88 +689,7 @@ router.put('/content/:id/fields', [
     }
 
     // Always create revision before updating (unless this is already a revision)
-    if (existingContent.status !== 'REVISION') {
-      // Get the latest revision number
-      const latestRevision = await prisma.content.findFirst({
-        where: { revisionOf: id },
-        orderBy: { revisionNumber: 'desc' },
-        select: { revisionNumber: true }
-      });
-      
-      const nextRevisionNumber = latestRevision ? latestRevision.revisionNumber + 1 : 1;
-      
-      // Get current tags and skills
-      const currentTags = await prisma.contentTag.findMany({
-        where: {
-          content: {
-            some: { id }
-          }
-        }
-      });
-      
-      const currentSkills = await prisma.skill.findMany({
-        where: {
-          content: {
-            some: { id }
-          }
-        }
-      });
-      
-      // Create revision with current content state
-      const revisionData = {
-        projectId: existingContent.projectId,
-        type: existingContent.type,
-        contentType: existingContent.contentType,
-        title: existingContent.title,
-        slug: `${existingContent.slug || 'content'}-rev-${nextRevisionNumber}`,
-        excerpt: existingContent.excerpt,
-        content: existingContent.content,
-        metadata: existingContent.metadata,
-        order: existingContent.order,
-        status: 'REVISION',
-        revisionOf: id,
-        revisionNumber: nextRevisionNumber,
-        revisedAt: new Date(),
-        // Project-specific fields
-        startDate: existingContent.startDate,
-        endDate: existingContent.endDate,
-        isOngoing: existingContent.isOngoing,
-        featuredImage: existingContent.featuredImage,
-        projectLinks: existingContent.projectLinks,
-        contributors: existingContent.contributors,
-        // Experience-specific fields
-        experienceCategory: existingContent.experienceCategory,
-        location: existingContent.location,
-        locationType: existingContent.locationType
-      };
-      
-      const createdRevision = await prisma.content.create({
-        data: revisionData
-      });
-      
-      // Connect tags and skills to revision
-      if (currentTags.length > 0) {
-        await prisma.content.update({
-          where: { id: createdRevision.id },
-          data: {
-            tags: {
-              connect: currentTags.map(tag => ({ id: tag.id }))
-            }
-          }
-        });
-      }
-      
-      if (currentSkills.length > 0) {
-        await prisma.content.update({
-          where: { id: createdRevision.id },
-          data: {
-            linkedSkills: {
-              connect: currentSkills.map(skill => ({ id: skill.id }))
-            }
-          }
-        });
-      }
-    }
+    await snapshotContentRevision(existingContent);
 
     // Prepare update data
     const updateData = {};
@@ -1104,6 +1090,123 @@ router.put('/projects/:projectId/content/order', [
       error: 'Post Order Update Failed',
       message: 'Unable to update post order'
     });
+  }
+});
+
+/**
+ * @swagger
+ * /api/content/{id}/chat:
+ *   post:
+ *     summary: Send a message to the content editing agent (SSE stream of thinking/text/tool-call events)
+ *     tags: [CMS Content]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/content/:id/chat', [
+  body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
+  body('provider').optional().isString(),
+  body('history').optional().isArray(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Validation Error', message: 'Invalid input data', details: errors.array() });
+  }
+
+  const userId = req.user.id;
+  const existingContent = await prisma.content.findUnique({
+    where: { id: req.params.id },
+    include: { project: { include: { owner: true, members: { where: { userId } } } } },
+  });
+  if (!existingContent) {
+    return res.status(404).json({ error: 'Not Found', message: 'Content does not exist' });
+  }
+  const isOwner = existingContent.project.ownerId === userId;
+  const memberAccess = existingContent.project.members[0];
+  const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
+  if (!canEdit) {
+    return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this content' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const send = (event) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+
+  const userMessage = req.body.message;
+  // Content has no chatHistory column (unlike ResumeDocument) — the client
+  // resends prior turns each request instead of the server persisting them.
+  const priorHistory = Array.isArray(req.body.history) ? req.body.history : [];
+  const messages = [
+    ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: userMessage },
+  ];
+
+  const doc = { content: existingContent.content };
+  const tools = createContentEditorTools(doc);
+
+  const systemInstruction = `You are an expert content editor and writer, working inside an agentic Markdown editor for a "${existingContent.contentType || existingContent.type}" post titled "${existingContent.title}".
+
+CURRENT CONTENT (Markdown source):
+"""
+${doc.content}
+"""
+
+${existingContent.excerpt ? `EXCERPT: ${existingContent.excerpt}\n` : ''}
+
+RULES:
+- Use the edit_content_section tool for small, targeted changes. The "search" text must match the current content verbatim and uniquely.
+- Use the write_content tool only for the first draft or large restructures — it replaces the whole body, so always output complete, valid Markdown.
+- After making edits, briefly tell the user what you changed and why, in plain prose.
+- Preserve existing Markdown formatting conventions already used in the document (headers, code fences, image links, mermaid/drawio blocks) unless asked to change them.`;
+
+  let assistantText = '';
+
+  try {
+    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 6, provider: req.body.provider })) {
+      switch (part.type) {
+        case 'text-delta':
+          assistantText += part.text;
+          send({ type: 'text-delta', text: part.text });
+          break;
+        case 'reasoning-delta':
+          send({ type: 'reasoning-delta', text: part.text });
+          break;
+        case 'tool-call':
+          send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
+          break;
+        case 'tool-result':
+          send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
+          break;
+        case 'tool-error':
+          send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
+          break;
+        case 'error':
+          send({ type: 'error', message: part.error?.message || String(part.error) });
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (doc.content !== existingContent.content) {
+      await snapshotContentRevision(existingContent);
+      await prisma.content.update({ where: { id: existingContent.id }, data: { content: doc.content } });
+      await cache.del(`project:${existingContent.projectId}`);
+      await cache.del(`project:${existingContent.projectId}:content`);
+      await cache.del(`content:${existingContent.id}`);
+    }
+
+    send({ type: 'document-updated', content: doc.content });
+    send({ type: 'done' });
+  } catch (error) {
+    console.error('Content chat error:', error);
+    send({ type: 'error', message: error.message || 'Agent request failed' });
+  } finally {
+    res.end();
   }
 });
 

@@ -23,6 +23,18 @@
     </button>
 
     <button
+      v-if="showInsertMenu"
+      @click.stop="toggle('insert')"
+      class="w-9 h-9 flex items-center justify-center rounded-md transition-colors"
+      :class="open === 'insert' ? 'bg-primary-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+      title="Insert: formatting, tables, diagrams, emoji"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+
+    <button
       v-if="adapter.supportsMediaImport"
       @click.stop="toggle('media')"
       class="w-9 h-9 flex items-center justify-center rounded-md transition-colors"
@@ -41,8 +53,27 @@
         :active-id="documentId"
         @select="(id) => { $emit('switch-document', id); open = null }"
       />
+      <InsertMenuFlyout
+        v-else-if="open === 'insert'"
+        @format-h1="$emit('format-h1')"
+        @format-h2="$emit('format-h2')"
+        @format-h3="$emit('format-h3')"
+        @format-bold="$emit('format-bold')"
+        @format-italic="$emit('format-italic')"
+        @format-link="$emit('format-link')"
+        @format-ul="$emit('format-ul')"
+        @format-ol="$emit('format-ol')"
+        @format-quote="$emit('format-quote')"
+        @format-code="$emit('format-code')"
+        @format-codeblock="$emit('format-codeblock')"
+        @format-table="$emit('format-table')"
+        @insert-mermaid="$emit('insert-mermaid')"
+        @open-drawio="$emit('open-drawio'); open = null"
+        @insert-emoji="(emoji) => $emit('insert-emoji', emoji)"
+      />
       <MediaPickerPopover
         v-else-if="open === 'media'"
+        :project-id="projectId"
         @select="(media) => { adapter.onMediaSelected?.(media); open = null }"
       />
     </div>
@@ -54,22 +85,42 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { EditorStudioAdapter } from '@/studio/types'
 import OtherDocumentsFlyout from '@/components/studio/OtherDocumentsFlyout.vue'
 import MediaPickerPopover from '@/components/studio/MediaPickerPopover.vue'
+import InsertMenuFlyout from '@/components/studio/InsertMenuFlyout.vue'
 import { useCommandPaletteStore } from '@/stores/commandPalette'
 
 const commandPaletteStore = useCommandPaletteStore()
 
-defineProps<{
+withDefaults(defineProps<{
   adapter: EditorStudioAdapter
   documentId: string
-}>()
+  projectId?: string
+  showInsertMenu?: boolean
+}>(), {
+  showInsertMenu: false,
+})
 
 defineEmits<{
   (e: 'switch-document', id: string): void
+  (e: 'format-h1'): void
+  (e: 'format-h2'): void
+  (e: 'format-h3'): void
+  (e: 'format-bold'): void
+  (e: 'format-italic'): void
+  (e: 'format-link'): void
+  (e: 'format-ul'): void
+  (e: 'format-ol'): void
+  (e: 'format-quote'): void
+  (e: 'format-code'): void
+  (e: 'format-codeblock'): void
+  (e: 'format-table'): void
+  (e: 'insert-mermaid'): void
+  (e: 'open-drawio'): void
+  (e: 'insert-emoji', emoji: string): void
 }>()
 
-const open = ref<'documents' | 'media' | null>(null)
+const open = ref<'documents' | 'insert' | 'media' | null>(null)
 
-function toggle(panel: 'documents' | 'media') {
+function toggle(panel: 'documents' | 'insert' | 'media') {
   open.value = open.value === panel ? null : panel
 }
 

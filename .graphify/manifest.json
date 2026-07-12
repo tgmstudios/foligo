@@ -1,0 +1,1090 @@
+{
+  ".graphify/studio/assets/index-CU5cXRnL.js": {
+    "mtime": 1783710049782.8584,
+    "hash": "4a1731652aadc733229941e111688870"
+  },
+  "api/scripts/make-admin.js": {
+    "mtime": 1763241597398.418,
+    "hash": "cf402d163e0971f0732181b8d8de4aa2"
+  },
+  "api/src/index.js": {
+    "mtime": 1783885743558.5474,
+    "hash": "940b006b8b10071e72c0b02d12884562"
+  },
+  "api/src/middleware/auth.js": {
+    "mtime": 1783700040582.5876,
+    "hash": "dc79810a46cb7ec83588ff570cf1bad7"
+  },
+  "api/src/middleware/errorHandler.js": {
+    "mtime": 1761764389191.6013,
+    "hash": "afea0039e0b96e7276a7feaa31349935"
+  },
+  "api/src/routes/admin-sso.js": {
+    "mtime": 1763329671407.5583,
+    "hash": "05d6ad39bfdae5272d94b5e530e430cb"
+  },
+  "api/src/routes/admin.js": {
+    "mtime": 1783886311735.0967,
+    "hash": "12f12849f706b8c3b7d7b9bd10c88501"
+  },
+  "api/src/routes/ai-content.js": {
+    "mtime": 1783744656694.5115,
+    "hash": "ba7f3380469763d64c0be8e5c3d899bb"
+  },
+  "api/src/routes/ai-providers.js": {
+    "mtime": 1783886508318.8628,
+    "hash": "ad7d574f75374a79ea9ae3db27a053f1"
+  },
+  "api/src/routes/auth.js": {
+    "mtime": 1783700040582.5876,
+    "hash": "90bd1991d7ba533a9636fc08c2c14e8f"
+  },
+  "api/src/routes/content-blocks.js": {
+    "mtime": 1763329641898.2183,
+    "hash": "a2422c300d9bcd97d958dffb9212e6a0"
+  },
+  "api/src/routes/content-links.js": {
+    "mtime": 1763329647127.4553,
+    "hash": "55631fbc1cc09f040570934f912c45c3"
+  },
+  "api/src/routes/content-meta.js": {
+    "mtime": 1763329644264.6348,
+    "hash": "16aa8500ee76fb8b2a3a84372f25e951"
+  },
+  "api/src/routes/content-tags.js": {
+    "mtime": 1763329640383.687,
+    "hash": "343ced60f4a4625bcc1153824321ba67"
+  },
+  "api/src/routes/content.js": {
+    "mtime": 1783879989324.4045,
+    "hash": "b8c35de0ad2f3dff18d071dba0b79d9a"
+  },
+  "api/src/routes/experience-roles.js": {
+    "mtime": 1763246674083.8538,
+    "hash": "97b8de0617c75a23a8e9b358513f5ff1"
+  },
+  "api/src/routes/goapply.js": {
+    "mtime": 1783882011085.3406,
+    "hash": "145a3755c70279fdc3c7f411178bb69d"
+  },
+  "api/src/routes/media.js": {
+    "mtime": 1763329661524.3982,
+    "hash": "695e979b2f1784b4be2bcedeef208f12"
+  },
+  "api/src/routes/projectAccess.js": {
+    "mtime": 1761764389288.8013,
+    "hash": "640523964eb4c9bd77ea60a1e42934c3"
+  },
+  "api/src/routes/projects.js": {
+    "mtime": 1764180422388.304,
+    "hash": "b067684020c1a91731ef3fb827d2bb1f"
+  },
+  "api/src/routes/public-content.js": {
+    "mtime": 1764180422388.304,
+    "hash": "36924b0a8e06d6e439762343c96c6cd3"
+  },
+  "api/src/routes/resume.js": {
+    "mtime": 1783878082805.23,
+    "hash": "1d2d70d720b012ce9fa42235781b1e5d"
+  },
+  "api/src/routes/revisions.js": {
+    "mtime": 1763246674083.8538,
+    "hash": "3d07c5c556b270b3d202171d9dcdf668"
+  },
+  "api/src/routes/site.js": {
+    "mtime": 1763358776506.1807,
+    "hash": "78c7f2fbfb6aeaf12b8fc9da0553720b"
+  },
+  "api/src/routes/skills.js": {
+    "mtime": 1763329690618.5935,
+    "hash": "d236136ebf69d6787714dd14bcc35463"
+  },
+  "api/src/routes/sso-auth.js": {
+    "mtime": 1763243027883.0835,
+    "hash": "51369132a02308bd4d6c94c3c1c65914"
+  },
+  "api/src/routes/upload.js": {
+    "mtime": 1761764389342.8013,
+    "hash": "b8ac3db8d2e1a208883c14197329d7af"
+  },
+  "api/src/routes/users.js": {
+    "mtime": 1761764389357.2014,
+    "hash": "ed8f8b89d067aa16e49ba62d5eadbcc0"
+  },
+  "api/src/routes/voice-webhook.js": {
+    "mtime": 1763236626597.218,
+    "hash": "108dd8d68cd4021552e134de0493dc96"
+  },
+  "api/src/seed.js": {
+    "mtime": 1763236626597.218,
+    "hash": "fdfb67545fd58d23ee576eddf4e36cad"
+  },
+  "api/src/services/ai.js": {
+    "mtime": 1783727214682.071,
+    "hash": "a59185f737e14b0f3ee3bd3f8f10a4b0"
+  },
+  "api/src/services/ai/index.js": {
+    "mtime": 1783727156933.8667,
+    "hash": "973e64e56446a9914fb039a17aaa5d03"
+  },
+  "api/src/services/ai/manager.js": {
+    "mtime": 1783885948831.6045,
+    "hash": "dc245b085180af0fba3f33bb22774b8f"
+  },
+  "api/src/services/ai/providers/index.js": {
+    "mtime": 1783727141837.4224,
+    "hash": "ebb4fd2e8bb6398c885ab3f645cac163"
+  },
+  "api/src/services/content-generation-prompts.js": {
+    "mtime": 1763329710743.601,
+    "hash": "968febae35bbd2363c8acda2701aaa94"
+  },
+  "api/src/services/conversation-prompts.js": {
+    "mtime": 1763329710693.6711,
+    "hash": "4738ac149493ac3d4e19c0cdef0c6ad7"
+  },
+  "api/src/services/database.js": {
+    "mtime": 1761764389440.0015,
+    "hash": "dd406c1339e82e92640ef1c25f06819a"
+  },
+  "api/src/services/errors.js": {
+    "mtime": 1763314334562.5867,
+    "hash": "0158ac936aaeac7d2af5166d327f972f"
+  },
+  "api/src/services/gemini-config.js": {
+    "mtime": 1763322398580.5525,
+    "hash": "f88da7e330fb678ea51516c9dd2feef2"
+  },
+  "api/src/services/gemini-tools.js": {
+    "mtime": 1783744615670.198,
+    "hash": "84340758f1daf5822926fee1a7b6d497"
+  },
+  "api/src/services/gemini.js": {
+    "mtime": 1783885799866.6282,
+    "hash": "872a07d182ea0b78144fbb9b468021f4"
+  },
+  "api/src/services/latex-compiler.js": {
+    "mtime": 1783744358350.0767,
+    "hash": "a00262d707b617e4acce68a24761dae1"
+  },
+  "api/src/services/logger.js": {
+    "mtime": 1783727943876.4082,
+    "hash": "49bca2398083dbeb466e4fddbcb3093b"
+  },
+  "api/src/services/minio.js": {
+    "mtime": 1763329659357.786,
+    "hash": "dc9a7baaf7ebb92fb7cef5af3774d898"
+  },
+  "api/src/services/post-links-prompts.js": {
+    "mtime": 1763329711089.2683,
+    "hash": "2165629567d8ba5a0a9b6df787e0f5f7"
+  },
+  "api/src/services/prompt-utils.js": {
+    "mtime": 1763320638851.5378,
+    "hash": "07894d4bd7b176686d892304407d5246"
+  },
+  "api/src/services/redis.js": {
+    "mtime": 1761764389483.2014,
+    "hash": "03692ab4aa1a9fdb7bd42b02740079b4"
+  },
+  "api/src/services/resume-chatbot-prompts.js": {
+    "mtime": 1783744631359.4653,
+    "hash": "eae0b00adbdcf0ba56ee48b29ea00547"
+  },
+  "api/src/services/resume-editor-tools.js": {
+    "mtime": 1783744461494.0908,
+    "hash": "d1a21d6b08517cf3a470755398a2f183"
+  },
+  "api/src/services/retry.js": {
+    "mtime": 1763314334562.5867,
+    "hash": "4dd8830c558e863909ca81e0974f0efc"
+  },
+  "api/src/utils/encryption.js": {
+    "mtime": 1763329672010.5503,
+    "hash": "bb2b18c84e5eaab94360c5c2d1b13de1"
+  },
+  "dashboard/postcss.config.js": {
+    "mtime": 1761764390257.2014,
+    "hash": "5b84f4567208c7c747079c0477373231"
+  },
+  "dashboard/src/App.vue": {
+    "mtime": 1783878572793.6477,
+    "hash": "6975a4b69538bdd3885f845c9ef12ee3"
+  },
+  "dashboard/src/components/AIContentCreatorModal.vue": {
+    "mtime": 1783886575897.695,
+    "hash": "715b5bf6aed51b587f067f6b2311ce9f"
+  },
+  "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
+    "mtime": 1783881738150.89,
+    "hash": "7757ac35bc233f7f393ecf59a2df7ef0"
+  },
+  "dashboard/src/components/agentic-editor/DocumentEditor.vue": {
+    "mtime": 1783746309114.7114,
+    "hash": "91884651b79d1c47e6ca6ac89058a9f3"
+  },
+  "dashboard/src/components/agentic-editor/PreviewPane.vue": {
+    "mtime": 1783745896667.6921,
+    "hash": "b12bd6d33f706564d0e48940f4ddaee5"
+  },
+  "dashboard/src/components/content/ContentBlocksEditor.vue": {
+    "mtime": 1763329645676.8572,
+    "hash": "2c05357478b45da293d60485293c6b72"
+  },
+  "dashboard/src/components/content/ContentLinksManager.vue": {
+    "mtime": 1763329708684.0999,
+    "hash": "df2e297c95438eccad6fa696a79b41cb"
+  },
+  "dashboard/src/components/content/CreateContentModal.vue": {
+    "mtime": 1764180422404.4219,
+    "hash": "068cc52aea993af5fc8338354f7388f2"
+  },
+  "dashboard/src/components/content/ExperienceRolesEditor.vue": {
+    "mtime": 1763329683367.716,
+    "hash": "8f05af85a1e85b744578fc92d8321dc9"
+  },
+  "dashboard/src/components/content/FeaturedImageSelector.vue": {
+    "mtime": 1764180734475.349,
+    "hash": "8e6f27e605fc11543e718c934ef6ac8a"
+  },
+  "dashboard/src/components/content/GeminiChatbot.vue": {
+    "mtime": 1761764390512.8013,
+    "hash": "ee62b112c0e81c3382b49b17585364cc"
+  },
+  "dashboard/src/components/content/RevisionTimeline.vue": {
+    "mtime": 1783886544514.9802,
+    "hash": "e772655413dea136a2da5ec1a12c98b7"
+  },
+  "dashboard/src/components/content/RevisionViewer.vue": {
+    "mtime": 1783886544514.9802,
+    "hash": "15aa45c0670f7217a349820eceef9864"
+  },
+  "dashboard/src/components/content/SkillsManager.vue": {
+    "mtime": 1763246674083.8538,
+    "hash": "fb25a2d66ab4b10546612a452be3ae78"
+  },
+  "dashboard/src/components/content/TagManager.vue": {
+    "mtime": 1763246207347.6892,
+    "hash": "7153e1d0f12cafa3a2d1becb68baf2df"
+  },
+  "dashboard/src/components/editor/DrawIOEditor.vue": {
+    "mtime": 1763329670904.425,
+    "hash": "34d61b8cafa9f48ed0ce4dab17a44213"
+  },
+  "dashboard/src/components/goapply/ExperienceLinker.vue": {
+    "mtime": 1783879743619.459,
+    "hash": "d1e03f02444beb377b03e98fb8107af9"
+  },
+  "dashboard/src/components/goapply/ExperienceQuickCreateModal.vue": {
+    "mtime": 1783879718973.0046,
+    "hash": "8fea414877179fb7865bc46b8b2efd7c"
+  },
+  "dashboard/src/components/goapply/SkillsPicker.vue": {
+    "mtime": 1783882074770.3193,
+    "hash": "2e18d13fe83dbe046fb5ed0709498687"
+  },
+  "dashboard/src/components/media/ImageEditor.vue": {
+    "mtime": 1763236561951.019,
+    "hash": "362b466f470306efd26412710c4038fe"
+  },
+  "dashboard/src/components/media/MediaManager.vue": {
+    "mtime": 1764180844335.911,
+    "hash": "b696ffd847a6a963d0b560b90d3b4ddc"
+  },
+  "dashboard/src/components/projects/CreateProjectModal.vue": {
+    "mtime": 1763246807833.731,
+    "hash": "b839a2efb180422ed83484d4a43de88a"
+  },
+  "dashboard/src/components/shared/CommandPalette.vue": {
+    "mtime": 1783878514501.3928,
+    "hash": "80ef9d9d2b9ba079d33ebbf6ae66bafd"
+  },
+  "dashboard/src/components/studio/MediaPickerPopover.vue": {
+    "mtime": 1783884560424.9204,
+    "hash": "8317a3ebc04a69d8e3434166eb0402f5"
+  },
+  "dashboard/src/components/studio/MetaEditorPopover.vue": {
+    "mtime": 1783877669101.715,
+    "hash": "b1c4f588fbcf5fc630eec45329618058"
+  },
+  "dashboard/src/components/studio/OtherDocumentsFlyout.vue": {
+    "mtime": 1783878214886.064,
+    "hash": "6675e36278a22a3ccd9e5ce9c5755c45"
+  },
+  "dashboard/src/components/studio/RevisionDiffView.vue": {
+    "mtime": 1783877573137.5222,
+    "hash": "b9155010e0cd0216064d3c5bc8091baa"
+  },
+  "dashboard/src/components/studio/RevisionHistoryPopup.vue": {
+    "mtime": 1783877594527.6199,
+    "hash": "1d78b43fb03172f941e407490c9a0c4d"
+  },
+  "dashboard/src/components/studio/StudioChatSidebar.vue": {
+    "mtime": 1783881765339.7703,
+    "hash": "21d889a5bc7afc5adb0ba79e198a0371"
+  },
+  "dashboard/src/components/studio/StudioHeader.vue": {
+    "mtime": 1783876147991.0647,
+    "hash": "4a22899b1adb6344f97b809241db1b98"
+  },
+  "dashboard/src/components/studio/StudioLeftToolbar.vue": {
+    "mtime": 1783884560417.3506,
+    "hash": "a2b2be54d02c8700a2491256835f13d6"
+  },
+  "dashboard/src/components/studio/StudioShell.vue": {
+    "mtime": 1783876164883.8325,
+    "hash": "ed2f0e829545708e12c8143962323cfb"
+  },
+  "dashboard/src/composables/useAgenticChat.ts": {
+    "mtime": 1783880030927.986,
+    "hash": "d71295a1ba7954d8cdf0c247323ba477"
+  },
+  "dashboard/src/composables/useAutosave.ts": {
+    "mtime": 1783877903208.9373,
+    "hash": "b503ab3b4b5a2390268cd86e564cffa4"
+  },
+  "dashboard/src/composables/useCommandPaletteShortcut.ts": {
+    "mtime": 1783878484165.2817,
+    "hash": "bd3a680c0ca4b8a10eb80f51cc8f737e"
+  },
+  "dashboard/src/composables/useDashboardSearchSources.ts": {
+    "mtime": 1783878856045.7847,
+    "hash": "9bcd24bb17473ce65148b0f3ec5734bd"
+  },
+  "dashboard/src/composables/useResumeDocuments.ts": {
+    "mtime": 1783877524541.7366,
+    "hash": "d536377021d9fb36c5a370eab4ecf2eb"
+  },
+  "dashboard/src/layouts/DashboardLayout.vue": {
+    "mtime": 1783886249798.9602,
+    "hash": "100aada797f3eaa4f0258990b501c95b"
+  },
+  "dashboard/src/lib/monaco.ts": {
+    "mtime": 1783746272269.3135,
+    "hash": "103e901125defaaf9f07be406324d6e0"
+  },
+  "dashboard/src/main.ts": {
+    "mtime": 1761764390646.0012,
+    "hash": "191ceab48c792e89add704a278feb300"
+  },
+  "dashboard/src/router/goapply.ts": {
+    "mtime": 1783876890540.8745,
+    "hash": "cf4a77b7af992632895c98d52f2bafe3"
+  },
+  "dashboard/src/router/index.ts": {
+    "mtime": 1783886311735.0967,
+    "hash": "fdce7ee194ac30fec2d6852a11b00f36"
+  },
+  "dashboard/src/services/api.ts": {
+    "mtime": 1783744725627.544,
+    "hash": "bcdef1cfd27f2725fab1f037b87586ba"
+  },
+  "dashboard/src/services/media.ts": {
+    "mtime": 1763329648493.627,
+    "hash": "eb36fcc19ded7d699e26043052dde2f8"
+  },
+  "dashboard/src/stores/auth.ts": {
+    "mtime": 1761764390714.4014,
+    "hash": "5da9390512af2457a05363133c2bf7ad"
+  },
+  "dashboard/src/stores/commandPalette.ts": {
+    "mtime": 1783878474619.6084,
+    "hash": "2b5d0bcab2631e914daced83814354b9"
+  },
+  "dashboard/src/stores/goapply.ts": {
+    "mtime": 1783882056202.8064,
+    "hash": "a2681630887515eb7cfef8185d786e0e"
+  },
+  "dashboard/src/stores/projects.ts": {
+    "mtime": 1764180422388.304,
+    "hash": "7bb5e0daf5edfe27a6af25231ce56727"
+  },
+  "dashboard/src/studio/adapters/index.ts": {
+    "mtime": 1783876116853.4685,
+    "hash": "36bcccac8812cca1958918e6cfdc9b63"
+  },
+  "dashboard/src/studio/adapters/resume/index.ts": {
+    "mtime": 1783878280235.4268,
+    "hash": "2d0ef90e19d6cc9d6ab2c34fba14aff1"
+  },
+  "dashboard/src/studio/registry.ts": {
+    "mtime": 1783876051878.5774,
+    "hash": "55c8afb998579b215a95ad0aec174be4"
+  },
+  "dashboard/src/studio/types.ts": {
+    "mtime": 1783877614691.2952,
+    "hash": "7c9beb4f2449c67cf9b995f5acd6ee41"
+  },
+  "dashboard/src/utils/formatRelativeDate.ts": {
+    "mtime": 1783876757544.727,
+    "hash": "e83906fb535d68af06b593523299b32e"
+  },
+  "dashboard/src/utils/index.ts": {
+    "mtime": 1763328365115.138,
+    "hash": "29997fd5ffbdd3f3853bea5c96272947"
+  },
+  "dashboard/src/views/admin/AdminContentView.vue": {
+    "mtime": 1783886532256.7795,
+    "hash": "efcfb9e1c2bfbe1028e46cc929686782"
+  },
+  "dashboard/src/views/admin/AdminDashboardView.vue": {
+    "mtime": 1783885799870.4175,
+    "hash": "c67554b0fd85f55568edc6bcaed5acb6"
+  },
+  "dashboard/src/views/admin/AdminProjectsView.vue": {
+    "mtime": 1783886532256.7795,
+    "hash": "98d80f34e4d82bdd6d6f0ed43fb24947"
+  },
+  "dashboard/src/views/admin/AdminSsoView.vue": {
+    "mtime": 1783886532260.5608,
+    "hash": "6f2f8bd820ba15b6ea8ba6d9c98d41e4"
+  },
+  "dashboard/src/views/admin/AdminUsersView.vue": {
+    "mtime": 1783886532256.7795,
+    "hash": "c6a1637cdc6228a8f0735297016f8318"
+  },
+  "dashboard/src/views/analytics/AnalyticsView.vue": {
+    "mtime": 1761764390800.8013,
+    "hash": "9122ec58f42460bacfd4264b3bb8d4c3"
+  },
+  "dashboard/src/views/auth/AuthCallbackView.vue": {
+    "mtime": 1763241597398.418,
+    "hash": "b7ae58ad8e197147d9262b6070fb14f2"
+  },
+  "dashboard/src/views/auth/LinkDevice.vue": {
+    "mtime": 1783700040582.5876,
+    "hash": "320bf28cba32c5f49f946aed2bb20723"
+  },
+  "dashboard/src/views/auth/LoginView.vue": {
+    "mtime": 1763328365115.138,
+    "hash": "407f5bb7f8a6a98ae1efc8adea9fa95a"
+  },
+  "dashboard/src/views/auth/RegisterView.vue": {
+    "mtime": 1763329673765.7559,
+    "hash": "e370e6c8d64362f785a823fc2271152b"
+  },
+  "dashboard/src/views/content/ContentEditorView.vue": {
+    "mtime": 1783886649353.6177,
+    "hash": "7a2c29491ff7ef75ab6061663c7d9c5c"
+  },
+  "dashboard/src/views/content/ContentListView.vue": {
+    "mtime": 1783886500253.5667,
+    "hash": "059bd6e266adbbec1aa0b11b2ad52822"
+  },
+  "dashboard/src/views/content/ContentManagementView.vue": {
+    "mtime": 1783886500257.3484,
+    "hash": "c91b8f5d407962ba58ec0ee49656e317"
+  },
+  "dashboard/src/views/content/CreateContentView.vue": {
+    "mtime": 1763246667247.536,
+    "hash": "6cfefbfd86d12b2f574af2704819c227"
+  },
+  "dashboard/src/views/dashboard/DashboardView.vue": {
+    "mtime": 1783886500261.1304,
+    "hash": "321b679fb5a0d7202a16fb8ac16e9cce"
+  },
+  "dashboard/src/views/goapply/CoverLetters.vue": {
+    "mtime": 1783658179946.6484,
+    "hash": "583cdc302245685af6aaa2d2d484367f"
+  },
+  "dashboard/src/views/goapply/JobAssistant.vue": {
+    "mtime": 1783745179600.4795,
+    "hash": "5aa5e4a8ca3dc3931e6623513d4252a2"
+  },
+  "dashboard/src/views/goapply/JobForm.vue": {
+    "mtime": 1783700040582.5876,
+    "hash": "048468d900bec68029342dfb66012e44"
+  },
+  "dashboard/src/views/goapply/JobList.vue": {
+    "mtime": 1783658179950.694,
+    "hash": "24a2e40593bbcc80c3d09bd71ee7871d"
+  },
+  "dashboard/src/views/goapply/JobTracker.vue": {
+    "mtime": 1783876750830.7444,
+    "hash": "348b2b8a2775a2c3cc6e35b86fe840f9"
+  },
+  "dashboard/src/views/goapply/KanbanBoard.vue": {
+    "mtime": 1783727807483.6938,
+    "hash": "f92ae15bc041234aeb0cb13ecdc0ed97"
+  },
+  "dashboard/src/views/goapply/ProfileSettings.vue": {
+    "mtime": 1783882145775.7332,
+    "hash": "46d4d294b6c741a42bedafb2f12065b5"
+  },
+  "dashboard/src/views/goapply/ResumeGallery.vue": {
+    "mtime": 1783880604595.1096,
+    "hash": "2b4ead1d3134c38af83ce0912cf25cdf"
+  },
+  "dashboard/src/views/goapply/SavedAnswers.vue": {
+    "mtime": 1783658179950.694,
+    "hash": "3b25b3c7e216bd53538f37ea4e145e89"
+  },
+  "dashboard/src/views/media/MediaLibraryView.vue": {
+    "mtime": 1763329657921.0063,
+    "hash": "48eccbc1a007b226564085fb0c937e76"
+  },
+  "dashboard/src/views/onboarding/OnboardingView.vue": {
+    "mtime": 1761764390977.2014,
+    "hash": "054d1c5270cf90d05b589af321ea5a4b"
+  },
+  "dashboard/src/views/projects/ProjectDetailView.vue": {
+    "mtime": 1783886500261.1304,
+    "hash": "f26d6439ec9b5c41a71c91df743017b9"
+  },
+  "dashboard/src/views/projects/ProjectsContentView.vue": {
+    "mtime": 1763078442187.1304,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "dashboard/src/views/projects/ProjectsView.vue": {
+    "mtime": 1763246667247.536,
+    "hash": "dd739d6a8878ea061af0170334a55794"
+  },
+  "dashboard/src/views/settings/SettingsView.vue": {
+    "mtime": 1763241597398.418,
+    "hash": "09ac386d9981004cc622d8c8d2ddb17b"
+  },
+  "dashboard/src/views/settings/SiteSettingsView.vue": {
+    "mtime": 1763241597398.418,
+    "hash": "c5398cc61ddceef92b5658e4a132dd31"
+  },
+  "dashboard/src/views/settings/UserSettingsView.vue": {
+    "mtime": 1783700040582.5876,
+    "hash": "458d27cd92c9b359dbb5f3dce53d4c2e"
+  },
+  "dashboard/src/views/studio/EditorStudioView.vue": {
+    "mtime": 1783881793208.0625,
+    "hash": "08f16ae023ef766fb6a4cc6358ff9b54"
+  },
+  "dashboard/src/views/users/UsersView.vue": {
+    "mtime": 1783886532256.7795,
+    "hash": "9dfa64f15fc5ea17c2fd69ecc4de8f4d"
+  },
+  "dashboard/src/vite-env.d.ts": {
+    "mtime": 1763328364906.6665,
+    "hash": "f3051615e4d3a4022dbc0a98d9f2a4f1"
+  },
+  "dashboard/tailwind.config.js": {
+    "mtime": 1761764391178.8013,
+    "hash": "6bb1041a843c47252ee936347caa2d85"
+  },
+  "dashboard/vite.config.ts": {
+    "mtime": 1763331876720.9436,
+    "hash": "cef4bbc23da4d62d010f5697327c2fbf"
+  },
+  "extension/content_script/foligo-auth.js": {
+    "mtime": 1783744528069.9624,
+    "hash": "9412b6dd071fee4c756b0be4bf893cfa"
+  },
+  "extension/core/api.js": {
+    "mtime": 1783746227321.2654,
+    "hash": "439ccaa84229fdf108c90b24bf6b6961"
+  },
+  "extension/core/banners.js": {
+    "mtime": 1783658179962.8308,
+    "hash": "c8d233ce1540aa6b1752964ed02806c2"
+  },
+  "extension/core/boards.js": {
+    "mtime": 1783659092618.6519,
+    "hash": "5d6861eb3e07433954d230f7d76737e8"
+  },
+  "extension/core/consent.js": {
+    "mtime": 1783658179962.8308,
+    "hash": "10f1e027ed773525cd0f07e3b5c26d07"
+  },
+  "extension/core/detector.js": {
+    "mtime": 1783658179962.8308,
+    "hash": "da241b6e5600f1a3b491cbaa1295ec6f"
+  },
+  "extension/core/filler.js": {
+    "mtime": 1783746269840.6794,
+    "hash": "2353bdacbd6c0ea08eaef8310366b806"
+  },
+  "extension/core/finder.js": {
+    "mtime": 1783746330190.7922,
+    "hash": "bac2adac13682313dbb56a3c552191ea"
+  },
+  "extension/core/main.js": {
+    "mtime": 1783746277759.564,
+    "hash": "4a30d035ee61cdc39b49028155a6ca77"
+  },
+  "extension/core/tracker.js": {
+    "mtime": 1783658179962.8308,
+    "hash": "688814cc100149216dce5aad13c83b8b"
+  },
+  "extension/core/tutorial.js": {
+    "mtime": 1783659092618.6519,
+    "hash": "047243d330f1f1a8f47ea68dd0db56ba"
+  },
+  "extension/core/ui.js": {
+    "mtime": 1783658179962.8308,
+    "hash": "00cff4dc2d7bf83a6cde3191e23a152f"
+  },
+  "extension/options.js": {
+    "mtime": 1783744313236.6292,
+    "hash": "e3b4b9200b1f10cf08a2e692648f0281"
+  },
+  "extension/popup.js": {
+    "mtime": 1783744599592.5967,
+    "hash": "4479e68e6029805de637ef71f9a61ee5"
+  },
+  "ios_app/foligo/Auth/AuthView.swift": {
+    "mtime": 1761764389976.4014,
+    "hash": "5f56d834340edc66d685f1226d32c72f"
+  },
+  "ios_app/foligo/Auth/AuthViewModel.swift": {
+    "mtime": 1761764389998.0015,
+    "hash": "014964b17c7457c67b567617f5f9952e"
+  },
+  "ios_app/foligo/Auth/OnboardingView.swift": {
+    "mtime": 1761764390016.0015,
+    "hash": "28023f5901bbcaa1630fc1a96532e602"
+  },
+  "ios_app/foligo/ColorSelection.swift": {
+    "mtime": 1761764390030.4014,
+    "hash": "2a192fae5547a8e5c7abd174cebcdb7a"
+  },
+  "ios_app/foligo/ContentView.swift": {
+    "mtime": 1761764390052.0015,
+    "hash": "01d4e2e869447001ec480bfab501b9f5"
+  },
+  "ios_app/foligo/Projects/ProjectDetailView.swift": {
+    "mtime": 1761764390088.0015,
+    "hash": "5b1e547df30a0cccc61a9816241be322"
+  },
+  "ios_app/foligo/Projects/ProjectsDashboard.swift": {
+    "mtime": 1761764390106.0015,
+    "hash": "2867ff896a26e96c3fd34babc93448c6"
+  },
+  "ios_app/foligo/SplashScreen/FoligoText.swift": {
+    "mtime": 1761764390134.8013,
+    "hash": "d9e3bcff565881a35a373f3173241a9f"
+  },
+  "ios_app/foligo/SplashScreen/SplashScreen.swift": {
+    "mtime": 1761764390156.4014,
+    "hash": "435601b97cd9e684560cbaea1d0aff40"
+  },
+  "ios_app/foligo/foligoApp.swift": {
+    "mtime": 1761764390167.2014,
+    "hash": "c6150baa2fc3913f6bdf39df51df93fb"
+  },
+  "sites/app.vue": {
+    "mtime": 1761764391301.2012,
+    "hash": "80a1970bfde6e1c24ae7d8157368ff8e"
+  },
+  "sites/components/AboutSection.vue": {
+    "mtime": 1761764391376.8013,
+    "hash": "d1f25a4576932677bf4bedf7fe64bfe7"
+  },
+  "sites/components/ArchiveLayout.vue": {
+    "mtime": 1761764391387.6013,
+    "hash": "703a92c490887f6b6c7f7f0256933316"
+  },
+  "sites/components/BlogArchive.vue": {
+    "mtime": 1761764391409.2012,
+    "hash": "003a479920447adf9a1a0a01ebcb3165"
+  },
+  "sites/components/Breadcrumb.vue": {
+    "mtime": 1761764391423.6013,
+    "hash": "bdaa27d4857b0f3dcbbc0dcc3d98ed03"
+  },
+  "sites/components/Button.vue": {
+    "mtime": 1761764391434.4014,
+    "hash": "540a009f666bd066d93576ea7555cb9a"
+  },
+  "sites/components/Card.vue": {
+    "mtime": 1761764391445.2012,
+    "hash": "19f7f1b56363af8c4a6ea25716a792c2"
+  },
+  "sites/components/CommonHeader.vue": {
+    "mtime": 1761764391459.6013,
+    "hash": "c59a7a0826442cc01dca9bca6222f1b0"
+  },
+  "sites/components/ContactForm.vue": {
+    "mtime": 1761764391470.4014,
+    "hash": "61515bb849ce7ef46983183e50f7f604"
+  },
+  "sites/components/Container.vue": {
+    "mtime": 1761764391488.4014,
+    "hash": "0de8669d20d9020ee0b959fd54bf0816"
+  },
+  "sites/components/DefaultLayout.vue": {
+    "mtime": 1761764391495.6013,
+    "hash": "3c4501855c533a145ac3242c7fceceb5"
+  },
+  "sites/components/Footer.vue": {
+    "mtime": 1761764391510.0012,
+    "hash": "a219eb0880a949eccd6a0f6dfeeab519"
+  },
+  "sites/components/Gallery.vue": {
+    "mtime": 1761764391524.4014,
+    "hash": "d8d2e2c4df0686407395192c742575fc"
+  },
+  "sites/components/GridLayout.vue": {
+    "mtime": 1761764391535.2012,
+    "hash": "f5d68d63f101ede6ab98f21b0ee3d186"
+  },
+  "sites/components/Header.vue": {
+    "mtime": 1761764391546.0012,
+    "hash": "cdb583bf758132089df37d8013a24490"
+  },
+  "sites/components/Heading.vue": {
+    "mtime": 1761764391564.0012,
+    "hash": "82c6e2112eecf2000a735ee2ab1b90e3"
+  },
+  "sites/components/Hero.vue": {
+    "mtime": 1761764391578.4014,
+    "hash": "05ea2816138b5a482d8642b97c3ad658"
+  },
+  "sites/components/Input.vue": {
+    "mtime": 1761764391596.4014,
+    "hash": "6e50aed48aa42fb6d6325e8451c4e214"
+  },
+  "sites/components/ListLayout.vue": {
+    "mtime": 1761764391607.2012,
+    "hash": "9c5982352abbc3621ecf2d9c7acc99da"
+  },
+  "sites/components/MasonryLayout.vue": {
+    "mtime": 1761764391625.2012,
+    "hash": "5b6ac695eebc1e2772cfe5400e6fc4ac"
+  },
+  "sites/components/MinimalLayout.vue": {
+    "mtime": 1761764391636.0012,
+    "hash": "8aab5d97c1ea6a774976f12330336a8f"
+  },
+  "sites/components/Modal.vue": {
+    "mtime": 1761764391650.4014,
+    "hash": "ae22b1aa31848e301c9a308804a34ce3"
+  },
+  "sites/components/Navbar.vue": {
+    "mtime": 1761764391668.4014,
+    "hash": "36d3403e74e4c3a84a49009710313873"
+  },
+  "sites/components/PortfolioLayout.vue": {
+    "mtime": 1761764391679.2012,
+    "hash": "45ebc6d4898d34741be2c5e65c908148"
+  },
+  "sites/components/PortfolioTemplateManager.vue": {
+    "mtime": 1761764391697.2012,
+    "hash": "f117e6d2f60d44ab98bd9d2c2f6f9d2a"
+  },
+  "sites/components/ProjectCard.vue": {
+    "mtime": 1761764391711.6013,
+    "hash": "6f0a64af0b5fdc36af837ecbc7874b51"
+  },
+  "sites/components/ProjectsArchive.vue": {
+    "mtime": 1761764391722.4014,
+    "hash": "1f1713b1053e60bb21c1a5accff39a41"
+  },
+  "sites/components/SiteNotFound.vue": {
+    "mtime": 1763328526076.7944,
+    "hash": "e09c7d30bb161d0d1c59219b81d98bed"
+  },
+  "sites/components/StandardLayout.vue": {
+    "mtime": 1761764391744.0012,
+    "hash": "9edad21cf289a2a2505d54675d3a3db7"
+  },
+  "sites/components/UnifiedLayout.vue": {
+    "mtime": 1763359215492.8245,
+    "hash": "3e02a1f3e4af15e71d4da017ff1e1d73"
+  },
+  "sites/components/WideLayout.vue": {
+    "mtime": 1761764391758.4014,
+    "hash": "8ec0afb7d9a8aa7ead59db7d50bd5c56"
+  },
+  "sites/components/icons/IconGithub.vue": {
+    "mtime": 1761764391798.0012,
+    "hash": "fd8e34994f07586da73ca0f9d2e7d70a"
+  },
+  "sites/components/icons/IconInstagram.vue": {
+    "mtime": 1761764391816.0012,
+    "hash": "89b038d337b4b624a99f879dd86445c3"
+  },
+  "sites/components/icons/IconLinkedIn.vue": {
+    "mtime": 1761764391826.8013,
+    "hash": "c03713d66b21cad4e539ad0e20401c52"
+  },
+  "sites/components/icons/IconTwitter.vue": {
+    "mtime": 1761764391844.8013,
+    "hash": "bd0a0e7b29fea2c4765b0e8694d334d8"
+  },
+  "sites/components/portfolio-templates/AmieTemplate.vue": {
+    "mtime": 1761764391880.8013,
+    "hash": "ea0f889454901ba374555363299e64e5"
+  },
+  "sites/components/portfolio-templates/AnalogueTemplate.vue": {
+    "mtime": 1761764391902.4014,
+    "hash": "1750f9ad65ca98cc16953c13b5bfb31e"
+  },
+  "sites/components/portfolio-templates/BaoTemplate.vue": {
+    "mtime": 1761764391916.8013,
+    "hash": "0ca7cc0b0ae9a5c98c720fe2ad5d9aeb"
+  },
+  "sites/components/portfolio-templates/FragmentTemplate.vue": {
+    "mtime": 1761764391927.6013,
+    "hash": "79110742f1145ccdfbfe223f50b1c229"
+  },
+  "sites/components/portfolio-templates/GuglieriTemplate.vue": {
+    "mtime": 1761764391942.0012,
+    "hash": "4a80d762a125c7906a97a9b7de355a6f"
+  },
+  "sites/components/portfolio-templates/LinearTemplate.vue": {
+    "mtime": 1761764391956.4014,
+    "hash": "9fdcf576aed1c05d84ef7a9996ce0a5d"
+  },
+  "sites/components/portfolio-templates/MartinezTemplate.vue": {
+    "mtime": 1761764391963.6013,
+    "hash": "6a8cdf8779c8d6803fda95b7603c5544"
+  },
+  "sites/components/portfolio-templates/SempliceTemplate.vue": {
+    "mtime": 1761764391974.4014,
+    "hash": "c6506578a55745758540daa3d61b1a13"
+  },
+  "sites/components/portfolio-templates/StripeTemplate.vue": {
+    "mtime": 1761764391988.8013,
+    "hash": "fb46d0c894f87523e5968d6c5e2c0f6a"
+  },
+  "sites/components/portfolio-templates/VercelTemplate.vue": {
+    "mtime": 1761764391996.0012,
+    "hash": "0a9dbcb8727f07f9304b97d4441c84bb"
+  },
+  "sites/components/portfolio-templates/WebflowTemplate.vue": {
+    "mtime": 1761764392010.4014,
+    "hash": "a3064e66445fb681c5a1deafa500834a"
+  },
+  "sites/components/portfolio-templates/WellsTemplate.vue": {
+    "mtime": 1761764392028.4014,
+    "hash": "19fbb638b4b882c6309f6b3fe4ae1454"
+  },
+  "sites/components/portfolio-templates/YugaTemplate.vue": {
+    "mtime": 1761764392042.8013,
+    "hash": "c875641676247e54a83582b5c302865e"
+  },
+  "sites/composables/useSubdomain.js": {
+    "mtime": 1761764392075.2012,
+    "hash": "abbf0ac23ee96893ba0b9f02b21d09b5"
+  },
+  "sites/layouts/default.vue": {
+    "mtime": 1761764392096.8013,
+    "hash": "77df68cd76bb4460bad830511218ca8f"
+  },
+  "sites/nuxt.config.ts": {
+    "mtime": 1763328521621.6953,
+    "hash": "8038727c50d54b8af01cfdee001bebed"
+  },
+  "sites/pages/[...slug].vue": {
+    "mtime": 1763357071707.4688,
+    "hash": "4ed8e09ec030a30ed52285d3df491806"
+  },
+  "sites/pages/blog/[slug].vue": {
+    "mtime": 1763328364906.6665,
+    "hash": "dc5fff50e1f60da957f5a5e83ffe93dd"
+  },
+  "sites/pages/blog/index.vue": {
+    "mtime": 1761764392215.6013,
+    "hash": "51756efb3f07cd29bd503f8a9ee04b41"
+  },
+  "sites/pages/contact.vue": {
+    "mtime": 1761764392230.0012,
+    "hash": "d71f5fde6038ed1f529fad44190b4cec"
+  },
+  "sites/pages/debug.vue": {
+    "mtime": 1763328521062.8809,
+    "hash": "6cc58fa8d60076a3ae26a0f005110287"
+  },
+  "sites/pages/experience/[slug].vue": {
+    "mtime": 1761764392266.0012,
+    "hash": "2ff446926a3c34d980b973facc052a10"
+  },
+  "sites/pages/experience/index.vue": {
+    "mtime": 1761764392284.0012,
+    "hash": "144fd162e4f6ca73e5324bbcf964353d"
+  },
+  "sites/pages/index.vue": {
+    "mtime": 1763357087292.922,
+    "hash": "9de220e4f2a862ef0dcd83b77ce7a63d"
+  },
+  "sites/pages/project/[slug].vue": {
+    "mtime": 1761764392316.4011,
+    "hash": "b7f57f9f0813357c791eede42096ba47"
+  },
+  "sites/pages/projects/index.vue": {
+    "mtime": 1761764392334.4011,
+    "hash": "49a8f9e5464d79fd52d1f1f66788c7c8"
+  },
+  "sites/postcss.config.js": {
+    "mtime": 1761764392348.8013,
+    "hash": "ede0185cdbc3887ca8bceced50eb0d07"
+  },
+  "sites/services/templateSelector.js": {
+    "mtime": 1761764392446.0012,
+    "hash": "d9f63eea615f4b8ac4d790d42eed90b6"
+  },
+  "sites/tailwind.config.js": {
+    "mtime": 1761764392460.4011,
+    "hash": "ef5c689b285624879ab4711a64e44b38"
+  },
+  "sites/types/nuxt.d.ts": {
+    "mtime": 1761764392492.8013,
+    "hash": "71076f0d9ba11c30e9a4211557bc6e59"
+  },
+  "sites/utils/markdownRenderer.js": {
+    "mtime": 1763359215492.8245,
+    "hash": "29de5d96605673afb574883d77096acb"
+  },
+  "sites/utils/siteApi.js": {
+    "mtime": 1761764392528.8013,
+    "hash": "12787c20441b3c819c27966f86bae12d"
+  },
+  ".devcontainer/docker-compose.yml": {
+    "mtime": 1776035307111.8552,
+    "hash": "72d33b74ea143d59a695edadee388a21"
+  },
+  ".graphify/GRAPH_REPORT.md": {
+    "mtime": 1783886646458.75,
+    "hash": "95c637afe96ec17b3ddf039828e40750"
+  },
+  ".graphify/studio/index.html": {
+    "mtime": 1783710049786.848,
+    "hash": "e0de6f474f81b1f12f740e284df72b38"
+  },
+  ".graphify/studio/studio-template.html": {
+    "mtime": 1783710049790.8374,
+    "hash": "7c18608bfef6b2223ce0af585ad18e47"
+  },
+  ".graphify/studio/studio.html": {
+    "mtime": 1783710049794.8267,
+    "hash": "20f2d8a8ee9136ecb82fd2f1fd07d5a6"
+  },
+  "AGENTS.md": {
+    "mtime": 1783710049794.8267,
+    "hash": "1992740c904e1dff538818b3c9fedf66"
+  },
+  "README.md": {
+    "mtime": 1776035328117.4082,
+    "hash": "940b190f37c53359d63dfbdbb5b40cc3"
+  },
+  "api/MIGRATIONS.md": {
+    "mtime": 1764180422404.4219,
+    "hash": "693c506cbf359d7ec3f2120995c73859"
+  },
+  "api/README.md": {
+    "mtime": 1763363540767.784,
+    "hash": "70a1ad386829a8a521ce15dfca7a59f0"
+  },
+  "api/docs/AI_ARCHITECTURE.md": {
+    "mtime": 1763315766260.2578,
+    "hash": "8965d6c43ea82d4e8c5b655dcf69c56b"
+  },
+  "api/docs/AI_MIGRATION_GUIDE.md": {
+    "mtime": 1763315766267.988,
+    "hash": "756caafa7465f77842d85796c743169e"
+  },
+  "api/docs/AI_PROMPT_REFACTORING.md": {
+    "mtime": 1763315766260.2578,
+    "hash": "68bb93cd9841003c36964127291d6fd8"
+  },
+  "api/docs/AI_REFACTORING_SUMMARY.md": {
+    "mtime": 1763315766260.2578,
+    "hash": "e1868a47b9499283caf5c1bb725f7ef2"
+  },
+  "api/docs/API_DOCUMENTATION.md": {
+    "mtime": 1763358801486.6953,
+    "hash": "80aad8056769a176fa5031bc63275e36"
+  },
+  "api/docs/ENHANCED_ENDPOINTS_SUMMARY.md": {
+    "mtime": 1763358776506.1807,
+    "hash": "cc3222ac81d09a9310f14c7a0305a926"
+  },
+  "api/docs/FUNCTION_CALLING_FLOW.md": {
+    "mtime": 1763318617414.1377,
+    "hash": "e035179388fd480fe86c4824c5353db3"
+  },
+  "api/docs/README.md": {
+    "mtime": 1763315766267.988,
+    "hash": "6082644a2deb211e03a8d5ea6ffe5fb5"
+  },
+  "api/docs/REFACTORING_SUMMARY.md": {
+    "mtime": 1763314334562.5867,
+    "hash": "995bc8f947b8b8910d07b0d6f8d3e85e"
+  },
+  "dashboard/README.md": {
+    "mtime": 1761764390214.0012,
+    "hash": "54d509a232f61f27cb4c07614923cec1"
+  },
+  "dashboard/index.html": {
+    "mtime": 1763328365115.138,
+    "hash": "3fc82f040c38b6ffc7e024d60e8697b2"
+  },
+  "extension/options.html": {
+    "mtime": 1783744322797.4917,
+    "hash": "245292416e6ee9288514c23c071744cc"
+  },
+  "extension/popup.html": {
+    "mtime": 1783743949491.6157,
+    "hash": "99e8a3614aba6a46e0412e1fce10d9bb"
+  },
+  "extension/test-page.html": {
+    "mtime": 1783658179962.8308,
+    "hash": "aaf9632234d1c606aa58ef9b279483c9"
+  },
+  "pnpm-lock.yaml": {
+    "mtime": 1783882500845.7634,
+    "hash": "b951eeb98e34881a7986a494db74c7b9"
+  },
+  "pnpm-workspace.yaml": {
+    "mtime": 1776035307111.8552,
+    "hash": "8bad170b9f258518a6932a08c79bdef7"
+  },
+  "sites/README.md": {
+    "mtime": 1761764391272.4014,
+    "hash": "1a571e57dcd071908c121c9182e9e40b"
+  },
+  "sites/public/robots.txt": {
+    "mtime": 1761764392417.2012,
+    "hash": "44521b8e059628a769e92023e9e34262"
+  },
+  "dashboard/src/assets/logos/squiggle.png": {
+    "mtime": 1761764390455.2014,
+    "hash": "c909966418b1ef0f739637977c191667"
+  },
+  "dashboard/src/assets/logos/squiggle.svg": {
+    "mtime": 1761764390473.2014,
+    "hash": "094b19ab150581e628d742c2d74a1224"
+  },
+  "extension/icons/icon128.png": {
+    "mtime": 1783885361353.1062,
+    "hash": "5b1352203899669fe6cd88fd0b1e8a88"
+  },
+  "extension/icons/icon16.png": {
+    "mtime": 1783885361375.7305,
+    "hash": "36050e0e538fd786c54392638a158421"
+  },
+  "extension/icons/icon48.png": {
+    "mtime": 1783885361364.4182,
+    "hash": "42e11a8b5e135c7d407370c7ee97c3ff"
+  },
+  "ios_app/foligo/AppIcon.icon/Assets/3241aqu0wfqmh6vimnh.svg": {
+    "mtime": 1761764389926.0015,
+    "hash": "8542009b754c1ca29e380a54c069edf8"
+  },
+  "sites/public/images/sample-project-1.svg": {
+    "mtime": 1761764392381.2012,
+    "hash": "9f20b045a2044e2cd61c2348a2c9179e"
+  },
+  "sites/public/images/sample-project-2.svg": {
+    "mtime": 1761764392395.6013,
+    "hash": "deb1958df13e0adaab996b83effc1c44"
+  },
+  "sites/public/images/sample-project-3.svg": {
+    "mtime": 1761764392402.8013,
+    "hash": "c7a949add5ae26176821da20d2eba8dd"
+  },
+  "sites/public/squiggle.png": {
+    "mtime": 1761764392424.4011,
+    "hash": "c909966418b1ef0f739637977c191667"
+  },
+  "sites/public/squiggle.svg": {
+    "mtime": 1761764392431.6013,
+    "hash": "094b19ab150581e628d742c2d74a1224"
+  }
+}

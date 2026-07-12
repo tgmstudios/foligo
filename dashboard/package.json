@@ -23,7 +23,6 @@
     "@types/diff": "^5.2.3",
     "@vueup/vue-quill": "^1.2.0",
     "@vueuse/core": "^10.7.0",
-    "@wysimark/vue": "^3.0.20",
     "autoprefixer": "^10.4.16",
     "axios": "^1.6.2",
     "chart.js": "^4.4.1",

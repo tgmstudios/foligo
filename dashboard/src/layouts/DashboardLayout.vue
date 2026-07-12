@@ -133,7 +133,8 @@
             :class="
               $route.path === '/admin' ||
               ($route.path.startsWith('/admin/') &&
-                !$route.path.startsWith('/admin/sso'))
+                !$route.path.startsWith('/admin/sso') &&
+                !$route.path.startsWith('/admin/ai-models'))
                 ? 'sidebar-item-active'
                 : 'sidebar-item-inactive'
             "
@@ -177,6 +178,19 @@
               />
             </svg>
             SSO Providers
+          </router-link>
+          <router-link
+            v-if="authStore.user?.isAdmin"
+            to="/admin/ai-models"
+            class="sidebar-item"
+            :class="
+              $route.path.startsWith('/admin/ai-models')
+                ? 'sidebar-item-active'
+                : 'sidebar-item-inactive'
+            "
+          >
+            <span class="mr-3 h-5 w-5 flex items-center justify-center text-lg">✦</span>
+            AI Models
           </router-link>
         </div>
 
@@ -375,13 +389,13 @@
           </template>
         </div>
 
-        <!-- AI Assistants Section -->
+        <!-- Extensions Section -->
         <div v-if="!isSettingsRoute" class="mt-8 pt-6 border-t border-gray-700">
           <div class="px-3 mb-3">
             <h3
               class="text-xs font-semibold text-gray-400 uppercase tracking-wider"
             >
-              AI Assistants
+              Extensions
             </h3>
           </div>
           <div class="space-y-1">
@@ -847,6 +861,7 @@ const pageTitle = computed(() => {
     "admin-projects": "Portfolio Management",
     "admin-content": "Content Management",
     "admin-sso": "SSO Providers",
+    "admin-ai-models": "AI Models",
     "goapply-kanban": "GoApply · Kanban",
     "goapply-jobs": "GoApply · Job List",
     "goapply-assistant": "GoApply · Job Assistant",

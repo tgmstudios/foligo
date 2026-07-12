@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const ai = require('../services/ai/manager');
 const { authenticateToken } = require('../middleware/auth');
+const { prisma } = require('../services/database');
 
 /**
  * GET /api/ai/providers
@@ -19,6 +20,19 @@ router.get('/providers', authenticateToken, async (req, res) => {
     res.json({ providers });
   } catch (error) {
     res.status(500).json({ error: 'Failed to list providers', message: error.message });
+  }
+});
+
+/** Safe runtime voice settings for the authenticated content creator UI. */
+router.get('/voice-config', authenticateToken, async (_req, res) => {
+  try {
+    const provider = await prisma.voiceProvider.findFirst({
+      where: { provider: 'elevenlabs', enabled: true },
+      select: { provider: true, name: true, agentId: true, voiceId: true, modelId: true },
+    });
+    res.json({ voice: provider });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load voice configuration', message: error.message });
   }
 });
 

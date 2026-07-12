@@ -429,6 +429,7 @@ class GeminiService {
       const fullResponse = await this._aiText(prompt, {
         temperature: GENERATION_CONFIG.CREATIVE.temperature,
         maxTokens: GENERATION_CONFIG.CREATIVE.maxOutputTokens,
+        modelType: 'LONG',
         context: 'Content generation',
       });
       

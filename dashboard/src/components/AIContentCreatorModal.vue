@@ -121,7 +121,7 @@
           </div>
 
           <!-- Voice Mode ConvAI Widget -->
-          <div v-if="selectedInteractionMode === 'voice' && modeSelected && !sessionDone" class="mb-4">
+          <div v-if="selectedInteractionMode === 'voice' && modeSelected && !sessionDone && voiceAgentId" class="mb-4">
             <div class="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-2 border-purple-500/30 rounded-lg p-4">
               <div class="flex items-center space-x-3 mb-3">
                 <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,8 +132,8 @@
               <p class="text-sm text-gray-300 mb-4">Speak with our AI assistant to create your content:</p>
               
               <!-- ElevenLabs ConvAI Widget -->
-              <elevenlabs-convai 
-                agent-id="agent_1301k8emq0nzfwmbyta7254adhpv"
+              <elevenlabs-convai
+                :agent-id="voiceAgentId"
                 :dynamic-variables="voiceVariables"
               ></elevenlabs-convai>
             </div>
@@ -178,7 +178,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import api, { aiApi } from '@/services/api'
 
 const props = defineProps<{
@@ -204,6 +204,7 @@ const messageTextarea = ref<HTMLTextAreaElement | null>(null)
 const sessionDone = ref(false)
 const modeSelected = ref(false)
 const selectedInteractionMode = ref<'text' | 'voice'>('text')
+const voiceAgentId = ref('')
 
 const canRespond = computed(() => !isTyping.value && !sessionDone.value && modeSelected.value && selectedInteractionMode.value === 'text')
 
@@ -215,6 +216,17 @@ const voiceVariables = computed(() => {
     content_type: contentType
   })
 })
+
+async function loadVoiceConfig() {
+  try {
+    const response = await api.get('/ai/voice-config')
+    voiceAgentId.value = response.data.voice?.agentId || ''
+  } catch {
+    voiceAgentId.value = ''
+  }
+}
+
+onMounted(loadVoiceConfig)
 
 const open = () => {
   isOpen.value = true

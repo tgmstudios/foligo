@@ -1,0 +1,246 @@
+{
+  "scripts/make-admin.js": {
+    "mtime": 1763241597398.418,
+    "hash": "cf402d163e0971f0732181b8d8de4aa2"
+  },
+  "src/index.js": {
+    "mtime": 1783885743558.5474,
+    "hash": "940b006b8b10071e72c0b02d12884562"
+  },
+  "src/middleware/auth.js": {
+    "mtime": 1783700040582.5876,
+    "hash": "dc79810a46cb7ec83588ff570cf1bad7"
+  },
+  "src/middleware/errorHandler.js": {
+    "mtime": 1761764389191.6013,
+    "hash": "afea0039e0b96e7276a7feaa31349935"
+  },
+  "src/routes/admin-sso.js": {
+    "mtime": 1763329671407.5583,
+    "hash": "05d6ad39bfdae5272d94b5e530e430cb"
+  },
+  "src/routes/admin.js": {
+    "mtime": 1763238868305.6655,
+    "hash": "34da571eba0b78056175f870087fade9"
+  },
+  "src/routes/ai-content.js": {
+    "mtime": 1783744656694.5115,
+    "hash": "ba7f3380469763d64c0be8e5c3d899bb"
+  },
+  "src/routes/ai-providers.js": {
+    "mtime": 1783658179942.6028,
+    "hash": "5ee0c959a234ef77f9be6c2245033b54"
+  },
+  "src/routes/auth.js": {
+    "mtime": 1783700040582.5876,
+    "hash": "90bd1991d7ba533a9636fc08c2c14e8f"
+  },
+  "src/routes/content-blocks.js": {
+    "mtime": 1763329641898.2183,
+    "hash": "a2422c300d9bcd97d958dffb9212e6a0"
+  },
+  "src/routes/content-links.js": {
+    "mtime": 1763329647127.4553,
+    "hash": "55631fbc1cc09f040570934f912c45c3"
+  },
+  "src/routes/content-meta.js": {
+    "mtime": 1763329644264.6348,
+    "hash": "16aa8500ee76fb8b2a3a84372f25e951"
+  },
+  "src/routes/content-tags.js": {
+    "mtime": 1763329640383.687,
+    "hash": "343ced60f4a4625bcc1153824321ba67"
+  },
+  "src/routes/content.js": {
+    "mtime": 1783879989324.4045,
+    "hash": "b8c35de0ad2f3dff18d071dba0b79d9a"
+  },
+  "src/routes/experience-roles.js": {
+    "mtime": 1763246674083.8538,
+    "hash": "97b8de0617c75a23a8e9b358513f5ff1"
+  },
+  "src/routes/goapply.js": {
+    "mtime": 1783882011085.3406,
+    "hash": "145a3755c70279fdc3c7f411178bb69d"
+  },
+  "src/routes/media.js": {
+    "mtime": 1763329661524.3982,
+    "hash": "695e979b2f1784b4be2bcedeef208f12"
+  },
+  "src/routes/projectAccess.js": {
+    "mtime": 1761764389288.8013,
+    "hash": "640523964eb4c9bd77ea60a1e42934c3"
+  },
+  "src/routes/projects.js": {
+    "mtime": 1764180422388.304,
+    "hash": "b067684020c1a91731ef3fb827d2bb1f"
+  },
+  "src/routes/public-content.js": {
+    "mtime": 1764180422388.304,
+    "hash": "36924b0a8e06d6e439762343c96c6cd3"
+  },
+  "src/routes/resume.js": {
+    "mtime": 1783878082805.23,
+    "hash": "1d2d70d720b012ce9fa42235781b1e5d"
+  },
+  "src/routes/revisions.js": {
+    "mtime": 1763246674083.8538,
+    "hash": "3d07c5c556b270b3d202171d9dcdf668"
+  },
+  "src/routes/site.js": {
+    "mtime": 1763358776506.1807,
+    "hash": "78c7f2fbfb6aeaf12b8fc9da0553720b"
+  },
+  "src/routes/skills.js": {
+    "mtime": 1763329690618.5935,
+    "hash": "d236136ebf69d6787714dd14bcc35463"
+  },
+  "src/routes/sso-auth.js": {
+    "mtime": 1763243027883.0835,
+    "hash": "51369132a02308bd4d6c94c3c1c65914"
+  },
+  "src/routes/upload.js": {
+    "mtime": 1761764389342.8013,
+    "hash": "b8ac3db8d2e1a208883c14197329d7af"
+  },
+  "src/routes/users.js": {
+    "mtime": 1761764389357.2014,
+    "hash": "ed8f8b89d067aa16e49ba62d5eadbcc0"
+  },
+  "src/routes/voice-webhook.js": {
+    "mtime": 1763236626597.218,
+    "hash": "108dd8d68cd4021552e134de0493dc96"
+  },
+  "src/seed.js": {
+    "mtime": 1763236626597.218,
+    "hash": "fdfb67545fd58d23ee576eddf4e36cad"
+  },
+  "src/services/ai.js": {
+    "mtime": 1783727214682.071,
+    "hash": "a59185f737e14b0f3ee3bd3f8f10a4b0"
+  },
+  "src/services/ai/index.js": {
+    "mtime": 1783727156933.8667,
+    "hash": "973e64e56446a9914fb039a17aaa5d03"
+  },
+  "src/services/ai/manager.js": {
+    "mtime": 1783885743558.5474,
+    "hash": "9afec05af716d982debd76705923f506"
+  },
+  "src/services/ai/providers/index.js": {
+    "mtime": 1783727141837.4224,
+    "hash": "ebb4fd2e8bb6398c885ab3f645cac163"
+  },
+  "src/services/content-generation-prompts.js": {
+    "mtime": 1763329710743.601,
+    "hash": "968febae35bbd2363c8acda2701aaa94"
+  },
+  "src/services/conversation-prompts.js": {
+    "mtime": 1763329710693.6711,
+    "hash": "4738ac149493ac3d4e19c0cdef0c6ad7"
+  },
+  "src/services/database.js": {
+    "mtime": 1761764389440.0015,
+    "hash": "dd406c1339e82e92640ef1c25f06819a"
+  },
+  "src/services/errors.js": {
+    "mtime": 1763314334562.5867,
+    "hash": "0158ac936aaeac7d2af5166d327f972f"
+  },
+  "src/services/gemini-config.js": {
+    "mtime": 1763322398580.5525,
+    "hash": "f88da7e330fb678ea51516c9dd2feef2"
+  },
+  "src/services/gemini-tools.js": {
+    "mtime": 1783744615670.198,
+    "hash": "84340758f1daf5822926fee1a7b6d497"
+  },
+  "src/services/gemini.js": {
+    "mtime": 1783885799866.6282,
+    "hash": "872a07d182ea0b78144fbb9b468021f4"
+  },
+  "src/services/latex-compiler.js": {
+    "mtime": 1783744358350.0767,
+    "hash": "a00262d707b617e4acce68a24761dae1"
+  },
+  "src/services/logger.js": {
+    "mtime": 1783727943876.4082,
+    "hash": "49bca2398083dbeb466e4fddbcb3093b"
+  },
+  "src/services/minio.js": {
+    "mtime": 1763329659357.786,
+    "hash": "dc9a7baaf7ebb92fb7cef5af3774d898"
+  },
+  "src/services/post-links-prompts.js": {
+    "mtime": 1763329711089.2683,
+    "hash": "2165629567d8ba5a0a9b6df787e0f5f7"
+  },
+  "src/services/prompt-utils.js": {
+    "mtime": 1763320638851.5378,
+    "hash": "07894d4bd7b176686d892304407d5246"
+  },
+  "src/services/redis.js": {
+    "mtime": 1761764389483.2014,
+    "hash": "03692ab4aa1a9fdb7bd42b02740079b4"
+  },
+  "src/services/resume-chatbot-prompts.js": {
+    "mtime": 1783744631359.4653,
+    "hash": "eae0b00adbdcf0ba56ee48b29ea00547"
+  },
+  "src/services/resume-editor-tools.js": {
+    "mtime": 1783744461494.0908,
+    "hash": "d1a21d6b08517cf3a470755398a2f183"
+  },
+  "src/services/retry.js": {
+    "mtime": 1763314334562.5867,
+    "hash": "4dd8830c558e863909ca81e0974f0efc"
+  },
+  "src/utils/encryption.js": {
+    "mtime": 1763329672010.5503,
+    "hash": "bb2b18c84e5eaab94360c5c2d1b13de1"
+  },
+  "MIGRATIONS.md": {
+    "mtime": 1764180422404.4219,
+    "hash": "693c506cbf359d7ec3f2120995c73859"
+  },
+  "README.md": {
+    "mtime": 1763363540767.784,
+    "hash": "70a1ad386829a8a521ce15dfca7a59f0"
+  },
+  "docs/AI_ARCHITECTURE.md": {
+    "mtime": 1763315766260.2578,
+    "hash": "8965d6c43ea82d4e8c5b655dcf69c56b"
+  },
+  "docs/AI_MIGRATION_GUIDE.md": {
+    "mtime": 1763315766267.988,
+    "hash": "756caafa7465f77842d85796c743169e"
+  },
+  "docs/AI_PROMPT_REFACTORING.md": {
+    "mtime": 1763315766260.2578,
+    "hash": "68bb93cd9841003c36964127291d6fd8"
+  },
+  "docs/AI_REFACTORING_SUMMARY.md": {
+    "mtime": 1763315766260.2578,
+    "hash": "e1868a47b9499283caf5c1bb725f7ef2"
+  },
+  "docs/API_DOCUMENTATION.md": {
+    "mtime": 1763358801486.6953,
+    "hash": "80aad8056769a176fa5031bc63275e36"
+  },
+  "docs/ENHANCED_ENDPOINTS_SUMMARY.md": {
+    "mtime": 1763358776506.1807,
+    "hash": "cc3222ac81d09a9310f14c7a0305a926"
+  },
+  "docs/FUNCTION_CALLING_FLOW.md": {
+    "mtime": 1763318617414.1377,
+    "hash": "e035179388fd480fe86c4824c5353db3"
+  },
+  "docs/README.md": {
+    "mtime": 1763315766267.988,
+    "hash": "6082644a2deb211e03a8d5ea6ffe5fb5"
+  },
+  "docs/REFACTORING_SUMMARY.md": {
+    "mtime": 1763314334562.5867,
+    "hash": "995bc8f947b8b8910d07b0d6f8d3e85e"
+  }
+}
