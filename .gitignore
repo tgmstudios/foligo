@@ -9,6 +9,9 @@ node_modules
 .graphify/needs_update
 .graphify/cache/
 
+# Personal Claude Code settings, not shared project config
+.claude/settings.local.json
+
 # Third-party extensions kept locally for reference/reverse-engineering only —
 # never ship a competitor's packaged extension as part of our repo.
 extension/vendor/
