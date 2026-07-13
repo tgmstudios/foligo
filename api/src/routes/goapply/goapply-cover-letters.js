@@ -8,7 +8,7 @@ const { createCoverLetterEditorTools } = require('../../services/goapply/cover-l
 const { createGithubTools } = require('../../services/github/github-tools');
 const githubService = require('../../services/github/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../../services/goapply/portfolio-context');
-const { sendSse } = require('../../utils/sse');
+const { setupSSE } = require('../../utils/sse');
 
 const router = express.Router();
 
@@ -379,6 +379,7 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
     console.error('Cover letter chat error:', error);
     sendSse(res, { type: 'error', message: error.message || 'Agent request failed' });
   } finally {
+    cleanup();
     res.end();
   }
 });

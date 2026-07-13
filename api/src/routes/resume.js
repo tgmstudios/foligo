@@ -9,7 +9,7 @@ const { createResumeEditorTools } = require('../services/goapply/resume-editor-t
 const { createGithubTools } = require('../services/github/github-tools');
 const githubService = require('../services/github/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../services/goapply/portfolio-context');
-const { sendSse } = require('../utils/sse');
+const { setupSSE } = require('../utils/sse');
 
 const router = express.Router();
 
@@ -369,16 +369,7 @@ router.post('/documents/:id/chat', [
     return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  // Tell any reverse proxy in front of this (nginx, etc.) not to buffer the
-  // response — buffering would defeat the point of streaming by delivering
-  // everything to the browser in one chunk at the end instead of incrementally.
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = (event) => sendSse(res, event);
+  const { send, aborted, cleanup } = setupSSE(req, res);
 
   const userMessage = req.body.message;
   const priorHistory = Array.isArray(document.chatHistory) ? document.chatHistory : [];
@@ -467,8 +458,11 @@ router.post('/documents/:id/chat', [
     send({ type: 'done' });
   } catch (error) {
     console.error('Resume chat error:', error);
-    send({ type: 'error', message: error.message || 'Agent request failed' });
+    if (!aborted) {
+      send({ type: 'error', message: error.message || 'Agent request failed' });
+    }
   } finally {
+    cleanup();
     res.end();
   }
 });

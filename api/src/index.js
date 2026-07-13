@@ -356,10 +356,16 @@ async function startServer() {
     }
 
     // Start server
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
     });
+
+    // Disable the default 2-minute socket timeout — SSE chat endpoints
+    // and long-running AI responses need connections to stay open longer.
+    server.timeout = 0;
+    server.keepAliveTimeout = 0;
+    server.headersTimeout = 0;
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

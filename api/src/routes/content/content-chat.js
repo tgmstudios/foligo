@@ -5,7 +5,7 @@ const { cache } = require('../../services/core/redis');
 const ai = require('../../services/ai/manager');
 const { createContentEditorTools } = require('../../services/content/content-editor-tools');
 const { createGithubTools } = require('../../services/github/github-tools');
-const { sendSse } = require('../../utils/sse');
+const { setupSSE } = require('../../utils/sse');
 const { snapshotContentRevision } = require('./content-crud');
 
 const router = express.Router();
@@ -124,6 +124,7 @@ RULES:
     console.error('Content chat error:', error);
     send({ type: 'error', message: error.message || 'Agent request failed' });
   } finally {
+    cleanup();
     res.end();
   }
 });

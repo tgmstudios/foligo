@@ -6,7 +6,7 @@ const { createJobAssistantTools } = require('../../services/goapply/job-assistan
 const { createGithubTools } = require('../../services/github/github-tools');
 const githubService = require('../../services/github/github-service');
 const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
-const { sendSse } = require('../../utils/sse');
+const { setupSSE } = require('../../utils/sse');
 const { projectAccessWhere } = require('../../utils/project-access-where');
 
 const ALL_PROJECT_ROLES = ['VIEWER', 'EDITOR', 'ADMIN'];
@@ -216,6 +216,7 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
   } catch (error) {
     sendSse(res, { type: 'error', message: error.message || 'Assistant request failed.' });
   } finally {
+    cleanup();
     res.end();
   }
 });
