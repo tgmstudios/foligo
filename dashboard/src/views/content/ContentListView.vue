@@ -189,6 +189,7 @@
               <div class="flex items-center space-x-2 mb-2">
                 <h3 class="text-lg font-semibold text-white">{{ getItemTitle(item) }}</h3>
                 <span
+                  v-if="!isPortfoliosPage"
                   :class="getStatusClass(item.status)"
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                 >
