@@ -26,8 +26,8 @@
           <div v-for="i in 4" :key="i" class="card h-28 animate-pulse p-6"><div class="h-3 w-20 rounded bg-gray-700"></div><div class="mt-4 h-7 w-16 rounded bg-gray-700"></div></div>
         </div>
 
-        <template v-else-if="summary?.configured">
-          <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <section v-else-if="summary?.configured" class="space-y-8">
+          <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
             <div v-for="metric in metrics" :key="metric.label" class="card p-6">
               <div class="flex items-center">
                 <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg" :class="metric.iconClass">
@@ -35,7 +35,7 @@
                 </div>
                 <div class="ml-4 min-w-0">
                   <p class="text-sm font-medium text-gray-400">{{ metric.label }}</p>
-                  <p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ formatNumber(metric.value) }}</p>
+                  <p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ metric.formatted || formatNumber(metric.value) }}</p>
                 </div>
               </div>
             </div>
@@ -50,11 +50,15 @@
           </section>
 
           <section class="grid gap-6 lg:grid-cols-3">
-            <RankingTable title="Top pages" empty="No page views yet" :rows="summary.topPages" />
+            <RankingTable title="Top pages" empty="No page views yet" :rows="summary.topPages" :show-duration="true" />
             <RankingTable title="Top referrers" empty="No referrers yet" :rows="summary.topReferrers" />
             <RankingTable title="Top events" empty="No events yet" :rows="summary.topEvents" />
           </section>
-        </template>
+
+          <section class="grid gap-6 lg:grid-cols-2">
+            <RankingTable title="Top countries" empty="No country data yet" :rows="summary.topCountries" :is-country="true" />
+          </section>
+        </section>
 
         <section v-if="!loading && !summary?.configured" class="card py-12 text-center">
           <SignalIcon class="mx-auto h-10 w-10 text-primary-500" />
@@ -98,19 +102,22 @@
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Line } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler } from 'chart.js'
-import { ArrowTopRightOnSquareIcon, ChartBarIcon, ChevronDownIcon, ClipboardIcon, CodeBracketIcon, CursorArrowRaysIcon, EyeIcon, SignalIcon, UserGroupIcon } from '@heroicons/vue/24/outline'
+import { ArrowTopRightOnSquareIcon, ChartBarIcon, ChevronDownIcon, ClipboardIcon, ClockIcon, CodeBracketIcon, CursorArrowRaysIcon, EyeIcon, SignalIcon, UserGroupIcon } from '@heroicons/vue/24/outline'
 import { useToast } from 'vue-toastification'
 import api from '@/services/api'
 import { useProjectStore } from '@/stores/projects'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler)
-type Row = { label: string; value: number }
-type Summary = { configured: boolean; totals: { events: number; pageViews: number; visitors: number; sessions: number }; series: Array<{ date: string; views: number; visitors: number }>; topPages: Row[]; topReferrers: Row[]; topEvents: Row[] }
+type Row = { label: string; value: number; avgDuration?: number; visitors?: number }
+type Summary = { configured: boolean; totals: { events: number; pageViews: number; visitors: number; sessions: number }; series: Array<{ date: string; views: number; visitors: number }>; topPages: Row[]; topReferrers: Row[]; topEvents: Row[]; topCountries: Row[]; avgTimeOnPage: number }
 type Property = { configured: boolean; writeKeyPrefix?: string; allowedOrigins: string[] }
 
+function countryFlag(code: string) { return String.fromCodePoint(...code.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) }
+function formatDuration(ms: number) { if (!ms) return '0s'; return ms >= 60000 ? `${Math.round(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s` : `${Math.round(ms / 1000)}s` }
+
 const RankingTable = defineComponent({
-  props: { title: { type: String, required: true }, empty: { type: String, required: true }, rows: { type: Array as () => Row[], required: true } },
-  setup(props) { return () => h('div', { class: 'card min-w-0 p-6' }, [h('h2', { class: 'mb-3 text-sm font-semibold text-white' }, props.title), props.rows.length ? h('div', { class: 'divide-y divide-gray-700 border-t border-gray-700' }, props.rows.map((row, index) => h('div', { class: 'flex items-center gap-3 py-3 text-sm' }, [h('span', { class: 'w-5 text-xs tabular-nums text-gray-500' }, String(index + 1).padStart(2, '0')), h('span', { class: 'min-w-0 flex-1 truncate text-gray-300', title: row.label }, row.label), h('span', { class: 'tabular-nums text-white' }, row.value.toLocaleString())]))) : h('p', { class: 'border-t border-gray-700 py-8 text-center text-sm text-gray-500' }, props.empty)]) }
+  props: { title: { type: String, required: true }, empty: { type: String, required: true }, rows: { type: Array as () => Row[], required: true }, showDuration: { type: Boolean, default: false }, isCountry: { type: Boolean, default: false } },
+  setup(props) { return () => h('div', { class: 'card min-w-0 p-6' }, [h('h2', { class: 'mb-3 text-sm font-semibold text-white' }, props.title), props.rows.length ? h('div', { class: 'divide-y divide-gray-700 border-t border-gray-700' }, props.rows.map((row, index) => h('div', { class: 'flex items-center gap-3 py-3 text-sm' }, [h('span', { class: 'w-5 text-xs tabular-nums text-gray-500' }, String(index + 1).padStart(2, '0')), props.isCountry ? h('span', { class: 'text-lg' }, countryFlag(row.label)) : null, h('span', { class: 'min-w-0 flex-1 truncate text-gray-300', title: row.label }, row.label), props.showDuration && row.avgDuration ? h('span', { class: 'text-xs text-gray-500' }, formatDuration(row.avgDuration)) : null, h('span', { class: 'tabular-nums text-white' }, row.value.toLocaleString())]))) : h('p', { class: 'border-t border-gray-700 py-8 text-center text-sm text-gray-500' }, props.empty)]) }
 })
 
 const toast = useToast(); const projectStore = useProjectStore()
@@ -123,7 +130,8 @@ const metrics = computed(() => [
   { label: 'Page views', value: summary.value?.totals.pageViews || 0, icon: EyeIcon, iconClass: 'bg-primary-100 text-primary-600' },
   { label: 'Visitors', value: summary.value?.totals.visitors || 0, icon: UserGroupIcon, iconClass: 'bg-green-100 text-green-600' },
   { label: 'Sessions', value: summary.value?.totals.sessions || 0, icon: ChartBarIcon, iconClass: 'bg-purple-100 text-purple-600' },
-  { label: 'All events', value: summary.value?.totals.events || 0, icon: CursorArrowRaysIcon, iconClass: 'bg-yellow-100 text-yellow-600' }
+  { label: 'All events', value: summary.value?.totals.events || 0, icon: CursorArrowRaysIcon, iconClass: 'bg-yellow-100 text-yellow-600' },
+  { label: 'Avg. time on page', value: summary.value?.avgTimeOnPage || 0, formatted: formatDuration(summary.value?.avgTimeOnPage || 0), icon: ClockIcon, iconClass: 'bg-indigo-100 text-indigo-600' }
 ])
 const filledSeries = computed(() => { const map = new Map((summary.value?.series || []).map(row => [row.date, row])); const rows = []; const cursor = new Date(); cursor.setUTCHours(0, 0, 0, 0); cursor.setUTCDate(cursor.getUTCDate() - days.value + 1); for (let i = 0; i < days.value; i++) { const date = cursor.toISOString().slice(0, 10); rows.push(map.get(date) || { date, views: 0, visitors: 0 }); cursor.setUTCDate(cursor.getUTCDate() + 1) } return rows })
 const chartData = computed(() => ({ labels: filledSeries.value.map(row => new Date(`${row.date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })), datasets: [{ data: filledSeries.value.map(row => row.views), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', fill: true, tension: .3, pointRadius: 0, borderWidth: 2 }, { data: filledSeries.value.map(row => row.visitors), borderColor: '#a855f7', tension: .3, pointRadius: 0, borderWidth: 2 }] }))

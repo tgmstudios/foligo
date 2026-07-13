@@ -70,6 +70,9 @@ function normalizeEvent(input, propertyId) {
     title: cleanString(input.title, 512),
     referrer: cleanString(input.referrer, 2048),
     country: cleanString(input.country, 2)?.toUpperCase(),
+    city: cleanString(input.city, 128),
+    region: cleanString(input.region, 128),
+    duration: Number.isFinite(input.duration) && input.duration > 0 && input.duration <= 3600000 ? Math.round(input.duration) : null,
     device: cleanString(input.device, 32),
     metadata,
   };

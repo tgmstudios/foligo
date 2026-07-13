@@ -95,6 +95,9 @@ model AnalyticsEvent {
   title       String?
   referrer    String?
   country     String?
+  city        String?
+  region      String?
+  duration    Int?
   device      String?
   metadata    Json?
 

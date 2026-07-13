@@ -83,6 +83,51 @@ await fetch('https://api.foligo.tech/api/analytics/events', {
 
 Do not put names, email addresses, message text, access tokens, or other personal/sensitive values in `metadata`.
 
+## 4. Track time on page
+
+Record how long a visitor stays on a page by sending the elapsed duration when they navigate away:
+
+```js
+const pageEnteredAt = Date.now();
+
+window.addEventListener('beforeunload', () => {
+  const duration = Date.now() - pageEnteredAt;
+  navigator.sendBeacon(
+    'https://api.foligo.tech/api/analytics/events',
+    JSON.stringify({
+      name: 'page_view',
+      visitorId,
+      sessionId,
+      url: location.href,
+      path: location.pathname,
+      title: document.title,
+      duration,
+      timestamp: new Date().toISOString()
+    })
+  );
+});
+```
+
+The `duration` field accepts any positive integer up to 3,600,000 ms (1 hour). Values outside this range are ignored.
+
+## 5. Add geolocation data
+
+If your backend or edge worker can resolve the visitor's IP to a location, include `city`, `region`, and `country` in each event:
+
+```json
+{
+  "name": "page_view",
+  "visitorId": "...",
+  "sessionId": "...",
+  "path": "/",
+  "country": "US",
+  "region": "California",
+  "city": "San Francisco"
+}
+```
+
+`country` must be a two-letter ISO 3166-1 alpha-2 code. `city` and `region` are free-form strings up to 128 characters.
+
 ## Batch ingestion
 
 Send up to 100 events in one request:
@@ -117,6 +162,9 @@ The whole batch is rejected when any event is invalid. Retry `429` and `5xx` res
 | `title` | string | no | Maximum 512 characters. |
 | `referrer` | string | no | Maximum 2,048 characters. |
 | `country` | string | no | Two-letter country code supplied by your trusted edge/server. |
+| `city` | string | no | City name, such as `San Francisco`. Maximum 128 characters. |
+| `region` | string | no | Region/state, such as `California`. Maximum 128 characters. |
+| `duration` | number | no | Time spent on the page in milliseconds (max 3,600,000). Sent via `beforeunload`. |
 | `device` | string | no | Device category such as `mobile`, `tablet`, or `desktop`. |
 | `metadata` | object | no | JSON object, maximum 8 KB. |
 

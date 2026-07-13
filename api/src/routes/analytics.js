@@ -120,7 +120,7 @@ router.get('/projects/:projectId/summary', authorizeProjectAccess('VIEWER'), asy
   try {
     const days = Math.min(365, Math.max(1, Number.parseInt(req.query.days, 10) || 30));
     const property = await prisma.analyticsProperty.findUnique({ where: { projectId: req.params.projectId } });
-    if (!property) return res.json({ configured: false, days, totals: { events: 0, pageViews: 0, visitors: 0, sessions: 0 }, series: [], topPages: [], topReferrers: [], topEvents: [] });
+    if (!property) return res.json({ configured: false, days, totals: { events: 0, pageViews: 0, visitors: 0, sessions: 0 }, series: [], topPages: [], topReferrers: [], topEvents: [], topCountries: [], avgTimeOnPage: 0 });
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
     since.setUTCDate(since.getUTCDate() - days + 1);
@@ -133,13 +133,16 @@ router.get('/projects/:projectId/summary', authorizeProjectAccess('VIEWER'), asy
         COUNT(DISTINCT "sessionHash")::int AS sessions
       FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since}
     `);
-    const [series, topPages, topReferrers, topEvents] = await Promise.all([
+    const [series, topPages, topReferrers, topEvents, topCountries, avgTimeResult] = await Promise.all([
       prisma.$queryRaw(Prisma.sql`SELECT to_char(date_trunc('day', "occurredAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS date, COUNT(*) FILTER (WHERE name = 'page_view')::int AS views, COUNT(DISTINCT "visitorHash")::int AS visitors FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} GROUP BY 1 ORDER BY 1`),
-      prisma.$queryRaw(Prisma.sql`SELECT COALESCE(path, '/') AS label, COUNT(*)::int AS value FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} AND name = 'page_view' GROUP BY 1 ORDER BY value DESC LIMIT 10`),
+      prisma.$queryRaw(Prisma.sql`SELECT COALESCE(path, '/') AS label, COUNT(*)::int AS value, COALESCE(AVG(duration)::int, 0) AS "avgDuration" FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} AND name = 'page_view' GROUP BY 1 ORDER BY value DESC LIMIT 10`),
       prisma.$queryRaw(Prisma.sql`SELECT referrer AS label, COUNT(*)::int AS value FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} AND referrer IS NOT NULL GROUP BY 1 ORDER BY value DESC LIMIT 10`),
       prisma.$queryRaw(Prisma.sql`SELECT name AS label, COUNT(*)::int AS value FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} GROUP BY 1 ORDER BY value DESC LIMIT 10`),
+      prisma.$queryRaw(Prisma.sql`SELECT country AS label, COUNT(*)::int AS value, COUNT(DISTINCT "visitorHash")::int AS visitors FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} AND country IS NOT NULL GROUP BY country ORDER BY value DESC LIMIT 10`),
+      prisma.$queryRaw(Prisma.sql`SELECT COALESCE(AVG(duration)::int, 0) AS "avgDuration" FROM analytics_events WHERE "propertyId" = ${propertyId} AND "occurredAt" >= ${since} AND name = 'page_view' AND duration IS NOT NULL`),
     ]);
-    res.json({ configured: true, days, totals, series, topPages, topReferrers, topEvents });
+    const avgTimeOnPage = avgTimeResult[0]?.avgDuration || 0;
+    res.json({ configured: true, days, totals, series, topPages, topReferrers, topEvents, topCountries, avgTimeOnPage });
   } catch (error) {
     console.error('Analytics summary error:', error);
     res.status(500).json({ error: 'Unable to load analytics summary' });
