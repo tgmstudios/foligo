@@ -1,5 +1,6 @@
 const { tool } = require('ai');
 const { z } = require('zod');
+const { projectAccessWhere } = require('../utils/project-access-where');
 
 const optionalText = z.string().nullable().optional();
 
@@ -44,7 +45,7 @@ async function assertOwnedJob(prisma, userId, jobId) {
 
 async function assertWritableProject(prisma, userId, projectId) {
   const project = await prisma.project.findFirst({
-    where: { id: projectId, OR: [{ ownerId: userId }, { members: { some: { userId, role: { in: ['ADMIN', 'EDITOR'] } } } }] },
+    where: { id: projectId, ...projectAccessWhere(userId, ['ADMIN', 'EDITOR']) },
     select: { id: true, name: true },
   });
   if (!project) throw new Error('The Foligo project does not exist or you do not have write access.');

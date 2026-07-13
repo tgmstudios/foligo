@@ -22,6 +22,7 @@ const { cache } = require('../services/redis');
 const { authorizeProjectAccess, authenticateToken } = require('../middleware/auth');
 const geminiService = require('../services/gemini');
 const { findSimilarPostPairs } = require('../services/post-similarity');
+const { matchOrCreateSkills, matchOrCreateTags } = require('../services/skill-tag-matcher');
 
 // Configure multer for resume uploads
 const upload = multer({
@@ -1018,10 +1019,10 @@ router.post('/create', [
     });
 
     // Match or create skills
-    const matchedSkills = await matchOrCreateSkills(generatedData.skills || [], projectId);
-    
+    const matchedSkills = await matchOrCreateSkills(prisma, generatedData.skills || [], projectId);
+
     // Match or create tags
-    const matchedTags = await matchOrCreateTags(generatedData.tags || [], projectId);
+    const matchedTags = await matchOrCreateTags(prisma, generatedData.tags || [], projectId);
 
     console.log('[ai-content/create] Matched/created:', {
       skillsCount: matchedSkills.length,
@@ -1173,7 +1174,7 @@ router.post('/create', [
       
       for (const roleData of rolesData) {
         // Match or create skills for this role
-        const roleSkills = await matchOrCreateSkills(roleData.skills || [], projectId);
+        const roleSkills = await matchOrCreateSkills(prisma, roleData.skills || [], projectId);
         
         // Create the role
         await prisma.experienceRole.create({
@@ -1230,144 +1231,6 @@ router.post('/create', [
     });
   }
 });
-
-// Helper function to match or create skills
-async function matchOrCreateSkills(skills, projectId) {
-  if (!skills || skills.length === 0) return [];
-  
-  const matchedSkills = [];
-  
-  for (const skillData of skills) {
-    const skillName = skillData.name?.trim();
-    const skillCategory = skillData.category?.trim() || null;
-    
-    if (!skillName) continue;
-
-    try {
-      // Try to find existing skill
-      let skill = await prisma.skill.findFirst({
-        where: {
-          name: { equals: skillName, mode: 'insensitive' },
-          category: skillCategory || null
-        }
-      });
-
-      // If not found, create it
-      if (!skill) {
-        skill = await prisma.skill.create({
-          data: {
-            name: skillName,
-            category: skillCategory
-          }
-        });
-        console.log('[matchOrCreateSkills] Created new skill:', skillName);
-      }
-
-      // Link skill to project if not already linked
-      const existingLink = await prisma.skill.findFirst({
-        where: {
-          id: skill.id,
-          projects: {
-            some: {
-              id: projectId
-            }
-          }
-        }
-      });
-
-      if (!existingLink) {
-        await prisma.project.update({
-          where: { id: projectId },
-          data: {
-            skills: {
-              connect: { id: skill.id }
-            }
-          }
-        });
-        console.log('[matchOrCreateSkills] Linked skill to project:', skill.id);
-      }
-
-      matchedSkills.push({
-        id: skill.id,
-        name: skill.name,
-        category: skill.category
-      });
-    } catch (error) {
-      console.error(`Error matching/creating skill ${skillName}:`, error.message);
-    }
-  }
-
-  return matchedSkills;
-}
-
-// Helper function to match or create tags
-async function matchOrCreateTags(tags, projectId) {
-  if (!tags || tags.length === 0) return [];
-  
-  const matchedTags = [];
-  
-  for (const tagData of tags) {
-    const tagName = tagData.name?.trim();
-    const tagCategory = tagData.category?.trim() || null;
-    
-    if (!tagName) continue;
-
-    try {
-      // Try to find existing tag
-      let tag = await prisma.contentTag.findFirst({
-        where: {
-          name: { equals: tagName, mode: 'insensitive' },
-          category: tagCategory || null
-        }
-      });
-
-      // If not found, create it
-      if (!tag) {
-        tag = await prisma.contentTag.create({
-          data: {
-            name: tagName,
-            category: tagCategory
-          }
-        });
-        console.log('[matchOrCreateTags] Created new tag:', tagName);
-      }
-
-      // Link tag to project if not already linked
-      const existingLink = await prisma.contentTag.findFirst({
-        where: {
-          id: tag.id,
-          projects: {
-            some: {
-              id: projectId
-            }
-          }
-        }
-      });
-
-      if (!existingLink) {
-        await prisma.project.update({
-          where: { id: projectId },
-          data: {
-            tags: {
-              connect: { id: tag.id }
-            }
-          }
-        });
-        console.log('[matchOrCreateTags] Linked tag to project:', tag.id);
-      }
-
-      matchedTags.push({
-        id: tag.id,
-        name: tag.name,
-        category: tag.category
-      });
-    } catch (error) {
-      console.error(`Error matching/creating tag ${tagName}:`, error.message);
-    }
-  }
-
-  return matchedTags;
-}
 
 /**
  * @swagger

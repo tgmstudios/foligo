@@ -1,32 +1,29 @@
 /**
- * Shared skill/tag matching helpers: given AI-extracted skills/tags, find an
- * existing Skill/ContentTag record (case-insensitive) or create a new one,
- * then link it to the given project.
- *
- * Extracted out of gemini.js (previously duplicated between gemini.js and
- * routes/ai-content.js).
+ * Match-or-create helpers for Skill/ContentTag records, deduplicating the
+ * near-identical implementations previously duplicated in routes/ai-content.js
+ * and services/gemini.js. This is the canonical implementation used by both.
  */
-const { prisma } = require('./database');
 
 /**
- * Match or create skills based on extracted skills from AI
+ * Find-or-create each skill by (name, category), link it to the project if
+ * not already linked, and return the matched/created skill records.
+ *
+ * @param {object} prisma
+ * @param {Array<{name: string, category?: string}>} skills
+ * @param {string} projectId
+ * @param {object} [logger=console]
+ * @returns {Promise<Array<{id: string, name: string, category: string|null}>>}
  */
-async function matchOrCreateSkills(extractedSkills, context, logger = console) {
-  if (!extractedSkills || extractedSkills.length === 0) {
+async function matchOrCreateSkills(prisma, skills, projectId, logger = console) {
+  if (!skills || skills.length === 0) return [];
+  if (!projectId) {
+    logger.warn('No project ID provided for skills matching');
     return [];
   }
 
-  logger.info('Matching or creating skills', { count: extractedSkills.length });
-
   const matchedSkills = [];
 
-  const projectId = context.project?.id;
-  if (!projectId) {
-    logger.warn('No project ID provided for skills matching');
-    return matchedSkills;
-  }
-
-  for (const skillData of extractedSkills) {
+  for (const skillData of skills) {
     const skillName = skillData.name?.trim();
     const skillCategory = skillData.category?.trim() || null;
 
@@ -86,29 +83,29 @@ async function matchOrCreateSkills(extractedSkills, context, logger = console) {
     }
   }
 
-  logger.info('Skills matched/created', { count: matchedSkills.length });
   return matchedSkills;
 }
 
 /**
- * Match or create tags based on extracted tags from AI
+ * Find-or-create each tag by (name, category), link it to the project if
+ * not already linked, and return the matched/created tag records.
+ *
+ * @param {object} prisma
+ * @param {Array<{name: string, category?: string}>} tags
+ * @param {string} projectId
+ * @param {object} [logger=console]
+ * @returns {Promise<Array<{id: string, name: string, category: string|null}>>}
  */
-async function matchOrCreateTags(extractedTags, context, logger = console) {
-  if (!extractedTags || extractedTags.length === 0) {
+async function matchOrCreateTags(prisma, tags, projectId, logger = console) {
+  if (!tags || tags.length === 0) return [];
+  if (!projectId) {
+    logger.warn('No project ID provided for tags matching');
     return [];
   }
 
-  logger.info('Matching or creating tags', { count: extractedTags.length });
-
   const matchedTags = [];
 
-  const projectId = context.project?.id;
-  if (!projectId) {
-    logger.warn('No project ID provided for tags matching');
-    return matchedTags;
-  }
-
-  for (const tagData of extractedTags) {
+  for (const tagData of tags) {
     const tagName = tagData.name?.trim();
     const tagCategory = tagData.category?.trim() || null;
 
@@ -168,7 +165,6 @@ async function matchOrCreateTags(extractedTags, context, logger = console) {
     }
   }
 
-  logger.info('Tags matched/created', { count: matchedTags.length });
   return matchedTags;
 }
 

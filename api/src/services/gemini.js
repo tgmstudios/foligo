@@ -10,6 +10,7 @@
  * module under ./gemini/*, passing that state through explicitly instead of
  * relying on mixed-in prototypes.
  */
+const { prisma } = require('./database');
 const { createAILogger } = require('./logger');
 const { GENERATION_CONFIG } = require('./gemini/config');
 const { createAiClient } = require('./gemini/ai-client');
@@ -202,14 +203,14 @@ class GeminiService {
    * Match or create skills based on extracted skills from AI
    */
   async matchOrCreateSkills(extractedSkills, context) {
-    return skillTagMatcher.matchOrCreateSkills(extractedSkills, context, this.logger);
+    return skillTagMatcher.matchOrCreateSkills(prisma, extractedSkills, context.project?.id, this.logger);
   }
 
   /**
    * Match or create tags based on extracted tags from AI
    */
   async matchOrCreateTags(extractedTags, context) {
-    return skillTagMatcher.matchOrCreateTags(extractedTags, context, this.logger);
+    return skillTagMatcher.matchOrCreateTags(prisma, extractedTags, context.project?.id, this.logger);
   }
 
   /**
