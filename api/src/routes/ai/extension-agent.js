@@ -106,7 +106,7 @@ router.post('/turn', authenticateToken, async (req, res) => {
   try {
     const providerMessages = flattenToolMessages(messages);
     for await (const part of ai.streamChat(providerMessages, {
-      systemInstruction: buildSystemPrompt(context), tools, maxSteps: 8,
+      systemInstruction: buildSystemPrompt(context), tools, maxSteps: 40,
       provider, modelType: 'QUICK', externalToolLoop: true,
     })) {
       if (part.type === 'text-delta') sendSse(res, { type: 'text-delta', text: part.text });

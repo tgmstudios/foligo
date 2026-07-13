@@ -66,7 +66,7 @@ async function handleAISession(mode, contentType, initialInfo, chatHistory, cont
     for await (const part of ai.streamChat(messages, {
       systemInstruction,
       tools,
-      maxSteps: 6,
+      maxSteps: 30,
       temperature: GENERATION_CONFIG.CHAT.temperature,
       maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens,
     })) {
@@ -181,7 +181,7 @@ async function* streamAISession(mode, contentType, initialInfo, chatHistory, con
   for await (const part of ai.streamChat(messages, {
     systemInstruction,
     tools,
-    maxSteps: 6,
+    maxSteps: 30,
     temperature: GENERATION_CONFIG.CHAT.temperature,
     maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens,
   })) {

@@ -239,7 +239,7 @@ class AIManager {
         system: systemInstruction,
         messages,
         tools,
-        stopWhen: stepCountIs(externalToolLoop ? 1 : (maxSteps ?? 6)),
+        stopWhen: stepCountIs(externalToolLoop ? 1 : (maxSteps ?? 30)),
         temperature,
         maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
         providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },

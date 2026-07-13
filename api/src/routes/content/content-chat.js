@@ -84,7 +84,7 @@ RULES:
   let assistantText = '';
 
   try {
-    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 6, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           assistantText += part.text;
