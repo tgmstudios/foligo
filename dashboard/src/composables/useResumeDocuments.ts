@@ -7,6 +7,9 @@ export interface ResumeDocumentSummary {
   name: string
   jobDescription: string | null
   linkedJobId: string | null
+  linkedJob: { id: string; company: string; position: string } | null
+  isTemplate: boolean
+  isDefault: boolean
   createdAt: string
   updatedAt: string
 }
@@ -58,7 +61,7 @@ export function useResumeDocuments() {
 
   async function updateDocument(
     id: string,
-    data: { name?: string; content?: string; jobDescription?: string | null; linkedJobId?: string | null },
+    data: { name?: string; content?: string; jobDescription?: string | null; linkedJobId?: string | null; isTemplate?: boolean; isDefault?: boolean },
     kind?: 'autosave' | 'manual'
   ) {
     isSaving.value = true

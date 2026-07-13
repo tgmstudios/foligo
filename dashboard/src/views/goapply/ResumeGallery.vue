@@ -32,7 +32,13 @@
         class="relative bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-750 transition-all group"
       >
         <div class="flex items-start justify-between mb-2">
-          <h3 class="font-medium text-sm text-white truncate pr-6">{{ doc.name }}</h3>
+          <div class="min-w-0 pr-6">
+            <h3 class="font-medium text-sm text-white truncate">{{ doc.name }}</h3>
+            <div v-if="doc.isTemplate" class="flex gap-1 mt-1">
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-700 text-gray-300">Template</span>
+              <span v-if="doc.isDefault" class="px-1.5 py-0.5 rounded text-[10px] bg-primary-900 text-primary-300">Default</span>
+            </div>
+          </div>
           <button
             @click.stop="toggleMenu(doc.id)"
             class="absolute top-3 right-3 p-1 text-gray-500 hover:text-white hover:bg-gray-700 rounded transition-colors opacity-0 group-hover:opacity-100"
@@ -46,7 +52,7 @@
           <div
             v-if="openMenuId === doc.id"
             @click.stop
-            class="absolute top-9 right-3 z-10 w-40 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1"
+            class="absolute top-9 right-3 z-10 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1"
           >
             <button
               @click="openQuickEdit(doc)"
@@ -60,6 +66,15 @@
             >
               Clone
             </button>
+            <button @click="toggleTemplate(doc)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+              {{ doc.isTemplate ? 'Remove from templates' : 'Mark as template' }}
+            </button>
+            <button v-if="!doc.isDefault" @click="makeDefault(doc.id)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+              Make default template
+            </button>
+            <button v-if="doc.isDefault" @click="clearDefault(doc.id)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+              Clear default
+            </button>
             <button
               @click="handleDelete(doc.id)"
               class="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-gray-800 hover:text-red-300 transition-colors"
@@ -70,6 +85,9 @@
         </div>
 
         <p class="text-xs text-gray-500">{{ formatRelativeDate(doc.updatedAt) }}</p>
+        <div v-if="doc.linkedJob" class="mt-2">
+          <LinkedJobBadge :company="doc.linkedJob.company" :position="doc.linkedJob.position" />
+        </div>
         <p v-if="doc.jobDescription" class="text-xs text-gray-500 mt-2 line-clamp-2">
           {{ doc.jobDescription.substring(0, 100) }}{{ doc.jobDescription.length > 100 ? '…' : '' }}
         </p>
@@ -96,11 +114,12 @@ import { getAdapter } from '@/studio/registry'
 import { useResumeDocuments, type ResumeDocumentSummary } from '@/composables/useResumeDocuments'
 import { formatRelativeDate } from '@/utils/formatRelativeDate'
 import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
+import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
 
 const router = useRouter()
 const adapter = getAdapter('resume')
 
-const { documents, isLoading, fetchDocuments, createDocument, cloneDocument, deleteDocument } = useResumeDocuments()
+const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cloneDocument, deleteDocument } = useResumeDocuments()
 
 const creating = ref(false)
 const openMenuId = ref<string | null>(null)
@@ -136,6 +155,21 @@ function openQuickEdit(doc: ResumeDocumentSummary) {
 async function handleClone(id: string) {
   closeMenu()
   await cloneDocument(id)
+}
+
+async function toggleTemplate(doc: ResumeDocumentSummary) {
+  closeMenu()
+  await updateDocument(doc.id, { isTemplate: !doc.isTemplate })
+}
+
+async function makeDefault(id: string) {
+  closeMenu()
+  await updateDocument(id, { isDefault: true })
+}
+
+async function clearDefault(id: string) {
+  closeMenu()
+  await updateDocument(id, { isDefault: false })
 }
 
 async function handleDelete(id: string) {
