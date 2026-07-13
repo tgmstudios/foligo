@@ -476,21 +476,25 @@ model PostOrder {
 
 // Resume Chat Session - Stores chat history for resume assistant
 model ResumeChatSession {
-  id             String   @id @default(uuid())
-  userId         String
-  title          String // Auto-generated from first message or user-provided
-  chatHistory    Json // Array of { role: 'user' | 'assistant', content: string }
-  resumeText     String? // Extracted text from resume file
-  resumeFileName String? // Original resume filename
-  jobPosting     String? // Job posting text
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  userId                 String
+  title                  String // Auto-generated from first message or user-provided
+  chatHistory            Json // Array of { role: 'user' | 'assistant', content: string }
+  resumeText             String? // Extracted text from resume file
+  resumeFileName         String? // Original resume filename
+  jobPosting             String? // Job posting text
+  jobId                  String? // GoApply job this assistant conversation is centered on
+  attachedResumeIds      String[] @default([]) // Optional explicit context overrides
+  attachedCoverLetterIds String[] @default([])
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Relationships
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
+  @@index([jobId])
   @@map("resume_chat_sessions")
 }
 
@@ -507,6 +511,8 @@ model ResumeDocument {
   chatHistory    Json     @default("[]") // [{ role, content, toolCalls? }]
   pdfPath        String? // Path to the last compiled PDF, if any
   linkedJobId    String? // Tracked job application this resume is tailored for, if any
+  isTemplate     Boolean  @default(false)
+  isDefault      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -541,20 +547,24 @@ model ResumeDocumentRevision {
 // GoApply - Job Application Tracker
 
 model JobApplication {
-  id         String           @id @default(uuid())
-  userId     String
-  company    String
-  position   String
-  url        String?
-  status     String           @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
-  notes      String?
-  referredBy String?
-  sortOrder  Int              @default(0)
-  appliedAt  DateTime?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resumes    ResumeDocument[]
+  id           String           @id @default(uuid())
+  userId       String
+  company      String
+  position     String
+  url          String?
+  status       String           @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
+  notes        String?
+  category     String?
+  tags         String[]         @default([])
+  referredBy   String?
+  sortOrder    Int              @default(0)
+  appliedAt    DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumes      ResumeDocument[]
+  coverLetters CoverLetter[]
+  savedAnswers SavedAnswer[]    @relation("JobSavedAnswers")
 
   @@map("job_applications")
 }
@@ -637,30 +647,51 @@ model UserProfile {
 }
 
 model SavedAnswer {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   userId    String
   question  String
   answer    String
   category  String? // e.g., "experience", "education", "why-company"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs      JobApplication[] @relation("JobSavedAnswers")
 
   @@map("saved_answers")
 }
 
 model CoverLetter {
-  id          String   @id @default(uuid())
+  id          String                @id @default(uuid())
   userId      String
   jobId       String?
   title       String
-  content     String
+  content     String // LaTeX source
+  chatHistory Json                  @default("[]") // [{ role, content, toolCalls? }]
+  pdfPath     String? // Path to the last compiled PDF, if any
   generatedBy String? // provider that generated it
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isTemplate  Boolean               @default(false)
+  isDefault   Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job         JobApplication?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  revisions   CoverLetterRevision[]
 
+  @@index([userId])
+  @@index([jobId])
   @@map("cover_letters")
+}
+
+model CoverLetterRevision {
+  id            String      @id @default(uuid())
+  coverLetterId String
+  content       String      @db.Text
+  createdAt     DateTime    @default(now())
+  coverLetter   CoverLetter @relation(fields: [coverLetterId], references: [id], onDelete: Cascade)
+
+  @@index([coverLetterId])
+  @@index([createdAt])
+  @@map("cover_letter_revisions")
 }
 
 model GeneratedEmail {
