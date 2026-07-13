@@ -1,7 +1,15 @@
 /**
- * Core conversational session flow: handleAISession / streamAISession (the
- * function-calling conversation loop), function-call dispatch, and final
- * content generation.
+ * Core conversational session flow: handleAISession / streamAISession.
+ *
+ * Both paths now use the exact same `ai.streamChat` + `maxSteps` pattern
+ * that the content editor, resume editor, and every other agentic chat in
+ * Foligo uses.  The ai SDK drives the full tool-calling loop —
+ * no custom function-call dispatch or single-turn limitations.
+ *
+ * Foligo tools (signalContentReadyForGeneration, fetchExistingPost, etc.)
+ * all have `execute` handlers so the SDK executes them natively.  The route
+ * handler detects completion signals from streamed tool-call / tool-result
+ * events.
  */
 const ai = require('../ai/manager');
 const { GeminiAPIError } = require('../core/errors');
@@ -25,160 +33,139 @@ function buildInitialMessage(contentType) {
 }
 
 /**
- * Handle AI session - main conversation handler
- * Now uses Function Calling for structured, reliable responses
+ * Handle AI session — non-streaming path.
+ *
+ * Consumes the ai SDK stream internally, collecting the final text, any
+ * tool-call signals, and the completion marker from Foligo signal tools.
  */
-async function handleAISession(mode, contentType, initialInfo, chatHistory, context = {}, { aiChat, logger, userId, sessionKey }) {
-  logger.info('Starting AI session with Function Calling', {
-    mode,
-    contentType,
-    chatHistoryLength: chatHistory.length
-  });
+async function handleAISession(mode, contentType, initialInfo, chatHistory, context = {}, { logger, userId, sessionKey, fetchPost }) {
+  logger.info('Starting AI session', { mode, contentType, chatHistoryLength: chatHistory.length });
 
   try {
-    // Build the consolidated system prompt
-    const systemPrompt = buildConversationalSystemPrompt(mode, contentType, initialInfo, context);
+    const systemInstruction = buildConversationalSystemPrompt(mode, contentType, initialInfo, context);
+    const tools = mode === 'edit'
+      ? createContentEditTools({ userId, sessionKey, fetchPost })
+      : createContentCreateTools({ userId, sessionKey, fetchPost });
 
-    logger.debug('System prompt built', {
-      promptLength: systemPrompt.length,
-      mode,
-      contentType
-    });
-
-    // Log the actual prompt for debugging (first 500 chars)
-    logger.debug('System prompt preview', {
-      preview: systemPrompt.substring(0, 500)
-    });
-
-    // Pick tools based on mode (create vs edit) — now built per-session with GitHub tools
-    const toolsForMode = mode === 'edit'
-      ? createContentEditTools({ userId, sessionKey })
-      : createContentCreateTools({ userId, sessionKey });
-
-    // Build message list from history — send all in one call via AIManager
     const messages = chatHistory.slice(-10).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content
     }));
-
-    // Ensure starts with 'user' role
     while (messages.length > 0 && messages[0].role !== 'user') messages.shift();
-
-    // Guard: empty history on initial create — inject a default starter message
     if (messages.length === 0) {
       messages.push({ role: 'user', content: buildInitialMessage(contentType) });
     }
 
-    logger.debug('Chat history prepared', {
-      originalLength: chatHistory.length,
-      formattedLength: messages.length,
-    });
+    // Collect the full stream — same multi-step loop the editor uses.
+    let text = '';
+    let finalToolCall = null;
+    let finalToolResult = null;
+    const toolCalls = [];
 
-    // Call through AIManager — provider handles model, tools, system prompt
-    const { text: responseText, reasoning, functionCalls } = await aiChat(messages, {
-      tools: toolsForMode,
-      systemInstruction: systemPrompt,
+    for await (const part of ai.streamChat(messages, {
+      systemInstruction,
+      tools,
+      maxSteps: 6,
       temperature: GENERATION_CONFIG.CHAT.temperature,
       maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens,
-      context: 'AI session',
-    });
+    })) {
+      if (part.type === 'text-delta') text += part.text;
 
-    logger.debug('Response received', {
-      hasText: !!responseText,
-      textLength: responseText?.length || 0,
-      hasFunctionCalls: !!functionCalls,
-      functionCount: functionCalls?.length || 0,
-    });
+      if (part.type === 'tool-call') {
+        finalToolCall = { name: part.toolName, args: part.input, toolCallId: part.toolCallId };
+        toolCalls.push(finalToolCall);
+        logger.info('Tool call', { toolName: part.toolName, argsPreview: JSON.stringify(part.input).substring(0, 200) });
+      }
 
-    // Check for function calls FIRST (structured response)
-    // Now in model-agnostic format: [{name, args}]
-    if (functionCalls && functionCalls.length > 0) {
-      logger.info('AI session - function call detected', {
-        functionName: functionCalls[0].name,
-        mode,
-        contentType,
-        argsPreview: JSON.stringify(functionCalls[0].args).substring(0, 200)
-      });
-      const toolCall = functionCalls[0];
-      const handled = await handleFunctionCall({ name: toolCall.name, args: toolCall.args }, contentType, { logger });
-      return {
-        ...handled,
-        reasoning: reasoning || undefined,
-        toolActivity: [{
-          toolName: toolCall.name,
-          input: toolCall.args,
-          status: 'done'
-        }]
-      };
+      if (part.type === 'tool-result') {
+        finalToolResult = part.output;
+        logger.info('Tool result', { toolName: part.toolName });
+      }
     }
 
-    logger.debug('Checking for function calls', {
-      hasFunctionCalls: !!functionCalls,
-      functionCallsLength: functionCalls?.length || 0
-    });
+    // If the AI called a Foligo completion signal, extract the result.
+    if (finalToolCall) {
+      const name = finalToolCall.name;
+      const args = finalToolCall.args;
 
-    if (functionCalls && functionCalls.length > 0) {
-      logger.info('AI session - function call detected', {
-        functionName: functionCalls[0].name,
-        mode,
-        contentType,
-        argsPreview: JSON.stringify(functionCalls[0].args).substring(0, 200)
-      });
-      return await handleFunctionCall(functionCalls[0], contentType, { logger });
-    }
+      if (name === 'signalContentReadyForGeneration') {
+        const result = finalToolResult?._action === 'contentReady'
+          ? finalToolResult : { _action: 'contentReady', ...args };
+        return {
+          done: true,
+          summary: result.summary,
+          contentType: result.contentType || contentType,
+          message: text || "Perfect! I have everything I need to create your content.",
+          toolActivity: toolCalls.map(tc => ({ toolName: tc.name, input: tc.args, status: 'done' }))
+        };
+      }
 
-    // If no function call, it's a regular conversational response
-    logger.debug('No function call, returning text response');
+      if (name === 'signalEditReadyForGeneration') {
+        const result = finalToolResult?._action === 'editReady'
+          ? finalToolResult : { _action: 'editReady', ...args };
+        return {
+          done: true,
+          summary: result.summary,
+          changes: result.changes,
+          contentType,
+          message: text || "Got it! I'll apply those changes now.",
+          toolActivity: toolCalls.map(tc => ({ toolName: tc.name, input: tc.args, status: 'done' }))
+        };
+      }
 
-    // Warn if response is empty
-    if (!responseText || responseText.trim().length === 0) {
-      logger.error('AI returned empty response', {
-        mode, contentType,
-        chatHistoryLength: chatHistory.length,
-        systemPromptLength: systemPrompt.length,
-      });
+      if (name === 'fetchExistingPost') {
+        return {
+          done: false,
+          toolcall: 'fetch_post',
+          postId: args.postId,
+          message: text || `Fetching "${args.postTitle || 'the post'}"...`,
+          contentType,
+          toolActivity: toolCalls.map(tc => ({ toolName: tc.name, input: tc.args, status: 'done' }))
+        };
+      }
+
+      // Tool was executed (GitHub, etc.) — return conversational response
       return {
-        message: "I apologize, but I ran into an issue. Please try again.",
+        message: text || 'I gathered some information from your GitHub.',
         done: false,
-        contentType: contentType
+        contentType,
+        toolActivity: toolCalls.map(tc => ({ toolName: tc.name, input: tc.args, status: 'done' }))
       };
     }
 
-    logger.info('AI session - conversational response', {
-      responseLength: responseText.length,
-      responsePreview: responseText.substring(0, 100)
-    });
+    // No tool call — plain conversational response
+    if (!text || text.trim().length === 0) {
+      logger.error('AI returned empty response');
+      return { message: "I apologize, but I ran into an issue. Please try again.", done: false, contentType };
+    }
 
-    return {
-      message: responseText,
-      reasoning: reasoning || undefined,
-      done: false,
-      contentType: contentType
-    };
+    return { message: text, done: false, contentType };
 
   } catch (error) {
-    logger.error('AI session EXCEPTION', {
-      error: error.message,
-      errorName: error.name,
-      stack: error.stack,
-      mode,
-      contentType,
-      chatHistoryLength: chatHistory.length
-    });
+    logger.error('AI session EXCEPTION', { error: error.message, stack: error.stack, mode, contentType });
     throw new GeminiAPIError(`Failed to handle AI session: ${error.message}`, error);
   }
 }
 
 /**
- * Stream a content-creator conversation turn. Raw reasoning, text, and tool
- * events are yielded immediately; the final session state is returned as a
- * synthetic session-result event so the route can execute server-side tools.
+ * Stream a content-creator conversation turn.
+ *
+ * This is now a thin wrapper around `ai.streamChat` with `maxSteps: 6` —
+ * the exact same multi-step tool-calling pattern used by the content editor
+ * and resume editor.  All tools have `execute` handlers so the SDK
+ * auto-executes GitHub browse/read/search calls and feeds results back
+ * to the AI without any external loop.
+ *
+ * Completion signals (signalContentReadyForGeneration, etc.) are yielded
+ * as normal tool-call / tool-result events — the route handler watches
+ * for them to know when to trigger content generation.
  */
-async function* streamAISession(mode, contentType, initialInfo, chatHistory, context = {}, { logger, userId, sessionKey }) {
+async function* streamAISession(mode, contentType, initialInfo, chatHistory, context = {}, { logger, userId, sessionKey, fetchPost }) {
   const systemInstruction = buildConversationalSystemPrompt(mode, contentType, initialInfo, context);
   const tools = mode === 'edit'
-    ? createContentEditTools({ userId, sessionKey })
-    : createContentCreateTools({ userId, sessionKey });
+    ? createContentEditTools({ userId, sessionKey, fetchPost })
+    : createContentCreateTools({ userId, sessionKey, fetchPost });
+
   const messages = chatHistory.slice(-10).map(message => ({
     role: message.role === 'user' ? 'user' : 'assistant',
     content: message.content
@@ -189,98 +176,55 @@ async function* streamAISession(mode, contentType, initialInfo, chatHistory, con
     messages.push({ role: 'user', content: buildInitialMessage(contentType) });
   }
 
-  let text = '';
-  let toolCall = null;
+  // Same multi-step agentic loop the editor/resume chats use.
   for await (const part of ai.streamChat(messages, {
     systemInstruction,
     tools,
-    maxSteps: 1,
+    maxSteps: 6,
     temperature: GENERATION_CONFIG.CHAT.temperature,
-    maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens
+    maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens,
   })) {
-    if (part.type === 'text-delta') text += part.text;
-    if (part.type === 'tool-call' && !toolCall) {
-      toolCall = { name: part.toolName, args: part.input, toolCallId: part.toolCallId };
-    }
     yield part;
   }
-
-  const result = toolCall
-    ? await handleFunctionCall(toolCall, contentType, { logger })
-    : { message: text || 'I apologize, but I ran into an issue. Please try again.', done: false, contentType };
-  yield { type: 'session-result', result, toolCall };
 }
 
-/**
- * Private: Handle function call from AI
- * This replaces the old regex-based JSON parsing
- */
-async function handleFunctionCall(functionCall, currentContentType, { logger }) {
-  const { name, args } = functionCall;
+// ── Legacy handleFunctionCall kept for resume-chatbot.js compatibility ──
 
-  logger.info('Function call received', {
-    functionName: name,
-    args: JSON.stringify(args)
-  });
+async function handleFunctionCall(functionCall, currentContentType, { logger, userId, sessionKey }) {
+  const { name, args } = functionCall;
+  logger.info('Function call received', { functionName: name, args: JSON.stringify(args) });
 
   switch (name) {
     case 'signalContentReadyForGeneration':
-      logger.info('Content ready for generation', {
-        contentType: args.contentType,
-        summaryLength: args.summary?.length || 0
-      });
-      return {
-        done: true,
-        summary: args.summary,
-        contentType: args.contentType,
-        message: "Perfect! I have everything I need to create your content."
-      };
-
+      return { done: true, summary: args.summary, contentType: args.contentType, message: "Perfect! I have everything I need to create your content." };
     case 'signalEditReadyForGeneration':
-      return {
-        done: true,
-        summary: args.summary,
-        changes: args.changes,
-        contentType: currentContentType,
-        message: "Got it! I'll apply those changes now."
-      };
-
+      return { done: true, summary: args.summary, changes: args.changes, contentType: currentContentType, message: "Got it! I'll apply those changes now." };
     case 'fetchExistingPost':
-      return {
-        done: false,
-        toolcall: 'fetch_post',
-        postId: args.postId,
-        message: `Fetching "${args.postTitle || 'the post'}"...`,
-        contentType: currentContentType
-      };
-
+      return { done: false, toolcall: 'fetch_post', postId: args.postId, message: `Fetching "${args.postTitle || 'the post'}"...`, contentType: currentContentType };
     case 'createStructuredResumeDraft':
-      // Resume chatbot: create a saved resume document that the agentic resume editor can open.
-      // IMPORTANT: No additional AI is called on the server; the provided resumeContent LaTeX is used as-is.
-      return {
-        done: true,
-        toolcall: 'create_resume_document',
-        resume: {
-          name: args.name,
-          jobDescription: args.jobDescription || '',
-          resumeContent: args.resumeContent
-        },
-        message: "Great, I've created a resume draft. You can open it in the Resume Editor to keep refining and export it."
-      };
-
+      return { done: true, toolcall: 'create_resume_document', resume: { name: args.name, jobDescription: args.jobDescription || '', resumeContent: args.resumeContent }, message: "Great, I've created a resume draft." };
+    // GitHub tools
+    case 'github_list_repos':
+    case 'github_browse_files':
+    case 'github_read_file':
+    case 'github_search_code':
+      try {
+        const { createGithubTools } = require('../github/github-tools');
+        const ghTools = createGithubTools({ userId, sessionKey });
+        const impl = ghTools[name];
+        if (!impl?.execute) throw new Error(`GitHub tool ${name} not available.`);
+        const output = await impl.execute(args);
+        return { done: false, toolcall: name, toolOutput: output, toolInput: args, message: null, contentType: currentContentType };
+      } catch (error) {
+        logger.error(`GitHub tool ${name} failed`, { error: error.message });
+        return { done: false, message: `I tried to check your GitHub but ran into an issue: ${error.message}. Can you tell me about the project directly?`, contentType: currentContentType };
+      }
     default:
       logger.warn('Unknown function call', { functionName: name });
-      return {
-        done: false,
-        message: "I'm not sure what to do next. Can you provide more details?",
-        contentType: currentContentType
-      };
+      return { done: false, message: "I'm not sure what to do next. Can you provide more details?", contentType: currentContentType };
   }
 }
 
-/**
- * Private: Get a natural follow-up message after content type change
- */
 function getFollowUpMessage(contentType) {
   const followUps = {
     'PROJECT': 'What did you build and what problem does it solve?',
@@ -290,16 +234,8 @@ function getFollowUpMessage(contentType) {
   return followUps[contentType] || 'Tell me more about it.';
 }
 
-/**
- * Generate final content
- * Now uses XML-based prompts and structured_data extraction
- */
 async function generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}, { aiText, logger }) {
-  logger.info('Generating final content with XML prompts', {
-    mode,
-    contentType,
-    chatHistoryLength: chatHistory.length
-  });
+  logger.info('Generating final content with XML prompts', { mode, contentType, chatHistoryLength: chatHistory.length });
 
   try {
     const {
@@ -310,30 +246,16 @@ async function generateFinalContent(mode, contentType, chatHistory, currentConte
       editGenerationPrompt
     } = require('../content/content-generation-prompts');
 
-    // Build the appropriate prompt based on mode and type
     let prompt;
     if (mode === 'edit') {
       prompt = editGenerationPrompt(currentContent, changes, chatHistory, context);
     } else {
-      const promptMap = {
-        'PROJECT': projectGenerationPrompt,
-        'EXPERIENCE': experienceGenerationPrompt,
-        'BLOG': blogGenerationPrompt
-      };
-
+      const promptMap = { 'PROJECT': projectGenerationPrompt, 'EXPERIENCE': experienceGenerationPrompt, 'BLOG': blogGenerationPrompt };
       const promptGenerator = promptMap[contentType];
-      if (!promptGenerator) {
-        throw new Error(`Unknown content type: ${contentType}`);
-      }
-
+      if (!promptGenerator) throw new Error(`Unknown content type: ${contentType}`);
       prompt = promptGenerator(chatHistory, context);
     }
 
-    logger.debug('Content generation prompt', {
-      promptLength: prompt.length
-    });
-
-    // Generate content via AIManager (model-agnostic)
     const fullResponse = await aiText(prompt, {
       temperature: GENERATION_CONFIG.CREATIVE.temperature,
       maxTokens: GENERATION_CONFIG.CREATIVE.maxOutputTokens,
@@ -341,80 +263,35 @@ async function generateFinalContent(mode, contentType, chatHistory, currentConte
       context: 'Content generation',
     });
 
-    logger.info('Content generated - FULL RESPONSE', {
-      responseLength: fullResponse.length,
-      fullResponse: fullResponse // Log entire response for debugging
-    });
-
-    // Extract structured_data block and markdown content
     const { markdownContent, structuredData } = extractStructuredData(fullResponse, { logger });
 
-    logger.info('Extracted content and structured data', {
-      markdownLength: markdownContent.length,
-      hasStructuredData: !!structuredData,
-      structuredData: structuredData ? JSON.stringify(structuredData, null, 2) : null
-    });
-
-    // Extract skills and tags from structured data
-    // Return them without IDs - frontend will handle matching/creating
     const extractedSkills = structuredData?.skills || [];
     const extractedTags = structuredData?.tags || [];
 
-    logger.info('Skills and tags extracted from structured data', {
-      skillsCount: extractedSkills.length,
-      tagsCount: extractedTags.length,
-      skills: extractedSkills,
-      tags: extractedTags
-    });
-
-    // Use title from structured data or extract from conversation
     let title = structuredData?.title;
     if (!title || title.length < 3) {
-      logger.debug('Title missing or too short, extracting from conversation');
       title = await extractTitleFromConversation(contentType, chatHistory, markdownContent, { aiText, logger });
     }
 
-    // Build metadata from structured data
     const metadata = buildMetadataFromStructuredData(structuredData, contentType);
-
-    logger.debug('Metadata built from structured data', {
-      metadata: metadata
-    });
-
-    // Check for multiple posts
-    const shouldCreateMultiple = await shouldCreateMultiplePosts(chatHistory, contentType, { aiText, logger });
 
     const result = {
       content: markdownContent,
       title,
       excerpt: structuredData?.excerpt || null,
       metadata,
-      skills: extractedSkills, // Return raw skills without IDs - frontend will handle matching
-      tags: extractedTags, // Return raw tags without IDs - frontend will handle matching
-      structuredData // Include full structured data for direct field mapping
+      skills: extractedSkills,
+      tags: extractedTags,
+      structuredData
     };
 
+    const shouldCreateMultiple = await shouldCreateMultiplePosts(chatHistory, contentType, { aiText, logger });
     if (shouldCreateMultiple) {
       const multiplePosts = await generateMultiplePosts(chatHistory, context, { aiText, logger });
       result.multiplePosts = multiplePosts || null;
     }
 
-    logger.info('Final content prepared - COMPLETE RESULT', {
-      title,
-      excerpt: result.excerpt?.substring(0, 100),
-      skillsCount: extractedSkills.length,
-      tagsCount: extractedTags.length,
-      hasMultiplePosts: !!result.multiplePosts,
-      hasStructuredData: !!structuredData,
-      structuredDataKeys: structuredData ? Object.keys(structuredData) : [],
-      projectLinks: structuredData?.projectLinks,
-      startDate: structuredData?.startDate,
-      endDate: structuredData?.endDate,
-      isOngoing: structuredData?.isOngoing
-    });
-
     return result;
-
   } catch (error) {
     logger.error('Content generation error', { error: error.message, stack: error.stack });
     throw new GeminiAPIError(`Failed to generate final content: ${error.message}`, error);

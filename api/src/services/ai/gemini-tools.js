@@ -4,51 +4,78 @@
  * (Gemini, OpenAI-compatible, Anthropic, ...) converts these to its own
  * native tool-call format internally, so no per-provider schema work is needed here.
  *
- * Tool sets are now factory functions. Callers supply { userId, sessionKey }
+ * Tool sets are factory functions. Callers supply { userId, sessionKey }
  * so per-user/per-session tools (e.g. GitHub repo browsing) can be merged in.
+ *
+ * All tools now include `execute` handlers so the ai SDK can drive a
+ * multi-step tool-calling loop (maxSteps > 1) — the same pattern used by
+ * the content editor, resume editor, and every other agentic chat in Foligo.
  */
 const { tool } = require('ai');
 const { z } = require('zod');
 const { createGithubTools } = require('../github/github-tools');
 
 /**
- * Core Foligo content-creation tools (mode-agnostic helpers).
- * These are always available regardless of mode.
+ * Core Foligo tools — mode-agnostic.  These always have execute handlers so
+ * the SDK can drive the full tool-calling loop without external interception.
+ *
+ * `fetchPost` is an optional async callback(postId) → post object | null.
+ * When provided, fetchExistingPost resolves the full post body inline.
  */
-function _coreFoligoCreateTools() {
+function _coreFoligoBaseTools({ fetchPost } = {}) {
   return {
     signalContentReadyForGeneration: tool({
-      description: 'Call this function when ALL necessary information has been gathered and you are ready to hand off to the writing AI. This signals the end of the conversation phase. ONLY call this when you have sufficient details for high-quality content generation. At this point, you will determine the content type based on everything discussed.',
+      description:
+        'Call this function when ALL necessary information has been gathered and you are ready to hand off to the writing AI. This signals the end of the conversation phase. ONLY call this when you have sufficient details for high-quality content generation.',
       inputSchema: z.object({
-        summary: z.string().describe('A comprehensive summary of ALL information gathered from the conversation. Include every relevant detail: names, dates, technologies, achievements, links, timelines, responsibilities, etc. This summary will be used by the writing AI to generate the final content, so be thorough and specific.'),
-        contentType: z.enum(['PROJECT', 'EXPERIENCE', 'BLOG']).describe('The content type determined from the conversation. PROJECT = something they built. EXPERIENCE = job/education/certification. BLOG = article/tutorial.'),
+        summary: z.string().describe('A comprehensive summary of ALL information gathered from the conversation.'),
+        contentType: z.enum(['PROJECT', 'EXPERIENCE', 'BLOG']).describe('The content type determined from the conversation.'),
+      }),
+      execute: async (args) => ({
+        _action: 'contentReady',
+        summary: args.summary,
+        contentType: args.contentType,
       }),
     }),
-    fetchExistingPost: tool({
-      description: 'Call this function when the user wants to reference a specific post from their portfolio during content creation. Use the post ID from the context provided in the system prompt.',
-      inputSchema: z.object({
-        postId: z.string().describe('The UUID of the post to fetch (from the portfolio context)'),
-        postTitle: z.string().describe('The title of the post being fetched (for user feedback)'),
-      }),
-    }),
-  };
-}
 
-function _coreFoligoEditTools() {
-  return {
     signalEditReadyForGeneration: tool({
-      description: 'Call this function when you understand what changes the user wants to make to existing content. Use this in EDIT mode only.',
+      description:
+        'Call this function when you understand what changes the user wants to make to existing content. Use this in EDIT mode only.',
       inputSchema: z.object({
-        summary: z.string().describe('A brief summary of the conversation and what the user wants to change'),
-        changes: z.string().describe('Clear, specific description of the requested changes. Be detailed about what should be added, removed, or modified.'),
+        summary: z.string().describe('A brief summary of the conversation and what the user wants to change.'),
+        changes: z.string().describe('Clear, specific description of the requested changes.'),
+      }),
+      execute: async (args) => ({
+        _action: 'editReady',
+        summary: args.summary,
+        changes: args.changes,
       }),
     }),
+
     fetchExistingPost: tool({
-      description: 'Call this function when the user wants to edit or reference a specific post from their portfolio. Use the post ID from the context provided in the system prompt.',
+      description:
+        'Call this function when the user wants to reference or edit a specific post from their portfolio. Use the post ID from the context provided in the system prompt.',
       inputSchema: z.object({
-        postId: z.string().describe('The UUID of the post to fetch (from the portfolio context)'),
-        postTitle: z.string().describe('The title of the post being fetched (for user feedback)'),
+        postId: z.string().describe('The UUID of the post to fetch (from the portfolio context).'),
+        postTitle: z.string().describe('The title of the post being fetched (for user feedback).'),
       }),
+      execute: async (args) => {
+        if (fetchPost) {
+          try {
+            const post = await fetchPost(args.postId);
+            if (post) {
+              return {
+                _action: 'postFetched',
+                id: post.id,
+                title: post.title,
+                contentType: post.contentType,
+                content: post.content,
+              };
+            }
+          } catch (_) { /* fall through to marker */ }
+        }
+        return { _action: 'fetchPost', postId: args.postId, postTitle: args.postTitle };
+      },
     }),
   };
 }
@@ -58,11 +85,11 @@ function _coreFoligoEditTools() {
  * Merges Foligo's conversational tools with GitHub repo-browsing tools
  * when GitHub is connected for this user.
  *
- * @param {{ userId: string, sessionKey: string }} params
+ * @param {{ userId: string, sessionKey: string, fetchPost?: (postId: string) => Promise<object|null> }} params
  * @returns {object} merged tool set
  */
-function createContentCreateTools({ userId, sessionKey }) {
-  const core = _coreFoligoCreateTools();
+function createContentCreateTools({ userId, sessionKey, fetchPost }) {
+  const core = _coreFoligoBaseTools({ fetchPost });
   let github = {};
   try {
     github = createGithubTools({ userId, sessionKey });
@@ -74,15 +101,15 @@ function createContentCreateTools({ userId, sessionKey }) {
 
 /**
  * Factory: tools for AI content sessions – EDIT mode.
- * Same as createContentCreateTools but with edit-specific Foligo tools.
+ * Same tool set as create mode (signalEditReadyForGeneration + signalContentReadyForGeneration both present).
  */
-function createContentEditTools({ userId, sessionKey }) {
-  const core = _coreFoligoEditTools();
+function createContentEditTools({ userId, sessionKey, fetchPost }) {
+  const core = _coreFoligoBaseTools({ fetchPost });
   let github = {};
   try {
     github = createGithubTools({ userId, sessionKey });
   } catch (_) {
-    // GitHub tools are optional — only available when the user has connected their GitHub account
+    // GitHub tools are optional
   }
   return { ...core, ...github };
 }

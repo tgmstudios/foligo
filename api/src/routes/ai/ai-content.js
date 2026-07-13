@@ -558,12 +558,20 @@ router.post('/session', [
     const context = await getAIContext(userId, projectId);
     const sessionKey = `ai-session:${userId || 'anon'}:${projectId || 'noproject'}`;
     
+    // Callback so fetchExistingPost can resolve full post bodies inline
+    const fetchPost = async (postId) => {
+      return prisma.content.findUnique({
+        where: { id: postId },
+        select: { id: true, title: true, contentType: true, content: true, excerpt: true, metadata: true }
+      });
+    };
+
     // If contentType is not provided, try to infer it from the conversation
     if (!contentType && chatHistory.length > 0) {
       contentType = await geminiService.inferContentType(chatHistory, initialInfo);
     }
 
-    const result = await geminiService.handleAISession(mode, contentType, initialInfo, chatHistory, context, { userId, sessionKey });
+    const result = await geminiService.handleAISession(mode, contentType, initialInfo, chatHistory, context, { userId, sessionKey, fetchPost });
 
     // Handle toolcall (post fetch)
     if (result.toolcall === 'fetch_post' && result.postId) {
@@ -597,7 +605,7 @@ router.post('/session', [
             initialInfo, 
             updatedChatHistory, 
             context,
-            { userId, sessionKey }
+            { userId, sessionKey, fetchPost }
           );
 
           // Use the contentType from result if it was corrected
@@ -664,9 +672,17 @@ router.post('/session/stream', [
   }
 
   let { mode, contentType, initialInfo = {}, chatHistory, projectId } = req.body;
-  const context = await getAIContext(req.user?.id, projectId);
   const userId = req.user?.id;
+  const context = await getAIContext(userId, projectId);
   const sessionKey = `ai-session:${userId || 'anon'}:${projectId || 'noproject'}`;
+
+  const fetchPost = async (postId) => {
+    return prisma.content.findUnique({
+      where: { id: postId },
+      select: { id: true, title: true, contentType: true, content: true, excerpt: true, metadata: true }
+    });
+  };
+
   if (!contentType && chatHistory.length > 0) {
     contentType = await geminiService.inferContentType(chatHistory, initialInfo);
   }
@@ -678,62 +694,55 @@ router.post('/session/stream', [
   res.flushHeaders();
   const send = event => res.write(`data: ${JSON.stringify(event)}\n\n`);
 
-  const streamTurn = async history => {
+  try {
+    // Track completion signals from the stream
     let sessionResult = null;
-    for await (const part of geminiService.streamAISession(mode, contentType, initialInfo, history, context, { userId, sessionKey })) {
-      if (part.type === 'session-result') {
-        sessionResult = part;
-      } else if (['text-delta', 'reasoning-delta', 'tool-call', 'tool-result', 'tool-error'].includes(part.type)) {
-        send({
-          type: part.type,
-          text: part.text,
-          toolCallId: part.toolCallId,
-          toolName: part.toolName,
-          input: part.input,
-          output: part.output,
-          error: part.error?.message || part.error
-        });
+    let lastToolCall = null;
+    let lastToolResult = null;
+
+    // Same multi-step agentic loop the editor/resume chats use.
+    // fetchExistingPost resolves full post bodies inline via the callback.
+    // GitHub tools execute natively.  signalContentReadyForGeneration
+    // returns a marker the AI sees and finishes with a final message.
+    for await (const part of geminiService.streamAISession(mode, contentType, initialInfo, chatHistory, context, { userId, sessionKey, fetchPost })) {
+      if (part.type === 'text-delta') {
+        send({ type: 'text-delta', text: part.text });
+      } else if (part.type === 'reasoning-delta') {
+        send({ type: 'reasoning-delta', text: part.text });
+      } else if (part.type === 'tool-call') {
+        lastToolCall = { name: part.toolName, args: part.input, toolCallId: part.toolCallId };
+        send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
+      } else if (part.type === 'tool-result') {
+        lastToolResult = part.output;
+        send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
+      } else if (part.type === 'tool-error') {
+        send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
       } else if (part.type === 'error') {
         send({ type: 'error', message: part.error?.message || String(part.error) });
       }
     }
-    return sessionResult;
-  };
 
-  try {
-    let completed = await streamTurn(chatHistory);
-    let result = completed?.result || { message: 'Unable to complete the AI session.', done: false };
-    let toolCall = completed?.toolCall;
+    // Determine session result from the final tool call
+    if (lastToolCall) {
+      const name = lastToolCall.name;
+      const args = lastToolCall.args || {};
+      const output = lastToolResult;
 
-    if (toolCall?.name === 'fetchExistingPost' && result.postId) {
-      const post = await prisma.content.findUnique({
-        where: { id: result.postId },
-        select: { id: true, title: true, contentType: true, content: true, excerpt: true, metadata: true }
-      });
-      if (!post) {
-        send({ type: 'tool-error', toolCallId: toolCall.toolCallId, toolName: toolCall.name, error: 'Post not found' });
-        result = { message: 'Post not found.', done: false };
+      if (name === 'signalContentReadyForGeneration') {
+        const data = (output && output._action === 'contentReady') ? output : { _action: 'contentReady', ...args };
+        sessionResult = { done: true, summary: data.summary, contentType: data.contentType || contentType };
+      } else if (name === 'signalEditReadyForGeneration') {
+        const data = (output && output._action === 'editReady') ? output : { _action: 'editReady', ...args };
+        sessionResult = { done: true, summary: data.summary, changes: data.changes, contentType };
       } else {
-        send({ type: 'tool-result', toolCallId: toolCall.toolCallId, toolName: toolCall.name, output: { id: post.id, title: post.title } });
-        const continuedHistory = [
-          ...chatHistory,
-          { role: 'assistant', content: result.message || `Fetching "${post.title}"...` },
-          { role: 'user', content: `Here is the full content of the post "${post.title}":\n\n${post.content}` }
-        ];
-        completed = await streamTurn(continuedHistory);
-        result = completed?.result || result;
-        toolCall = completed?.toolCall;
-        if (toolCall) {
-          send({ type: 'tool-result', toolCallId: toolCall.toolCallId, toolName: toolCall.name, output: { done: true } });
-        }
+        // Tool was executed (GitHub, fetchExistingPost, etc.) — AI already saw the result
+        sessionResult = { done: false, contentType };
       }
-    } else if (toolCall) {
-      send({ type: 'tool-result', toolCallId: toolCall.toolCallId, toolName: toolCall.name, output: { done: true } });
+    } else {
+      sessionResult = { done: false, contentType };
     }
 
-    // Tool-only turns have no model text, so stream the friendly hand-off copy.
-    if (toolCall && result.message) send({ type: 'text-delta', text: result.message });
-    send({ type: 'session-done', ...result, contentType: result.contentType || contentType });
+    send({ type: 'session-done', ...sessionResult, contentType: sessionResult.contentType || contentType });
   } catch (error) {
     console.error('Streaming AI session error:', error);
     send({ type: 'error', message: error.message || 'Unable to process session' });
