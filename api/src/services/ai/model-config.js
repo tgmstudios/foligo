@@ -1,4 +1,4 @@
-const { prisma } = require('../database');
+const { prisma } = require('../core/database');
 const { decrypt } = require('../../utils/encryption');
 
 const VALID_MODEL_TYPES = ['QUICK', 'LONG'];

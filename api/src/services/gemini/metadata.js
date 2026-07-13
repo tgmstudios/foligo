@@ -6,7 +6,7 @@
  * object rather than reaching for `this` — see gemini.js for how the facade
  * wires these up.
  */
-const { utilityPrompts } = require('../prompt-utils');
+const { utilityPrompts } = require('../content/prompt-utils');
 const { GENERATION_CONFIG } = require('./config');
 const { cleanGeneratedContent } = require('./text-cleanup');
 

@@ -15,8 +15,8 @@ const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const os = require('os');
 const path = require('path');
-const { prisma } = require('./database');
-const { decrypt } = require('../utils/encryption');
+const { prisma } = require('../core/database');
+const { decrypt } = require('../../utils/encryption');
 
 const PROVIDER = 'github';
 const CLONE_ROOT = process.env.GITHUB_CLONE_DIR || path.join(os.tmpdir(), 'github-clones');

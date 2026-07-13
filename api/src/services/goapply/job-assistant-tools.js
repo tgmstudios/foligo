@@ -1,6 +1,6 @@
 const { tool } = require('ai');
 const { z } = require('zod');
-const { projectAccessWhere } = require('../utils/project-access-where');
+const { projectAccessWhere } = require('../../utils/project-access-where');
 
 const optionalText = z.string().nullable().optional();
 

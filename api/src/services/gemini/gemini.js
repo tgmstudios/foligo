@@ -10,17 +10,17 @@
  * module under ./gemini/*, passing that state through explicitly instead of
  * relying on mixed-in prototypes.
  */
-const { prisma } = require('./database');
-const { createAILogger } = require('./logger');
-const { GENERATION_CONFIG } = require('./gemini/config');
-const { createAiClient } = require('./gemini/ai-client');
-const { stripMarkdown, extractHashtags } = require('./gemini/text-cleanup');
-const sessionFlow = require('./gemini/session-flow');
-const metadata = require('./gemini/metadata');
-const multiPost = require('./gemini/multi-post');
-const socialPost = require('./gemini/social-post');
-const resumeChatbot = require('./gemini/resume-chatbot');
-const skillTagMatcher = require('./skill-tag-matcher');
+const { prisma } = require('../core/database');
+const { createAILogger } = require('../core/logger');
+const { GENERATION_CONFIG } = require('./config');
+const { createAiClient } = require('./ai-client');
+const { stripMarkdown, extractHashtags } = require('./text-cleanup');
+const sessionFlow = require('./session-flow');
+const metadata = require('./metadata');
+const multiPost = require('./multi-post');
+const socialPost = require('./social-post');
+const resumeChatbot = require('./resume-chatbot');
+const skillTagMatcher = require('../content/skill-tag-matcher');
 
 class GeminiService {
   constructor() {

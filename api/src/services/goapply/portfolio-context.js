@@ -1,4 +1,4 @@
-const { prisma } = require('./database');
+const { prisma } = require('../core/database');
 
 /** Fetch a portfolio content item, scoped to the requesting user, for the fetch_portfolio_item tool. */
 async function fetchPortfolioItem(userId, postId) {

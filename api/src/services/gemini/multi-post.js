@@ -3,7 +3,7 @@
  * more than one piece of content should be created, and drafts the list of
  * additional content types.
  */
-const { utilityPrompts } = require('../prompt-utils');
+const { utilityPrompts } = require('../content/prompt-utils');
 const { GENERATION_CONFIG } = require('./config');
 
 /**

@@ -2,7 +2,7 @@
  * AI Service — model-agnostic resume content generation.
  * Thin wrapper around AIManager for backward compatibility.
  */
-const ai = require('./ai/manager');
+const ai = require('./manager');
 
 class AIService {
   /**

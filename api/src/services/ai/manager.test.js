@@ -16,7 +16,7 @@ jest.mock('./model-config', () => ({
   ensureBootstrapModels: jest.fn(),
 }));
 
-jest.mock('../logger', () => ({
+jest.mock('../core/logger', () => ({
   createAILogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
 }));
 

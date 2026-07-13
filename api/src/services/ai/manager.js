@@ -24,7 +24,7 @@
 const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
 const { createProvider, listProviders, isProviderConfigured, SAFETY_SETTINGS } = require('./providers');
 const { resolveModel, listModelSelections, ensureBootstrapModels } = require('./model-config');
-const { createAILogger } = require('../logger');
+const { createAILogger } = require('../core/logger');
 
 class AIManager {
   constructor() {
@@ -305,7 +305,7 @@ class AIManager {
   async listProviders() {
     try {
       await ensureBootstrapModels();
-      const models = await require('../database').prisma.aiModel.findMany({
+      const models = await require('../core/database').prisma.aiModel.findMany({
         where: { enabled: true }, orderBy: [{ modelType: 'asc' }, { name: 'asc' }],
       });
       if (models.length) return models.map(model => ({

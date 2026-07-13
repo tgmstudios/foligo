@@ -4,7 +4,7 @@
  * behavior the rest of the gemini/* modules expect.
  */
 const ai = require('../ai/manager');
-const { GeminiAPIError } = require('../errors');
+const { GeminiAPIError } = require('../core/errors');
 
 /**
  * Build the { aiText, aiChat } helpers bound to a given logger.

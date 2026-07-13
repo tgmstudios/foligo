@@ -2,9 +2,9 @@
  * Resume chatbot session — specialized for resume and job application
  * assistance. Uses a larger context window and specialized prompts.
  */
-const { GeminiAPIError } = require('../errors');
-const { AI_RESUME_CHATBOT_TOOLS } = require('../gemini-tools');
-const { buildResumeChatbotSystemPrompt } = require('../resume-chatbot-prompts');
+const { GeminiAPIError } = require('../core/errors');
+const { AI_RESUME_CHATBOT_TOOLS } = require('../ai/gemini-tools');
+const { buildResumeChatbotSystemPrompt } = require('../content/resume-chatbot-prompts');
 const { GENERATION_CONFIG } = require('./config');
 const { handleFunctionCall } = require('./session-flow');
 

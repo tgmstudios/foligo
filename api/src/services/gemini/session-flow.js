@@ -4,12 +4,12 @@
  * content generation.
  */
 const ai = require('../ai/manager');
-const { GeminiAPIError } = require('../errors');
+const { GeminiAPIError } = require('../core/errors');
 const {
   AI_CONTENT_CREATE_TOOLS,
   AI_CONTENT_EDIT_TOOLS
-} = require('../gemini-tools');
-const { buildConversationalSystemPrompt } = require('../conversation-prompts');
+} = require('../ai/gemini-tools');
+const { buildConversationalSystemPrompt } = require('../content/conversation-prompts');
 const { GENERATION_CONFIG } = require('./config');
 const {
   extractStructuredData,
@@ -304,7 +304,7 @@ async function generateFinalContent(mode, contentType, chatHistory, currentConte
       blogGenerationPrompt,
       skillGenerationPrompt,
       editGenerationPrompt
-    } = require('../content-generation-prompts');
+    } = require('../content/content-generation-prompts');
 
     // Build the appropriate prompt based on mode and type
     let prompt;

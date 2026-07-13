@@ -1,7 +1,7 @@
 /**
  * Social media post generation (LinkedIn / X) for a piece of content.
  */
-const { GeminiAPIError } = require('../errors');
+const { GeminiAPIError } = require('../core/errors');
 const { stripMarkdown, extractHashtags } = require('./text-cleanup');
 
 /**

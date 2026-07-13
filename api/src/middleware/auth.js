@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { prisma } = require('../services/database');
+const { prisma } = require('../services/core/database');
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
