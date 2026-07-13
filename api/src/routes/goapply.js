@@ -1377,6 +1377,9 @@ router.delete('/cover-letters/:id', async (req, res) => {
       });
     }
 
+    if (existing.pdfPath) {
+      await fs.unlink(existing.pdfPath).catch(() => {});
+    }
     await prisma.coverLetter.delete({
       where: { id }
     });

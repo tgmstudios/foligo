@@ -69,7 +69,7 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     get_cover_letter: jobAssistantTool({
-      description: 'Load the full content of one of the user’s cover letters. Use an ID from the available cover letter catalog.',
+      description: 'Load the full LaTeX source of one of the user’s cover letters. Use an ID from the available cover letter catalog.',
       inputSchema: z.object({ coverLetterId: z.string() }),
       execute: async ({ coverLetterId }) => {
         const letter = await prisma.coverLetter.findFirst({
@@ -158,7 +158,7 @@ function createJobAssistantTools(prisma, userId) {
       description: 'Create a cover letter or update an existing owned cover letter. Use this when the user asks to save cover-letter content. Omit coverLetterId to create; include it to update.',
       inputSchema: z.object({
         coverLetterId: z.string().optional(), title: z.string().min(1).max(255),
-        content: z.string().min(1), jobId: optionalText,
+        content: z.string().min(1).describe('Complete LaTeX cover letter source.'), jobId: optionalText,
       }),
       execute: async ({ coverLetterId, title, content, jobId }) => {
         await assertOwnedJob(prisma, userId, jobId);
