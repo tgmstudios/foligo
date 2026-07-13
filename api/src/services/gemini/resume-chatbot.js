@@ -4,11 +4,12 @@
  */
 const { GeminiAPIError } = require('../core/errors');
 const { AI_RESUME_CHATBOT_TOOLS } = require('../ai/gemini-tools');
+const { createGithubTools } = require('../github/github-tools');
 const { buildResumeChatbotSystemPrompt } = require('../content/resume-chatbot-prompts');
 const { GENERATION_CONFIG } = require('./config');
 const { handleFunctionCall } = require('./session-flow');
 
-async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context = {}, { aiChat, logger }) {
+async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context = {}, { aiChat, logger, sessionKey }) {
   logger.info('Starting resume chatbot session', {
     hasResume: !!resumeText,
     hasJobPosting: !!jobPosting,
@@ -40,11 +41,17 @@ async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, u
       messages.push({ role: 'user', content: initialMsg });
     }
 
+    // Merge resume-specific tools with GitHub tools (same library as every other chat)
+    const tools = {
+      ...AI_RESUME_CHATBOT_TOOLS,
+      ...(userId && sessionKey ? createGithubTools({ userId, sessionKey }) : {}),
+    };
+
     logger.info('Calling AI for resume chatbot', { msgCount: messages.length });
 
     // Call through AIManager with tools + system prompt
     const { text: responseText, functionCalls } = await aiChat(messages, {
-      tools: AI_RESUME_CHATBOT_TOOLS,
+      tools,
       systemInstruction: systemPrompt,
       temperature: GENERATION_CONFIG.RESUME_CHATBOT.temperature,
       maxTokens: GENERATION_CONFIG.RESUME_CHATBOT.maxOutputTokens,

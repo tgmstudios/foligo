@@ -6,8 +6,8 @@
 const ai = require('../ai/manager');
 const { GeminiAPIError } = require('../core/errors');
 const {
-  AI_CONTENT_CREATE_TOOLS,
-  AI_CONTENT_EDIT_TOOLS
+  createContentCreateTools,
+  createContentEditTools
 } = require('../ai/gemini-tools');
 const { buildConversationalSystemPrompt } = require('../content/conversation-prompts');
 const { GENERATION_CONFIG } = require('./config');
@@ -28,7 +28,7 @@ function buildInitialMessage(contentType) {
  * Handle AI session - main conversation handler
  * Now uses Function Calling for structured, reliable responses
  */
-async function handleAISession(mode, contentType, initialInfo, chatHistory, context = {}, { aiChat, logger }) {
+async function handleAISession(mode, contentType, initialInfo, chatHistory, context = {}, { aiChat, logger, userId, sessionKey }) {
   logger.info('Starting AI session with Function Calling', {
     mode,
     contentType,
@@ -50,8 +50,10 @@ async function handleAISession(mode, contentType, initialInfo, chatHistory, cont
       preview: systemPrompt.substring(0, 500)
     });
 
-    // Pick tools based on mode (create vs edit)
-    const toolsForMode = mode === 'edit' ? AI_CONTENT_EDIT_TOOLS : AI_CONTENT_CREATE_TOOLS;
+    // Pick tools based on mode (create vs edit) — now built per-session with GitHub tools
+    const toolsForMode = mode === 'edit'
+      ? createContentEditTools({ userId, sessionKey })
+      : createContentCreateTools({ userId, sessionKey });
 
     // Build message list from history — send all in one call via AIManager
     const messages = chatHistory.slice(-10).map(msg => ({
@@ -172,9 +174,11 @@ async function handleAISession(mode, contentType, initialInfo, chatHistory, cont
  * events are yielded immediately; the final session state is returned as a
  * synthetic session-result event so the route can execute server-side tools.
  */
-async function* streamAISession(mode, contentType, initialInfo, chatHistory, context = {}, { logger }) {
+async function* streamAISession(mode, contentType, initialInfo, chatHistory, context = {}, { logger, userId, sessionKey }) {
   const systemInstruction = buildConversationalSystemPrompt(mode, contentType, initialInfo, context);
-  const tools = mode === 'edit' ? AI_CONTENT_EDIT_TOOLS : AI_CONTENT_CREATE_TOOLS;
+  const tools = mode === 'edit'
+    ? createContentEditTools({ userId, sessionKey })
+    : createContentCreateTools({ userId, sessionKey });
   const messages = chatHistory.slice(-10).map(message => ({
     role: message.role === 'user' ? 'user' : 'assistant',
     content: message.content

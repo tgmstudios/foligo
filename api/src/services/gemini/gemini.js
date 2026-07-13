@@ -91,8 +91,8 @@ class GeminiService {
    * Handle AI session - main conversation handler
    * Now uses Function Calling for structured, reliable responses
    */
-  async handleAISession(mode, contentType, initialInfo, chatHistory, context = {}) {
-    return sessionFlow.handleAISession(mode, contentType, initialInfo, chatHistory, context, this._deps);
+  async handleAISession(mode, contentType, initialInfo, chatHistory, context = {}, extra = {}) {
+    return sessionFlow.handleAISession(mode, contentType, initialInfo, chatHistory, context, { ...this._deps, ...extra });
   }
 
   /**
@@ -100,8 +100,8 @@ class GeminiService {
    * events are yielded immediately; the final session state is returned as a
    * synthetic session-result event so the route can execute server-side tools.
    */
-  streamAISession(mode, contentType, initialInfo, chatHistory, context = {}) {
-    return sessionFlow.streamAISession(mode, contentType, initialInfo, chatHistory, context, this._deps);
+  streamAISession(mode, contentType, initialInfo, chatHistory, context = {}, extra = {}) {
+    return sessionFlow.streamAISession(mode, contentType, initialInfo, chatHistory, context, { ...this._deps, ...extra });
   }
 
   /**
@@ -226,8 +226,8 @@ class GeminiService {
    * Handle resume chatbot session - specialized for resume and job application assistance
    * Uses larger context window and specialized prompts
    */
-  async handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context = {}) {
-    return resumeChatbot.handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context, this._deps);
+  async handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context = {}, extra = {}) {
+    return resumeChatbot.handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context, { ...this._deps, ...extra });
   }
 }
 

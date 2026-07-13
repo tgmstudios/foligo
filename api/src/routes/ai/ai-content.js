@@ -556,13 +556,14 @@ router.post('/session', [
     // Get context (user, project, existing content)
     const userId = req.user?.id;
     const context = await getAIContext(userId, projectId);
+    const sessionKey = `ai-session:${userId || 'anon'}:${projectId || 'noproject'}`;
     
     // If contentType is not provided, try to infer it from the conversation
     if (!contentType && chatHistory.length > 0) {
       contentType = await geminiService.inferContentType(chatHistory, initialInfo);
     }
 
-    const result = await geminiService.handleAISession(mode, contentType, initialInfo, chatHistory, context);
+    const result = await geminiService.handleAISession(mode, contentType, initialInfo, chatHistory, context, { userId, sessionKey });
 
     // Handle toolcall (post fetch)
     if (result.toolcall === 'fetch_post' && result.postId) {
@@ -595,7 +596,8 @@ router.post('/session', [
             contentType, 
             initialInfo, 
             updatedChatHistory, 
-            context
+            context,
+            { userId, sessionKey }
           );
 
           // Use the contentType from result if it was corrected
@@ -663,6 +665,8 @@ router.post('/session/stream', [
 
   let { mode, contentType, initialInfo = {}, chatHistory, projectId } = req.body;
   const context = await getAIContext(req.user?.id, projectId);
+  const userId = req.user?.id;
+  const sessionKey = `ai-session:${userId || 'anon'}:${projectId || 'noproject'}`;
   if (!contentType && chatHistory.length > 0) {
     contentType = await geminiService.inferContentType(chatHistory, initialInfo);
   }
@@ -676,7 +680,7 @@ router.post('/session/stream', [
 
   const streamTurn = async history => {
     let sessionResult = null;
-    for await (const part of geminiService.streamAISession(mode, contentType, initialInfo, history, context)) {
+    for await (const part of geminiService.streamAISession(mode, contentType, initialInfo, history, context, { userId, sessionKey })) {
       if (part.type === 'session-result') {
         sessionResult = part;
       } else if (['text-delta', 'reasoning-delta', 'tool-call', 'tool-result', 'tool-error'].includes(part.type)) {
@@ -1552,6 +1556,7 @@ router.post('/resume-chatbot/session',
 
       // Get comprehensive context for resume chatbot (all user content across all projects)
       const context = await getResumeChatbotContext(userId);
+      const resumeSessionKey = sessionId || `resume-chat:${userId}`;
 
       // Call resume chatbot handler
       const result = await geminiService.handleResumeChatbotSession(
@@ -1559,7 +1564,8 @@ router.post('/resume-chatbot/session',
         jobPosting,
         chatHistory,
         userId,
-        context
+        context,
+        { sessionKey: resumeSessionKey }
       );
 
       // Handle toolcall: create a saved resume document for the agentic LaTeX editor (no extra AI)
@@ -1648,7 +1654,8 @@ router.post('/resume-chatbot/session',
               jobPosting,
               updatedChatHistory,
               userId,
-              context
+              context,
+              { sessionKey: resumeSessionKey }
             );
 
             // Save updated chat history

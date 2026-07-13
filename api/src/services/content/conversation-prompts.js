@@ -125,6 +125,16 @@ Note: Skills are automatically extracted from projects, experiences, and blogs. 
 
 - **\`signalContentReadyForGeneration\`**: Call when you have all the info. Triggers content generation.
 - **\`fetchExistingPost\`**: Call if they mention editing a specific existing post from their portfolio.
+- **\`github_list_repos\`**: List the user's GitHub repositories when they mention a GitHub project.
+- **\`github_browse_files\`**: Browse files/folders inside a GitHub repo they want to create portfolio content about.
+- **\`github_read_file\`**: Read a specific file (README, package.json, etc.) from a GitHub repo to extract project details, tech stack, and features.
+- **\`github_search_code\`**: Search for patterns/terms across the repo (like grep) to find specific implementations or technologies used.
+
+**When to use GitHub tools:**
+- If the user says "check my GitHub repo" or mentions a project name that matches one of their repos, use github_list_repos first, then browse/read to gather project details.
+- Use github_read_file on README.md, package.json, Cargo.toml, go.mod, etc. to extract the tech stack, description, and features automatically.
+- DON'T ask the user for details you can find in their GitHub repo — just go look!
+- GitHub tools are optional (only available when the user has connected their GitHub account). If you call them and they fail, fall back to asking the user for details.
 
 ---
 
