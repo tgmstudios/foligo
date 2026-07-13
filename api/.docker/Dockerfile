@@ -1,27 +1,3 @@
-FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS build
-
-# The API dependency tree is JavaScript except for Prisma. Install and generate
-# on the runner's native architecture, while explicitly fetching the ARM64 CLI
-# and client engines needed by the production image.
-ENV PRISMA_CLI_BINARY_TARGETS=linux-arm64-openssl-3.0.x
-
-WORKDIR /usr/src/app
-
-RUN corepack enable
-
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY api/package.json ./api/package.json
-
-RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true \
-    pnpm install --frozen-lockfile --prod --filter foligo-api
-
-COPY api/ ./api/
-RUN chmod +x ./api/.docker/entrypoint.sh && \
-    sed -i 's/\r$//' ./api/.docker/entrypoint.sh
-
-WORKDIR /usr/src/app/api
-RUN pnpm run build
-
 FROM node:22-bookworm-slim
 
 # Prisma engine needs OpenSSL; fontconfig + libssl are runtime deps for tectonic (LaTeX compiler);
@@ -49,6 +25,22 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
 
 RUN corepack enable
 
+WORKDIR /usr/src/app
+
+# Install on the target architecture so transitive native modules (Prisma,
+# @napi-rs/canvas, and future additions) always match the ARM64 runtime. This
+# layer only changes when package metadata or the lockfile changes.
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY api/package.json ./api/package.json
+RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true \
+    pnpm install --frozen-lockfile --prod --filter foligo-api
+
+# Generate the ARM64 Prisma client before copying general API source so route
+# and service changes do not invalidate this emulated step.
+COPY api/prisma/ ./api/prisma/
+WORKDIR /usr/src/app/api
+RUN pnpm run build
+
 # Pre-warm tectonic's TeX package bundle cache at build time by compiling the
 # starter template once, so the first real request doesn't need outbound
 # network access (tectonic normally fetches+caches packages on first use).
@@ -62,12 +54,13 @@ RUN if ! tectonic --bundle "$TECTONIC_BUNDLE_URL" \
     fi && \
     rm -rf /tmp/tectonic-warmup
 
-COPY --from=build /usr/src/app /usr/src/app
-COPY --from=build /usr/src/app/api/.docker/entrypoint.sh /docker-entrypoint.sh
-
-WORKDIR /usr/src/app/api
+# Keep application source last: normal API changes now reuse dependencies,
+# Prisma generation, Tectonic installation, and the bundle warmup.
+COPY api/ /usr/src/app/api/
+RUN chmod +x ./.docker/entrypoint.sh && \
+    sed -i 's/\r$//' ./.docker/entrypoint.sh
 
 EXPOSE 3000
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/src/app/api/.docker/entrypoint.sh"]
 CMD ["pnpm", "run", "start"]
