@@ -6,6 +6,7 @@ const { prisma } = require('../services/database');
 const ai = require('../services/ai/manager');
 const latexCompiler = require('../services/latex-compiler');
 const { createResumeEditorTools } = require('../services/resume-editor-tools');
+const { fetchPortfolioItem, getPortfolioContext } = require('../services/portfolio-context');
 
 const router = express.Router();
 
@@ -18,41 +19,6 @@ async function getStarterContent() {
 
 async function ensurePdfDir() {
   await fs.mkdir(PDF_STORAGE_DIR, { recursive: true });
-}
-
-/** Fetch a portfolio content item, scoped to the requesting user, for the fetch_portfolio_item tool. */
-async function fetchPortfolioItem(userId, postId) {
-  const post = await prisma.content.findFirst({
-    where: {
-      id: postId,
-      project: {
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
-      },
-    },
-    select: { id: true, title: true, contentType: true, content: true, excerpt: true },
-  });
-  return post;
-}
-
-/** Titles/excerpts of all the user's portfolio content, for grounding the agent's context. */
-async function getPortfolioContext(userId) {
-  const projects = await prisma.project.findMany({
-    where: { OR: [{ ownerId: userId }, { members: { some: { userId } } }] },
-    select: { id: true },
-  });
-  const projectIds = projects.map((p) => p.id);
-  if (projectIds.length === 0) return [];
-
-  return prisma.content.findMany({
-    where: {
-      projectId: { in: projectIds },
-      status: { not: 'REVISION' },
-      revisionOf: null,
-      contentType: { not: 'SKILL' },
-    },
-    select: { id: true, title: true, excerpt: true, contentType: true },
-    orderBy: { createdAt: 'desc' },
-  });
 }
 
 function buildSystemPrompt({ content, jobDescription, portfolioContext }) {
@@ -94,7 +60,11 @@ router.get('/documents', async (req, res) => {
     const documents = await prisma.resumeDocument.findMany({
       where: { userId: req.user.id },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, name: true, jobDescription: true, linkedJobId: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true, name: true, jobDescription: true, linkedJobId: true,
+        linkedJob: { select: { id: true, company: true, position: true } },
+        isTemplate: true, isDefault: true, createdAt: true, updatedAt: true,
+      },
     });
     res.json(documents);
   } catch (error) {
@@ -145,7 +115,10 @@ router.post('/documents', [
       return res.status(400).json({ error: 'Validation Error', message: 'Invalid input data', details: errors.array() });
     }
 
-    const content = req.body.content || await getStarterContent();
+    const defaultDocument = req.body.content === undefined
+      ? await prisma.resumeDocument.findFirst({ where: { userId: req.user.id, isDefault: true } })
+      : null;
+    const content = req.body.content ?? defaultDocument?.content ?? await getStarterContent();
     const document = await prisma.resumeDocument.create({
       data: {
         userId: req.user.id,
@@ -175,6 +148,8 @@ router.patch('/documents/:id', [
   body('content').optional().isString(),
   body('jobDescription').optional({ nullable: true }).isString(),
   body('linkedJobId').optional({ nullable: true }).isString(),
+  body('isTemplate').optional().isBoolean(),
+  body('isDefault').optional().isBoolean(),
   body('kind').optional().isIn(['autosave', 'manual']),
 ], async (req, res) => {
   try {
@@ -200,6 +175,12 @@ router.patch('/documents/:id', [
     if (req.body.content !== undefined) data.content = req.body.content;
     if (req.body.jobDescription !== undefined) data.jobDescription = req.body.jobDescription;
     if (req.body.linkedJobId !== undefined) data.linkedJobId = req.body.linkedJobId;
+    if (req.body.isTemplate !== undefined) data.isTemplate = req.body.isTemplate;
+    if (req.body.isDefault !== undefined) {
+      data.isDefault = req.body.isDefault;
+      if (req.body.isDefault) data.isTemplate = true;
+    }
+    if (req.body.isTemplate === false) data.isDefault = false;
 
     // Manual saves (the default, for backward compatibility with callers that
     // don't pass `kind`) snapshot the pre-update content as a revision before
@@ -208,7 +189,15 @@ router.patch('/documents/:id', [
     const kind = req.body.kind || 'manual';
     let revisionId;
     let document;
-    if (kind === 'manual' && req.body.content !== undefined) {
+    if (req.body.isDefault === true) {
+      [, document] = await prisma.$transaction([
+        prisma.resumeDocument.updateMany({
+          where: { userId: req.user.id, isDefault: true, id: { not: existing.id } },
+          data: { isDefault: false },
+        }),
+        prisma.resumeDocument.update({ where: { id: req.params.id }, data }),
+      ]);
+    } else if (kind === 'manual' && req.body.content !== undefined) {
       [{ id: revisionId }, document] = await prisma.$transaction([
         prisma.resumeDocumentRevision.create({
           data: { documentId: existing.id, content: existing.content, jobDescription: existing.jobDescription },
