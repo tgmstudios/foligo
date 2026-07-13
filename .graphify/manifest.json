@@ -28,8 +28,8 @@
     "hash": "12f12849f706b8c3b7d7b9bd10c88501"
   },
   "api/src/routes/ai-content.js": {
-    "mtime": 1783891052072.6462,
-    "hash": "7c7265376a935cbebe9fe662635b753d"
+    "mtime": 1783896273564.4817,
+    "hash": "35152462e76245341d717cd2ea11b877"
   },
   "api/src/routes/ai-providers.js": {
     "mtime": 1783886508318.8628,
@@ -64,8 +64,8 @@
     "hash": "97b8de0617c75a23a8e9b358513f5ff1"
   },
   "api/src/routes/goapply.js": {
-    "mtime": 1783892557209.757,
-    "hash": "d56e13a4da84d452405089f0db260f89"
+    "mtime": 1783903729769.707,
+    "hash": "e5f3913cae63756cc7069aec6de5b246"
   },
   "api/src/routes/media.js": {
     "mtime": 1763329661524.3982,
@@ -84,8 +84,8 @@
     "hash": "36924b0a8e06d6e439762343c96c6cd3"
   },
   "api/src/routes/resume.js": {
-    "mtime": 1783878082805.23,
-    "hash": "1d2d70d720b012ce9fa42235781b1e5d"
+    "mtime": 1783903657664.0044,
+    "hash": "4441d7bf67b32c758cdae8532c2c88e6"
   },
   "api/src/routes/revisions.js": {
     "mtime": 1763246674083.8538,
@@ -160,8 +160,8 @@
     "hash": "84340758f1daf5822926fee1a7b6d497"
   },
   "api/src/services/gemini.js": {
-    "mtime": 1783891037143.3296,
-    "hash": "4844c7733754328198236d4909ab67be"
+    "mtime": 1783896236047.7693,
+    "hash": "076a43b1032aa57c94be04d7a354d598"
   },
   "api/src/services/latex-compiler.js": {
     "mtime": 1783893092033.38,
@@ -208,12 +208,12 @@
     "hash": "6975a4b69538bdd3885f845c9ef12ee3"
   },
   "dashboard/src/components/AIContentCreatorModal.vue": {
-    "mtime": 1783886575897.695,
-    "hash": "715b5bf6aed51b587f067f6b2311ce9f"
+    "mtime": 1783896344352.334,
+    "hash": "f1912efda8f1e0a196402b44a80a057d"
   },
   "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
-    "mtime": 1783881738150.89,
-    "hash": "7757ac35bc233f7f393ecf59a2df7ef0"
+    "mtime": 1783903364818.268,
+    "hash": "a9cb57fdfb34829e8f10d1c93a279e81"
   },
   "dashboard/src/components/agentic-editor/DocumentEditor.vue": {
     "mtime": 1783746309114.7114,
@@ -316,8 +316,8 @@
     "hash": "1d78b43fb03172f941e407490c9a0c4d"
   },
   "dashboard/src/components/studio/StudioChatSidebar.vue": {
-    "mtime": 1783881765339.7703,
-    "hash": "21d889a5bc7afc5adb0ba79e198a0371"
+    "mtime": 1783897275688.5605,
+    "hash": "d447db7d7663f16bc1aac77666a8a115"
   },
   "dashboard/src/components/studio/StudioHeader.vue": {
     "mtime": 1783876147991.0647,
@@ -328,12 +328,12 @@
     "hash": "a2b2be54d02c8700a2491256835f13d6"
   },
   "dashboard/src/components/studio/StudioShell.vue": {
-    "mtime": 1783876164883.8325,
-    "hash": "ed2f0e829545708e12c8143962323cfb"
+    "mtime": 1783904033625.2488,
+    "hash": "907d8cb2d00140d38a3364137b724e2f"
   },
   "dashboard/src/composables/useAgenticChat.ts": {
-    "mtime": 1783880030927.986,
-    "hash": "d71295a1ba7954d8cdf0c247323ba477"
+    "mtime": 1783897311213.2024,
+    "hash": "d1967ddf2ad36cce6fef7da34243e3f4"
   },
   "dashboard/src/composables/useAutosave.ts": {
     "mtime": 1783877903208.9373,
@@ -348,8 +348,8 @@
     "hash": "9bcd24bb17473ce65148b0f3ec5734bd"
   },
   "dashboard/src/composables/useResumeDocuments.ts": {
-    "mtime": 1783877524541.7366,
-    "hash": "d536377021d9fb36c5a370eab4ecf2eb"
+    "mtime": 1783903657664.0044,
+    "hash": "03b58ef49cc8f30ef2fc74644f0bf4b8"
   },
   "dashboard/src/layouts/DashboardLayout.vue": {
     "mtime": 1783891452792.3667,
@@ -368,8 +368,8 @@
     "hash": "cf4a77b7af992632895c98d52f2bafe3"
   },
   "dashboard/src/router/index.ts": {
-    "mtime": 1783886311735.0967,
-    "hash": "fdce7ee194ac30fec2d6852a11b00f36"
+    "mtime": 1783894242846.6162,
+    "hash": "85f7d308517cfaf3ca32140cda15bdb0"
   },
   "dashboard/src/services/api.ts": {
     "mtime": 1783744725627.544,
@@ -388,16 +388,16 @@
     "hash": "2b5d0bcab2631e914daced83814354b9"
   },
   "dashboard/src/stores/goapply.ts": {
-    "mtime": 1783882056202.8064,
-    "hash": "a2681630887515eb7cfef8185d786e0e"
+    "mtime": 1783903729769.707,
+    "hash": "1b5bfd4271a1d01115df5aac7915f3ee"
   },
   "dashboard/src/stores/projects.ts": {
     "mtime": 1764180422388.304,
     "hash": "7bb5e0daf5edfe27a6af25231ce56727"
   },
   "dashboard/src/studio/adapters/index.ts": {
-    "mtime": 1783876116853.4685,
-    "hash": "36bcccac8812cca1958918e6cfdc9b63"
+    "mtime": 1783894144283.3997,
+    "hash": "5e57fda0ec3f564fa5da8ee8edd41ab0"
   },
   "dashboard/src/studio/adapters/resume/index.ts": {
     "mtime": 1783878280235.4268,
@@ -464,8 +464,8 @@
     "hash": "7a2c29491ff7ef75ab6061663c7d9c5c"
   },
   "dashboard/src/views/content/ContentListView.vue": {
-    "mtime": 1783886500253.5667,
-    "hash": "059bd6e266adbbec1aa0b11b2ad52822"
+    "mtime": 1783893723586.4832,
+    "hash": "a83789b09af1247b985bcb613acede7e"
   },
   "dashboard/src/views/content/ContentManagementView.vue": {
     "mtime": 1783886500257.3484,
@@ -480,40 +480,40 @@
     "hash": "a40c362ab1c7dbe43fb8c36a7d07f9e7"
   },
   "dashboard/src/views/goapply/CoverLetters.vue": {
-    "mtime": 1783658179946.6484,
-    "hash": "583cdc302245685af6aaa2d2d484367f"
+    "mtime": 1783903657668.0112,
+    "hash": "6ad66af41f44febee673ad45d885a54e"
   },
   "dashboard/src/views/goapply/JobAssistant.vue": {
-    "mtime": 1783745179600.4795,
-    "hash": "5aa5e4a8ca3dc3931e6623513d4252a2"
+    "mtime": 1783897275692.5518,
+    "hash": "566704be960a564b5a6dd699122a8558"
   },
   "dashboard/src/views/goapply/JobForm.vue": {
-    "mtime": 1783700040582.5876,
-    "hash": "048468d900bec68029342dfb66012e44"
+    "mtime": 1783904181801.2068,
+    "hash": "fdbc6215664902d4e9cb07201a718d12"
   },
   "dashboard/src/views/goapply/JobList.vue": {
-    "mtime": 1783658179950.694,
-    "hash": "24a2e40593bbcc80c3d09bd71ee7871d"
+    "mtime": 1783904301152.1904,
+    "hash": "51af5bec171772fa9ed1977163353a82"
   },
   "dashboard/src/views/goapply/JobTracker.vue": {
-    "mtime": 1783876750830.7444,
-    "hash": "348b2b8a2775a2c3cc6e35b86fe840f9"
+    "mtime": 1783903800741.6907,
+    "hash": "d3058cad6eabf92d02cbc108b7ab666d"
   },
   "dashboard/src/views/goapply/KanbanBoard.vue": {
-    "mtime": 1783727807483.6938,
-    "hash": "f92ae15bc041234aeb0cb13ecdc0ed97"
+    "mtime": 1783904301156.172,
+    "hash": "5d0fded75d6b364fc4622d0df272e692"
   },
   "dashboard/src/views/goapply/ProfileSettings.vue": {
-    "mtime": 1783893033639.503,
-    "hash": "b39a137d6e11672e90210d086d0cb7ea"
+    "mtime": 1783893999706.5862,
+    "hash": "cb13b3afdb98e72255c1a9b1b57fa2ee"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
-    "mtime": 1783880604595.1096,
-    "hash": "2b4ead1d3134c38af83ce0912cf25cdf"
+    "mtime": 1783903657664.0044,
+    "hash": "a8adf9f27194ff47f5080e4c8e6c800f"
   },
   "dashboard/src/views/goapply/SavedAnswers.vue": {
-    "mtime": 1783658179950.694,
-    "hash": "3b25b3c7e216bd53538f37ea4e145e89"
+    "mtime": 1783903657668.0112,
+    "hash": "2feead73b9095800c0004d7db6badce4"
   },
   "dashboard/src/views/media/MediaLibraryView.vue": {
     "mtime": 1763329657921.0063,
@@ -548,8 +548,8 @@
     "hash": "458d27cd92c9b359dbb5f3dce53d4c2e"
   },
   "dashboard/src/views/studio/EditorStudioView.vue": {
-    "mtime": 1783881793208.0625,
-    "hash": "08f16ae023ef766fb6a4cc6358ff9b54"
+    "mtime": 1783904043213.658,
+    "hash": "6e79f90accfe0c6b9ce2bb22c2039888"
   },
   "dashboard/src/views/users/UsersView.vue": {
     "mtime": 1783886532256.7795,
@@ -572,16 +572,16 @@
     "hash": "9412b6dd071fee4c756b0be4bf893cfa"
   },
   "extension/core/api.js": {
-    "mtime": 1783746227321.2654,
-    "hash": "439ccaa84229fdf108c90b24bf6b6961"
+    "mtime": 1783896190757.736,
+    "hash": "5293effa7de02eda9d952488eb222d22"
   },
   "extension/core/banners.js": {
-    "mtime": 1783658179962.8308,
-    "hash": "c8d233ce1540aa6b1752964ed02806c2"
+    "mtime": 1783896198965.162,
+    "hash": "a2b504d5204d67cd4266e28a616356e1"
   },
   "extension/core/boards.js": {
-    "mtime": 1783659092618.6519,
-    "hash": "5d6861eb3e07433954d230f7d76737e8"
+    "mtime": 1783896624415.0134,
+    "hash": "b76c5ec07e27851d1af02f9a6da76a22"
   },
   "extension/core/consent.js": {
     "mtime": 1783658179962.8308,
@@ -592,36 +592,36 @@
     "hash": "da241b6e5600f1a3b491cbaa1295ec6f"
   },
   "extension/core/filler.js": {
-    "mtime": 1783893033639.503,
-    "hash": "f40ed0154ad5a506af4746411a4646cb"
+    "mtime": 1783896543535.9392,
+    "hash": "e10d1549d6fc7964bbb5c13e258c1c6e"
   },
   "extension/core/finder.js": {
-    "mtime": 1783893033639.503,
-    "hash": "20997b62e569f8f55e241e692355fd71"
+    "mtime": 1783896543531.9448,
+    "hash": "1f64f76e3fb322c75bcefb31a081d508"
   },
   "extension/core/main.js": {
-    "mtime": 1783746277759.564,
-    "hash": "4a30d035ee61cdc39b49028155a6ca77"
+    "mtime": 1783896624415.0134,
+    "hash": "fff748e60f49e51f712fd370007d7949"
   },
   "extension/core/tracker.js": {
-    "mtime": 1783658179962.8308,
-    "hash": "688814cc100149216dce5aad13c83b8b"
+    "mtime": 1783896629668.1807,
+    "hash": "e33181b0b3b2e8cf41573a4b696bdf74"
   },
   "extension/core/tutorial.js": {
     "mtime": 1783659092618.6519,
     "hash": "047243d330f1f1a8f47ea68dd0db56ba"
   },
   "extension/core/ui.js": {
-    "mtime": 1783658179962.8308,
-    "hash": "00cff4dc2d7bf83a6cde3191e23a152f"
+    "mtime": 1783896624411.0132,
+    "hash": "2907c5d61297cdc77a7368d3adbf218d"
   },
   "extension/options.js": {
     "mtime": 1783744313236.6292,
     "hash": "e3b4b9200b1f10cf08a2e692648f0281"
   },
   "extension/popup.js": {
-    "mtime": 1783744599592.5967,
-    "hash": "4479e68e6029805de637ef71f9a61ee5"
+    "mtime": 1783896190769.7166,
+    "hash": "b8ec642c475bbdf0a7039a892db1d99a"
   },
   "ios_app/foligo/Auth/AuthView.swift": {
     "mtime": 1761764389976.4014,
@@ -936,8 +936,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783892760032.7007,
-    "hash": "a36f489eb0e2dfd9ecb94de278a12d55"
+    "mtime": 1783904231947.9094,
+    "hash": "d62c918a5ff4ed5489bba218c6641725"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1136,8 +1136,8 @@
     "hash": "507ebb8d5261c846ea32fca2ae102a9f"
   },
   "dashboard/src/views/studio/ContentStudioView.vue": {
-    "mtime": 1783884560424.9204,
-    "hash": "2fa7d6c3c952aff46753d4288e2229d9"
+    "mtime": 1783904057971.2349,
+    "hash": "dc80993e6321565461b26eb1310975c0"
   },
   ".github/workflows/build-and-deploy.yml": {
     "mtime": 1783890647928.6008,
