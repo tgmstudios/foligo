@@ -1,9 +1,10 @@
 FROM node:22-bookworm-slim
 
-# Prisma engine needs OpenSSL; fontconfig + libssl are runtime deps for tectonic (LaTeX compiler)
+# Prisma engine needs OpenSSL; fontconfig + libssl are runtime deps for tectonic (LaTeX compiler);
+# git is needed to shallow-clone repos for the GitHub-crawling AI tools (api/src/services/github-service.js)
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      openssl ca-certificates curl fontconfig && \
+      openssl ca-certificates curl fontconfig git && \
     rm -rf /var/lib/apt/lists/*
 
 # Tectonic — self-contained LaTeX engine used to compile resume documents to PDF (api/src/services/latex-compiler.js)

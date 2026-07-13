@@ -111,11 +111,43 @@ const GoApplyAPI = (() => {
           method: options.method || 'GET',
           headers: options.headers || {},
           body: options.body,
+          binary: options.binary || false,
         },
       });
     }
     const response = await fetch(url, options);
+    if (options.binary) {
+      const buffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      return { ok: response.ok, status: response.status, base64: btoa(binary), contentType: response.headers.get('content-type') || '' };
+    }
     return { ok: response.ok, status: response.status, text: await response.text() };
+  }
+
+  /** Like request(), but for binary responses (PDF downloads) — returns a Blob. */
+  async function requestBinary(path, options = {}) {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated. Open Foligo dashboard to sign in.');
+
+    const { api: BASE_URL } = await getEndpoints();
+    const url = `${BASE_URL}${path}`;
+    const headers = { 'Authorization': `Bearer ${token}`, ...options.headers };
+
+    const result = await sendNetworkRequest(url, { ...options, headers, binary: true });
+    if (result.status === 401) {
+      await chrome.storage.local.remove(['foligoToken', 'profileFetchedAt']);
+      throw new Error('Session expired. Please sign in again.');
+    }
+    if (!result.ok) {
+      throw new Error(result.networkError || `API ${result.status}`);
+    }
+    if (!result.base64) return null;
+    const binary = atob(result.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: result.contentType || 'application/pdf' });
   }
 
   // ─── Profile ────────────────────────────────────────────────────
@@ -161,10 +193,17 @@ const GoApplyAPI = (() => {
   }
   async function reorderCards(columnId, cardIds) { return request('/api/goapply/kanban/reorder', { method: 'PUT', body: JSON.stringify({ columnId, cardIds }) }); }
 
+  // ─── Resumes (Foligo Resume Studio documents) ────────────────────
+  async function getResumes() { return request('/api/resume/documents'); }
+  async function getResumePdf(id) { return requestBinary(`/api/resume/documents/${id}/pdf`); }
+  async function compileResumePdf(id) { return requestBinary(`/api/resume/documents/${id}/compile`, { method: 'POST' }); }
+
   // ─── Cover Letters ──────────────────────────────────────────────
   async function getCoverLetters() { return request('/api/goapply/cover-letters'); }
   async function saveCoverLetter(data) { return request('/api/goapply/cover-letters', { method: 'POST', body: JSON.stringify(data) }); }
   async function setDefaultCoverLetter(id) { return request(`/api/goapply/cover-letters/${id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) }); }
+  async function getCoverLetterPdf(id) { return requestBinary(`/api/goapply/cover-letters/${id}/pdf`); }
+  async function compileCoverLetterPdf(id) { return requestBinary(`/api/goapply/cover-letters/${id}/compile`, { method: 'POST' }); }
 
   // ─── Saved Answers ──────────────────────────────────────────────
   async function getAnswers() { return request('/api/goapply/answers'); }
@@ -260,7 +299,8 @@ const GoApplyAPI = (() => {
     getProfile, getGoApplyProfile, syncProfile,
     getJobs, trackJob, updateJob, deleteJob,
     getKanban, reorderCards,
-    getCoverLetters, saveCoverLetter, setDefaultCoverLetter,
+    getResumes, getResumePdf, compileResumePdf,
+    getCoverLetters, saveCoverLetter, setDefaultCoverLetter, getCoverLetterPdf, compileCoverLetterPdf,
     getAnswers, saveAnswer,
     generateCoverLetter, tailorResume, generateEmail, generateCustomAnswer,
     // Device code

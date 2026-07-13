@@ -10,6 +10,8 @@ const ai = require('../services/ai/manager');
 const latexCompiler = require('../services/latex-compiler');
 const { createJobAssistantTools } = require('../services/job-assistant-tools');
 const { createCoverLetterEditorTools } = require('../services/cover-letter-editor-tools');
+const { createGithubTools } = require('../services/github-tools');
+const githubService = require('../services/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../services/portfolio-context');
 const { prepareAttachments, buildModelMessage } = require('../services/ai-attachment-text');
 
@@ -209,6 +211,7 @@ router.delete('/assistant/sessions/:id', async (req, res) => {
   const session = await getAssistantSession(req.user.id, req.params.id);
   if (!session || !session.jobId) return res.status(404).json({ error: 'Not Found', message: 'Assistant session not found.' });
   await prisma.resumeChatSession.delete({ where: { id: session.id } });
+  githubService.cleanupSession(req.user.id, `job-assistant:${session.id}`).catch(() => {});
   res.json({ success: true });
 });
 
@@ -236,7 +239,10 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
 
   const prior = Array.isArray(session.chatHistory) ? session.chatHistory : [];
   const messages = [...prior.map((m) => ({ role: m.role, content: m.modelContent || m.content })), { role: 'user', content: modelMessage }];
-  const tools = createJobAssistantTools(prisma, req.user.id);
+  const tools = {
+    ...createJobAssistantTools(prisma, req.user.id),
+    ...createGithubTools({ userId: req.user.id, sessionKey: `job-assistant:${session.id}` }),
+  };
   let assistantText = '';
   try {
     for await (const part of ai.streamChat(messages, { systemInstruction: buildJobAssistantPrompt(context), tools, maxSteps: 8, provider: req.body.provider })) {
@@ -1278,7 +1284,10 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
   ];
 
   const doc = { content: letter.content };
-  const tools = createCoverLetterEditorTools(doc, (postId) => fetchPortfolioItem(userId, postId));
+  const tools = {
+    ...createCoverLetterEditorTools(doc, (postId) => fetchPortfolioItem(userId, postId)),
+    ...createGithubTools({ userId, sessionKey: `cover-letter:${letter.id}` }),
+  };
 
   let assistantText = '';
 
@@ -1383,6 +1392,7 @@ router.delete('/cover-letters/:id', async (req, res) => {
     await prisma.coverLetter.delete({
       where: { id }
     });
+    githubService.cleanupSession(userId, `cover-letter:${id}`).catch(() => {});
 
     res.json({ success: true, message: 'Cover letter deleted' });
   } catch (error) {

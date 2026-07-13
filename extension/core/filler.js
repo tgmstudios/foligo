@@ -176,14 +176,68 @@ const Filler = (() => {
     }
   }
 
-  // ─── Resume upload ────────────────────────────────────────────────
+  // ─── Resume / cover letter upload ─────────────────────────────────
+  //
+  // Attaching a File to an <input type="file"> via DataTransfer does not
+  // require a user gesture — only invoking the native picker dialog does —
+  // so the default Foligo document can be attached without the user ever
+  // touching the field. We still fall back to a manual highlight when no
+  // default document exists, it fails to compile, or the site rejects the
+  // programmatic assignment.
 
-  function fillUploadResume(element, _value) {
-    // For file inputs: focus and scroll into view, but actual file selection
-    // requires user gesture. We highlight it for the user.
+  // Attachment names are always derived from the applicant's name, not the
+  // Foligo document's own title — a stable, predictable filename regardless
+  // of what the user called the document in Resume Studio.
+  function sanitizeNamePart(s) {
+    return String(s || '').trim().replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_');
+  }
+
+  function buildDocumentFileName(kind, profile = {}) {
+    const first = sanitizeNamePart(resolveValueSync('first_name', profile));
+    const last = sanitizeNamePart(resolveValueSync('last_name', profile));
+    const label = kind === 'resume' ? 'Resume' : 'Cover_Letter';
+    const parts = [first, last, label].filter(Boolean);
+    return `${parts.join('_')}.pdf`;
+  }
+
+  const DOCUMENT_SOURCES = {
+    resume: { list: 'getResumes', pdf: 'getResumePdf', compile: 'compileResumePdf' },
+    coverLetter: { list: 'getCoverLetters', pdf: 'getCoverLetterPdf', compile: 'compileCoverLetterPdf' },
+  };
+
+  let cachedDocFiles = { resume: null, coverLetter: null };
+  let cachedDocFilesAt = { resume: 0, coverLetter: 0 };
+  const DOC_FILE_TTL_MS = 10 * 60 * 1000;
+
+  async function fetchDefaultDocumentFile(kind, profile) {
+    if (typeof GoApplyAPI === 'undefined') return null;
+    const source = DOCUMENT_SOURCES[kind];
+    let docs;
+    try { docs = await GoApplyAPI[source.list](); } catch (e) { return null; }
+    if (!Array.isArray(docs) || docs.length === 0) return null;
+    const doc = docs.find(d => d.isDefault) || docs[0];
+
+    let blob = null;
+    try { blob = await GoApplyAPI[source.pdf](doc.id); } catch (e) { /* not compiled yet */ }
+    if (!blob) {
+      try { blob = await GoApplyAPI[source.compile](doc.id); } catch (e) { console.warn(`[GoApply:Filler] ${kind} compile failed:`, e.message); }
+    }
+    if (!blob) return null;
+    return new File([blob], buildDocumentFileName(kind, profile), { type: 'application/pdf' });
+  }
+
+  async function loadDocumentFile(kind, profile = {}, forceRefresh = false) {
+    if (!forceRefresh && cachedDocFiles[kind] && (Date.now() - cachedDocFilesAt[kind]) < DOC_FILE_TTL_MS) {
+      return cachedDocFiles[kind];
+    }
+    const file = await fetchDefaultDocumentFile(kind, profile);
+    if (file) { cachedDocFiles[kind] = file; cachedDocFilesAt[kind] = Date.now(); }
+    return file;
+  }
+
+  function highlightForManualUpload(element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     element.focus();
-    // Create a pulsing outline to draw attention
     const origOutline = element.style.outline;
     element.style.outline = '3px solid #635BFF';
     element.style.outlineOffset = '4px';
@@ -198,7 +252,27 @@ const Filler = (() => {
       element.style.outline = origOutline;
       element.style.animation = '';
     }, 5000);
-    return { success: true, note: 'highlighted for manual upload' };
+  }
+
+  async function fillUploadDocument(element, kind, profile) {
+    let file = null;
+    try { file = await loadDocumentFile(kind, profile); } catch (e) { file = null; }
+
+    if (file) {
+      try {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        element.files = dataTransfer.files;
+        element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+        return { success: true, note: `attached ${file.name}`, expectedValue: file.name, manual: false };
+      } catch (e) {
+        console.warn('[GoApply:Filler] Programmatic file attach failed, falling back to manual:', e.message);
+      }
+    }
+
+    highlightForManualUpload(element);
+    return { success: true, note: 'highlighted for manual upload', manual: true };
   }
 
   // ─── Cover letter (contentEditable / textarea) ────────────────────
@@ -495,7 +569,11 @@ const Filler = (() => {
     return cachedProfile;
   }
 
-  function invalidateCache() { cachedProfile = null; cachedProfileAt = 0; }
+  function invalidateCache() {
+    cachedProfile = null; cachedProfileAt = 0;
+    cachedDocFiles = { resume: null, coverLetter: null };
+    cachedDocFilesAt = { resume: 0, coverLetter: 0 };
+  }
 
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -525,18 +603,18 @@ const Filler = (() => {
 
   // ─── Main fill function ──────────────────────────────────────────
 
-  function fillField(fieldInfo, profile = {}) {
+  async function fillField(fieldInfo, profile = {}) {
     const { element, method, fieldName, values } = fieldInfo;
-    
-    const value = Object.keys(profile).length > 0 
-      ? resolveValueSync(fieldName, profile) 
+
+    const value = Object.keys(profile).length > 0
+      ? resolveValueSync(fieldName, profile)
       : resolveValueSync(fieldName, cachedProfile || {});
-    
+
     if (!element) return { success: false, reason: 'no element' };
-    if (!value && method !== 'uploadResume' && method !== 'click') {
+    if (!value && method !== 'uploadResume' && method !== 'uploadCoverLetter' && method !== 'click') {
       return { success: false, reason: 'no value configured' };
     }
-    
+
     try {
       switch (method) {
         case 'react': fillReact(element, value); break;
@@ -547,14 +625,13 @@ const Filler = (() => {
           return { success: true, expectedValue: value, expectedChoices };
         }
         case 'click': fillClick(element, value); break;
-        case 'defaultWithoutBlur': 
+        case 'defaultWithoutBlur':
           element.focus(); setNativeValue(element, value);
           element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
           element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
           break;
-        case 'uploadResume':
-        case 'uploadCoverLetter':
-          return { ...fillUploadResume(element, value), manual: true };
+        case 'uploadResume': return await fillUploadDocument(element, 'resume', profile);
+        case 'uploadCoverLetter': return await fillUploadDocument(element, 'coverLetter', profile);
         case 'writeCoverLetter':
           return fillWriteCoverLetter(element, value);
         default: fillDefault(element, value);
@@ -565,10 +642,10 @@ const Filler = (() => {
     }
   }
 
-  function fillAll(foundFields, profile = {}) {
+  async function fillAll(foundFields, profile = {}) {
     const results = [];
     for (const field of foundFields) {
-      const result = fillField(field, profile);
+      const result = await fillField(field, profile);
       results.push({ ...field, ...result });
     }
     return results;
@@ -577,6 +654,6 @@ const Filler = (() => {
   return {
     fillField, fillAll, fillDefault, fillReact, fillDijit,
     resolveValue, resolveValueSync, loadProfile, invalidateCache,
-    fillUploadResume, fillWriteCoverLetter, DEFAULT_VALUES
+    fillWriteCoverLetter, loadDocumentFile, DEFAULT_VALUES
   };
 })();

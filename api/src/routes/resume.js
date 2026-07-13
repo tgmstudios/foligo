@@ -6,6 +6,8 @@ const { prisma } = require('../services/database');
 const ai = require('../services/ai/manager');
 const latexCompiler = require('../services/latex-compiler');
 const { createResumeEditorTools } = require('../services/resume-editor-tools');
+const { createGithubTools } = require('../services/github-tools');
+const githubService = require('../services/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../services/portfolio-context');
 
 const router = express.Router();
@@ -266,6 +268,7 @@ router.delete('/documents/:id', async (req, res) => {
       await fs.unlink(existing.pdfPath).catch(() => {});
     }
     await prisma.resumeDocument.delete({ where: { id: req.params.id } });
+    githubService.cleanupSession(req.user.id, `resume-doc:${req.params.id}`).catch(() => {});
     res.status(204).send();
   } catch (error) {
     console.error('Delete resume document error:', error);
@@ -373,7 +376,10 @@ router.post('/documents/:id/chat', [
   ];
 
   const doc = { content: document.content };
-  const tools = createResumeEditorTools(doc, (postId) => fetchPortfolioItem(userId, postId));
+  const tools = {
+    ...createResumeEditorTools(doc, (postId) => fetchPortfolioItem(userId, postId)),
+    ...createGithubTools({ userId, sessionKey: `resume-doc:${document.id}` }),
+  };
 
   let assistantText = '';
 

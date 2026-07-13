@@ -20,6 +20,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         headers: message.options?.headers || {},
         body: message.options?.body,
       });
+
+      if (message.options?.binary) {
+        // PDFs (resume/cover-letter attachments) can't cross the sendMessage
+        // boundary as text without corrupting bytes — base64-encode instead.
+        const buffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        sendResponse({
+          ok: response.ok, status: response.status,
+          base64: btoa(binary), contentType: response.headers.get('content-type') || '',
+        });
+        return;
+      }
+
       const text = await response.text();
       sendResponse({ ok: response.ok, status: response.status, text });
     } catch (error) {

@@ -34,6 +34,7 @@ model User {
   coverLetters       CoverLetter[]
   generatedEmails    GeneratedEmail[]
   apiTokens          ApiToken[]
+  integrations       UserIntegration[]
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -723,4 +724,29 @@ model ApiToken {
   @@index([userId])
   @@index([hash])
   @@map("api_tokens")
+}
+
+// User Integration - Linked external accounts (e.g. GitHub) used to ground
+// in-app AI agent tools. `provider` is a plain string rather than an enum so
+// adding a new provider doesn't require a migration. `accessToken` is always
+// stored encrypted via api/src/utils/encryption.js, never in plaintext.
+model UserIntegration {
+  id              String    @id @default(uuid())
+  userId          String
+  provider        String // "github" for v1
+  accessToken     String // encrypted (AES-256-CBC via api/src/utils/encryption.js)
+  tokenType       String? // e.g. "bearer"
+  scopes          String[]  @default([])
+  externalId      String? // stable external account id (e.g. GitHub numeric user id)
+  externalLogin   String? // display login/username (e.g. GitHub username)
+  status          String    @default("active") // active | revoked
+  lastValidatedAt DateTime? // last time a call using this token succeeded
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("user_integrations")
 }

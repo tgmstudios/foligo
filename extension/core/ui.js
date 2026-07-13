@@ -134,7 +134,7 @@ const UI = (() => {
 
   // ─── Full panel with all features ────────────────────────────────
 
-  function renderPanel(platform, foundFields, jobInfo, appCount, onAutofill, onClose) {
+  function renderPanel(platform, foundFields, jobInfo, appCount, onAutofill, onClose, onSubmitFound, onPreview) {
     const root = mount();
     if (!root) return;
 
@@ -201,13 +201,25 @@ const UI = (() => {
       const row = document.createElement('div');
       row.className = 'sr-field-row';
       const name = field.fieldName.replace(/_/g, ' ');
-      const method = field.method || 'default';
-      const badge = field.method === 'uploadResume' ? '📎 manual' :
+      const docKind = field.method === 'uploadResume' ? 'resume' : field.method === 'uploadCoverLetter' ? 'coverLetter' : null;
+      const badge = docKind === 'resume' ? '📎 resume' :
+                    docKind === 'coverLetter' ? '📎 cover letter' :
                     field.method === 'writeCoverLetter' ? '✏️ text' : 'detected';
-      const badgeClass = field.method === 'uploadResume' ? 'sr-badge-warning' : 'sr-badge-muted';
-      row.innerHTML = `<span>${name}</span><span class="sr-badge ${badgeClass}">${badge}</span>`;
+      const badgeClass = docKind ? 'sr-badge-warning' : 'sr-badge-muted';
+      const previewBtn = docKind
+        ? `<button class="sr-preview-btn" data-kind="${docKind}" title="Preview" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;">👁</button>`
+        : '';
+      row.innerHTML = `<span>${name}</span><span>${previewBtn}<span class="sr-badge ${badgeClass}">${badge}</span></span>`;
       listEl.appendChild(row);
     }
+
+    // Preview a resume/cover letter without leaving the page
+    listEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sr-preview-btn');
+      if (!btn) return;
+      e.stopPropagation();
+      if (onPreview) onPreview(btn.dataset.kind);
+    });
 
     // Toggle field list
     root.querySelector('#sr-fields-toggle').addEventListener('click', () => {
@@ -254,6 +266,7 @@ const UI = (() => {
       const submitBtn = Tracker.findSubmitButton(platform.config);
       if (submitBtn) {
         Tracker.highlightSubmitButton(submitBtn);
+        if (onSubmitFound) onSubmitFound(submitBtn);
         showToast('🎯 Submit button highlighted');
       } else {
         showToast('⚠ No submit button found');

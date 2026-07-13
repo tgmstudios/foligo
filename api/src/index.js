@@ -34,6 +34,7 @@ const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
 const goapplyRoutes = require('./routes/goapply');
 const tokenRoutes = require('./routes/tokens');
+const githubAuthRoutes = require('./routes/github-auth');
 const { publicRouter: publicAnalyticsRoutes, router: analyticsRoutes } = require('./routes/analytics');
 
 // Import middleware
@@ -156,6 +157,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/sso', ssoAuthRoutes); // SSO authentication routes (public)
 app.use('/api/auth/tokens', tokenRoutes); // API token management (authenticated)
+app.use('/api/integrations/github', githubAuthRoutes); // GitHub account linking (mixed public callback + authenticated routes, see file)
 app.use('/api/site', publicCors, siteRoutes); // Public site routes (no auth required)
 app.use('/api/ai/voice-webhook', publicCors, voiceWebhookRoutes); // Public voice webhook (called by ElevenLabs)
 app.use('/api', publicCors, publicContentRoutes); // Public content GET endpoint (no auth required)

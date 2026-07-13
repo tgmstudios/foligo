@@ -10,7 +10,44 @@
 
   let platform = null, foundFields = [], observer = null;
   let boardsInterval = null, successWatcher = null, isActivated = false;
-  let bannerInjected = false;
+  let bannerInjected = false, currentJobInfo = null;
+
+  // ─── Submit tracking ──────────────────────────────────────────────
+
+  // Success is only inferred after the user actually clicks the real submit
+  // button — starting the DOM watcher on activation let autofill's own field
+  // mutations (and a site's per-field validation styling) false-positive as
+  // "submitted" before the form was ever sent.
+  function armSubmitWatcher(button) {
+    if (!button || button.dataset.srArmed) return;
+    button.dataset.srArmed = '1';
+    button.addEventListener('click', () => {
+      if (successWatcher) return;
+      const info = currentJobInfo || {};
+      successWatcher = Tracker.watchForSuccess(platform?.config, async () => {
+        log('Submitted!');
+        try {
+          await Tracker.trackApplication({ ...info, platform: platform?.platform }, 'applied');
+        } catch(e) { warn('Submission tracking failed:', e.message); }
+        UI.showSuccessModal(info);
+      });
+    }, { once: true });
+  }
+
+  // ─── Document preview ──────────────────────────────────────────────
+
+  // Opens a bundled extension page that fetches and renders the PDF itself.
+  // A window.open() called after the async doc fetch/compile would land on
+  // about:blank: by the time the network round-trip finishes, the click's
+  // transient user-activation has expired, and Chrome silently refuses to
+  // navigate a popup to a data:/blob: URL without it. Navigating straight to
+  // our own extension page, synchronously inside the click handler, has no
+  // such restriction — the page then does its own fetching after it loads.
+  function previewDocument(kind) {
+    const url = chrome.runtime.getURL(`preview.html?kind=${encodeURIComponent(kind)}`);
+    const tab = window.open(url, '_blank');
+    if (!tab) UI.showToast('Preview blocked — allow popups for this site');
+  }
 
   // ─── Startup ──────────────────────────────────────────────────────
 
@@ -49,22 +86,17 @@
     catch(e) { foundFields = []; }
 
     const jobInfo = Tracker.extractJobInfo();
+    currentJobInfo = jobInfo;
     let appCount = 0;
     try { const kanban = await GoApplyAPI.getKanban().catch(() => []); appCount = kanban.reduce((s,c) => s + (c.cards?.length||0), 0); } catch(e) {}
 
     if (foundFields.length > 0 || jobInfo.company) {
-      UI.renderPanel(platform, foundFields, jobInfo, appCount, fullAutofill, () => { platform = null; foundFields = []; isActivated = false; });
+      UI.renderPanel(platform, foundFields, jobInfo, appCount, fullAutofill, () => { platform = null; foundFields = []; isActivated = false; }, armSubmitWatcher, previewDocument);
     }
 
     if (!bannerInjected) { try { await Banners.injectBanner(platform); bannerInjected = true; } catch(e) {} }
 
-    successWatcher = Tracker.watchForSuccess(platform.config, async () => {
-      log('Submitted!');
-      try {
-        await Tracker.trackApplication({ ...jobInfo, platform: platform.platform }, 'applied');
-      } catch(e) { warn('Submission tracking failed:', e.message); }
-      UI.showSuccessModal(jobInfo);
-    });
+    try { armSubmitWatcher(Tracker.findSubmitButton(platform.config)); } catch(e) {}
     return true;
   }
 
@@ -92,7 +124,7 @@
     for (let i = 0; i < foundFields.length; i++) {
       const f = foundFields[i];
       try {
-        const r = Filler.fillField(f, profile);
+        const r = await Filler.fillField(f, profile);
         if (r.manual) {
           manual++;
           console.debug('[GoApply:Autofill]', f.fieldName, 'manual action required');
@@ -147,7 +179,7 @@
     
     setTimeout(() => {
       const btn = Tracker.findSubmitButton(platform?.config);
-      if (btn) { Tracker.highlightSubmitButton(btn); UI.showToast('🎯 Review & submit'); }
+      if (btn) { Tracker.highlightSubmitButton(btn); armSubmitWatcher(btn); UI.showToast('🎯 Review & submit'); }
     }, 800);
     return { success: filled > 0, filled, total: foundFields.length, skipped, manual };
   }

@@ -8,8 +8,8 @@
     "hash": "cf402d163e0971f0732181b8d8de4aa2"
   },
   "api/src/index.js": {
-    "mtime": 1783891025913.6123,
-    "hash": "73035ef8bcf3e06c12c6cf08cccdf98a"
+    "mtime": 1783910385554.7405,
+    "hash": "b7605d793e6f7412a2ced53093c83b2c"
   },
   "api/src/middleware/auth.js": {
     "mtime": 1783700040582.5876,
@@ -56,16 +56,16 @@
     "hash": "343ced60f4a4625bcc1153824321ba67"
   },
   "api/src/routes/content.js": {
-    "mtime": 1783879989324.4045,
-    "hash": "b8c35de0ad2f3dff18d071dba0b79d9a"
+    "mtime": 1783910579444.7507,
+    "hash": "61fbded6ba37a371b009d5186720bb13"
   },
   "api/src/routes/experience-roles.js": {
     "mtime": 1763246674083.8538,
     "hash": "97b8de0617c75a23a8e9b358513f5ff1"
   },
   "api/src/routes/goapply.js": {
-    "mtime": 1783903729769.707,
-    "hash": "e5f3913cae63756cc7069aec6de5b246"
+    "mtime": 1783910525939.3105,
+    "hash": "2c47a3563273368fe32ffb7becd622f5"
   },
   "api/src/routes/media.js": {
     "mtime": 1763329661524.3982,
@@ -84,8 +84,8 @@
     "hash": "36924b0a8e06d6e439762343c96c6cd3"
   },
   "api/src/routes/resume.js": {
-    "mtime": 1783903657664.0044,
-    "hash": "4441d7bf67b32c758cdae8532c2c88e6"
+    "mtime": 1783910550997.5999,
+    "hash": "a9304efd14052e3970246c7f6a9992b7"
   },
   "api/src/routes/revisions.js": {
     "mtime": 1763246674083.8538,
@@ -320,16 +320,16 @@
     "hash": "d447db7d7663f16bc1aac77666a8a115"
   },
   "dashboard/src/components/studio/StudioHeader.vue": {
-    "mtime": 1783876147991.0647,
-    "hash": "4a22899b1adb6344f97b809241db1b98"
+    "mtime": 1783904546097.2175,
+    "hash": "4f54e6d3871a4425a66d2dfc34fecace"
   },
   "dashboard/src/components/studio/StudioLeftToolbar.vue": {
     "mtime": 1783884560417.3506,
     "hash": "a2b2be54d02c8700a2491256835f13d6"
   },
   "dashboard/src/components/studio/StudioShell.vue": {
-    "mtime": 1783904033625.2488,
-    "hash": "907d8cb2d00140d38a3364137b724e2f"
+    "mtime": 1783904797263.808,
+    "hash": "6c4af729d73e3e0967a331a963b33dc0"
   },
   "dashboard/src/composables/useAgenticChat.ts": {
     "mtime": 1783897311213.2024,
@@ -492,8 +492,8 @@
     "hash": "fdbc6215664902d4e9cb07201a718d12"
   },
   "dashboard/src/views/goapply/JobList.vue": {
-    "mtime": 1783904301152.1904,
-    "hash": "51af5bec171772fa9ed1977163353a82"
+    "mtime": 1783904653824.1611,
+    "hash": "1fdb5f36f856aabe5b6a8698f25246f0"
   },
   "dashboard/src/views/goapply/JobTracker.vue": {
     "mtime": 1783903800741.6907,
@@ -544,12 +544,12 @@
     "hash": "c5398cc61ddceef92b5658e4a132dd31"
   },
   "dashboard/src/views/settings/UserSettingsView.vue": {
-    "mtime": 1783700040582.5876,
-    "hash": "458d27cd92c9b359dbb5f3dce53d4c2e"
+    "mtime": 1783910660991.3792,
+    "hash": "463b69e9a3500828686b0bb35e53981f"
   },
   "dashboard/src/views/studio/EditorStudioView.vue": {
-    "mtime": 1783904043213.658,
-    "hash": "6e79f90accfe0c6b9ce2bb22c2039888"
+    "mtime": 1783904568427.996,
+    "hash": "1469be91217104c9b93cb6be3bb3046f"
   },
   "dashboard/src/views/users/UsersView.vue": {
     "mtime": 1783886532256.7795,
@@ -572,8 +572,8 @@
     "hash": "9412b6dd071fee4c756b0be4bf893cfa"
   },
   "extension/core/api.js": {
-    "mtime": 1783896190757.736,
-    "hash": "5293effa7de02eda9d952488eb222d22"
+    "mtime": 1783910867047.6814,
+    "hash": "31a9ff60141d111e3b11e88ffe8f4b4a"
   },
   "extension/core/banners.js": {
     "mtime": 1783896198965.162,
@@ -592,16 +592,16 @@
     "hash": "da241b6e5600f1a3b491cbaa1295ec6f"
   },
   "extension/core/filler.js": {
-    "mtime": 1783896543535.9392,
-    "hash": "e10d1549d6fc7964bbb5c13e258c1c6e"
+    "mtime": 1783912831687.3997,
+    "hash": "5ebafe3a02b0b14adff875dfa1173c16"
   },
   "extension/core/finder.js": {
     "mtime": 1783896543531.9448,
     "hash": "1f64f76e3fb322c75bcefb31a081d508"
   },
   "extension/core/main.js": {
-    "mtime": 1783896624415.0134,
-    "hash": "fff748e60f49e51f712fd370007d7949"
+    "mtime": 1783915353763.9985,
+    "hash": "27e746b40f8810141bc49c3670b92b6a"
   },
   "extension/core/tracker.js": {
     "mtime": 1783896629668.1807,
@@ -612,8 +612,8 @@
     "hash": "047243d330f1f1a8f47ea68dd0db56ba"
   },
   "extension/core/ui.js": {
-    "mtime": 1783896624411.0132,
-    "hash": "2907c5d61297cdc77a7368d3adbf218d"
+    "mtime": 1783912873668.389,
+    "hash": "1828d5c00e330abed94c0fad443fb19a"
   },
   "extension/options.js": {
     "mtime": 1783744313236.6292,
@@ -936,8 +936,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783904231947.9094,
-    "hash": "d62c918a5ff4ed5489bba218c6641725"
+    "mtime": 1783915378208.458,
+    "hash": "3871174990addf88d56d2995e7d20b71"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1024,8 +1024,8 @@
     "hash": "aaf9632234d1c606aa58ef9b279483c9"
   },
   "pnpm-lock.yaml": {
-    "mtime": 1783890863530.6797,
-    "hash": "96c3cd203f29ea58c619794d6e25bcd1"
+    "mtime": 1783910321392.91,
+    "hash": "86fd323b75fca649899649edc6d9c387"
   },
   "pnpm-workspace.yaml": {
     "mtime": 1776035307111.8552,
@@ -1108,8 +1108,8 @@
     "hash": "6326011d92af6731adbe0c9f3e5f44e4"
   },
   "dashboard/src/components/studio/MarkdownPreview.vue": {
-    "mtime": 1783885234666.25,
-    "hash": "22964cbeccba28b1735aa3db059b0394"
+    "mtime": 1783904716154.221,
+    "hash": "7c196a4e80bbaa92a0afd4a203f2c394"
   },
   "dashboard/src/lib/markdownMermaid.ts": {
     "mtime": 1783880203070.9573,
@@ -1136,8 +1136,8 @@
     "hash": "507ebb8d5261c846ea32fca2ae102a9f"
   },
   "dashboard/src/views/studio/ContentStudioView.vue": {
-    "mtime": 1783904057971.2349,
-    "hash": "dc80993e6321565461b26eb1310975c0"
+    "mtime": 1783904588805.5828,
+    "hash": "04a79827a8c2584ac767d26830f62df0"
   },
   ".github/workflows/build-and-deploy.yml": {
     "mtime": 1783890647928.6008,
@@ -1170,5 +1170,69 @@
   "api/docs/ANALYTICS_INTEGRATION.md": {
     "mtime": 1783891141917.051,
     "hash": "4ddee04d91b23bffd5ee78d6369043d3"
+  },
+  "api/prisma/migrations/20260712223000_job_assistant_attachments/migration.sql": {
+    "mtime": 1783894567852.0627,
+    "hash": "3b936feaaf3c425f7ce1f215a25d3f4a"
+  },
+  "api/src/services/ai-attachment-text.js": {
+    "mtime": 1783897275684.5693,
+    "hash": "231c0b4a54472aa6eb505e55dc4dbf10"
+  },
+  "api/src/services/cover-letter-editor-tools.js": {
+    "mtime": 1783905194936.574,
+    "hash": "fbbbc2bf1594a409d785adb4426dbd4e"
+  },
+  "api/src/services/job-assistant-tools.js": {
+    "mtime": 1783905323858.5952,
+    "hash": "7a565050c2dc837aa32b30986c744317"
+  },
+  "api/src/services/portfolio-context.js": {
+    "mtime": 1783905158333.465,
+    "hash": "ee57d9f75d83c6d7fd715b382114c8c3"
+  },
+  "dashboard/src/components/goapply/AddressAutocomplete.vue": {
+    "mtime": 1783903874120.3394,
+    "hash": "d2504a9331f00ec4b889352e38657c7f"
+  },
+  "dashboard/src/components/goapply/LinkedJobBadge.vue": {
+    "mtime": 1783903657659.9978,
+    "hash": "a2f5589d728f93baddbda54e7e3a2f14"
+  },
+  "dashboard/src/components/goapply/PhoneNumberInput.vue": {
+    "mtime": 1783893560660.5576,
+    "hash": "f10143bcff6db41470e9c092552209f8"
+  },
+  "dashboard/src/composables/useCoverLetterDocuments.ts": {
+    "mtime": 1783905367188.9194,
+    "hash": "d6d846465bd917c1ffe6cb467575699e"
+  },
+  "dashboard/src/studio/adapters/cover-letter/index.ts": {
+    "mtime": 1783905397436.2283,
+    "hash": "b0e97723e7efa6ccd64712f25b04cecf"
+  },
+  "dashboard/src/utils/goapplyJobPreferences.ts": {
+    "mtime": 1783904285987.5557,
+    "hash": "360a6b842fc3e673ed86c2a818c3f81c"
+  },
+  "dashboard/src/views/studio/CoverLetterStudioView.vue": {
+    "mtime": 1783905457507.389,
+    "hash": "9f0bca07532f96c4b0d1a72691ebb9a1"
+  },
+  "extension/background.js": {
+    "mtime": 1783910840951.086,
+    "hash": "1e177e812d17fd1c1aedc339c4b239e3"
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1783905422347.266,
+    "hash": "db73b0edd7ffbc61ceac177130730865"
+  },
+  ".claude/skills/graphify/SKILL.md": {
+    "mtime": 1783905422347.266,
+    "hash": "c1571f7a7f451058f7ef8173f62d2063"
+  },
+  "CLAUDE.md": {
+    "mtime": 1783905422347.266,
+    "hash": "43933251c7da7a98da7b57cd858902b1"
   }
 }

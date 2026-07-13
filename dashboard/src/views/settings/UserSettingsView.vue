@@ -98,6 +98,57 @@
         </form>
       </div>
 
+      <!-- Connected Accounts -->
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold text-white">Connected Accounts</h3>
+            <p class="text-sm text-gray-400 mt-1">
+              Link your GitHub account so the AI assistants can read your repositories for context (read-only).
+            </p>
+          </div>
+        </div>
+
+        <div v-if="isLoadingGithub" class="text-center py-6 text-gray-500">
+          <p class="text-sm">Loading connection status...</p>
+        </div>
+        <div v-else class="flex items-center justify-between border border-gray-700 rounded-lg p-4">
+          <div class="flex items-center space-x-3">
+            <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.605-2.665-.303-5.466-1.332-5.466-5.93 0-1.31.469-2.38 1.236-3.22-.124-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 013.003-.404c1.02.005 2.047.138 3.006.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.804 5.624-5.475 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            </svg>
+            <div>
+              <p class="text-sm font-medium text-white">
+                {{ githubStatus?.connected ? `Connected as @${githubStatus.login}` : 'GitHub' }}
+              </p>
+              <p class="text-xs text-gray-400">
+                <span v-if="githubStatus?.connected && githubStatus.status === 'revoked'" class="text-red-400">
+                  Access was revoked on GitHub — reconnect to restore access.
+                </span>
+                <span v-else-if="githubStatus?.connected">Repos are read-only accessible to your AI assistants.</span>
+                <span v-else>Not connected.</span>
+              </p>
+            </div>
+          </div>
+          <button
+            v-if="!githubStatus?.connected || githubStatus.status === 'revoked'"
+            @click="connectGithub"
+            :disabled="isConnectingGithub"
+            class="px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50"
+            style="background-color: #635BFF;"
+          >
+            {{ isConnectingGithub ? 'Redirecting...' : 'Connect GitHub' }}
+          </button>
+          <button
+            v-else
+            @click="showDisconnectGithubModal = true"
+            class="px-4 py-2 text-sm bg-red-600/20 text-red-400 border border-red-600/30 rounded-lg hover:bg-red-600/30 transition-colors"
+          >
+            Disconnect
+          </button>
+        </div>
+      </div>
+
       <!-- API Tokens -->
       <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <div class="flex items-center justify-between mb-4">
@@ -358,6 +409,44 @@
       </div>
     </div>
 
+    <!-- Disconnect GitHub Confirmation Modal -->
+    <div
+      v-if="showDisconnectGithubModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+      @click.self="showDisconnectGithubModal = false"
+    >
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md w-full mx-4">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <div class="ml-4 flex-1">
+            <h3 class="text-lg font-semibold text-white">Disconnect GitHub</h3>
+            <p class="text-sm text-gray-400 mt-2">
+              Your AI assistants will no longer be able to read your GitHub repositories until you reconnect.
+            </p>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button
+            @click="showDisconnectGithubModal = false"
+            class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="disconnectGithub"
+            :disabled="isDisconnectingGithub"
+            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {{ isDisconnectingGithub ? 'Disconnecting...' : 'Disconnect' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Delete Account Modal -->
     <div
       v-if="showDeleteModal"
@@ -404,7 +493,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
@@ -418,7 +507,17 @@ interface ApiToken {
   createdAt: string
 }
 
+interface GithubStatus {
+  connected: boolean
+  login?: string
+  scopes?: string[]
+  status?: string
+  lastValidatedAt?: string | null
+  connectedAt?: string
+}
+
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 const authStore = useAuthStore()
 
@@ -440,6 +539,13 @@ const revokeTarget = ref<ApiToken | null>(null)
 const isRevoking = ref(false)
 const isRevokingAll = ref(false)
 const isDisconnecting = ref(false)
+
+// GitHub connection state
+const githubStatus = ref<GithubStatus | null>(null)
+const isLoadingGithub = ref(false)
+const isConnectingGithub = ref(false)
+const isDisconnectingGithub = ref(false)
+const showDisconnectGithubModal = ref(false)
 
 const profileForm = reactive({
   name: '',
@@ -559,6 +665,47 @@ const disconnectAllDevices = async () => {
   }
 }
 
+// ---- GitHub Connection ----
+
+const loadGithubStatus = async () => {
+  try {
+    isLoadingGithub.value = true
+    const response = await api.get('/integrations/github/status')
+    githubStatus.value = response.data
+  } catch (error: any) {
+    console.error('Failed to load GitHub status:', error)
+  } finally {
+    isLoadingGithub.value = false
+  }
+}
+
+const connectGithub = async () => {
+  try {
+    isConnectingGithub.value = true
+    const response = await api.post('/integrations/github/connect')
+    window.location.href = response.data.authUrl
+  } catch (error: any) {
+    console.error('Failed to start GitHub connection:', error)
+    toast.error(error.response?.data?.message || 'Failed to connect GitHub')
+    isConnectingGithub.value = false
+  }
+}
+
+const disconnectGithub = async () => {
+  try {
+    isDisconnectingGithub.value = true
+    await api.delete('/integrations/github')
+    githubStatus.value = { connected: false }
+    toast.success('GitHub disconnected')
+    showDisconnectGithubModal.value = false
+  } catch (error: any) {
+    console.error('Failed to disconnect GitHub:', error)
+    toast.error(error.response?.data?.message || 'Failed to disconnect GitHub')
+  } finally {
+    isDisconnectingGithub.value = false
+  }
+}
+
 // ---- Profile ----
 
 const updateProfile = async () => {
@@ -617,5 +764,15 @@ onMounted(() => {
     profileForm.email = authStore.user.email
   }
   loadTokens()
+  loadGithubStatus()
+
+  const githubResult = route.query.github as string | undefined
+  if (githubResult === 'connected') {
+    toast.success('GitHub connected successfully')
+    router.replace({ query: { ...route.query, github: undefined, reason: undefined } })
+  } else if (githubResult === 'error') {
+    toast.error(`Failed to connect GitHub${route.query.reason ? `: ${route.query.reason}` : ''}`)
+    router.replace({ query: { ...route.query, github: undefined, reason: undefined } })
+  }
 })
 </script>

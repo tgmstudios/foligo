@@ -5,6 +5,8 @@ const { cache } = require('../services/redis');
 const { authorizeProjectAccess } = require('../middleware/auth');
 const ai = require('../services/ai/manager');
 const { createContentEditorTools } = require('../services/content-editor-tools');
+const { createGithubTools } = require('../services/github-tools');
+const githubService = require('../services/github-service');
 
 const router = express.Router();
 
@@ -838,6 +840,7 @@ router.delete('/content/:id', async (req, res) => {
     await cache.del(`project:${existingContent.projectId}`);
     await cache.del(`project:${existingContent.projectId}:content`);
     await cache.del(`content:${id}`);
+    githubService.cleanupSession(userId, `content:${id}`).catch(() => {});
 
     res.status(204).send();
   } catch (error) {
@@ -1146,7 +1149,10 @@ router.post('/content/:id/chat', [
   ];
 
   const doc = { content: existingContent.content };
-  const tools = createContentEditorTools(doc);
+  const tools = {
+    ...createContentEditorTools(doc),
+    ...createGithubTools({ userId, sessionKey: `content:${existingContent.id}` }),
+  };
 
   const systemInstruction = `You are an expert content editor and writer, working inside an agentic Markdown editor for a "${existingContent.contentType || existingContent.type}" post titled "${existingContent.title}".
 
