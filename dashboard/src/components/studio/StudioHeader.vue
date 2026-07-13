@@ -19,6 +19,13 @@
 
     <div class="flex items-center space-x-1.5 flex-shrink-0">
       <button
+        v-if="showPreviewToggle && !sideBySide"
+        @click="$emit('toggle-preview')"
+        class="px-2.5 py-1.5 text-xs bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+      >
+        {{ previewOpen ? 'Edit' : 'Preview' }}
+      </button>
+      <button
         v-if="showHistory"
         @click="$emit('open-history')"
         class="px-2.5 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
@@ -40,6 +47,7 @@
         Export
       </button>
       <button
+        v-if="sideBySide"
         @click="$emit('toggle-focus')"
         class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
         :class="{ 'text-primary-400': focusMode }"
@@ -69,6 +77,9 @@ withDefaults(defineProps<{
   showHistory?: boolean
   showMeta?: boolean
   showExport?: boolean
+  showPreviewToggle?: boolean
+  sideBySide?: boolean
+  previewOpen?: boolean
 }>(), {
   dirty: false,
   saving: false,
@@ -76,6 +87,9 @@ withDefaults(defineProps<{
   showHistory: false,
   showMeta: false,
   showExport: false,
+  showPreviewToggle: false,
+  sideBySide: true,
+  previewOpen: false,
 })
 
 defineEmits<{
@@ -85,5 +99,6 @@ defineEmits<{
   (e: 'open-history'): void
   (e: 'open-meta'): void
   (e: 'export'): void
+  (e: 'toggle-preview'): void
 }>()
 </script>

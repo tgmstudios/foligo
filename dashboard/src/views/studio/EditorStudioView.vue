@@ -1,7 +1,7 @@
 
 <template>
   <StudioShell :focus-mode="focusMode">
-    <template #header>
+    <template #header="{ sideBySide, previewOpen, togglePreview }">
       <StudioHeader
         :title="documentTitle"
         :dirty="dirty"
@@ -10,44 +10,36 @@
         :show-history="adapter.supportsRevisions"
         :show-meta="true"
         :show-export="!!pdfUrl"
+        show-preview-toggle
+        :side-by-side="sideBySide"
+        :preview-open="previewOpen"
         @back="goBack"
         @save="saveAndCompile"
         @toggle-focus="focusMode = !focusMode"
         @open-history="showHistory = true"
         @open-meta="showMeta = true"
         @export="downloadPdf"
+        @toggle-preview="togglePreview"
       />
     </template>
 
-    <template #editor="{ sideBySide, togglePreview, previewOpen }">
+    <template #editor>
       <component
         :is="adapter.components.editor"
         :model-value="content"
         :saving="isSaving"
         @update:model-value="onContentInput"
         @save="saveAndCompile"
-      >
-        <template #toolbar-extra>
-          <button
-            v-if="!sideBySide"
-            @click="togglePreview"
-            class="px-3 py-1 text-xs bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
-          >
-            {{ previewOpen ? 'Show editor' : 'Show preview' }}
-          </button>
-        </template>
-      </component>
+      />
     </template>
 
-    <template #preview="{ sideBySide, togglePreview }">
+    <template #preview>
       <component
         :is="adapter.components.preview"
         :pdf-url="pdfUrl"
         :compiling="compiling"
         :compile-error="compileError"
-        :closable="!sideBySide"
         @recompile="saveAndCompile"
-        @close="togglePreview"
       />
     </template>
 

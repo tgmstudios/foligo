@@ -1,7 +1,7 @@
 
 <template>
   <StudioShell :focus-mode="focusMode">
-    <template #header>
+    <template #header="{ sideBySide, previewOpen, togglePreview }">
       <StudioHeader
         :title="documentTitle"
         :dirty="dirty"
@@ -9,35 +9,29 @@
         :focus-mode="focusMode"
         :show-history="true"
         :show-meta="true"
+        show-preview-toggle
+        :side-by-side="sideBySide"
+        :preview-open="previewOpen"
         @back="goBack"
         @save="saveDocument(content)"
         @toggle-focus="focusMode = !focusMode"
         @open-history="showHistory = true"
         @open-meta="showMeta = true"
+        @toggle-preview="togglePreview"
       />
     </template>
 
-    <template #editor="{ sideBySide, togglePreview, previewOpen }">
-      <div class="h-full flex flex-col">
-        <div v-if="!sideBySide" class="flex-shrink-0 px-3 py-1.5 border-b border-gray-800 bg-gray-800/50">
-          <button
-            @click="togglePreview"
-            class="px-3 py-1 text-xs bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
-          >
-            {{ previewOpen ? 'Show editor' : 'Show preview' }}
-          </button>
-        </div>
-        <MarkdownCodeEditor
-          ref="editorRef"
-          class="flex-1 min-h-0"
-          :model-value="content"
-          :project-id="projectId"
-          :saving="isSaving"
-          @update:model-value="onContentInput"
-          @scroll-position="editorScrollPosition = $event"
-          @save="saveDocument"
-        />
-      </div>
+    <template #editor>
+      <MarkdownCodeEditor
+        ref="editorRef"
+        class="h-full"
+        :model-value="content"
+        :project-id="projectId"
+        :saving="isSaving"
+        @update:model-value="onContentInput"
+        @scroll-position="editorScrollPosition = $event"
+        @save="saveDocument"
+      />
     </template>
 
     <template #preview>

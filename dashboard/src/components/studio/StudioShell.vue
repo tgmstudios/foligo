@@ -2,7 +2,7 @@
 <template>
   <div class="studio-shell h-screen w-screen flex flex-col bg-gray-950 overflow-hidden">
     <div class="flex-shrink-0 border-b border-gray-800">
-      <slot name="header" />
+      <slot name="header" :side-by-side="sideBySide" :preview-open="previewOpen" :toggle-preview="togglePreview" />
     </div>
 
     <div class="flex-1 flex min-h-0">
@@ -25,10 +25,36 @@
       </div>
 
       <div
-        v-if="!focusMode && $slots.chat"
+        v-if="!focusMode && $slots.chat && !chatCollapsed"
         class="w-80 flex-shrink-0 border-l border-gray-800 bg-gray-900 flex flex-col overflow-hidden"
       >
+        <div class="h-9 flex items-center justify-end border-b border-gray-800 flex-shrink-0 px-1.5">
+          <button
+            @click="chatCollapsed = true"
+            class="p-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+            title="Collapse chat"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
         <slot name="chat" />
+      </div>
+
+      <div
+        v-if="!focusMode && $slots.chat && chatCollapsed"
+        class="w-9 flex-shrink-0 border-l border-gray-800 bg-gray-900 flex flex-col items-center pt-1.5"
+      >
+        <button
+          @click="chatCollapsed = false"
+          class="p-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+          title="Expand chat"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -46,6 +72,7 @@ withDefaults(defineProps<{ focusMode?: boolean }>(), { focusMode: false })
 const mainColEl = ref<HTMLDivElement>()
 const sideBySide = ref(true)
 const previewOpen = ref(false)
+const chatCollapsed = ref(false)
 
 let observer: ResizeObserver | null = null
 
@@ -67,5 +94,5 @@ onUnmounted(() => {
   observer?.disconnect()
 })
 
-defineExpose({ sideBySide, previewOpen, togglePreview })
+defineExpose({ sideBySide, previewOpen, togglePreview, chatCollapsed })
 </script>
