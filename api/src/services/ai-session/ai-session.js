@@ -310,10 +310,89 @@ async function generateFinalContent(mode, contentType, chatHistory, currentConte
   }
 }
 
+/**
+ * Stream final content generation over SSE.
+ * Yields text-delta events as the model generates, then runs extraction
+ * and yields the final result.  Keeps the connection alive so nginx/load
+ * balancer timeouts are never hit.
+ */
+async function* streamGenerateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}, { aiText, logger }) {
+  logger.info('Streaming final content generation', { mode, contentType });
+
+  const {
+    projectGenerationPrompt,
+    experienceGenerationPrompt,
+    blogGenerationPrompt,
+    editGenerationPrompt
+  } = require('../content/content-generation-prompts');
+
+  let prompt;
+  if (mode === 'edit') {
+    prompt = editGenerationPrompt(currentContent, changes, chatHistory, context);
+  } else {
+    const promptMap = { 'PROJECT': projectGenerationPrompt, 'EXPERIENCE': experienceGenerationPrompt, 'BLOG': blogGenerationPrompt };
+    const promptGenerator = promptMap[contentType];
+    if (!promptGenerator) throw new Error(`Unknown content type: ${contentType}`);
+    prompt = promptGenerator(chatHistory, context);
+  }
+
+  // Phase 1: stream the markdown generation
+  let fullResponse = '';
+  yield { type: 'status', phase: 'generating', message: 'Writing content...' };
+
+  try {
+    for await (const part of ai.streamGenerate(prompt, {
+      temperature: GENERATION_CONFIG.CREATIVE.temperature,
+      maxTokens: GENERATION_CONFIG.CREATIVE.maxOutputTokens,
+      modelType: 'LONG',
+    })) {
+      fullResponse += part.text;
+      yield { type: 'text-delta', text: part.text };
+    }
+  } catch (error) {
+    logger.error('Stream generation error', { error: error.message });
+    yield { type: 'error', message: `Generation failed: ${error.message}` };
+    return;
+  }
+
+  // Phase 2: extract structured data
+  yield { type: 'status', phase: 'extracting', message: 'Extracting metadata...' };
+
+  const { markdownContent, structuredData: xmlData } = extractStructuredData(fullResponse, { logger });
+  let finalStructuredData = xmlData;
+
+  if (!finalStructuredData) {
+    finalStructuredData = await extractStructuredDataUniversal(
+      contentType, markdownContent, chatHistory, context, { aiText, logger }
+    );
+  }
+
+  const skills = finalStructuredData?.skills || [];
+  const tags = finalStructuredData?.tags || [];
+  let title = finalStructuredData?.title;
+  if (!title || title.length < 3) {
+    title = await extractTitleFromConversation(contentType, chatHistory, markdownContent, { aiText, logger });
+  }
+  const metadata = buildMetadataFromStructuredData(finalStructuredData, contentType);
+  const excerpt = finalStructuredData?.excerpt || null;
+
+  yield {
+    type: 'result',
+    content: markdownContent,
+    title,
+    excerpt,
+    metadata,
+    skills,
+    tags,
+    structuredData: finalStructuredData,
+  };
+}
+
 module.exports = {
   handleAISession,
   streamAISession,
   handleFunctionCall,
   getFollowUpMessage,
-  generateFinalContent
+  generateFinalContent,
+  streamGenerateFinalContent,
 };

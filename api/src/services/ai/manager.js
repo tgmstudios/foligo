@@ -300,6 +300,47 @@ class AIManager {
   }
 
   /**
+   * Stream a single-prompt text generation (no tools, no multi-step).
+   * Yields raw text-delta parts from the AI SDK's fullStream.
+   * Lightweight — no fallback buffering since it's a single prompt.
+   */
+  async *streamGenerate(prompt, options = {}) {
+    const { provider: reqProvider, modelType = 'LONG', system, temperature, maxTokens } = options;
+    const types = await this._fallbackSelections(reqProvider, modelType);
+
+    let lastError;
+    for (const type of types) {
+      const prov = await this.getProvider(type, {}, modelType);
+      if (!prov) continue;
+
+      try {
+        const result = sdkStreamText({
+          model: prov.model,
+          system,
+          messages: [{ role: 'user', content: prompt }],
+          temperature,
+          maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
+          providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },
+        });
+
+        for await (const part of result.fullStream) {
+          if (part.type === 'text-delta') yield part;
+          else if (part.type === 'error') {
+            lastError = part.error;
+            break;
+          }
+        }
+        return;
+      } catch (e) {
+        lastError = e;
+        this.logger.warn(`Provider "${type}" streamGenerate failed: ${e.message}`);
+      }
+    }
+
+    throw new Error(`No healthy AI provider for streaming generation. Last error: ${lastError?.message}`);
+  }
+
+  /**
    * List all configured providers with status.
    */
   async listProviders() {

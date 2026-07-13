@@ -128,6 +128,13 @@ class GeminiService {
   }
 
   /**
+   * Stream final content generation over SSE.
+   */
+  streamGenerateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}) {
+    return sessionFlow.streamGenerateFinalContent(mode, contentType, chatHistory, currentContent, changes, context, this._deps);
+  }
+
+  /**
    * Private: Extract structured_data block and markdown content
    * Parses XML-style structured_data tag and returns both parts
    */

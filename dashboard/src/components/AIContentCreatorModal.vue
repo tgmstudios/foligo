@@ -68,11 +68,15 @@
             </div>
           </div>
 
-          <!-- Loading -->
-          <div v-else-if="isLoading" class="text-center py-8">
-            <div class="inline-flex items-center space-x-2">
-              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-              <span class="text-gray-400">{{ loadingMessage }}</span>
+          <!-- Loading / Streaming generation -->
+          <div v-else-if="isLoading" class="py-4">
+            <div class="flex items-center space-x-2 mb-3">
+              <div v-if="!generatingText" class="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+              <span class="text-sm text-gray-400">{{ loadingMessage }}</span>
+            </div>
+            <div v-if="generatingText" class="bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+              <div class="text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">{{ generatingText }}</div>
+              <div class="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5 align-text-bottom"></div>
             </div>
           </div>
 
@@ -511,40 +515,74 @@ const startVoiceSession = async () => {
   // User can close it themselves after calling
 }
 
+const generatingText = ref('')
+
 const generateFinalContent = async () => {
   isLoading.value = true
   loadingMessage.value = 'Generating your content...'
-  
+  generatingText.value = ''
+
   try {
     const finalContentType = inferredContentType.value || props.contentType || 'BLOG'
-    
-    // Call the new /ai/create endpoint that generates and creates in one step
-    const response = await aiApi.post('/ai/create', {
-      mode: props.mode,
-      contentType: finalContentType,
-      chatHistory: chatHistory.value,
-      currentContent: props.currentContent || '',
-      changes: '',
-      projectId: props.projectId
+    const token = localStorage.getItem('auth_token')
+
+    const response = await fetch(`${API_URL}/ai/create/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        mode: props.mode,
+        contentType: finalContentType,
+        chatHistory: chatHistory.value,
+        currentContent: props.currentContent || '',
+        changes: '',
+        projectId: props.projectId
+      })
     })
-    
-    console.log('[AIContentCreatorModal] Content created:', {
-      contentId: response.data.id,
-      hasContent: !!response.data.content
-    })
-    
-    // Emit the created content with its ID
-    emit('content-created', {
-      id: response.data.id,
-      content: response.data.content
-    })
-    
-    close()
+
+    if (!response.ok || !response.body) throw new Error(`Request failed (${response.status})`)
+
+    let contentId: string | null = null
+    let buffer = ''
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const frames = buffer.split('\n\n')
+      buffer = frames.pop() || ''
+      for (const frame of frames) {
+        const line = frame.split('\n').find(l => l.startsWith('data: '))
+        if (!line) continue
+        const event = JSON.parse(line.slice(6))
+        if (event.type === 'text-delta') {
+          generatingText.value += event.text || ''
+        } else if (event.type === 'status') {
+          loadingMessage.value = event.message
+        } else if (event.type === 'content-created') {
+          contentId = event.id
+        } else if (event.type === 'error') {
+          throw new Error(event.message || 'Stream failed')
+        }
+      }
+    }
+
+    if (contentId) {
+      emit('content-created', { id: contentId, content: undefined })
+      close()
+    } else {
+      throw new Error('No content ID received from stream')
+    }
   } catch (error) {
     console.error('Failed to create content:', error)
     loadingMessage.value = 'Failed to create content. Please try again.'
   } finally {
     isLoading.value = false
+    generatingText.value = ''
   }
 }
 

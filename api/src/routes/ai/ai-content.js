@@ -1224,6 +1224,149 @@ router.post('/create', [
 });
 
 /**
+ * Stream content generation + creation over SSE.
+ * Keeps the connection alive during AI generation so nginx/load balancer
+ * timeouts are never hit. The client sees the markdown streaming in real-time.
+ */
+router.post('/create/stream', [
+  body('mode').isIn(['create', 'edit']),
+  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
+  body('chatHistory').isArray(),
+  body('currentContent').optional().isString(),
+  body('changes').optional().isString(),
+  body('projectId').isUUID()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Validation Error', details: errors.array() });
+  }
+
+  const { mode, contentType, chatHistory, currentContent = '', changes = '', projectId } = req.body;
+  const userId = req.user?.id;
+
+  // Verify project access
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      OR: [{ ownerId: userId }, { members: { some: { userId } } }]
+    }
+  });
+  if (!project) {
+    return res.status(403).json({ error: 'Access Denied', message: 'You do not have access to this project' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const send = event => res.write(`data: ${JSON.stringify(event)}\n\n`);
+
+  try {
+    const context = await getAIContext(userId, projectId);
+
+    // Phase 1: stream the AI generation, capture the final result
+    let generatedResult = null;
+    for await (const part of geminiService.streamGenerateFinalContent(
+      mode, contentType, chatHistory, currentContent, changes, context
+    )) {
+      if (part.type === 'error') {
+        send({ type: 'error', message: part.message });
+        return res.end();
+      }
+      if (part.type === 'result') {
+        generatedResult = part;  // don't send raw result to client
+        break;
+      }
+      send(part);  // stream text-delta and status events
+    }
+
+    if (!generatedResult) {
+      send({ type: 'error', message: 'No content generated' });
+      return res.end();
+    }
+
+    // Phase 2: save to database (same logic as /create endpoint)
+    send({ type: 'status', phase: 'saving', message: 'Saving content...' });
+
+    const generatedData = generatedResult;
+    const matchedSkills = await matchOrCreateSkills(prisma, generatedData.skills || [], projectId);
+    const matchedTags = await matchOrCreateTags(prisma, generatedData.tags || [], projectId);
+
+    let slug = (generatedData.title || 'untitled')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim('-');
+
+    const existingContent = await prisma.content.findFirst({ where: { slug } });
+    if (existingContent) slug = `${slug}-${Date.now()}`;
+
+    const order = 0;
+    await prisma.$transaction(async (tx) => {
+      await tx.content.updateMany({
+        where: { projectId, status: { not: 'REVISION' }, revisionOf: null },
+        data: { order: { increment: 1 } }
+      });
+      await tx.postOrder.updateMany({
+        where: { projectId },
+        data: { order: { increment: 1 } }
+      });
+    });
+
+    const contentData = {
+      projectId, type: contentType, contentType,
+      title: generatedData.title, slug,
+      excerpt: generatedData.excerpt || generatedData.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...',
+      content: generatedData.content,
+      metadata: generatedData.metadata || {},
+      order, status: 'DRAFT'
+    };
+
+    if (generatedData.structuredData) {
+      const sd = generatedData.structuredData;
+      if (contentType === 'PROJECT') {
+        if (sd.startDate) contentData.startDate = new Date(sd.startDate);
+        if (sd.endDate) contentData.endDate = new Date(sd.endDate);
+        if (sd.isOngoing !== undefined) contentData.isOngoing = sd.isOngoing;
+        if (sd.featuredImage) contentData.featuredImage = sd.featuredImage;
+        if (sd.projectLinks) contentData.projectLinks = sd.projectLinks;
+        if (sd.contributors) contentData.contributors = sd.contributors;
+      }
+      if (contentType === 'EXPERIENCE') {
+        if (sd.experienceCategory) contentData.experienceCategory = sd.experienceCategory;
+        if (sd.location) contentData.location = sd.location;
+        if (sd.locationType) contentData.locationType = sd.locationType;
+        if (sd.startDate) contentData.startDate = new Date(sd.startDate);
+        if (sd.endDate) contentData.endDate = new Date(sd.endDate);
+        if (sd.isOngoing !== undefined) contentData.isOngoing = sd.isOngoing;
+      }
+    }
+
+    const newContent = await prisma.content.create({ data: contentData });
+    await prisma.postOrder.create({ data: { projectId, contentId: newContent.id, order } });
+
+    if (matchedSkills.length > 0) {
+      await prisma.content.update({ where: { id: newContent.id }, data: { linkedSkills: { connect: matchedSkills.map(s => ({ id: s.id })) } } });
+    }
+    if (matchedTags.length > 0) {
+      await prisma.content.update({ where: { id: newContent.id }, data: { tags: { connect: matchedTags.map(t => ({ id: t.id })) } } });
+    }
+
+    await cache.del(`project:${projectId}`);
+    await cache.del(`project:${projectId}:content`);
+
+    send({ type: 'content-created', id: newContent.id });
+  } catch (error) {
+    console.error('Streaming create error:', error);
+    send({ type: 'error', message: error.message || 'Creation failed' });
+  } finally {
+    res.end();
+  }
+});
+
+/**
  * @swagger
  * /api/ai/post-links:
  *   post:
