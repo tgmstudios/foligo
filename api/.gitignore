@@ -111,11 +111,6 @@ templates/
 *.db
 *.sqlite
 
-# Prisma migrations are deployment artifacts in this repository. Keep the
-# Job Assistant schema migration visible while preserving the existing policy.
-prisma/migrations/*
-!prisma/migrations/20260712223000_job_assistant_attachments/
-!prisma/migrations/20260712223000_job_assistant_attachments/migration.sql
 
 # Docker
 .dockerignore
