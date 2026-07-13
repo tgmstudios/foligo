@@ -18,9 +18,10 @@ const { createJobAssistantTools, jobAssistantTool } = require('../goapply/job-as
 const { generateCoverLetter, generateCustomAnswer } = require('../goapply/goapply-content-generation');
 
 function createExtensionAgentServerTools(prisma, userId, aiManager) {
-  const { get_resume, get_cover_letter, get_goapply_profile, get_saved_answers, save_answers } = createJobAssistantTools(prisma, userId);
+  const { web_search, get_resume, get_cover_letter, get_goapply_profile, get_saved_answers, save_answers } = createJobAssistantTools(prisma, userId);
 
   return {
+    web_search,
     get_resume,
     get_cover_letter,
     get_goapply_profile,

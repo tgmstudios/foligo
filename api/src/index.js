@@ -36,6 +36,7 @@ const adminContentRoutes = require('./routes/admin/admin-content');
 const adminStatsRoutes = require('./routes/admin/admin-stats');
 const adminSsoRoutes = require('./routes/admin/admin-sso');
 const adminAiModelRoutes = require('./routes/admin/admin-ai-models');
+const adminSettingsRoutes = require('./routes/admin/admin-settings');
 const ssoAuthRoutes = require('./routes/auth/sso-auth');
 const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai/ai-providers');
@@ -310,6 +311,7 @@ app.use('/api/admin', authenticateToken, adminContentRoutes);
 app.use('/api/admin', authenticateToken, adminStatsRoutes);
 app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);
 app.use('/api/admin/ai-models', authenticateToken, adminAiModelRoutes);
+app.use('/api/admin/settings', authenticateToken, adminSettingsRoutes);
 
 // Static assets (publicly served, long cache)
 app.use(express.static(path.join(__dirname, '..', 'static'), {

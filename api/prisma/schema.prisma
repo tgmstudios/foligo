@@ -759,3 +759,13 @@ model UserIntegration {
   @@index([userId])
   @@map("user_integrations")
 }
+
+model PlatformSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("platform_settings")
+}

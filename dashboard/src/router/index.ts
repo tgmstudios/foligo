@@ -21,6 +21,7 @@ import AdminProjectsView from '@/views/admin/AdminProjectsView.vue'
 import AdminContentView from '@/views/admin/AdminContentView.vue'
 import AdminSsoView from '@/views/admin/AdminSsoView.vue'
 import AdminAiModelsView from '@/views/admin/AdminAiModelsView.vue'
+import AdminSettingsView from '@/views/admin/AdminSettingsView.vue'
 import AdminUserDetailView from '@/views/admin/AdminUserDetailView.vue'
 import AdminProjectDetailView from '@/views/admin/AdminProjectDetailView.vue'
 import AdminContentDetailView from '@/views/admin/AdminContentDetailView.vue'
@@ -200,6 +201,12 @@ const router = createRouter({
           path: 'admin/ai-models',
           name: 'admin-ai-models',
           component: AdminAiModelsView,
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: 'admin/settings',
+          name: 'admin-settings',
+          component: AdminSettingsView,
           meta: { requiresAdmin: true }
         },
         {
