@@ -1,12 +1,11 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const { prisma } = require('../services/database');
 const { cache } = require('../services/redis');
 const { authorizeProjectAccess } = require('../middleware/auth');
-const ai = require('../services/ai/manager');
-const { createContentEditorTools } = require('../services/content-editor-tools');
-const { createGithubTools } = require('../services/github-tools');
+const { handleValidation } = require('../middleware/handle-validation');
 const githubService = require('../services/github-service');
+const { CONTENT_INCLUDE, getContentWithAccess, invalidateContentCache } = require('../utils/content-access');
 
 const router = express.Router();
 
@@ -144,37 +143,17 @@ router.post('/projects/:projectId/content', [
   body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE']),
   // Skills and tags
   body('skills').optional().isArray(),
-  body('tags').optional().isArray()
+  body('tags').optional().isArray(),
+  handleValidation
 ], authorizeProjectAccess('EDITOR'), async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
     const { projectId } = req.params;
-    const { 
+    const {
       contentType, title, slug, excerpt, content, metadata, order, status,
       startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
       experienceCategory, location, locationType,
       skills, tags
     } = req.body;
-    
-    console.log('[content] Creating content with skills/tags:', {
-      contentType,
-      title,
-      hasProjectLinks: !!projectLinks,
-      projectLinks,
-      skillsCount: skills?.length || 0,
-      skills: skills?.map(s => ({ id: s.id, name: s.name })),
-      tagsCount: tags?.length || 0,
-      tags: tags?.map(t => ({ id: t.id, name: t.name }))
-    });
 
     // Generate slug if not provided
     let contentSlug = slug;
@@ -202,7 +181,7 @@ router.post('/projects/:projectId/content', [
     let contentOrder = order;
     if (contentOrder === undefined) {
       contentOrder = 0;
-      
+
       // Increment all existing posts' orders (excluding revisions)
       await prisma.$transaction(async (tx) => {
         // Update Content table order field
@@ -216,7 +195,7 @@ router.post('/projects/:projectId/content', [
             order: { increment: 1 }
           }
         });
-        
+
         // Update PostOrder table if entries exist
         await tx.postOrder.updateMany({
           where: { projectId },
@@ -264,20 +243,7 @@ router.post('/projects/:projectId/content', [
     // Create content
     const newContent = await prisma.content.create({
       data: contentData,
-      include: {
-        tags: true,
-        meta: true,
-        blocks: {
-          orderBy: { order: 'asc' }
-        },
-        roles: {
-          include: {
-            skills: true
-          },
-          orderBy: { startDate: 'desc' }
-        },
-        linkedSkills: true
-      }
+      include: CONTENT_INCLUDE
     });
 
     // Create PostOrder entry for the new content (only if not a revision)
@@ -326,20 +292,7 @@ router.post('/projects/:projectId/content', [
     // Fetch the complete content with all relationships
     const completeContent = await prisma.content.findUnique({
       where: { id: newContent.id },
-      include: {
-        tags: true,
-        meta: true,
-        blocks: {
-          orderBy: { order: 'asc' }
-        },
-        roles: {
-          include: {
-            skills: true
-          },
-          orderBy: { startDate: 'desc' }
-        },
-        linkedSkills: true
-      }
+      include: CONTENT_INCLUDE
     });
 
     // Clear project cache
@@ -389,52 +342,23 @@ router.get('/content/:id', async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    // Get content with project info and all related data
-    const content = await prisma.content.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            owner: true,
-            members: {
-              where: { userId }
-            }
-          }
-        },
-        tags: true,
-        meta: true,
-        blocks: {
-          orderBy: { order: 'asc' }
-        },
-        roles: {
-          include: {
-            skills: true
-          },
-          orderBy: { startDate: 'desc' }
-        },
-        linkedSkills: true
-      }
-    });
+    const access = await getContentWithAccess(prisma, id, userId);
 
-    if (!content) {
+    if (!access) {
       return res.status(404).json({
         error: 'Content Not Found',
         message: 'The requested content block does not exist'
       });
     }
 
-    // Check access permissions
-    const isOwner = content.project.ownerId === userId;
-    const isMember = content.project.members.length > 0;
-
-    if (!isOwner && !isMember) {
+    if (!access.isOwner && !access.isMember) {
       return res.status(403).json({
         error: 'Access Denied',
         message: 'You do not have access to this content'
       });
     }
 
-    res.json(content);
+    res.json(access.content);
   } catch (error) {
     console.error('Get content error:', error);
     res.status(500).json({
@@ -491,51 +415,24 @@ router.get('/content/:id', async (req, res) => {
 router.put('/content/:id', [
   body('type').optional().isIn(['TEXT', 'IMAGE', 'VIDEO', 'CODE', 'LINK', 'EMBED']),
   body('data').optional().isObject(),
-  body('order').optional().isInt({ min: 0 })
+  body('order').optional().isInt({ min: 0 }),
+  handleValidation
 ], async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
     const { id } = req.params;
     const userId = req.user.id;
     const { type, data, order } = req.body;
 
-    // Get content with project info to check permissions
-    const existingContent = await prisma.content.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            owner: true,
-            members: {
-              where: { userId }
-            }
-          }
-        }
-      }
-    });
+    const access = await getContentWithAccess(prisma, id, userId);
 
-    if (!existingContent) {
+    if (!access) {
       return res.status(404).json({
         error: 'Content Not Found',
         message: 'The requested content block does not exist'
       });
     }
 
-    // Check access permissions
-    const isOwner = existingContent.project.ownerId === userId;
-    const memberAccess = existingContent.project.members[0];
-    const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
-
-    if (!canEdit) {
+    if (!access.canEdit) {
       return res.status(403).json({
         error: 'Access Denied',
         message: 'You do not have permission to edit this content'
@@ -554,9 +451,7 @@ router.put('/content/:id', [
     });
 
     // Clear project and content caches
-    await cache.del(`project:${existingContent.projectId}`);
-    await cache.del(`project:${existingContent.projectId}:content`);
-    await cache.del(`content:${id}`);
+    await invalidateContentCache(cache, access.content.projectId, id);
 
     res.json(content);
   } catch (error) {
@@ -635,60 +530,35 @@ router.put('/content/:id/fields', [
   // Experience-specific fields
   body('experienceCategory').optional().isIn(['JOB', 'EDUCATION', 'CERTIFICATION']),
   body('location').optional().trim(),
-  body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE'])
+  body('locationType').optional().isIn(['REMOTE', 'HYBRID', 'ONSITE']),
+  handleValidation
 ], async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
     const { id } = req.params;
     const userId = req.user.id;
-    const { 
+    const {
       title, slug, excerpt, content, metadata, status,
       startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
       experienceCategory, location, locationType
     } = req.body;
 
-    // Get content with project info to check permissions
-    const existingContent = await prisma.content.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            owner: true,
-            members: {
-              where: { userId }
-            }
-          }
-        }
-      }
-    });
+    const access = await getContentWithAccess(prisma, id, userId);
 
-    if (!existingContent) {
+    if (!access) {
       return res.status(404).json({
         error: 'Content Not Found',
         message: 'The requested content does not exist'
       });
     }
 
-    // Check access permissions
-    const isOwner = existingContent.project.ownerId === userId;
-    const memberAccess = existingContent.project.members[0];
-    const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
-
-    if (!canEdit) {
+    if (!access.canEdit) {
       return res.status(403).json({
         error: 'Access Denied',
         message: 'You do not have permission to edit this content'
       });
     }
+
+    const existingContent = access.content;
 
     // Always create revision before updating (unless this is already a revision)
     await snapshotContentRevision(existingContent);
@@ -720,18 +590,7 @@ router.put('/content/:id/fields', [
       where: { id },
       data: updateData,
       include: {
-        tags: true,
-        meta: true,
-        blocks: {
-          orderBy: { order: 'asc' }
-        },
-        roles: {
-          include: {
-            skills: true
-          },
-          orderBy: { startDate: 'desc' }
-        },
-        linkedSkills: true,
+        ...CONTENT_INCLUDE,
         revisions: {
           orderBy: { revisionNumber: 'desc' },
           select: {
@@ -754,9 +613,7 @@ router.put('/content/:id/fields', [
     });
 
     // Clear project and content caches
-    await cache.del(`project:${existingContent.projectId}`);
-    await cache.del(`project:${existingContent.projectId}:content`);
-    await cache.del(`content:${id}`);
+    await invalidateContentCache(cache, existingContent.projectId, id);
 
     res.json(updatedContent);
   } catch (error) {
@@ -797,34 +654,16 @@ router.delete('/content/:id', async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    // Get content with project info to check permissions
-    const existingContent = await prisma.content.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            owner: true,
-            members: {
-              where: { userId }
-            }
-          }
-        }
-      }
-    });
+    const access = await getContentWithAccess(prisma, id, userId);
 
-    if (!existingContent) {
+    if (!access) {
       return res.status(404).json({
         error: 'Content Not Found',
         message: 'The requested content block does not exist'
       });
     }
 
-    // Check access permissions
-    const isOwner = existingContent.project.ownerId === userId;
-    const memberAccess = existingContent.project.members[0];
-    const canDelete = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
-
-    if (!canDelete) {
+    if (!access.canEdit) {
       return res.status(403).json({
         error: 'Access Denied',
         message: 'You do not have permission to delete this content'
@@ -837,9 +676,7 @@ router.delete('/content/:id', async (req, res) => {
     });
 
     // Clear project and content caches
-    await cache.del(`project:${existingContent.projectId}`);
-    await cache.del(`project:${existingContent.projectId}:content`);
-    await cache.del(`content:${id}`);
+    await invalidateContentCache(cache, access.content.projectId, id);
     githubService.cleanupSession(userId, `content:${id}`).catch(() => {});
 
     res.status(204).send();
@@ -852,368 +689,5 @@ router.delete('/content/:id', async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /api/content/{id}/reorder:
- *   put:
- *     summary: Reorder content blocks
- *     tags: [CMS Content]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Content ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - newOrder
- *             properties:
- *               newOrder:
- *                 type: integer
- *                 minimum: 0
- *     responses:
- *       200:
- *         description: Content reordered successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Content'
- *       400:
- *         description: Validation error
- *       403:
- *         description: Access denied
- *       404:
- *         description: Content not found
- */
-router.put('/content/:id/reorder', [
-  body('newOrder').isInt({ min: 0 })
-], async (req, res) => {
-  try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
-    const { id } = req.params;
-    const userId = req.user.id;
-    const { newOrder } = req.body;
-
-    // Get content with project info to check permissions
-    const existingContent = await prisma.content.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            owner: true,
-            members: {
-              where: { userId }
-            }
-          }
-        }
-      }
-    });
-
-    if (!existingContent) {
-      return res.status(404).json({
-        error: 'Content Not Found',
-        message: 'The requested content block does not exist'
-      });
-    }
-
-    // Check access permissions
-    const isOwner = existingContent.project.ownerId === userId;
-    const memberAccess = existingContent.project.members[0];
-    const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
-
-    if (!canEdit) {
-      return res.status(403).json({
-        error: 'Access Denied',
-        message: 'You do not have permission to reorder this content'
-      });
-    }
-
-    // Update content order
-    const content = await prisma.content.update({
-      where: { id },
-      data: { order: newOrder }
-    });
-
-    // Clear project and content caches
-    await cache.del(`project:${existingContent.projectId}`);
-    await cache.del(`project:${existingContent.projectId}:content`);
-
-    res.json(content);
-  } catch (error) {
-    console.error('Reorder content error:', error);
-    res.status(500).json({
-      error: 'Content Reorder Failed',
-      message: 'Unable to reorder content block'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/projects/{projectId}/content/order:
- *   put:
- *     summary: Update post order for all posts in a project
- *     tags: [CMS Content]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: projectId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Project ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - order
- *             properties:
- *               order:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required:
- *                     - contentId
- *                     - order
- *                   properties:
- *                     contentId:
- *                       type: string
- *                       format: uuid
- *                     order:
- *                       type: integer
- *                       minimum: 0
- *     responses:
- *       200:
- *         description: Post order updated successfully
- *       400:
- *         description: Validation error
- *       403:
- *         description: Access denied
- *       404:
- *         description: Project not found
- */
-router.put('/projects/:projectId/content/order', [
-  body('order').isArray().withMessage('Order must be an array'),
-  body('order.*.contentId').isUUID().withMessage('Each order item must have a valid contentId'),
-  body('order.*.order').isInt({ min: 0 }).withMessage('Each order item must have a valid order number')
-], authorizeProjectAccess('EDITOR'), async (req, res) => {
-  try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
-    const { projectId } = req.params;
-    const { order } = req.body;
-
-    // Get all posts for this project (excluding revisions)
-    const allPosts = await prisma.content.findMany({
-      where: {
-        projectId,
-        status: { not: 'REVISION' },
-        revisionOf: null
-      },
-      select: { id: true }
-    });
-
-    const postIds = allPosts.map(p => p.id);
-    const orderContentIds = order.map(o => o.contentId);
-
-    // Verify all content IDs belong to this project
-    const invalidIds = orderContentIds.filter(id => !postIds.includes(id));
-    if (invalidIds.length > 0) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Some content IDs do not belong to this project',
-        invalidIds
-      });
-    }
-
-    // Use a transaction to update all orders atomically
-    await prisma.$transaction(async (tx) => {
-      // Delete existing post orders for this project
-      await tx.postOrder.deleteMany({
-        where: { projectId }
-      });
-
-      // Create new post orders
-      await tx.postOrder.createMany({
-        data: order.map(item => ({
-          projectId,
-          contentId: item.contentId,
-          order: item.order
-        }))
-      });
-
-      // Also update the order field in Content table for backward compatibility
-      for (const item of order) {
-        await tx.content.update({
-          where: { id: item.contentId },
-          data: { order: item.order }
-        });
-      }
-    });
-
-    // Clear project cache
-    await cache.del(`project:${projectId}`);
-    await cache.delPattern(`project:${projectId}:content*`);
-
-    res.json({ success: true, message: 'Post order updated successfully' });
-  } catch (error) {
-    console.error('Update post order error:', error);
-    res.status(500).json({
-      error: 'Post Order Update Failed',
-      message: 'Unable to update post order'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/content/{id}/chat:
- *   post:
- *     summary: Send a message to the content editing agent (SSE stream of thinking/text/tool-call events)
- *     tags: [CMS Content]
- *     security: [{ bearerAuth: [] }]
- */
-router.post('/content/:id/chat', [
-  body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
-  body('provider').optional().isString(),
-  body('history').optional().isArray(),
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ error: 'Validation Error', message: 'Invalid input data', details: errors.array() });
-  }
-
-  const userId = req.user.id;
-  const existingContent = await prisma.content.findUnique({
-    where: { id: req.params.id },
-    include: { project: { include: { owner: true, members: { where: { userId } } } } },
-  });
-  if (!existingContent) {
-    return res.status(404).json({ error: 'Not Found', message: 'Content does not exist' });
-  }
-  const isOwner = existingContent.project.ownerId === userId;
-  const memberAccess = existingContent.project.members[0];
-  const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
-  if (!canEdit) {
-    return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this content' });
-  }
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = (event) => {
-    res.write(`data: ${JSON.stringify(event)}\n\n`);
-  };
-
-  const userMessage = req.body.message;
-  // Content has no chatHistory column (unlike ResumeDocument) — the client
-  // resends prior turns each request instead of the server persisting them.
-  const priorHistory = Array.isArray(req.body.history) ? req.body.history : [];
-  const messages = [
-    ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage },
-  ];
-
-  const doc = { content: existingContent.content };
-  const tools = {
-    ...createContentEditorTools(doc),
-    ...createGithubTools({ userId, sessionKey: `content:${existingContent.id}` }),
-  };
-
-  const systemInstruction = `You are an expert content editor and writer, working inside an agentic Markdown editor for a "${existingContent.contentType || existingContent.type}" post titled "${existingContent.title}".
-
-CURRENT CONTENT (Markdown source):
-"""
-${doc.content}
-"""
-
-${existingContent.excerpt ? `EXCERPT: ${existingContent.excerpt}\n` : ''}
-
-RULES:
-- Use the edit_content_section tool for small, targeted changes. The "search" text must match the current content verbatim and uniquely.
-- Use the write_content tool only for the first draft or large restructures — it replaces the whole body, so always output complete, valid Markdown.
-- After making edits, briefly tell the user what you changed and why, in plain prose.
-- Preserve existing Markdown formatting conventions already used in the document (headers, code fences, image links, mermaid/drawio blocks) unless asked to change them.`;
-
-  let assistantText = '';
-
-  try {
-    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 6, provider: req.body.provider })) {
-      switch (part.type) {
-        case 'text-delta':
-          assistantText += part.text;
-          send({ type: 'text-delta', text: part.text });
-          break;
-        case 'reasoning-delta':
-          send({ type: 'reasoning-delta', text: part.text });
-          break;
-        case 'tool-call':
-          send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
-          break;
-        case 'tool-result':
-          send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
-          break;
-        case 'tool-error':
-          send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
-          break;
-        case 'error':
-          send({ type: 'error', message: part.error?.message || String(part.error) });
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (doc.content !== existingContent.content) {
-      await snapshotContentRevision(existingContent);
-      await prisma.content.update({ where: { id: existingContent.id }, data: { content: doc.content } });
-      await cache.del(`project:${existingContent.projectId}`);
-      await cache.del(`project:${existingContent.projectId}:content`);
-      await cache.del(`content:${existingContent.id}`);
-    }
-
-    send({ type: 'document-updated', content: doc.content });
-    send({ type: 'done' });
-  } catch (error) {
-    console.error('Content chat error:', error);
-    send({ type: 'error', message: error.message || 'Agent request failed' });
-  } finally {
-    res.end();
-  }
-});
-
 module.exports = router;
+module.exports.snapshotContentRevision = snapshotContentRevision;
