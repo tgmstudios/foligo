@@ -1,15 +1,30 @@
 <template>
-  <div>
-    <div class="card p-6 max-w-2xl">
-      <h3 class="text-lg font-semibold text-white mb-1">GoApply Profile</h3>
-      <p class="text-xs text-gray-400 mb-6">
-        These fields are what the GoApply extension autofills on job applications.
-        The more you fill in, the fewer fields you'll need to touch by hand.
-      </p>
+  <div class="max-w-7xl">
+    <div class="card p-6 mb-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-1">GoApply Profile</h3>
+          <p class="text-xs text-gray-400">
+            These fields are what the GoApply extension autofills on job applications.
+            The more you fill in, the fewer fields you'll need to touch by hand.
+          </p>
+        </div>
+        <button
+          type="submit"
+          form="goapply-profile-form"
+          :disabled="store.isSaving"
+          class="shrink-0 px-6 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+        >
+          {{ store.isSaving ? 'Saving...' : 'Save Profile' }}
+        </button>
+      </div>
+    </div>
 
-      <form @submit.prevent="handleSave" class="space-y-8">
+      <form id="goapply-profile-form" @submit.prevent="handleSave" class="profile-columns">
         <!-- Core identity (kept flat — used everywhere) -->
-        <div class="grid grid-cols-2 gap-4">
+        <section class="card p-6 profile-card">
+          <h4 class="section-title">Core Identity</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
             <input v-model="form.name" type="text" class="input" placeholder="John Doe" />
@@ -19,41 +34,47 @@
             <input v-model="form.email" type="email" class="input" placeholder="john@example.com" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Phone</label>
-            <input v-model="form.phone" type="tel" class="input" placeholder="(555) 123-4567" />
+            <PhoneNumberInput v-model="form.phone" v-model:country="form.phoneCountry" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">Location</label>
             <input v-model="form.location" type="text" class="input" placeholder="San Francisco, CA" />
           </div>
         </div>
+        </section>
 
         <!-- Education — fully driven by linking (or quick-creating) existing portfolio
              entries; highestDegree/school/discipline/etc. are derived from these, not
              retyped here. -->
-        <div>
-          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Education</h4>
+        <section class="card p-6 profile-card">
+          <h4 class="section-title">Education</h4>
           <ExperienceLinker category="EDUCATION" v-model="form.linkedEducation" />
-        </div>
+        </section>
 
         <!-- Experience — same deal: currentCompany/currentTitle/etc. are derived from
              whichever linked job is current (or most recent). -->
-        <div>
-          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Experience</h4>
+        <section class="card p-6 profile-card">
+          <h4 class="section-title">Experience</h4>
           <ExperienceLinker category="JOB" v-model="form.linkedJobs" />
-        </div>
+        </section>
 
         <!-- Generated sections -->
-        <div v-for="section in sections" :key="section.title">
-          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">
+        <section v-for="section in sections" :key="section.title" class="card p-6 profile-card">
+          <h4 class="section-title">
             {{ section.title }}
           </h4>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div v-for="f in section.fields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
-              <select v-if="f.options" v-model="(form as any)[f.key]" class="input">
+              <AddressAutocomplete
+                v-if="f.key === 'address'"
+                v-model="form.address"
+                @selected="applyAddress"
+              />
+              <select v-else-if="f.options" v-model="(form as any)[f.key]" class="input">
                 <option value="">{{ f.emptyLabel || 'Select an option' }}</option>
                 <option v-for="option in f.options" :key="option.value" :value="option.value">
                   {{ option.label }}
@@ -64,22 +85,25 @@
                 v-model="(form as any)[f.key]"
                 :type="f.type || 'text'"
                 class="input"
-                :placeholder="f.placeholder || ''"
+                :placeholder="f.placeholder || `Enter ${f.label.toLowerCase()}`"
+                :pattern="f.type === 'url' ? URL_PATTERN : undefined"
+                :title="f.type === 'url' ? URL_HELP : undefined"
+                @blur="f.type === 'url' && normalizeUrlField(f.key)"
               />
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- EEO / voluntary disclosures -->
-        <div>
-          <h4 class="text-sm font-semibold text-gray-200 mb-1 pb-1 border-b border-gray-700">
+        <section class="card p-6 profile-card">
+          <h4 class="section-title mb-1">
             EEO Disclosures <span class="text-gray-500 font-normal">(optional, voluntary)</span>
           </h4>
           <p class="text-xs text-gray-500 mb-3">
             Some applications ask these for equal-opportunity reporting. Leave blank to answer
             "Prefer not to say" by default.
           </p>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             <div v-for="f in eeoFields" :key="f.key">
               <label class="block text-sm font-medium text-gray-300 mb-1">{{ f.label }}</label>
               <select v-model="(form as any)[f.key]" class="input">
@@ -114,47 +138,15 @@
               </select>
             </div>
           </div>
-        </div>
-
-        <!-- Links (existing three + new taxonomy) -->
-        <div>
-          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">
-            Core Links
-          </h4>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">LinkedIn URL</label>
-              <input v-model="form.linkedin" type="url" class="input" placeholder="https://linkedin.com/in/..." />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">GitHub URL</label>
-              <input v-model="form.github" type="url" class="input" placeholder="https://github.com/..." />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Portfolio URL</label>
-              <input v-model="form.portfolio" type="url" class="input" placeholder="https://yourportfolio.com" />
-            </div>
-          </div>
-        </div>
+        </section>
 
         <!-- Skills -->
-        <div>
-          <h4 class="text-sm font-semibold text-gray-200 mb-3 pb-1 border-b border-gray-700">Skills</h4>
+        <section class="card p-6 profile-card">
+          <h4 class="section-title">Skills</h4>
           <SkillsPicker v-model="form.linkedSkills" />
-        </div>
+        </section>
 
-        <!-- Submit -->
-        <div class="flex justify-end pt-2">
-          <button
-            type="submit"
-            :disabled="store.isSaving"
-            class="px-6 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          >
-            {{ store.isSaving ? 'Saving...' : 'Save Profile' }}
-          </button>
-        </div>
       </form>
-    </div>
   </div>
 </template>
 
@@ -163,13 +155,35 @@ import { reactive, computed, watch } from 'vue'
 import { useGoApplyStore, type GoApplyProfile } from '@/stores/goapply'
 import ExperienceLinker from '@/components/goapply/ExperienceLinker.vue'
 import SkillsPicker from '@/components/goapply/SkillsPicker.vue'
+import PhoneNumberInput from '@/components/goapply/PhoneNumberInput.vue'
+import AddressAutocomplete from '@/components/goapply/AddressAutocomplete.vue'
 
 const store = useGoApplyStore()
+const URL_PATTERN = 'https?://.+'
+const URL_HELP = 'Enter a complete HTTP or HTTPS URL.'
+
+const SELECT_DEFAULTS: Partial<GoApplyProfile> = {
+  phoneType: 'Mobile',
+  phoneCountry: 'US',
+  pronouns: '',
+  workAuthUS: '',
+  sponsorshipRequired: '',
+  gender: '',
+  ethnicity: '',
+  hispanicLatino: '',
+  veteranStatus: '',
+  disabilityStatus: '',
+  lgbtStatus: '',
+  over18: undefined,
+  over21: undefined,
+  hasDriversLicense: undefined,
+}
 
 const form = reactive<GoApplyProfile>({
   name: '',
   email: '',
   phone: '',
+  ...SELECT_DEFAULTS,
   location: '',
   linkedin: '',
   github: '',
@@ -216,7 +230,6 @@ const sections: { title: string; fields: FieldDef[] }[] = [
         { value: 'Work', label: 'Work' },
         { value: 'Other', label: 'Other' },
       ] },
-      { key: 'phoneCountry', label: 'Phone Country', placeholder: 'US' },
       { key: 'birthday', label: 'Birthday', type: 'date' },
       { key: 'pronouns', label: 'Pronouns', emptyLabel: 'Prefer not to say', options: [
         { value: 'she/her', label: 'She / Her' },
@@ -249,6 +262,9 @@ const sections: { title: string; fields: FieldDef[] }[] = [
   {
     title: 'Social & Links',
     fields: [
+      { key: 'linkedin', label: 'LinkedIn URL', type: 'url', placeholder: 'https://linkedin.com/in/...' },
+      { key: 'github', label: 'GitHub URL', type: 'url', placeholder: 'https://github.com/...' },
+      { key: 'portfolio', label: 'Portfolio URL', type: 'url', placeholder: 'https://yourportfolio.com' },
       { key: 'twitter', label: 'Twitter / X URL', type: 'url' },
       { key: 'behance', label: 'Behance URL', type: 'url' },
       { key: 'dribbble', label: 'Dribbble URL', type: 'url' },
@@ -305,6 +321,29 @@ const over18Model = boolSelectModel('over18')
 const over21Model = boolSelectModel('over21')
 const hasDriversLicenseModel = boolSelectModel('hasDriversLicense')
 
+function normalizeUrlField(key: keyof GoApplyProfile) {
+  const value = form[key]
+  if (typeof value !== 'string' || !value.trim()) return
+  const normalized = /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`
+  ;(form as any)[key] = normalized
+}
+
+function applyAddress(address: {
+  label: string
+  address: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}) {
+  form.address = address.address
+  form.city = address.city
+  form.state = address.state
+  form.postalCode = address.postalCode
+  form.country = address.country
+  form.location = [address.city, address.state, address.country].filter(Boolean).join(', ') || address.label
+}
+
 // Populate form when profile loads. highestDegree/school/currentCompany/skills/etc.
 // come along in `p` as server-derived values (see computeDerivedFields in
 // api/src/routes/goapply.js) — they're read-only display data, not part of `form`.
@@ -313,6 +352,12 @@ watch(
   (p) => {
     if (!p) return
     Object.assign(form, p)
+    for (const [key, value] of Object.entries(SELECT_DEFAULTS)) {
+      const current = (form as any)[key]
+      if (current === null || current === undefined || (typeof value === 'string' && value && !current)) {
+        ;(form as any)[key] = value
+      }
+    }
     form.linkedJobs = [...(p.linkedJobs || [])]
     form.linkedEducation = [...(p.linkedEducation || [])]
     form.linkedSkills = [...(p.linkedSkills || [])]
@@ -333,5 +378,22 @@ async function handleSave() {
 <style scoped>
 .input {
   @apply w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500;
+}
+.section-title {
+  @apply text-sm font-semibold text-gray-200 mb-3 pb-2 border-b border-gray-700;
+}
+.profile-columns {
+  column-count: 1;
+  column-gap: 1.5rem;
+}
+.profile-card {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+  vertical-align: top;
+}
+@media (min-width: 1024px) {
+  .profile-columns { column-count: 2; }
 }
 </style>

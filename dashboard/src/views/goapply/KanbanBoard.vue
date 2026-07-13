@@ -1,7 +1,24 @@
 <template>
   <div>
     <!-- Toolbar -->
-    <div class="flex items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <input v-model="search" type="text" placeholder="Search jobs..." class="min-w-[200px] flex-1 max-w-xs px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+      <select v-model="categoryFilter" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        <option value="">All Categories</option>
+        <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+      </select>
+      <select v-model="tagFilter" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        <option value="">All Tags</option>
+        <option v-for="tag in tags" :key="tag" :value="tag">{{ tag }}</option>
+      </select>
+      <select v-model="sortBy" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Sort jobs">
+        <option value="manual">Manual Order</option>
+        <option value="updated-desc">Recently Updated</option>
+        <option value="created-desc">Recently Added</option>
+        <option value="applied-desc">Applied Date</option>
+        <option value="company-asc">Company A–Z</option>
+        <option value="category-asc">Category A–Z</option>
+      </select>
       <button
         @click="openCreateForm"
         class="ml-auto px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
@@ -14,11 +31,15 @@
       Loading board...
     </div>
 
-    <div v-else class="flex gap-4 overflow-x-auto pb-4" style="min-height: 60vh">
+    <div
+      v-else
+      class="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3"
+      style="min-height: 60vh"
+    >
       <div
         v-for="(column, colIdx) in localColumns"
         :key="column.status"
-        class="flex-shrink-0 w-72"
+        class="min-w-0"
       >
         <!-- Column Header -->
         <div class="flex items-center justify-between mb-3">
@@ -39,13 +60,13 @@
           :group="{ name: 'goapply-kanban', pull: true, put: true }"
           :animation="200"
           :sort="true"
-          :disabled="isMobile"
+          :disabled="isMobile || !canReorder"
           ghost-class="opacity-50"
           drag-class="shadow-lg"
           class="space-y-2 min-h-[120px] p-2 rounded-lg bg-gray-800/50 border border-dashed border-gray-700 transition-colors"
           :class="{ 'cursor-default': isMobile }"
-          @add="(evt: any) => handleAdd(evt, column.status, colIdx)"
-          @update="(evt: any) => handleUpdate(colIdx)"
+          @add="handleAdd($event, column.status, colIdx)"
+          @update="handleUpdate(colIdx)"
           item-key="id"
         >
           <div
@@ -58,6 +79,7 @@
               <div class="min-w-0 flex-1">
                 <h4 class="text-sm font-medium text-white truncate">{{ job.company }}</h4>
                 <p class="text-xs text-gray-400 truncate mt-0.5">{{ job.position }}</p>
+                <p v-if="job.category" class="text-xs text-primary-300 truncate mt-1">{{ job.category }}</p>
               </div>
               <!-- Edit button -->
               <button
@@ -69,6 +91,10 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
+            </div>
+
+            <div v-if="job.tags.length" class="flex flex-wrap gap-1 mt-2">
+              <span v-for="tag in job.tags" :key="tag" class="rounded-full bg-primary-900/50 px-2 py-0.5 text-[11px] text-primary-300">{{ tag }}</span>
             </div>
 
             <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
@@ -132,14 +158,73 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useGoApplyStore, JOB_STATUSES, KANBAN_COLUMNS, type JobStatus, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
 import { marked } from 'marked'
 import JobForm from '@/views/goapply/JobForm.vue'
+import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 
 const store = useGoApplyStore()
+const PREFERENCE_COOKIE = 'goapply-kanban-preferences'
+const PREFERENCE_VERSION = 1
+const SORT_OPTIONS = ['manual', 'updated-desc', 'created-desc', 'applied-desc', 'company-asc', 'category-asc'] as const
+const savedPreferences = readPreferenceCookie<Partial<{ search: string; category: string; tag: string; sort: string }>>(PREFERENCE_COOKIE, PREFERENCE_VERSION)
+const search = ref(typeof savedPreferences?.search === 'string' ? savedPreferences.search : '')
+const categoryFilter = ref(typeof savedPreferences?.category === 'string' ? savedPreferences.category : '')
+const tagFilter = ref(typeof savedPreferences?.tag === 'string' ? savedPreferences.tag : '')
+const sortBy = ref(typeof savedPreferences?.sort === 'string' && SORT_OPTIONS.includes(savedPreferences.sort as any) ? savedPreferences.sort : 'manual')
+const categories = computed(() => [...new Set(store.jobs.map(job => job.category).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b)))
+const tags = computed(() => [...new Set(store.jobs.flatMap(job => job.tags))].sort((a, b) => a.localeCompare(b)))
+
+if (savedPreferences && (
+  (savedPreferences.search !== undefined && typeof savedPreferences.search !== 'string') ||
+  (savedPreferences.category !== undefined && typeof savedPreferences.category !== 'string') ||
+  (savedPreferences.tag !== undefined && typeof savedPreferences.tag !== 'string') ||
+  (savedPreferences.sort !== undefined && !SORT_OPTIONS.includes(savedPreferences.sort as any))
+)) clearPreferenceCookie(PREFERENCE_COOKIE)
+
+watch([search, categoryFilter, tagFilter, sortBy], () => {
+  writePreferenceCookie(PREFERENCE_COOKIE, PREFERENCE_VERSION, {
+    search: search.value, category: categoryFilter.value, tag: tagFilter.value, sort: sortBy.value,
+  })
+})
+
+const preferencesReady = ref(store.jobs.length > 0)
+let jobsLoadStarted = store.isLoading
+watch(() => store.isLoading, (loading) => {
+  if (loading) jobsLoadStarted = true
+  else if (jobsLoadStarted) preferencesReady.value = true
+}, { immediate: true })
+watch([preferencesReady, categories, tags], ([ready]) => {
+  if (!ready) return
+  if (categoryFilter.value && !categories.value.includes(categoryFilter.value)) categoryFilter.value = ''
+  if (tagFilter.value && !tags.value.includes(tagFilter.value)) tagFilter.value = ''
+}, { immediate: true })
+const canReorder = computed(() => sortBy.value === 'manual' && !search.value && !categoryFilter.value && !tagFilter.value)
+
+const visibleJobs = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  let jobs = store.jobs.filter(job =>
+    (!q || [job.company, job.position, job.notes, job.category, ...job.tags].some(value => value?.toLowerCase().includes(q))) &&
+    (!categoryFilter.value || job.category === categoryFilter.value) &&
+    (!tagFilter.value || job.tags.includes(tagFilter.value))
+  )
+  if (sortBy.value === 'manual') return [...jobs].sort((a, b) => a.sortOrder - b.sortOrder || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const [field, direction] = sortBy.value.split('-')
+  return [...jobs].sort((a, b) => {
+    let result = 0
+    if (field === 'company') result = a.company.localeCompare(b.company)
+    else if (field === 'category') result = (a.category || '').localeCompare(b.category || '')
+    else {
+      const aDate = field === 'created' ? a.createdAt : field === 'applied' ? a.appliedAt : a.updatedAt
+      const bDate = field === 'created' ? b.createdAt : field === 'applied' ? b.appliedAt : b.updatedAt
+      result = (aDate ? new Date(aDate).getTime() : 0) - (bDate ? new Date(bDate).getTime() : 0)
+    }
+    return direction === 'desc' ? -result : result
+  })
+})
 
 // Local reactive copy that VueDraggable can mutate directly
 const localColumns = ref<{ status: JobStatus; label: string; color: string; jobs: GoApplyJob[] }[]>([])
@@ -157,15 +242,10 @@ const showForm = ref(false)
 const editingJob = ref<GoApplyJob | null>(null)
 
 // Sync from store → local when jobs load
-watch(() => store.jobs, (jobs) => {
+watch(visibleJobs, (jobs) => {
   const map: Record<string, GoApplyJob[]> = {}
   for (const s of JOB_STATUSES) map[s] = []
-  // Sort jobs by sortOrder then updatedAt
-  const sorted = [...jobs].sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  })
-  for (const job of sorted) {
+  for (const job of jobs) {
     if (map[job.status]) map[job.status].push(job)
   }
   localColumns.value = KANBAN_COLUMNS.map(col => ({

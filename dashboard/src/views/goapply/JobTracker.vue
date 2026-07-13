@@ -7,8 +7,8 @@
     </div>
 
     <!-- Tabs -->
-    <div class="border-b border-gray-700 mb-6">
-      <nav class="-mb-px flex space-x-6">
+    <div class="mb-6 overflow-x-auto overflow-y-hidden border-b border-gray-700 overscroll-x-contain goapply-tabs-scroll">
+      <nav class="-mb-px flex min-w-max space-x-6 pr-4">
         <router-link
           v-for="tab in tabs"
           :key="tab.route"
@@ -43,8 +43,8 @@ const tabs = [
   { label: 'Job List', route: '/goapply/jobs' },
   { label: 'Job Assistant', route: '/goapply/assistant' },
   { label: 'Resumes', route: '/goapply/resume' },
-  { label: 'Saved Answers', route: '/goapply/saved-answers' },
   { label: 'Cover Letters', route: '/goapply/cover-letters' },
+  { label: 'Saved Answers', route: '/goapply/saved-answers' },
   { label: 'Profile', route: '/goapply/profile' },
 ]
 
@@ -56,3 +56,13 @@ onMounted(async () => {
   await store.init()
 })
 </script>
+
+<style scoped>
+.goapply-tabs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 transparent;
+}
+.goapply-tabs-scroll::-webkit-scrollbar { height: 0.35rem; }
+.goapply-tabs-scroll::-webkit-scrollbar-track { background: transparent; }
+.goapply-tabs-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 9999px; }
+</style>

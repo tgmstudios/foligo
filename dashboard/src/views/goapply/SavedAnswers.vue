@@ -37,6 +37,9 @@
               </span>
             </div>
             <p class="text-sm text-gray-400 line-clamp-2">{{ answer.answer }}</p>
+            <div v-if="answer.jobs?.length" class="mt-2 flex flex-wrap gap-1.5">
+              <LinkedJobBadge v-for="job in answer.jobs" :key="job.id" :company="job.company" :position="job.position" />
+            </div>
             <p class="text-xs text-gray-500 mt-1">
               Updated {{ formatTimeAgo(answer.updatedAt) }}
             </p>
@@ -106,6 +109,21 @@
             ></textarea>
           </div>
 
+          <div>
+            <div class="mb-1 flex items-center justify-between">
+              <label class="block text-sm font-medium text-gray-300">Attach to jobs</label>
+              <button v-if="form.jobIds.length" type="button" class="text-xs text-gray-400 hover:text-white" @click="form.jobIds = []">Clear</button>
+            </div>
+            <p class="mb-2 text-xs text-gray-500">Optional. Select every application where this Q&amp;A is relevant.</p>
+            <div v-if="store.jobs.length" class="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-gray-600 bg-gray-900/40 p-2">
+              <label v-for="job in store.jobs" :key="job.id" class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-gray-700/60">
+                <input v-model="form.jobIds" type="checkbox" :value="job.id" class="mt-0.5 rounded border-gray-600 bg-gray-800 text-primary-600 focus:ring-primary-500" />
+                <span class="min-w-0 text-sm text-gray-300"><span class="font-medium text-white">{{ job.position }}</span> at {{ job.company }}</span>
+              </label>
+            </div>
+            <p v-else class="rounded-lg border border-dashed border-gray-600 p-3 text-center text-xs text-gray-500">Create a job first to attach this answer.</p>
+          </div>
+
           <div class="flex justify-end gap-3 pt-2">
             <button type="button" @click="showForm = false" class="px-4 py-2 text-sm text-gray-300 hover:text-white">
               Cancel
@@ -128,6 +146,7 @@
 import { ref, reactive } from 'vue'
 import { useGoApplyStore, type SavedAnswer } from '@/stores/goapply'
 import { formatDistanceToNow } from 'date-fns'
+import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
 
 const store = useGoApplyStore()
 
@@ -138,6 +157,7 @@ const form = reactive({
   question: '',
   answer: '',
   category: '',
+  jobIds: [] as string[],
 })
 
 function openForm(answer?: SavedAnswer) {
@@ -146,11 +166,13 @@ function openForm(answer?: SavedAnswer) {
     form.question = answer.question
     form.answer = answer.answer
     form.category = answer.category || ''
+    form.jobIds = answer.jobs?.map((job) => job.id) || []
   } else {
     editingAnswer.value = null
     form.question = ''
     form.answer = ''
     form.category = ''
+    form.jobIds = []
   }
   showForm.value = true
 }

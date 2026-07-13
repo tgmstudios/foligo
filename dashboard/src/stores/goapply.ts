@@ -93,6 +93,8 @@ export interface GoApplyJob {
   position: string
   url: string
   notes: string
+  category: string | null
+  tags: string[]
   status: JobStatus
   referredBy: string | null
   sortOrder: number
@@ -116,7 +118,8 @@ export interface SavedAnswer {
   id: string
   question: string
   answer: string
-  category: string
+  category: string | null
+  jobs: Pick<GoApplyJob, 'id' | 'company' | 'position'>[]
   createdAt: string
   updatedAt: string
 }
@@ -137,6 +140,8 @@ export interface JobFormData {
   position: string
   url: string
   notes: string
+  category: string
+  tags: string[]
   status: JobStatus
   referredBy: string
   sortOrder: number
@@ -399,7 +404,7 @@ export const useGoApplyStore = defineStore('goapply', () => {
     }
   }
 
-  async function createAnswer(form: { question: string; answer: string; category: string }) {
+  async function createAnswer(form: { question: string; answer: string; category: string; jobIds: string[] }) {
     try {
       isSaving.value = true
       const { data } = await api.post('/goapply/answers', form)
@@ -414,7 +419,7 @@ export const useGoApplyStore = defineStore('goapply', () => {
     }
   }
 
-  async function updateAnswer(id: string, form: { question: string; answer: string; category: string }) {
+  async function updateAnswer(id: string, form: { question: string; answer: string; category: string; jobIds: string[] }) {
     try {
       isSaving.value = true
       const { data } = await api.put(`/goapply/answers/${id}`, form)
