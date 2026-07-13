@@ -4,6 +4,12 @@ on:
   push:
     branches: ["main", "staging"]
 
+# Only the newest commit on a branch should publish its images. Besides saving
+# runner capacity, this prevents an older, slower build from overwriting latest.
+concurrency:
+  group: build-and-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-api:
     runs-on: tgmstudios-runners
@@ -48,8 +54,8 @@ jobs:
           tags: |
             registry.tgm.one/foligo/${{ env.TAG_LATEST_API }}
             registry.tgm.one/foligo/${{ env.TAG_COMMIT_API }}
-          cache-from: type=registry,ref=registry.tgm.one/foligo/api:buildcache
-          cache-to: type=registry,ref=registry.tgm.one/foligo/api:buildcache,mode=max
+          cache-from: type=registry,ref=registry.tgm.one/foligo/api:buildcache-${{ github.ref_name }}
+          cache-to: type=registry,ref=registry.tgm.one/foligo/api:buildcache-${{ github.ref_name }},mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
             TURBO_TEAM=foligo
@@ -99,8 +105,8 @@ jobs:
           tags: |
             registry.tgm.one/foligo/${{ env.TAG_LATEST_DASHBOARD }}
             registry.tgm.one/foligo/${{ env.TAG_COMMIT_DASHBOARD }}
-          cache-from: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache
-          cache-to: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache,mode=max
+          cache-from: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache-${{ github.ref_name }}
+          cache-to: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache-${{ github.ref_name }},mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
             TURBO_TEAM=foligo
@@ -150,8 +156,8 @@ jobs:
           tags: |
             registry.tgm.one/foligo/${{ env.TAG_LATEST_SITES }}
             registry.tgm.one/foligo/${{ env.TAG_COMMIT_SITES }}
-          cache-from: type=registry,ref=registry.tgm.one/foligo/sites:buildcache
-          cache-to: type=registry,ref=registry.tgm.one/foligo/sites:buildcache,mode=max
+          cache-from: type=registry,ref=registry.tgm.one/foligo/sites:buildcache-${{ github.ref_name }}
+          cache-to: type=registry,ref=registry.tgm.one/foligo/sites:buildcache-${{ github.ref_name }},mode=max
           build-args: |
             TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
             TURBO_TEAM=foligo

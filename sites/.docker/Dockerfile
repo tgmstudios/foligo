@@ -1,5 +1,8 @@
 # Build stage
-FROM node:22-alpine AS build
+# Nuxt's output is portable JavaScript, so compile on the runner's native
+# architecture instead of paying the QEMU cost of an ARM64 build. The runtime
+# stage still uses the requested target platform (linux/arm64 in CI).
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 
 WORKDIR /app
 

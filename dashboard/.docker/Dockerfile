@@ -1,5 +1,8 @@
 # Build stage
-FROM node:22-alpine AS builder
+# The build emits static assets, so run it on the runner's native architecture
+# instead of emulating the target architecture. The nginx stage still uses the
+# requested target platform (linux/arm64 in CI).
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
 # node-canvas build dependencies (alpine/musl)
 RUN apk add --no-cache python3 make g++ cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev
