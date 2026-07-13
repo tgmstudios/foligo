@@ -1,11 +1,11 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
-const { authorizeProjectAccess } = require('../middleware/auth');
-const { handleValidation } = require('../middleware/handle-validation');
-const { checkSubdomainAvailable } = require('../utils/uniqueness-check');
-const { projectInclude } = require('../utils/project-include');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
+const { authorizeProjectAccess } = require('../../middleware/auth');
+const { handleValidation } = require('../../middleware/handle-validation');
+const { checkSubdomainAvailable } = require('../../utils/uniqueness-check');
+const { projectInclude } = require('../../utils/project-include');
 
 const router = express.Router();
 

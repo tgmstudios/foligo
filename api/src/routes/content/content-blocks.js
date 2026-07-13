@@ -1,8 +1,8 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
-const { authorizeProjectAccess } = require('../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
+const { authorizeProjectAccess } = require('../../middleware/auth');
 
 const router = express.Router();
 

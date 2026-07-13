@@ -1,14 +1,14 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
-const { prisma } = require('../services/database');
-const ai = require('../services/ai/manager');
-const latexCompiler = require('../services/latex-compiler');
-const { createCoverLetterEditorTools } = require('../services/cover-letter-editor-tools');
-const { createGithubTools } = require('../services/github-tools');
-const githubService = require('../services/github-service');
-const { fetchPortfolioItem, getPortfolioContext } = require('../services/portfolio-context');
-const { sendSse } = require('../utils/sse');
+const { prisma } = require('../../services/core/database');
+const ai = require('../../services/ai/manager');
+const latexCompiler = require('../../services/goapply/latex-compiler');
+const { createCoverLetterEditorTools } = require('../../services/goapply/cover-letter-editor-tools');
+const { createGithubTools } = require('../../services/github/github-tools');
+const githubService = require('../../services/github/github-service');
+const { fetchPortfolioItem, getPortfolioContext } = require('../../services/goapply/portfolio-context');
+const { sendSse } = require('../../utils/sse');
 
 const router = express.Router();
 

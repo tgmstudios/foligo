@@ -3,9 +3,9 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { uploadFile, deleteFile, getFileUrl, minioClient, BUCKET_NAME } = require('../services/minio');
-const { authenticateToken, authorizeProjectAccess } = require('../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { uploadFile, deleteFile, getFileUrl, minioClient, BUCKET_NAME } = require('../../services/core/minio');
+const { authenticateToken, authorizeProjectAccess } = require('../../middleware/auth');
 
 const router = express.Router();
 

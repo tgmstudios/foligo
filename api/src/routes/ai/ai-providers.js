@@ -5,10 +5,10 @@
  */
 const express = require('express');
 const router = express.Router();
-const ai = require('../services/ai/manager');
-const { authenticateToken } = require('../middleware/auth');
-const { prisma } = require('../services/database');
-const { generateCoverLetter, generateCustomAnswer } = require('../services/goapply-content-generation');
+const ai = require('../../services/ai/manager');
+const { authenticateToken } = require('../../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { generateCoverLetter, generateCustomAnswer } = require('../../services/goapply/goapply-content-generation');
 
 /**
  * GET /api/ai/providers

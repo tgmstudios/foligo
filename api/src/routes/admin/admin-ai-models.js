@@ -1,10 +1,10 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { requireAdmin } = require('../middleware/auth');
-const { encrypt } = require('../utils/encryption');
-const { ensureBootstrapModels, VALID_MODEL_TYPES, VALID_PROVIDER_TYPES } = require('../services/ai/model-config');
-const ai = require('../services/ai/manager');
+const { prisma } = require('../../services/core/database');
+const { requireAdmin } = require('../../middleware/auth');
+const { encrypt } = require('../../utils/encryption');
+const { ensureBootstrapModels, VALID_MODEL_TYPES, VALID_PROVIDER_TYPES } = require('../../services/ai/model-config');
+const ai = require('../../services/ai/manager');
 
 const router = express.Router();
 router.use(requireAdmin);

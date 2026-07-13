@@ -1,11 +1,11 @@
 const express = require('express');
 const { body, query } = require('express-validator');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
-const { requireAdmin } = require('../middleware/auth');
-const { handleValidation } = require('../middleware/handle-validation');
-const { paginate, buildPaginationResponse } = require('../utils/pagination');
-const { buildSearchWhere } = require('../utils/search-where');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
+const { requireAdmin } = require('../../middleware/auth');
+const { handleValidation } = require('../../middleware/handle-validation');
+const { paginate, buildPaginationResponse } = require('../../utils/pagination');
+const { buildSearchWhere } = require('../../utils/search-where');
 
 const router = express.Router();
 

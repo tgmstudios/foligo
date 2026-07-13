@@ -3,9 +3,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
-const { authenticateToken } = require('../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
+const { authenticateToken } = require('../../middleware/auth');
 
 const router = express.Router();
 

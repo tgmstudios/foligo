@@ -1,6 +1,6 @@
 const express = require('express');
 const { Prisma } = require('@prisma/client');
-const { prisma } = require('../services/database');
+const { prisma } = require('../services/core/database');
 const { authorizeProjectAccess } = require('../middleware/auth');
 const {
   MAX_BATCH_SIZE,
@@ -9,7 +9,7 @@ const {
   normalizeOrigin,
   originAllowed,
   normalizeEvent,
-} = require('../services/analytics');
+} = require('../services/analytics/analytics');
 
 const publicRouter = express.Router();
 const router = express.Router();

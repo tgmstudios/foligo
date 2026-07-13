@@ -1,8 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { authenticateToken } = require('../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { authenticateToken } = require('../../middleware/auth');
 
 const router = express.Router();
 

@@ -1,9 +1,9 @@
 const express = require('express');
 const crypto = require('crypto');
-const { prisma } = require('../services/database');
-const { encrypt } = require('../utils/encryption');
-const { authenticateToken } = require('../middleware/auth');
-const githubService = require('../services/github-service');
+const { prisma } = require('../../services/core/database');
+const { encrypt } = require('../../utils/encryption');
+const { authenticateToken } = require('../../middleware/auth');
+const githubService = require('../../services/github/github-service');
 
 const router = express.Router();
 

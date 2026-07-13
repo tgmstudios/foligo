@@ -1,6 +1,6 @@
 const express = require('express');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
 
 const router = express.Router();
 

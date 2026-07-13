@@ -108,7 +108,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     // If projectId is provided, verify user has access to the project
     if (projectId) {
-      const { prisma } = require('../services/database');
+      const { prisma } = require('../../services/core/database');
       
       const project = await prisma.project.findFirst({
         where: {
@@ -135,7 +135,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     }
 
     // Create asset record in database
-    const { prisma } = require('../services/database');
+    const { prisma } = require('../../services/core/database');
     const asset = await prisma.asset.create({
       data: {
         projectId: projectId || null,
@@ -207,7 +207,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const { prisma } = require('../services/database');
+    const { prisma } = require('../../services/core/database');
     
     // Get asset with project info to check permissions
     const asset = await prisma.asset.findUnique({
@@ -256,7 +256,7 @@ router.delete('/:id', async (req, res) => {
 
     // Clear project cache if applicable
     if (asset.projectId) {
-      const { cache } = require('../services/redis');
+      const { cache } = require('../../services/core/redis');
       await cache.del(`project:${asset.projectId}`);
     }
 

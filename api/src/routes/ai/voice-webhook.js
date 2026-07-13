@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const geminiService = require('../services/gemini');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
+const geminiService = require('../../services/gemini/gemini');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
 
 /**
  * @swagger

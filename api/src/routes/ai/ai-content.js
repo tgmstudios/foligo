@@ -17,12 +17,12 @@ if (!PDFParse || typeof PDFParse !== 'function') {
   });
   throw new Error('pdf-parse module is not properly loaded. Please reinstall pdf-parse: npm install pdf-parse');
 }
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
-const { authorizeProjectAccess, authenticateToken } = require('../middleware/auth');
-const geminiService = require('../services/gemini');
-const { findSimilarPostPairs } = require('../services/post-similarity');
-const { matchOrCreateSkills, matchOrCreateTags } = require('../services/skill-tag-matcher');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
+const { authorizeProjectAccess, authenticateToken } = require('../../middleware/auth');
+const geminiService = require('../../services/gemini/gemini');
+const { findSimilarPostPairs } = require('../../services/content/post-similarity');
+const { matchOrCreateSkills, matchOrCreateTags } = require('../../services/content/skill-tag-matcher');
 
 // Configure multer for resume uploads
 const upload = multer({

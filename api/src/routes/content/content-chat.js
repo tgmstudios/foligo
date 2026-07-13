@@ -1,11 +1,11 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { cache } = require('../services/redis');
-const ai = require('../services/ai/manager');
-const { createContentEditorTools } = require('../services/content-editor-tools');
-const { createGithubTools } = require('../services/github-tools');
-const { sendSse } = require('../utils/sse');
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
+const ai = require('../../services/ai/manager');
+const { createContentEditorTools } = require('../../services/content/content-editor-tools');
+const { createGithubTools } = require('../../services/github/github-tools');
+const { sendSse } = require('../../utils/sse');
 const { snapshotContentRevision } = require('./content-crud');
 
 const router = express.Router();

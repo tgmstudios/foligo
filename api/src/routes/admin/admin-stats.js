@@ -1,6 +1,6 @@
 const express = require('express');
-const { prisma } = require('../services/database');
-const { requireAdmin } = require('../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { requireAdmin } = require('../../middleware/auth');
 
 const router = express.Router();
 

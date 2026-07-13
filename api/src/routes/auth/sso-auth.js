@@ -10,7 +10,7 @@ const {
   fetchUserInfo,
   ClientSecretPost
 } = require('openid-client');
-const { prisma } = require('../services/database');
+const { prisma } = require('../../services/core/database');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();

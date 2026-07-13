@@ -1,13 +1,13 @@
 const express = require('express');
 const multer = require('multer');
-const { prisma } = require('../services/database');
-const ai = require('../services/ai/manager');
-const { createJobAssistantTools } = require('../services/job-assistant-tools');
-const { createGithubTools } = require('../services/github-tools');
-const githubService = require('../services/github-service');
-const { prepareAttachments, buildModelMessage } = require('../services/ai-attachment-text');
-const { sendSse } = require('../utils/sse');
-const { projectAccessWhere } = require('../utils/project-access-where');
+const { prisma } = require('../../services/core/database');
+const ai = require('../../services/ai/manager');
+const { createJobAssistantTools } = require('../../services/goapply/job-assistant-tools');
+const { createGithubTools } = require('../../services/github/github-tools');
+const githubService = require('../../services/github/github-service');
+const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
+const { sendSse } = require('../../utils/sse');
+const { projectAccessWhere } = require('../../utils/project-access-where');
 
 const ALL_PROJECT_ROLES = ['VIEWER', 'EDITOR', 'ADMIN'];
 

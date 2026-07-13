@@ -8,12 +8,12 @@
  */
 const express = require('express');
 const router = express.Router();
-const ai = require('../services/ai/manager');
-const { authenticateToken } = require('../middleware/auth');
-const { prisma } = require('../services/database');
-const { createExtensionAgentServerTools, CLIENT_AGENT_TOOL_DEFS } = require('../services/extension-agent-tools');
-const { flattenToolMessages } = require('../services/ai/message-history');
-const { sendSse } = require('../utils/sse');
+const ai = require('../../services/ai/manager');
+const { authenticateToken } = require('../../middleware/auth');
+const { prisma } = require('../../services/core/database');
+const { createExtensionAgentServerTools, CLIENT_AGENT_TOOL_DEFS } = require('../../services/extension/extension-agent-tools');
+const { flattenToolMessages } = require('../../services/ai/message-history');
+const { sendSse } = require('../../utils/sse');
 
 const NEVER_SUBMIT_RULE = `HARD RULE — never violate this: you may highlight the application's final Submit/Apply button with find_submit_button, but you must NEVER click it, and click_element will refuse any element that looks like a final submit action. The user always reviews and submits the application themselves. If asked to submit the application, politely refuse and explain that you can prepare everything but the user must click submit.`;
 

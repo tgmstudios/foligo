@@ -1,8 +1,8 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { prisma } = require('../services/database');
-const { requireAdmin } = require('../middleware/auth');
-const { encrypt, decrypt } = require('../utils/encryption');
+const { prisma } = require('../../services/core/database');
+const { requireAdmin } = require('../../middleware/auth');
+const { encrypt, decrypt } = require('../../utils/encryption');
 const https = require('https');
 const http = require('http');
 
