@@ -1,3 +1,27 @@
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS build
+
+# The API dependency tree is JavaScript except for Prisma. Install and generate
+# on the runner's native architecture, while explicitly fetching the ARM64 CLI
+# and client engines needed by the production image.
+ENV PRISMA_CLI_BINARY_TARGETS=linux-arm64-openssl-3.0.x
+
+WORKDIR /usr/src/app
+
+RUN corepack enable
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY api/package.json ./api/package.json
+
+RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true \
+    pnpm install --frozen-lockfile --prod --filter foligo-api
+
+COPY api/ ./api/
+RUN chmod +x ./api/.docker/entrypoint.sh && \
+    sed -i 's/\r$//' ./api/.docker/entrypoint.sh
+
+WORKDIR /usr/src/app/api
+RUN pnpm run build
+
 FROM node:22-bookworm-slim
 
 # Prisma engine needs OpenSSL; fontconfig + libssl are runtime deps for tectonic (LaTeX compiler);
@@ -23,58 +47,25 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
     rm /tmp/tectonic.tar.gz && \
     tectonic --version
 
-WORKDIR /usr/src/app
-
 RUN corepack enable
-
-# Copy workspace config + lockfile from monorepo root
-COPY pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
-COPY package.json ./
-COPY api/package.json ./api/package.json
-
-COPY api/.docker/entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh && \
-    sed -i 's/\r$//' /docker-entrypoint.sh
-
-# Install deps using workspace-aware pnpm
-RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true \
-    pnpm install --frozen-lockfile --filter foligo-api
-
-COPY api/ ./api/
-WORKDIR /usr/src/app/api
-
-# Turbo remote cache
-ARG TURBO_API
-ARG TURBO_TEAM
-ENV TURBO_API=$TURBO_API
-ENV TURBO_TEAM=$TURBO_TEAM
-RUN --mount=type=secret,id=TURBO_TOKEN \
-    TURBO_TOKEN="$(cat /run/secrets/TURBO_TOKEN)" \
-    pnpm exec turbo run build --filter=foligo-api
 
 # Pre-warm tectonic's TeX package bundle cache at build time by compiling the
 # starter template once, so the first real request doesn't need outbound
 # network access (tectonic normally fetches+caches packages on first use).
-# The upstream bundle service occasionally drops requests, and Tectonic does
-# not retry them itself, so retry the complete warmup a few times. The CI
-# build runner's network doesn't always reach the bundle host even though the
-# running container does, so a persistent failure here is non-fatal — it just
-# means the first real request will pay the fetch cost instead of this build.
-RUN mkdir -p /tmp/tectonic-warmup && \
-    success=0 && \
-    for attempt in 1 2 3 4 5; do \
-      if tectonic --bundle "$TECTONIC_BUNDLE_URL" \
-        src/assets/starter-resume.tex --outdir /tmp/tectonic-warmup; then \
-        success=1; \
-        break; \
-      fi; \
-      echo "Tectonic bundle warmup failed (attempt ${attempt}/5)" >&2; \
-      sleep $((attempt * 5)); \
-    done; \
-    if [ "$success" -ne 1 ]; then \
-      echo "Tectonic bundle warmup did not succeed after 5 attempts; continuing build without it" >&2; \
-    fi; \
+# Keep this layer independent of API source changes. CI cannot consistently
+# reach the bundle host, so one non-fatal attempt avoids four redundant 30s
+# network timeouts while still caching the bundle whenever the host responds.
+COPY api/src/assets/starter-resume.tex /tmp/tectonic-warmup/starter-resume.tex
+RUN if ! tectonic --bundle "$TECTONIC_BUNDLE_URL" \
+      /tmp/tectonic-warmup/starter-resume.tex --outdir /tmp/tectonic-warmup; then \
+      echo "Tectonic bundle warmup failed; continuing without it" >&2; \
+    fi && \
     rm -rf /tmp/tectonic-warmup
+
+COPY --from=build /usr/src/app /usr/src/app
+COPY --from=build /usr/src/app/api/.docker/entrypoint.sh /docker-entrypoint.sh
+
+WORKDIR /usr/src/app/api
 
 EXPOSE 3000
 
