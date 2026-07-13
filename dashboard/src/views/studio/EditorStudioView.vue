@@ -26,6 +26,7 @@
     <template #editor>
       <component
         :is="adapter.components.editor"
+        ref="editorRef"
         :model-value="content"
         :saving="isSaving"
         @update:model-value="onContentInput"
@@ -39,7 +40,9 @@
         :pdf-url="pdfUrl"
         :compiling="compiling"
         :compile-error="compileError"
+        :compile-log="compileLog"
         @recompile="saveAndCompile"
+        @jump-to-line="(line: number) => editorRef?.jumpToLine?.(line)"
       />
     </template>
 
@@ -143,6 +146,8 @@ const jobDescription = ref('')
 const showJobDescription = ref(false)
 const pdfUrl = ref<string | null>(null)
 const compileError = ref<string | null>(null)
+const compileLog = ref<string | null>(null)
+const editorRef = ref<any>(null)
 const awaitingCompile = ref(false)
 const isSaving = ref(false)
 const dirty = ref(false)
@@ -168,14 +173,31 @@ const chat = useAgenticChat(
         revokePdfUrl()
         pdfUrl.value = toPdfObjectUrl(response.data)
         compileError.value = null
+        compileLog.value = null
       } catch (error: any) {
-        compileError.value = error.response?.data?.message || 'Failed to load compiled PDF'
+        const data = error.response?.data
+        if (data instanceof Blob) {
+          try {
+            const text = await data.text()
+            const parsed = JSON.parse(text)
+            compileError.value = parsed.errors?.length
+              ? JSON.stringify(parsed.errors)
+              : parsed.message || 'Failed to load compiled PDF'
+            compileLog.value = parsed.log || null
+          } catch {
+            compileError.value = 'Failed to load compiled PDF'
+          }
+        } else {
+          compileError.value = data?.message || 'Failed to load compiled PDF'
+          compileLog.value = data?.log || null
+        }
       } finally {
         awaitingCompile.value = false
       }
     },
     onCompileError: (message) => {
       compileError.value = message
+      compileLog.value = null
       awaitingCompile.value = false
     },
   },
@@ -248,6 +270,13 @@ async function saveAndCompile() {
     awaitingCompile.value = false
     if ('error' in result) {
       compileError.value = result.error
+      compileLog.value = (result as any).log || null
+      // If structured errors came through, embed them for the PreviewPane
+      if ((result as any).errors?.length) {
+        try {
+          compileError.value = JSON.stringify((result as any).errors)
+        } catch { /* keep raw error */ }
+      }
     } else {
       revokePdfUrl()
       pdfUrl.value = result.previewUrl

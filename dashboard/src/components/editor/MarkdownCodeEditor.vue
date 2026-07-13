@@ -48,6 +48,83 @@ const container = ref<HTMLDivElement>()
 const dirty = ref(false)
 const wordCount = computed(() => props.modelValue.trim().split(/\s+/).filter(Boolean).length)
 
+// ── Markdown linting ───────────────────────────────────────────────────────
+
+let lintTimer: ReturnType<typeof setTimeout> | null = null
+
+function runMarkdownLint(monacoInstance: typeof monaco, model: monaco.editor.ITextModel) {
+  const source = model.getValue()
+  const lines = source.split('\n')
+  const markers: Array<{
+    startLineNumber: number; startColumn: number
+    endLineNumber: number; endColumn: number
+    message: string; severity: any; source: string
+  }> = []
+
+  // 1. Unclosed code fences
+  let inFence = false
+  let fenceStart = 0
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (/^```/.test(trimmed)) {
+      if (!inFence) {
+        inFence = true
+        fenceStart = i + 1
+      } else {
+        inFence = false
+      }
+    }
+  }
+  if (inFence) {
+    markers.push({
+      startLineNumber: fenceStart, startColumn: 1,
+      endLineNumber: fenceStart, endColumn: lines[fenceStart - 1].length + 1,
+      message: 'Unclosed code fence — add ``` to end the code block',
+      severity: monacoInstance.MarkerSeverity.Warning,
+      source: 'Markdown Lint',
+    })
+  }
+
+  // 2. Broken link syntax: [text](url without closing )
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const matches = line.matchAll(/\[([^\]]*)\]\(([^)]*)$/g)
+    for (const m of matches) {
+      // If the line doesn't end with ) after the URL
+      if (!/\)\s*$/.test(line.slice(m.index!))) {
+        markers.push({
+          startLineNumber: i + 1, startColumn: (m.index || 0) + 1,
+          endLineNumber: i + 1, endColumn: line.length + 1,
+          message: 'Possibly broken link — missing closing )',
+          severity: monacoInstance.MarkerSeverity.Warning,
+          source: 'Markdown Lint',
+        })
+      }
+    }
+  }
+
+  // 3. Heading hierarchy skip (e.g. ## then ####)
+  let lastHeadingLevel = 0
+  for (let i = 0; i < lines.length; i++) {
+    const hMatch = lines[i].match(/^(#{1,6})\s/)
+    if (hMatch) {
+      const level = hMatch[1].length
+      if (lastHeadingLevel > 0 && level > lastHeadingLevel + 1) {
+        markers.push({
+          startLineNumber: i + 1, startColumn: 1,
+          endLineNumber: i + 1, endColumn: level + 2,
+          message: `Heading skips from H${lastHeadingLevel} to H${level} — consider using H${lastHeadingLevel + 1} instead`,
+          severity: monacoInstance.MarkerSeverity.Info,
+          source: 'Markdown Lint',
+        })
+      }
+      lastHeadingLevel = level
+    }
+  }
+
+  monacoInstance.editor.setModelMarkers(model, 'markdown-lint', markers)
+}
+
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
 let applyingExternalUpdate = false
 
@@ -252,6 +329,21 @@ onMounted(async () => {
     renderLineHighlight: 'line',
   })
 
+  // Initial lint
+  const model = editor.getModel()
+  if (model) {
+    runMarkdownLint(monacoInstance, model)
+    editor.onDidChangeModelContent(() => {
+      if (lintTimer) clearTimeout(lintTimer)
+      lintTimer = setTimeout(() => {
+        if (editor) {
+          const m = editor.getModel()
+          if (m) runMarkdownLint(monacoInstance, m)
+        }
+      }, 300)
+    })
+  }
+
   editor.onDidChangeModelContent(() => {
     const value = editor?.getValue() || ''
     if (applyingExternalUpdate) return
@@ -293,6 +385,7 @@ watch(() => props.modelValue, (newValue) => {
 watch(() => props.saving, (saving) => { if (!saving) dirty.value = false })
 
 onUnmounted(() => {
+  if (lintTimer) clearTimeout(lintTimer)
   document.removeEventListener('paste', handlePaste as unknown as EventListener, true)
   editor?.dispose()
 })

@@ -294,7 +294,12 @@ router.post('/documents/:id/compile', async (req, res) => {
 
     const result = await latexCompiler.compile(document.content);
     if (result.error) {
-      return res.status(422).json({ error: 'Compilation Failed', message: result.error, log: result.log });
+      return res.status(422).json({
+        error: 'Compilation Failed',
+        message: result.error,
+        log: result.log,
+        errors: result.errors || [],
+      });
     }
 
     await ensurePdfDir();

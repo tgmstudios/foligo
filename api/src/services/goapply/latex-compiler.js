@@ -13,9 +13,90 @@ const TECTONIC_BUNDLE_URL = process.env.TECTONIC_BUNDLE_URL;
 const COMPILE_TIMEOUT_MS = 30000;
 
 /**
+ * Parse LaTeX compiler output for structured error information.
+ * Handles both tectonic's `error:` prefix format and traditional `! ... l.X` format.
+ *
+ * @param {string} output - raw compiler stdout/stderr
+ * @param {string} source - original .tex source (for context extraction)
+ * @returns {{ message: string, errors: Array<{line?:number, col?:number, message:string, context?:string}> }}
+ */
+function parseLatexErrors(output, source) {
+  const errors = [];
+  const sourceLines = source.split('\n');
+
+  // Pattern 1: tectonic-style "error: <msg>\n   --> <file>:<line>:<col>"
+  const tectonicPattern = /error:\s*(.+?)(?:\n|\r|$)\s*-->\s*\S+:(\d+):(\d+)/g;
+  let match;
+  while ((match = tectonicPattern.exec(output)) !== null) {
+    const message = match[1].trim();
+    const line = parseInt(match[2], 10);
+    const col = parseInt(match[3], 10);
+    const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
+    errors.push({ line, col, message, context: contextLine });
+  }
+
+  // Pattern 2: traditional LaTeX "! <msg>.\nl.<line> <content>"
+  const latexPattern = /!\s+(.+?)\.\s*\nl\.(\d+)\s+(.*?)(?=\n[!?]|\n\n|$)/gs;
+  while ((match = latexPattern.exec(output)) !== null) {
+    const message = match[1].trim();
+    const line = parseInt(match[2], 10);
+    const context = match[3].trim().slice(0, 120);
+    // Avoid duplicates (same line)
+    if (!errors.some(e => e.line === line && e.message === message)) {
+      errors.push({ line, col: undefined, message, context });
+    }
+  }
+
+  // Pattern 3: "Undefined control sequence" from tectonic
+  const undefPattern = /Undefined control sequence[:\s]*(.*?)(?:\n|$)/g;
+  while ((match = undefPattern.exec(output)) !== null) {
+    const cmd = match[1].trim();
+    errors.push({
+      line: undefined,
+      message: `Undefined control sequence: ${cmd || '(unknown)'}`,
+      context: cmd ? `\\${cmd}...` : undefined,
+    });
+  }
+
+  // Pattern 4: "Emergency stop" — last-resort catch
+  if (errors.length === 0 && output.includes('Emergency stop')) {
+    // Extract whatever context we can
+    const lines = output.split('\n');
+    const errorStart = lines.findIndex(l => l.includes('!') || l.includes('error:'));
+    if (errorStart >= 0) {
+      const msg = lines.slice(errorStart, errorStart + 5).join('\n').trim();
+      errors.push({ message: msg.slice(0, 300) });
+    }
+  }
+
+  // If we still found nothing, grab the last 20 lines as raw context
+  if (errors.length === 0) {
+    const trimmed = output.trim();
+    if (trimmed) {
+      const tail = trimmed.split('\n').slice(-15).join('\n');
+      errors.push({ message: tail.slice(0, 500) });
+    }
+  }
+
+  // Build a human-readable summary
+  let message;
+  if (errors.length === 0) {
+    message = 'LaTeX compilation failed (no specific error details available)';
+  } else if (errors.length === 1) {
+    const e = errors[0];
+    const loc = e.line ? ` at line ${e.line}` : '';
+    message = `LaTeX error${loc}: ${e.message}`;
+  } else {
+    message = `${errors.length} LaTeX errors found (first at line ${errors[0].line || '?'})`;
+  }
+
+  return { message, errors };
+}
+
+/**
  * Compile LaTeX source to a PDF buffer.
  * @param {string} source - Full .tex document source
- * @returns {Promise<{ pdf: Buffer } | { error: string, log: string }>}
+ * @returns {Promise<{ pdf: Buffer } | { error: string, log: string, errors?: Array }>}
  */
 async function compile(source) {
   const workDir = path.join(os.tmpdir(), `latex-${crypto.randomBytes(8).toString('hex')}`);
@@ -29,13 +110,22 @@ async function compile(source) {
     const { code, output } = await runTectonic(texPath, workDir);
 
     if (code !== 0) {
-      return { error: 'LaTeX compilation failed', log: output };
+      const parsed = parseLatexErrors(output, source);
+      return {
+        error: parsed.message,
+        log: output.slice(-3000), // Keep log manageable
+        errors: parsed.errors,
+      };
     }
 
     const pdf = await fs.readFile(pdfPath);
     return { pdf };
   } catch (error) {
-    return { error: error.message || 'Failed to compile LaTeX', log: error.stack || '' };
+    return {
+      error: error.message || 'Failed to compile LaTeX',
+      log: error.stack?.slice(0, 2000) || '',
+      errors: [{ message: error.message }],
+    };
   } finally {
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
