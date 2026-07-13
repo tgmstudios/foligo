@@ -4,19 +4,6 @@
     <div class="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50 flex-shrink-0">
       <span class="text-xs text-gray-400">Preview</span>
       <div class="flex items-center gap-3">
-      <button
-        type="button"
-        class="flex items-center gap-1.5 text-xs transition-colors"
-        :class="lockedScroll ? 'text-primary-300' : 'text-gray-500 hover:text-gray-300'"
-        :aria-pressed="lockedScroll"
-        title="Keep the preview aligned with the editor"
-        @click="toggleLockedScroll"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11V7a4 4 0 00-8 0v4m0 0h8m-8 0a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2v-6a2 2 0 00-2-2m4 0h4m0 0V7m0 4a2 2 0 012 2v6a2 2 0 01-2 2h-4" />
-        </svg>
-        {{ lockedScroll ? 'Scroll locked' : 'Lock scroll' }}
-      </button>
       <span v-if="stale" class="flex items-center space-x-1.5 text-xs text-amber-400">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -52,7 +39,7 @@ const props = defineProps<{
 const displayedHtml = ref('')
 const stale = ref(false)
 const scrollContainer = ref<HTMLElement>()
-const lockedScroll = ref(localStorage.getItem('studio-preview-scroll-lock') !== 'false')
+const lockedScroll = true
 
 // Guards against out-of-order async renders: mermaid.render() is async, so a
 // fast run of keystrokes can resolve out of order. Only the most recently
@@ -123,14 +110,8 @@ async function tryRender(source: string) {
 watch(() => props.content, (value) => tryRender(value), { immediate: true })
 watch(() => props.editorScrollPosition, () => syncScroll(), { deep: true })
 
-function toggleLockedScroll() {
-  lockedScroll.value = !lockedScroll.value
-  localStorage.setItem('studio-preview-scroll-lock', String(lockedScroll.value))
-  syncScroll()
-}
-
 function syncScroll() {
-  if (!lockedScroll.value || !scrollContainer.value || !props.editorScrollPosition) return
+  if (!lockedScroll || !scrollContainer.value || !props.editorScrollPosition) return
   const anchors = Array.from(scrollContainer.value.querySelectorAll<HTMLElement>('[data-source-line]'))
   if (!anchors.length) return
   const sourcePosition = props.editorScrollPosition.line + props.editorScrollPosition.lineProgress
