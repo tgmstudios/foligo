@@ -18,6 +18,7 @@ export interface AgenticChatMessage {
   reasoning?: string
   toolActivity?: ToolActivity[]
   streaming?: boolean
+  attachments?: Array<{ name: string; type?: string; size?: number }>
 }
 
 export interface AgenticChatCallbacks {
@@ -94,8 +95,8 @@ export function useAgenticChat(
     }
   }
 
-  async function sendMessage(userText: string) {
-    if (streaming.value || !userText.trim()) return
+  async function sendMessage(userText: string, attachments: File[] = []) {
+    if (streaming.value || (!userText.trim() && !attachments.length)) return
 
     // Captured before this turn's messages are pushed — some backends (e.g.
     // Content, which has no server-side chat storage like ResumeDocument
@@ -104,7 +105,8 @@ export function useAgenticChat(
       .filter((m) => m.content)
       .map((m) => ({ role: m.role, content: m.content }))
 
-    const userMsg: AgenticChatMessage = { id: uid(), role: 'user', content: userText }
+    const displayText = userText.trim() || 'Please review the attached file(s).'
+    const userMsg: AgenticChatMessage = { id: uid(), role: 'user', content: displayText, attachments: attachments.map(file => ({ name: file.name, type: file.type, size: file.size })) }
     const assistantMsg: AgenticChatMessage = {
       id: uid(),
       role: 'assistant',
@@ -125,17 +127,33 @@ export function useAgenticChat(
 
     try {
       const token = localStorage.getItem('auth_token')
+      const provider = getProvider()
+      let body: BodyInit
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+      if (attachments.length) {
+        const form = new FormData()
+        form.append('message', userText)
+        if (provider) form.append('provider', provider)
+        form.append('history', JSON.stringify(history))
+        attachments.forEach(file => form.append('attachments', file))
+        body = form
+      } else {
+        headers['Content-Type'] = 'application/json'
+        body = JSON.stringify({ message: userText, provider, history })
+      }
       const response = await fetch(getChatUrl(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ message: userText, provider: getProvider(), history }),
+        headers,
+        body,
       })
 
       if (!response.ok || !response.body) {
-        throw new Error(`Request failed (${response.status})`)
+        let message = `Request failed (${response.status})`
+        try {
+          const payload = await response.json()
+          if (payload?.message) message = payload.message
+        } catch { /* Keep the status-based fallback for non-JSON errors. */ }
+        throw new Error(message)
       }
 
       const reader = response.body.getReader()
@@ -175,11 +193,12 @@ export function useAgenticChat(
     messages.value = []
   }
 
-  function loadHistory(history: Array<{ role: string; content: string }>) {
+  function loadHistory(history: Array<{ role: string; content: string; attachments?: Array<{ name: string; type?: string; size?: number }> }>) {
     messages.value = history.map(m => ({
       id: uid(),
       role: m.role as 'user' | 'assistant',
       content: m.content,
+      attachments: m.attachments,
     }))
   }
 

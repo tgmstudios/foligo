@@ -103,20 +103,43 @@
                   ? 'bg-purple-600 text-white' 
                   : 'bg-gray-700 text-white'
               ]">
-                <p class="text-sm whitespace-pre-wrap">{{ message.content }}</p>
-              </div>
-            </div>
-          </div>
+                <template v-if="message.role === 'assistant'">
+                  <details v-if="message.reasoning" class="mb-2 group" :open="isTyping && messages[messages.length - 1]?.id === message.id && !message.content">
+                    <summary class="cursor-pointer text-xs text-gray-400 hover:text-gray-300 select-none flex items-center space-x-1">
+                      <svg class="w-3 h-3 transform transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>Thinking</span>
+                    </summary>
+                    <p class="mt-1 text-xs text-gray-400 whitespace-pre-wrap leading-relaxed border-l-2 border-gray-600 pl-2">{{ message.reasoning }}</p>
+                  </details>
 
-          <!-- Typing Indicator -->
-          <div v-if="isTyping" class="flex items-center space-x-3 mb-4">
-            <div class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <div class="rounded-lg px-4 py-2 bg-gray-700">
-              <p class="text-sm text-gray-300">AI is typing...</p>
+                  <div v-if="message.toolActivity?.length" class="mb-2 space-y-1">
+                    <div
+                      v-for="(tool, index) in message.toolActivity"
+                      :key="`${tool.toolName}-${index}`"
+                      class="flex items-center space-x-1.5 text-xs px-2 py-1 rounded-md border"
+                      :class="tool.status === 'running' ? 'bg-gray-700/50 border-gray-600 text-gray-300' : tool.status === 'error' ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-green-900/20 border-green-800 text-green-300'"
+                    >
+                      <svg v-if="tool.status === 'running'" class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path v-if="tool.status === 'error'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>{{ toolLabel(tool.toolName, tool.status) }}</span>
+                    </div>
+                  </div>
+                </template>
+                <p v-if="message.content" class="text-sm whitespace-pre-wrap">{{ message.content }}</p>
+                <div v-else-if="message.role === 'assistant' && isTyping && messages[messages.length - 1]?.id === message.id && !message.reasoning && !message.toolActivity?.length" class="flex space-x-1.5 py-1">
+                  <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -179,7 +202,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
-import api, { aiApi } from '@/services/api'
+import api, { aiApi, API_URL } from '@/services/api'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -197,7 +220,22 @@ const isOpen = ref(false)
 const isLoading = ref(false)
 const isTyping = ref(false)
 const loadingMessage = ref('')
-const messages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
+type ToolActivity = {
+  toolCallId?: string
+  toolName: string
+  status: 'running' | 'done' | 'error'
+  input?: unknown
+}
+
+type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  reasoning?: string
+  toolActivity?: ToolActivity[]
+}
+
+const messages = ref<ChatMessage[]>([])
 const currentMessage = ref('')
 const chatHistory = ref<Array<{ role: string; content: string }>>([])
 const messageTextarea = ref<HTMLTextAreaElement | null>(null)
@@ -207,6 +245,69 @@ const selectedInteractionMode = ref<'text' | 'voice'>('text')
 const voiceAgentId = ref('')
 
 const canRespond = computed(() => !isTyping.value && !sessionDone.value && modeSelected.value && selectedInteractionMode.value === 'text')
+
+const TOOL_LABELS: Record<string, { done: string; error: string }> = {
+  signalContentReadyForGeneration: { done: 'Content brief completed', error: 'Content brief failed' },
+  signalEditReadyForGeneration: { done: 'Edit brief completed', error: 'Edit brief failed' },
+  fetchExistingPost: { done: 'Existing post fetched', error: 'Post fetch failed' },
+}
+
+const toolLabel = (toolName: string, status: 'running' | 'done' | 'error') => {
+  const labels = TOOL_LABELS[toolName]
+  if (labels && status !== 'running') return labels[status]
+  const readableName = toolName.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ')
+  if (status === 'running') return `Running ${readableName}…`
+  return status === 'error' ? `${readableName} failed` : `${readableName} completed`
+}
+
+const streamSession = async (payload: Record<string, unknown>) => {
+  const assistantMessage: ChatMessage = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    role: 'assistant',
+    content: '',
+    reasoning: '',
+    toolActivity: []
+  }
+  messages.value.push(assistantMessage)
+  const message = messages.value[messages.value.length - 1]
+  const token = localStorage.getItem('auth_token')
+  const response = await fetch(`${API_URL}/ai/session/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(payload)
+  })
+  if (!response.ok || !response.body) throw new Error(`Request failed (${response.status})`)
+
+  let sessionResult: any = null
+  let buffer = ''
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const frames = buffer.split('\n\n')
+    buffer = frames.pop() || ''
+    for (const frame of frames) {
+      const line = frame.split('\n').find(item => item.startsWith('data: '))
+      if (!line) continue
+      const event = JSON.parse(line.slice(6))
+      if (event.type === 'text-delta') message.content += event.text || ''
+      else if (event.type === 'reasoning-delta') message.reasoning = (message.reasoning || '') + (event.text || '')
+      else if (event.type === 'tool-call') {
+        message.toolActivity!.push({ toolCallId: event.toolCallId, toolName: event.toolName, input: event.input, status: 'running' })
+      } else if (event.type === 'tool-result' || event.type === 'tool-error') {
+        const tool = message.toolActivity!.find(item => item.toolCallId === event.toolCallId)
+        if (tool) tool.status = event.type === 'tool-error' ? 'error' : 'done'
+      } else if (event.type === 'session-done') sessionResult = event
+      else if (event.type === 'error') throw new Error(event.message || 'AI stream failed')
+    }
+  }
+  return sessionResult || { done: false }
+}
 
 const voiceVariables = computed(() => {
   const projectId = (window as any).selectedProjectId || ''
@@ -271,11 +372,10 @@ const selectMode = async (mode: 'text' | 'voice') => {
 const initializeSession = async () => {
   if (props.mode === 'edit') {
     // For edit mode, start with existing content info
-    loadingMessage.value = 'Preparing your content...'
-    isLoading.value = true
+    isTyping.value = true
     
     try {
-      const response = await aiApi.post('/ai/session', {
+      const result = await streamSession({
         mode: 'edit',
         contentType: props.contentType || 'BLOG',
         initialInfo: props.initialInfo,
@@ -283,28 +383,21 @@ const initializeSession = async () => {
         projectId: props.projectId
       })
       
-      messages.value.push({
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: response.data.message
-      })
-      
-      if (response.data.done) {
+      if (result.done) {
         sessionDone.value = true
         generateFinalContent()
       }
     } catch (error) {
       console.error('Failed to initialize session:', error)
     } finally {
-      isLoading.value = false
+      isTyping.value = false
     }
   } else {
     // For create mode, start with first question
-    loadingMessage.value = 'Starting conversation...'
-    isLoading.value = true
+    isTyping.value = true
     
     try {
-      const response = await aiApi.post('/ai/session', {
+      const result = await streamSession({
         mode: 'create',
         contentType: props.contentType,
         initialInfo: {},
@@ -313,24 +406,18 @@ const initializeSession = async () => {
       })
       
       // Update inferred content type if it was determined
-      if (response.data.contentType) {
-        inferredContentType.value = response.data.contentType
+      if (result.contentType) {
+        inferredContentType.value = result.contentType
       }
-      
-      messages.value.push({
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: response.data.message
-      })
-      
-      if (response.data.done) {
+
+      if (result.done) {
         sessionDone.value = true
         generateFinalContent()
       }
     } catch (error) {
       console.error('Failed to initialize session:', error)
     } finally {
-      isLoading.value = false
+      isTyping.value = false
     }
   }
 }
@@ -363,7 +450,6 @@ const sendMessage = async () => {
   messages.value.push(userMessage)
   chatHistory.value.push({ role: 'user', content: userMessage.content })
   
-  const messageToSend = currentMessage.value.trim()
   currentMessage.value = ''
   
   // Reset textarea height
@@ -374,7 +460,7 @@ const sendMessage = async () => {
   isTyping.value = true
   
   try {
-    const response = await aiApi.post('/ai/session', {
+    const result = await streamSession({
       mode: props.mode,
       contentType: inferredContentType.value || props.contentType,
       initialInfo: props.initialInfo || {},
@@ -383,20 +469,14 @@ const sendMessage = async () => {
     })
     
     // Update inferred content type if it was determined
-    if (response.data.contentType) {
-      inferredContentType.value = response.data.contentType
+    if (result.contentType) {
+      inferredContentType.value = result.contentType
     }
+
+    const assistantMessage = messages.value[messages.value.length - 1]
+    chatHistory.value.push({ role: 'assistant', content: assistantMessage.content })
     
-    const assistantMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant' as const,
-      content: response.data.message
-    }
-    
-    messages.value.push(assistantMessage)
-    chatHistory.value.push({ role: 'assistant', content: response.data.message })
-    
-    if (response.data.done) {
+    if (result.done) {
       sessionDone.value = true
       await generateFinalContent()
     }

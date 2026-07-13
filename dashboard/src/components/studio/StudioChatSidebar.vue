@@ -16,7 +16,8 @@
       :streaming="streaming"
       :placeholder="placeholder"
       :empty-state-text="emptyStateText"
-      @send="(msg) => $emit('send', msg)"
+      :allow-attachments="allowAttachments"
+      @send="(msg, files) => $emit('send', msg, files)"
     />
   </div>
 </template>
@@ -32,10 +33,11 @@ defineProps<{
   streaming: boolean
   placeholder?: string
   emptyStateText?: string
+  allowAttachments?: boolean
 }>()
 
 defineEmits<{
-  (e: 'send', message: string): void
+  (e: 'send', message: string, files: File[]): void
 }>()
 
 interface AiProvider {
