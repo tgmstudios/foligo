@@ -7,7 +7,7 @@ const { AI_RESUME_CHATBOT_TOOLS } = require('../ai/gemini-tools');
 const { createGithubTools } = require('../github/github-tools');
 const { buildResumeChatbotSystemPrompt } = require('../content/resume-chatbot-prompts');
 const { GENERATION_CONFIG } = require('./config');
-const { handleFunctionCall } = require('./session-flow');
+const { handleFunctionCall } = require('./ai-session');
 
 async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, userId, context = {}, { aiChat, logger, sessionKey }) {
   logger.info('Starting resume chatbot session', {

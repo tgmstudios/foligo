@@ -1,7 +1,7 @@
 /**
- * Core conversational session flow: handleAISession / streamAISession.
+ * Core conversational AI session flow — model-agnostic.
  *
- * Both paths now use the exact same `ai.streamChat` + `maxSteps` pattern
+ * Both paths use the exact same `ai.streamChat` + `maxSteps` pattern
  * that the content editor, resume editor, and every other agentic chat in
  * Foligo uses.  The ai SDK drives the full tool-calling loop —
  * no custom function-call dispatch or single-turn limitations.
