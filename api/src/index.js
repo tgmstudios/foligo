@@ -9,9 +9,12 @@ const swaggerJsdoc = require('swagger-jsdoc');
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
-const projectRoutes = require('./routes/projects');
+const projectsCrudRoutes = require('./routes/projects-crud');
+const projectsSiteConfigRoutes = require('./routes/projects-site-config');
 const projectAccessRoutes = require('./routes/projectAccess');
-const contentRoutes = require('./routes/content');
+const contentCrudRoutes = require('./routes/content-crud');
+const contentOrderRoutes = require('./routes/content-order');
+const contentChatRoutes = require('./routes/content-chat');
 const publicContentRoutes = require('./routes/public-content');
 // const aiRoutes = require('./routes/ai');
 const aiContentRoutes = require('./routes/ai-content');
@@ -26,14 +29,21 @@ const skillsRoutes = require('./routes/skills');
 const experienceRolesRoutes = require('./routes/experience-roles');
 const revisionsRoutes = require('./routes/revisions');
 const mediaRoutes = require('./routes/media');
-const adminRoutes = require('./routes/admin');
+const adminUsersRoutes = require('./routes/admin-users');
+const adminProjectsRoutes = require('./routes/admin-projects');
+const adminContentRoutes = require('./routes/admin-content');
+const adminStatsRoutes = require('./routes/admin-stats');
 const adminSsoRoutes = require('./routes/admin-sso');
 const adminAiModelRoutes = require('./routes/admin-ai-models');
 const ssoAuthRoutes = require('./routes/sso-auth');
 const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
 const extensionAgentRoutes = require('./routes/extension-agent');
-const goapplyRoutes = require('./routes/goapply');
+const goapplyJobAssistantRoutes = require('./routes/goapply-job-assistant');
+const goapplyProfileRoutes = require('./routes/goapply-profile');
+const goapplyJobApplicationsRoutes = require('./routes/goapply-job-applications');
+const goapplySavedAnswersRoutes = require('./routes/goapply-saved-answers');
+const goapplyCoverLettersRoutes = require('./routes/goapply-cover-letters');
 const tokenRoutes = require('./routes/tokens');
 const githubAuthRoutes = require('./routes/github-auth');
 const { publicRouter: publicAnalyticsRoutes, router: analyticsRoutes } = require('./routes/analytics');
@@ -260,10 +270,13 @@ app.get('/api/media/:id/view', mediaCorsWithMethods, async (req, res) => {
 
 // All other routes require authentication
 app.use('/api/users', authenticateToken, userRoutes);
-app.use('/api/projects', authenticateToken, projectRoutes);
+app.use('/api/projects', authenticateToken, projectsCrudRoutes);
+app.use('/api/projects', authenticateToken, projectsSiteConfigRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
-app.use('/api', authenticateToken, contentRoutes); // Protected content routes
+app.use('/api', authenticateToken, contentCrudRoutes); // Protected content routes
+app.use('/api', authenticateToken, contentOrderRoutes); // Content reorder routes
+app.use('/api', authenticateToken, contentChatRoutes); // Content AI chat route
 app.use('/api', authenticateToken, contentLinksRoutes); // Content links routes
 app.use('/api', authenticateToken, contentTagsRoutes); // Content tags routes
 app.use('/api', authenticateToken, contentMetaRoutes); // Content meta routes
@@ -284,9 +297,16 @@ app.use('/api', mediaRoutes);
 // Resume routes - require authentication
 app.use('/api/resume', authenticateToken, resumeRoutes);
 // GoApply routes - require authentication
-app.use('/api/goapply', authenticateToken, goapplyRoutes);
+app.use('/api/goapply', authenticateToken, goapplyJobAssistantRoutes);
+app.use('/api/goapply', authenticateToken, goapplyProfileRoutes);
+app.use('/api/goapply', authenticateToken, goapplyJobApplicationsRoutes);
+app.use('/api/goapply', authenticateToken, goapplySavedAnswersRoutes);
+app.use('/api/goapply', authenticateToken, goapplyCoverLettersRoutes);
 // Admin routes - require authentication and admin privileges
-app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/admin', authenticateToken, adminUsersRoutes);
+app.use('/api/admin', authenticateToken, adminProjectsRoutes);
+app.use('/api/admin', authenticateToken, adminContentRoutes);
+app.use('/api/admin', authenticateToken, adminStatsRoutes);
 app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);
 app.use('/api/admin/ai-models', authenticateToken, adminAiModelRoutes);
 

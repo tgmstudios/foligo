@@ -9,6 +9,7 @@ const { createResumeEditorTools } = require('../services/resume-editor-tools');
 const { createGithubTools } = require('../services/github-tools');
 const githubService = require('../services/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../services/portfolio-context');
+const { sendSse } = require('../utils/sse');
 
 const router = express.Router();
 
@@ -364,9 +365,7 @@ router.post('/documents/:id/chat', [
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  const send = (event) => {
-    res.write(`data: ${JSON.stringify(event)}\n\n`);
-  };
+  const send = (event) => sendSse(res, event);
 
   const userMessage = req.body.message;
   const priorHistory = Array.isArray(document.chatHistory) ? document.chatHistory : [];
