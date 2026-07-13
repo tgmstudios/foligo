@@ -3,7 +3,7 @@
  * building for generated content.
  *
  * Functions that call the AI take an explicit `{ aiText, logger }` deps
- * object rather than reaching for `this` — see gemini.js for how the facade
+ * object rather than reaching for `this` — see index.js for how the facade
  * wires these up.
  */
 const { utilityPrompts } = require('../content/prompt-utils');

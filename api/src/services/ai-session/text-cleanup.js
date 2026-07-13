@@ -1,5 +1,5 @@
 /**
- * Pure text-cleanup helpers used across the gemini/* content flows.
+ * Pure text-cleanup helpers used across the content flows.
  * No external dependencies — safe to import directly wherever needed.
  */
 

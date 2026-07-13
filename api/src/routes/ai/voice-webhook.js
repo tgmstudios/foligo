@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const geminiService = require('../../services/gemini/gemini');
+const geminiService = require('../../services/ai-session');
 const { prisma } = require('../../services/core/database');
 const { cache } = require('../../services/core/redis');
 

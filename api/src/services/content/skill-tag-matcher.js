@@ -1,7 +1,7 @@
 /**
  * Match-or-create helpers for Skill/ContentTag records, deduplicating the
  * near-identical implementations previously duplicated in routes/ai-content.js
- * and services/gemini.js. This is the canonical implementation used by both.
+ * and services/ai-session/index.js. This is the canonical implementation used by both.
  */
 
 /**

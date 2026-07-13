@@ -7,7 +7,7 @@
  *
  * This file is a thin facade: it owns the singleton's shared state (logger,
  * AI-call helpers) and delegates each method group to the corresponding
- * module under ./gemini/*, passing that state through explicitly instead of
+ * module under ./*, passing that state through explicitly instead of
  * relying on mixed-in prototypes.
  */
 const { prisma } = require('../core/database');
@@ -32,7 +32,7 @@ class GeminiService {
     });
   }
 
-  /** Shared deps passed into the extracted gemini/* modules. */
+  /** Shared deps passed into the extracted ./* modules. */
   get _deps() {
     return { aiText: this._ai.aiText, aiChat: this._ai.aiChat, logger: this.logger };
   }

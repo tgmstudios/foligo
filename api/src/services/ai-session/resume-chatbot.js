@@ -3,7 +3,7 @@
  * assistance. Uses a larger context window and specialized prompts.
  */
 const { GeminiAPIError } = require('../core/errors');
-const { AI_RESUME_CHATBOT_TOOLS } = require('../ai/gemini-tools');
+const { AI_RESUME_CHATBOT_TOOLS } = require('../ai/tools');
 const { createGithubTools } = require('../github/github-tools');
 const { buildResumeChatbotSystemPrompt } = require('../content/resume-chatbot-prompts');
 const { GENERATION_CONFIG } = require('./config');

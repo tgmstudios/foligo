@@ -12,7 +12,7 @@
  * Every provider returns the same shape — { name, displayName, model, capabilities } —
  * so AIManager can call the SDK's generateText identically regardless of which
  * backend is actually serving the request. Tool schemas are defined once
- * (see ../../gemini-tools.js) and converted per-provider by the SDK itself.
+ * (see ../ai/tools.js) and converted per-provider by the SDK itself.
  *
  * Precedence for each provider:
  *   1. Explicit config passed to factory

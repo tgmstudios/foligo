@@ -20,7 +20,7 @@ if (!PDFParse || typeof PDFParse !== 'function') {
 const { prisma } = require('../../services/core/database');
 const { cache } = require('../../services/core/redis');
 const { authorizeProjectAccess, authenticateToken } = require('../../middleware/auth');
-const geminiService = require('../../services/gemini/gemini');
+const geminiService = require('../../services/ai-session');
 const { findSimilarPostPairs } = require('../../services/content/post-similarity');
 const { matchOrCreateSkills, matchOrCreateTags } = require('../../services/content/skill-tag-matcher');
 

@@ -1,6 +1,6 @@
 /**
- * Generation-config constants for the gemini/* conversation & content flows.
- * Split out of the old gemini-config.js so this smaller, gemini-flow-specific
+ * Generation-config constants for the content-conversation & content-generation flows.
+ * Split out of the old config so this smaller, flow-specific
  * config no longer drags in provider/SDK-specific constants (those now live
  * in ai/providers/index.js).
  */

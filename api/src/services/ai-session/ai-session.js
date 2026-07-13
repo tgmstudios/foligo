@@ -16,7 +16,7 @@ const { GeminiAPIError } = require('../core/errors');
 const {
   createContentCreateTools,
   createContentEditTools
-} = require('../ai/gemini-tools');
+} = require('../ai/tools');
 const { buildConversationalSystemPrompt } = require('../content/conversation-prompts');
 const { GENERATION_CONFIG } = require('./config');
 const {

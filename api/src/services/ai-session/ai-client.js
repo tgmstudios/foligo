@@ -1,7 +1,7 @@
 /**
  * Internal AI-call helpers (replaces the old _callModelWithRetry).
  * Wraps the model-agnostic AIManager singleton with the retry/logging
- * behavior the rest of the gemini/* modules expect.
+ * calls in the rest of this module.  Wraps the model-agnostic AIManager
  */
 const ai = require('../ai/manager');
 const { GeminiAPIError } = require('../core/errors');
