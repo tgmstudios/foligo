@@ -211,6 +211,39 @@ const Tracker = (() => {
     }
   }
 
+  /**
+   * Persist a job to the Foligo board, then mirror it locally for offline
+   * history. URL is the stable identity so tracking and later submission update
+   * one card instead of creating duplicates.
+   */
+  async function trackApplication(jobInfo, status = 'saved') {
+    if (typeof GoApplyAPI === 'undefined') throw new Error('Foligo API is unavailable');
+    const url = jobInfo.url || window.location.href;
+    const jobs = await GoApplyAPI.getJobs();
+    let job = (jobs || []).find(candidate => candidate.url === url);
+    let created = false;
+
+    if (job) {
+      // Submission promotes an existing saved card. Clicking Track again must
+      // never demote an application already further along the pipeline.
+      if (status === 'applied' && job.status === 'saved') {
+        job = await GoApplyAPI.updateJob(job.id, { status });
+      }
+    } else {
+      job = await GoApplyAPI.trackJob({
+        company: jobInfo.company || 'Unknown company',
+        position: jobInfo.jobTitle || jobInfo.position || jobInfo.title || 'Unknown role',
+        url,
+        status,
+        source: 'extension',
+      });
+      created = true;
+    }
+
+    await saveApplication({ ...jobInfo, url });
+    return { job, created };
+  }
+
   async function getApplications() {
     try {
       const stored = await chrome.storage.local.get('applications');
@@ -229,13 +262,19 @@ const Tracker = (() => {
 
   function watchForSuccess(platformConfig, onSuccess) {
     let detected = false;
+    // Some application forms contain phrases such as "your application" before
+    // submission. Only react to a new success state, never one present when the
+    // watcher starts or exposed by GoApply mounting its own UI.
+    let wasSuccessful = detectSuccess(platformConfig);
     const observer = new MutationObserver(() => {
       if (detected) return;
-      if (detectSuccess(platformConfig)) {
+      const isSuccessful = detectSuccess(platformConfig);
+      if (!wasSuccessful && isSuccessful) {
         detected = true;
         observer.disconnect();
         if (onSuccess) onSuccess();
       }
+      wasSuccessful = isSuccessful;
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     return observer;
@@ -248,6 +287,7 @@ const Tracker = (() => {
     detectSuccess,
     watchForSuccess,
     saveApplication,
+    trackApplication,
     getApplications,
     getApplicationCount,
   };

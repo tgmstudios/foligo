@@ -120,16 +120,24 @@ const Finder = (() => {
       return null;
     }
     if (selector && typeof selector === 'object' && selector.path) {
+      const metadata = {
+        method: selector.method,
+        track: selector.track,
+        values: selector.values,
+        actions: selector.actions,
+        valuePath: selector.valuePath,
+        valueKey: selector.valueKey,
+      };
       const path = typeof selector.path === 'string' ? selector.path : 
         (Array.isArray(selector.path) ? selector.path : null);
       if (Array.isArray(path)) {
         for (const p of path) {
           const node = Detector.getFirstXPathMatch(p, container);
-          if (node) return { node, method: selector.method, track: selector.track };
+          if (node) return { node, ...metadata };
         }
       } else if (typeof path === 'string') {
         const node = Detector.getFirstXPathMatch(path, container);
-        if (node) return { node, method: selector.method, track: selector.track };
+        if (node) return { node, ...metadata };
       }
     }
     return null;
@@ -165,16 +173,21 @@ const Finder = (() => {
           if (!foundIds.has(elId + fieldName)) {
             foundIds.add(elId + fieldName);
             const configuredMethod = resolved.method || platformConfig.defaultMethod;
-            const method = element.tagName === 'SELECT'
+            const method = element.type === 'file'
+              ? 'uploadResume'
+              : element.tagName === 'SELECT'
               ? 'select'
               : (element.type === 'checkbox' || element.type === 'radio')
                 ? 'selectCheckboxOrRadio'
-                : configuredMethod || 'default';
+                : (resolved.actions || /select/i.test(element.className || '') || element.getAttribute?.('role') === 'combobox')
+                  ? 'select'
+                  : configuredMethod || 'default';
             foundFields.push({
               fieldName,
               element,
               method,
-              container
+              container,
+              values: resolved.values,
             });
           }
           break;
@@ -191,7 +204,14 @@ const Finder = (() => {
     const nameFields = discoverNameFields(container, foundIds);
     foundFields.push(...nameFields);
     
-    return foundFields;
+    // Rich ATS configurations often contain aliases and fallback selectors that
+    // resolve to the same control. A control must only be filled and counted once.
+    const seenElements = new WeakSet();
+    return foundFields.filter(field => {
+      if (!field.element || seenElements.has(field.element)) return false;
+      seenElements.add(field.element);
+      return true;
+    });
   }
 
   // ─── Discover fields via label[for] ──────────────────────────────
@@ -250,6 +270,7 @@ const Finder = (() => {
     for (const el of inputs) {
       const id = el.id || el.name;
       if (!id || skipIds.has(id)) continue;
+      if (/^iti-\d+__search-input$|^iti_\d+_search_input$/i.test(id)) continue;
       
       // Only pick up fields that aren't already covered by label[for]
       const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);

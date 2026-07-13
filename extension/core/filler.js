@@ -46,11 +46,14 @@ const Filler = (() => {
 
   function fillDefault(element, value) {
     element.focus();
+    const tracker = element._valueTracker;
+    const previousValue = element.value;
     setNativeValue(element, value);
+    // React uses this tracker to decide whether a synthetic change occurred.
+    // It must contain the previous value when the input event is dispatched.
+    if (tracker) tracker.setValue(previousValue || '');
     element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-    const tracker = element._valueTracker;
-    if (tracker) tracker.setValue(element.value || '');
     if (element.contentEditable === 'true') {
       element.textContent = value;
       element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -58,20 +61,8 @@ const Filler = (() => {
   }
 
   function fillReact(element, value) {
-    const props = getReactProps(element);
     fillDefault(element, value);
-    if (props && props.onChange) {
-      props.onChange({ 
-        target: element, currentTarget: element, type: 'change',
-        nativeEvent: new Event('change', { bubbles: true })
-      });
-    }
     element.dispatchEvent(new Event('blur', { bubbles: true }));
-    const reactSelect = element.closest('[class*="select"]');
-    if (reactSelect) {
-      reactSelect.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    }
   }
 
   function fillDijit(element, value) {
@@ -87,12 +78,32 @@ const Filler = (() => {
     element.dispatchEvent(new Event('blur', { bubbles: true }));
   }
 
-  function fillSelect(element, value) {
+  function choiceCandidates(value, valuesMap) {
+    const candidates = [String(value)];
+    if (!valuesMap) return candidates;
+    const wanted = normalizeChoice(value);
+    for (const aliases of Object.values(valuesMap)) {
+      if (!Array.isArray(aliases)) continue;
+      if (aliases.some(alias => {
+        const normalized = normalizeChoice(alias);
+        return normalized === wanted || normalized.includes(wanted) || wanted.includes(normalized);
+      })) candidates.push(...aliases.map(String));
+    }
+    return [...new Set(candidates.filter(Boolean))];
+  }
+
+  function fillSelect(element, value, valuesMap) {
+    const candidates = choiceCandidates(value, valuesMap);
     if (element.tagName === 'SELECT') {
-      const wanted = normalizeChoice(value);
       const options = Array.from(element.options);
-      const option = options.find(opt => normalizeChoice(opt.value) === wanted || normalizeChoice(opt.textContent) === wanted)
-        || options.find(opt => normalizeChoice(opt.textContent).includes(wanted) || wanted.includes(normalizeChoice(opt.textContent)));
+      const option = options.find(opt => candidates.some(candidate => {
+        const wanted = normalizeChoice(candidate);
+        return normalizeChoice(opt.value) === wanted || normalizeChoice(opt.textContent) === wanted;
+      })) || options.find(opt => candidates.some(candidate => {
+        const wanted = normalizeChoice(candidate);
+        const actual = normalizeChoice(opt.textContent);
+        return actual.includes(wanted) || wanted.includes(actual);
+      }));
       if (!option) throw new Error(`No matching option for "${value}"`);
       element.focus();
       setNativeValue(element, option.value);
@@ -102,22 +113,24 @@ const Filler = (() => {
       return;
     }
     element.focus();
+    element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     element.click();
     setTimeout(() => {
-      const selectContainer = element.closest('[class*="select"]') || document;
-      const options = selectContainer.querySelectorAll(
+      const options = document.querySelectorAll(
         '[role="option"], [role="listbox"] [role="option"], li[class*="option"]'
       );
       for (const opt of options) {
-        if (opt.textContent.toLowerCase().includes(value.toLowerCase())) {
+        const actual = normalizeChoice(opt.textContent);
+        if (candidates.some(candidate => {
+          const wanted = normalizeChoice(candidate);
+          return actual === wanted || actual.includes(wanted) || wanted.includes(actual);
+        })) {
           opt.click();
           return;
         }
       }
-      setNativeValue(element, value);
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     }, 100);
+    return candidates;
   }
 
   function normalizeChoice(value) {
@@ -372,6 +385,8 @@ const Filler = (() => {
   const COMPOSERS = {
     city_state: p => [p.city, p.state].filter(Boolean).join(', '),
     city_state_full: p => [p.city, p.state].filter(Boolean).join(', ') || p.location || '',
+    phone_stripped: p => String(p.phone || '').replace(/\D/g, ''),
+    phone_country: p => ({ US: '+1', CA: '+1', GB: '+44', AU: '+61', IN: '+91', DE: '+49', FR: '+33', ES: '+34', IT: '+39', NL: '+31', IE: '+353', NZ: '+64', SG: '+65', JP: '+81', BR: '+55', MX: '+52' }[p.phoneCountry] || p.phoneCountry || ''),
   };
 
   // ─── Date-variant fields (birthday_MM, current_date_slashes_MMDDYYYY, …) ──
@@ -445,14 +460,19 @@ const Filler = (() => {
   let cachedProfileAt = 0;
   const PROFILE_TTL_MS = 10 * 60 * 1000;
 
-  async function loadProfile() {
-    if (cachedProfile && (Date.now() - cachedProfileAt) < PROFILE_TTL_MS) return cachedProfile;
+  async function loadProfile(forceRefresh = false) {
+    const memoryHasProfile = cachedProfile && Object.keys(cachedProfile).length > 0;
+    if (!forceRefresh && memoryHasProfile && (Date.now() - cachedProfileAt) < PROFILE_TTL_MS) {
+      console.debug('[GoApply:Filler] Profile source=memory fields=' + Object.keys(cachedProfile).length);
+      return cachedProfile;
+    }
     let stored = {};
     try {
       stored = await chrome.storage.local.get(['profile', 'profileFetchedAt']);
     } catch (e) { /* storage unavailable */ }
 
-    const isStale = !stored.profileFetchedAt || (Date.now() - stored.profileFetchedAt) > PROFILE_TTL_MS;
+    const storedHasProfile = stored.profile && Object.keys(stored.profile).length > 0;
+    const isStale = forceRefresh || !storedHasProfile || !stored.profileFetchedAt || (Date.now() - stored.profileFetchedAt) > PROFILE_TTL_MS;
     if (isStale && typeof GoApplyAPI !== 'undefined') {
       try {
         const remote = await GoApplyAPI.getGoApplyProfile();
@@ -460,15 +480,18 @@ const Filler = (() => {
           cachedProfile = remote;
           cachedProfileAt = Date.now();
           try { await chrome.storage.local.set({ profile: remote, profileFetchedAt: cachedProfileAt }); } catch (e) {}
+          console.debug('[GoApply:Filler] Profile source=api fields=' + Object.keys(remote).length);
           return cachedProfile;
         }
       } catch (e) {
         // Not authenticated / offline — fall back to whatever's cached locally.
+        console.error('[GoApply:Filler] Profile API load failed:', e.message);
       }
     }
 
-    cachedProfile = stored.profile || {};
+    cachedProfile = storedHasProfile ? stored.profile : {};
     cachedProfileAt = Date.now();
+    console.debug('[GoApply:Filler] Profile source=storage fields=' + Object.keys(cachedProfile).length);
     return cachedProfile;
   }
 
@@ -476,7 +499,7 @@ const Filler = (() => {
 
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes.profile) invalidateCache();
+      if (area === 'local' && (changes.profile || changes.foligoToken || changes.goapplyEnv || changes.goapplyCustomEndpoints)) invalidateCache();
     });
   }
 
@@ -503,7 +526,7 @@ const Filler = (() => {
   // ─── Main fill function ──────────────────────────────────────────
 
   function fillField(fieldInfo, profile = {}) {
-    const { element, method, fieldName } = fieldInfo;
+    const { element, method, fieldName, values } = fieldInfo;
     
     const value = Object.keys(profile).length > 0 
       ? resolveValueSync(fieldName, profile) 
@@ -519,7 +542,10 @@ const Filler = (() => {
         case 'react': fillReact(element, value); break;
         case 'dijit': fillDijit(element, value); break;
         case 'selectCheckboxOrRadio': fillCheckbox(element, value); break;
-        case 'select': fillSelect(element, value); break;
+        case 'select': {
+          const expectedChoices = fillSelect(element, value, values);
+          return { success: true, expectedValue: value, expectedChoices };
+        }
         case 'click': fillClick(element, value); break;
         case 'defaultWithoutBlur': 
           element.focus(); setNativeValue(element, value);
@@ -528,12 +554,12 @@ const Filler = (() => {
           break;
         case 'uploadResume':
         case 'uploadCoverLetter':
-          return fillUploadResume(element, value);
+          return { ...fillUploadResume(element, value), manual: true };
         case 'writeCoverLetter':
           return fillWriteCoverLetter(element, value);
         default: fillDefault(element, value);
       }
-      return { success: true };
+      return { success: true, expectedValue: value, expectedChoices: choiceCandidates(value, values) };
     } catch (e) {
       return { success: false, reason: e.message };
     }

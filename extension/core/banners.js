@@ -108,6 +108,7 @@ const Banners = (() => {
   async function injectBanner(platform) {
     if (bannerEl) return; // Already injected
     if (document.querySelector('.sr-banner')) return;
+    if (typeof ResumeScorer === 'undefined') return false;
 
     const container = findBannerContainer(platform?.config);
     if (!container) return false;

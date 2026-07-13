@@ -54,9 +54,14 @@ $('autofillBtn').addEventListener('click', async () => {
   $('autofillBtn').disabled = true; $('autofillBtn').textContent = 'Filling...';
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    await chrome.tabs.sendMessage(tab.id, { action: 'autofill' });
-    $('autofillBtn').textContent = '✓ Filled'; $('autofillBtn').style.background = '#00A86B';
-  } catch(e) { $('autofillBtn').textContent = 'Error'; $('autofillBtn').disabled = false; }
+    const result = await chrome.tabs.sendMessage(tab.id, { action: 'autofill' });
+    if (!result?.success) throw new Error(result?.message || 'No fields had configured profile values');
+    $('autofillBtn').textContent = `✓ Filled ${result.filled}/${result.total}`;
+    $('autofillBtn').style.background = '#00A86B';
+  } catch(e) {
+    $('autofillBtn').textContent = e.message || 'Autofill failed';
+    $('autofillBtn').disabled = false;
+  }
 });
 
 $('detectBtn').addEventListener('click', async () => {
@@ -77,7 +82,7 @@ $('signInBtn').addEventListener('click', () => {
 });
 
 // ─── KANBAN TAB ────────────────────────────────────────────────────
-const COLORS = { SAVED:'#6B7C93', APPLIED:'#635BFF', SCREENING:'#FF9500', INTERVIEW:'#FF9500', OFFER:'#00A86B', ACCEPTED:'#00A86B', REJECTED:'#DF1B41', WITHDRAWN:'#E0E6ED', ARCHIVED:'#E0E6ED' };
+const COLORS = { saved:'#6B7C93', applied:'#635BFF', screening:'#FF9500', interview:'#FF9500', offer:'#00A86B', accepted:'#00A86B', rejected:'#DF1B41', withdrawn:'#E0E6ED', archived:'#E0E6ED' };
 
 async function loadKanban() {
   $('kanban-loading').style.display = 'block';
@@ -94,12 +99,12 @@ async function loadKanban() {
     $('kanban-board').innerHTML = columns.map(col => `
       <div class="kanban-col">
         <div class="kanban-col-title" style="background:${COLORS[col.status]}15;color:${COLORS[col.status]}">
-          ${col.name} <span>${col.cards?.length||0}</span>
+          ${col.name || col.status} <span>${col.cards?.length||0}</span>
         </div>
         ${(col.cards||[]).map(card => `
           <div class="kanban-card" data-job-id="${card.application?.id}">
             <div class="company">${card.application?.company||'?'}</div>
-            <div class="title">${card.application?.jobTitle||''}</div>
+            <div class="title">${card.application?.position||card.application?.jobTitle||''}</div>
           </div>
         `).join('') || '<div style="font-size:10px;color:#6B7C93;padding:4px;text-align:center">—</div>'}
       </div>
@@ -112,7 +117,7 @@ async function loadKanban() {
 
 $('openDashboardBtn').addEventListener('click', async () => {
   const { web } = await GoApplyAPI.getEndpoints();
-  chrome.tabs.create({ url: `${web}/dashboard/jobs` });
+  chrome.tabs.create({ url: `${web}/goapply/kanban` });
 });
 
 // ─── ACCOUNT TAB ────────────────────────────────────────────────────
@@ -258,7 +263,7 @@ $('connectBtn').addEventListener('click', async () => {
 
 $('signOutBtn').addEventListener('click', async () => {
   stopPolling();
-  await chrome.storage.local.remove('foligoToken');
+  await chrome.storage.local.remove(['foligoToken', 'profileFetchedAt']);
   await chrome.storage.local.remove('pendingDeviceCode');
   checkAuth();
 });
@@ -272,12 +277,16 @@ $('openFoligoBtn').addEventListener('click', async () => {
 $('syncNowBtn').addEventListener('click', async () => {
   $('syncNowBtn').disabled = true; $('syncNowBtn').textContent = 'Syncing...';
   try {
-    const stored = await chrome.storage.local.get('profile');
-    if (stored.profile) {
-      await GoApplyAPI.syncProfile(stored.profile);
-      $('syncNowBtn').textContent = '✓ Synced';
-    }
-  } catch(e) { $('syncNowBtn').textContent = '✗ Failed'; }
+    // The dashboard/API is authoritative. Pull into extension storage instead
+    // of pushing a possibly stale or empty cache back to the server.
+    const profile = await GoApplyAPI.getGoApplyProfile();
+    if (!profile || Object.keys(profile).length === 0) throw new Error('Profile is empty');
+    await chrome.storage.local.set({ profile, profileFetchedAt: Date.now() });
+    $('syncNowBtn').textContent = '✓ Synced';
+  } catch(e) {
+    console.error('[GoApply] Profile sync failed:', e.message);
+    $('syncNowBtn').textContent = '✗ Failed';
+  }
   setTimeout(() => { $('syncNowBtn').textContent = '🔄 Sync Profile Now'; $('syncNowBtn').disabled = false; }, 2000);
 });
 

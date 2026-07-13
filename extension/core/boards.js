@@ -55,26 +55,26 @@ const Boards = (() => {
       btn.style.background = 'white'; btn.style.color = '#635BFF';
     });
     btn.addEventListener('click', async () => {
+      const extracted = Tracker.extractJobInfo();
       const info = {
+        ...extracted,
         url: jobUrl || window.location.href,
-        title: document.title,
-        company: extractCompanyFromBoard(),
+        company: extracted.company || extractCompanyFromBoard(),
         platform: board,
-        trackedAt: new Date().toISOString(),
       };
       try {
-        const stored = await chrome.storage.local.get('trackedJobs');
-        const jobs = stored.trackedJobs || [];
-        if (!jobs.some(j => j.url === info.url)) {
-          jobs.push(info);
-          await chrome.storage.local.set({ trackedJobs: jobs });
-          btn.innerHTML = '✓ Tracked';
-          btn.style.background = '#00A86B';
-          btn.style.color = 'white';
-          btn.style.borderColor = '#00A86B';
-          btn.disabled = true;
-        }
-      } catch(e) {}
+        btn.disabled = true;
+        btn.innerHTML = 'Tracking...';
+        await Tracker.trackApplication(info, 'saved');
+        btn.innerHTML = '✓ Tracked';
+        btn.style.background = '#00A86B';
+        btn.style.color = 'white';
+        btn.style.borderColor = '#00A86B';
+      } catch(e) {
+        console.error('[Boards] Track failed:', e.message);
+        btn.innerHTML = 'Track failed — retry';
+        btn.disabled = false;
+      }
     });
     return btn;
   }

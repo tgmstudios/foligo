@@ -20,6 +20,9 @@
     "default_title": "GoApply by Foligo"
   },
   "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["*://*/*"],

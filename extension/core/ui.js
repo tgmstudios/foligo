@@ -203,8 +203,9 @@ const UI = (() => {
       const name = field.fieldName.replace(/_/g, ' ');
       const method = field.method || 'default';
       const badge = field.method === 'uploadResume' ? '📎 manual' :
-                    field.method === 'writeCoverLetter' ? '✏️ text' : '✓ auto';
-      row.innerHTML = `<span>${name}</span><span class="sr-badge sr-badge-success">${badge}</span>`;
+                    field.method === 'writeCoverLetter' ? '✏️ text' : 'detected';
+      const badgeClass = field.method === 'uploadResume' ? 'sr-badge-warning' : 'sr-badge-muted';
+      row.innerHTML = `<span>${name}</span><span class="sr-badge ${badgeClass}">${badge}</span>`;
       listEl.appendChild(row);
     }
 
@@ -232,10 +233,20 @@ const UI = (() => {
     // Track job
     root.querySelector('#sr-track-btn').addEventListener('click', async () => {
       const btn = root.querySelector('#sr-track-btn');
-      const saved = await Tracker.saveApplication(jobInfo);
-      btn.textContent = saved ? '✓ Tracked' : 'Already tracked';
-      btn.style.color = COLORS.success;
       btn.disabled = true;
+      btn.textContent = 'Tracking...';
+      try {
+        const result = await Tracker.trackApplication(jobInfo, 'saved');
+        btn.textContent = result.created ? '✓ Tracked' : '✓ On board';
+        btn.style.color = COLORS.success;
+        showToast(result.created ? 'Job added to your Foligo board' : 'Job is already on your Foligo board');
+      } catch (error) {
+        console.error('[GoApply] Track failed:', error.message);
+        btn.textContent = 'Track failed — retry';
+        btn.style.color = COLORS.danger;
+        btn.disabled = false;
+        showToast(`Track failed: ${error.message}`);
+      }
     });
 
     // Find submit button
@@ -263,12 +274,7 @@ const UI = (() => {
       if (customMsg) {
         btn.textContent = customMsg;
       } else {
-        btn.textContent = `Filled ${completed}/${total}`;
-      }
-      if (!customMsg && completed >= total) {
-        btn.classList.remove('sr-btn-primary');
-        btn.classList.add('sr-btn-success');
-        btn.textContent = `✓ ${completed} Fields Filled`;
+        btn.textContent = `Processing ${completed}/${total}`;
       }
     }
   }

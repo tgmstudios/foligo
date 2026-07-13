@@ -37,6 +37,7 @@ const GoApplyAPI = (() => {
   async function setEnvironment(env) {
     if (env !== 'custom' && !ENVIRONMENTS[env]) throw new Error(`Unknown environment: ${env}`);
     await chrome.storage.local.set({ goapplyEnv: env });
+    await chrome.storage.local.remove('profileFetchedAt');
   }
 
   async function setCustomEndpoints(api, web) {
@@ -44,6 +45,7 @@ const GoApplyAPI = (() => {
       goapplyEnv: 'custom',
       goapplyCustomEndpoints: { api: api.replace(/\/+$/, ''), web: web.replace(/\/+$/, '') },
     });
+    await chrome.storage.local.remove('profileFetchedAt');
   }
 
   async function getToken() {
@@ -55,6 +57,9 @@ const GoApplyAPI = (() => {
 
   async function setToken(token) {
     await chrome.storage.local.set({ foligoToken: token });
+    // A token can represent a different user. Never reuse the previous user's
+    // profile freshness marker after login or device-code exchange.
+    await chrome.storage.local.remove('profileFetchedAt');
   }
 
   async function getAIPreference() {
@@ -80,16 +85,37 @@ const GoApplyAPI = (() => {
       ...options.headers,
     };
 
-    const resp = await fetch(url, { ...options, headers });
-    if (resp.status === 401) {
-      await chrome.storage.local.remove('foligoToken');
+    console.debug('[GoApplyAPI] Request', options.method || 'GET', path);
+    const result = await sendNetworkRequest(url, { ...options, headers });
+    console.debug('[GoApplyAPI] Response', options.method || 'GET', path, result?.status || 0, result?.ok ? 'ok' : 'failed');
+    if (result.status === 401) {
+      await chrome.storage.local.remove(['foligoToken', 'profileFetchedAt']);
       throw new Error('Session expired. Please sign in again.');
     }
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`API ${resp.status}: ${err}`);
+    if (!result.ok) {
+      throw new Error(result.networkError || `API ${result.status}: ${result.text}`);
     }
-    return resp.json();
+    if (!result.text) return null;
+    try { return JSON.parse(result.text); }
+    catch (e) { throw new Error('API returned an invalid JSON response'); }
+  }
+
+  async function sendNetworkRequest(url, options = {}) {
+    // All extension pages and content scripts can reach the service worker.
+    // Keep a direct-fetch fallback for tests and unusual non-extension embeds.
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      return chrome.runtime.sendMessage({
+        action: 'goapplyApiRequest',
+        url,
+        options: {
+          method: options.method || 'GET',
+          headers: options.headers || {},
+          body: options.body,
+        },
+      });
+    }
+    const response = await fetch(url, options);
+    return { ok: response.ok, status: response.status, text: await response.text() };
   }
 
   // ─── Profile ────────────────────────────────────────────────────
@@ -103,12 +129,36 @@ const GoApplyAPI = (() => {
 
   // ─── Jobs ───────────────────────────────────────────────────────
   async function getJobs(status) { return request('/api/goapply/jobs' + (status ? `?status=${status}` : '')); }
-  async function trackJob(job) { return request('/api/goapply/jobs', { method: 'POST', body: JSON.stringify(job) }); }
-  async function updateJob(id, data) { return request(`/api/goapply/jobs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  async function trackJob(job) {
+    const payload = {
+      ...job,
+      position: job.position || job.jobTitle,
+      status: job.status ? String(job.status).toLowerCase() : undefined,
+    };
+    delete payload.jobTitle;
+    return request('/api/goapply/jobs', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  async function updateJob(id, data) {
+    const payload = {
+      ...data,
+      ...(data.jobTitle && !data.position ? { position: data.jobTitle } : {}),
+      ...(data.status ? { status: String(data.status).toLowerCase() } : {}),
+    };
+    delete payload.jobTitle;
+    return request(`/api/goapply/jobs/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  }
   async function deleteJob(id) { return request(`/api/goapply/jobs/${id}`, { method: 'DELETE' }); }
 
   // ─── Kanban ─────────────────────────────────────────────────────
-  async function getKanban() { return request('/api/goapply/kanban'); }
+  async function getKanban() {
+    const board = await request('/api/goapply/kanban');
+    if (Array.isArray(board)) return board;
+    return Object.entries(board || {}).map(([status, jobs]) => ({
+      status,
+      name: status.charAt(0).toUpperCase() + status.slice(1),
+      cards: (Array.isArray(jobs) ? jobs : []).map(application => ({ application })),
+    }));
+  }
   async function reorderCards(columnId, cardIds) { return request('/api/goapply/kanban/reorder', { method: 'PUT', body: JSON.stringify({ columnId, cardIds }) }); }
 
   // ─── Cover Letters ──────────────────────────────────────────────
@@ -178,23 +228,22 @@ const GoApplyAPI = (() => {
   async function exchangeDeviceCode(deviceCode) {
     const { api: BASE_URL } = await getEndpoints();
     const url = `${BASE_URL}/api/auth/device-code/exchange`;
-    const resp = await fetch(url, {
+    const result = await sendNetworkRequest(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceCode }),
     });
 
-    if (resp.status === 202) {
+    if (result.status === 202) {
       // Still pending — the web page hasn't submitted the code yet
       return { status: 'pending' };
     }
 
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`Exchange failed (${resp.status}): ${err}`);
+    if (!result.ok) {
+      throw new Error(result.networkError || `Exchange failed (${result.status}): ${result.text}`);
     }
 
-    const data = await resp.json();
+    const data = JSON.parse(result.text);
     // Store the token
     if (data.token) {
       await setToken(data.token);
