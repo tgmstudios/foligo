@@ -72,6 +72,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/studio/cover-letter/:id',
+      name: 'studio-cover-letter',
+      component: () => import('@/views/studio/CoverLetterStudioView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/studio/content/:projectId/:id',
       name: 'studio-content',
       component: () => import('@/views/studio/ContentStudioView.vue'),

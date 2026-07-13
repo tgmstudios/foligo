@@ -1,211 +1,79 @@
 <template>
-  <div>
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-6">
       <div>
-        <p class="text-gray-400 text-sm">AI-generated cover letters for your job applications</p>
+        <h1 class="text-xl font-semibold text-white">Cover Letters</h1>
+        <p class="text-sm text-gray-400 mt-1">Open a cover letter in the Studio to write and tailor it.</p>
       </div>
-      <button
-        @click="showGenerateForm = true"
-        class="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
-      >
-        + Generate Letter
+      <button @click="handleNew" :disabled="creating" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        <span>New Cover Letter</span>
       </button>
     </div>
 
-    <!-- Generate Form Modal -->
-    <div v-if="showGenerateForm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/60" @click="showGenerateForm = false"></div>
-      <div class="relative bg-gray-800 rounded-lg border border-gray-700 w-full max-w-lg p-6 shadow-xl">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-white">Generate Cover Letter</h2>
-          <button @click="showGenerateForm = false" class="text-gray-400 hover:text-white">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+    <div v-if="isLoading" class="text-center py-16 text-gray-400 text-sm">Loading…</div>
+    <div v-else-if="documents.length === 0" class="text-center py-16"><p class="text-gray-400 text-sm">No cover letters yet.</p></div>
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-for="doc in documents" :key="doc.id" @click="openStudio(doc.id)" class="relative bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-750 transition-all group">
+        <div class="flex items-start justify-between mb-2">
+          <div class="min-w-0 pr-6">
+            <h3 class="font-medium text-sm text-white truncate">{{ doc.title }}</h3>
+            <div v-if="doc.isTemplate" class="flex gap-1 mt-1">
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-700 text-gray-300">Template</span>
+              <span v-if="doc.isDefault" class="px-1.5 py-0.5 rounded text-[10px] bg-primary-900 text-primary-300">Default</span>
+            </div>
+          </div>
+          <button @click.stop="toggleMenu(doc.id)" class="absolute top-3 right-3 p-1 text-gray-500 hover:text-white hover:bg-gray-700 rounded transition-colors opacity-0 group-hover:opacity-100" :class="{ 'opacity-100': openMenuId === doc.id }">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
           </button>
+          <div v-if="openMenuId === doc.id" @click.stop class="absolute top-9 right-3 z-10 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1">
+            <button @click="openQuickEdit(doc)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white">Quick edit</button>
+            <button @click="handleClone(doc.id)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white">Clone</button>
+            <button @click="toggleTemplate(doc)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white">{{ doc.isTemplate ? 'Remove from templates' : 'Mark as template' }}</button>
+            <button v-if="!doc.isDefault" @click="makeDefault(doc.id)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white">Make default template</button>
+            <button v-if="doc.isDefault" @click="clearDefault(doc.id)" class="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 hover:text-white">Clear default</button>
+            <button @click="handleDelete(doc.id)" class="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-gray-800 hover:text-red-300">Delete</button>
+          </div>
         </div>
-
-        <form @submit.prevent="handleGenerate" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Select Job (optional)</label>
-            <select
-              v-model="generateJobId"
-              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">— None —</option>
-              <option v-for="job in store.jobs" :key="job.id" :value="job.id">
-                {{ job.company }} — {{ job.position }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Or paste job description</label>
-            <textarea
-              v-model="generateJobDescription"
-              rows="4"
-              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Paste the job description here..."
-            ></textarea>
-          </div>
-
-          <div class="flex justify-end gap-3 pt-2">
-            <button type="button" @click="showGenerateForm = false" class="px-4 py-2 text-sm text-gray-300 hover:text-white">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :disabled="store.isGenerating"
-              class="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50"
-            >
-              {{ store.isGenerating ? 'Generating...' : 'Generate' }}
-            </button>
-          </div>
-        </form>
+        <p class="text-xs text-gray-500">{{ formatRelativeDate(doc.updatedAt) }}</p>
+        <div v-if="doc.job" class="mt-2">
+          <LinkedJobBadge :company="doc.job.company" :position="doc.job.position" />
+        </div>
+        <p class="text-xs text-gray-500 mt-2 line-clamp-2 whitespace-pre-line">{{ doc.content }}</p>
       </div>
     </div>
 
-    <!-- Letters List -->
-    <div v-if="store.coverLetters.length === 0 && !store.isLoading" class="text-center py-12 text-gray-400">
-      <p>No cover letters yet.</p>
-      <button @click="showGenerateForm = true" class="mt-2 text-primary-400 hover:underline text-sm">
-        Generate your first cover letter
-      </button>
-    </div>
-
-    <div v-else class="space-y-3">
-      <div
-        v-for="letter in store.coverLetters"
-        :key="letter.id"
-        class="card p-4"
-      >
-        <div class="flex items-start justify-between">
-          <div class="min-w-0 flex-1">
-            <h4 class="text-sm font-medium text-white mb-1">
-              {{ letter.title || 'Cover Letter' }}
-              <span v-if="letter.company" class="text-gray-400 font-normal">
-                — {{ letter.company }}
-              </span>
-              <span v-if="letter.position" class="text-gray-500 text-xs">
-                ({{ letter.position }})
-              </span>
-            </h4>
-            <p class="text-sm text-gray-400 line-clamp-3 whitespace-pre-line">{{ letter.content }}</p>
-            <p class="text-xs text-gray-500 mt-1">
-              Created {{ formatTimeAgo(letter.createdAt) }}
-            </p>
-          </div>
-          <div class="flex items-center gap-1 ml-4">
-            <button
-              @click="viewLetter = letter"
-              class="p-1 text-gray-400 hover:text-white transition-colors"
-              title="View"
-            >
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-            <button
-              @click="handleDelete(letter.id)"
-              class="p-1 text-gray-400 hover:text-red-400 transition-colors"
-              title="Delete"
-            >
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- View Letter Modal -->
-    <div v-if="viewLetter" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/60" @click="viewLetter = null"></div>
-      <div class="relative bg-gray-800 rounded-lg border border-gray-700 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 shadow-xl">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-white">
-            {{ viewLetter.title || 'Cover Letter' }}
-          </h2>
-          <button @click="viewLetter = null" class="text-gray-400 hover:text-white">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div v-if="viewLetter.company" class="text-sm text-gray-400 mb-3">
-          {{ viewLetter.company }}{{ viewLetter.position ? ` — ${viewLetter.position}` : '' }}
-        </div>
-
-        <div class="prose prose-invert max-w-none">
-          <pre class="text-sm text-gray-200 whitespace-pre-wrap font-sans">{{ viewLetter.content }}</pre>
-        </div>
-
-        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-700">
-          <button
-            @click="copyContent(viewLetter.content)"
-            class="px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Copy to Clipboard
-          </button>
-          <button
-            @click="viewLetter = null"
-            class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+    <MetaEditorPopover v-if="quickEditDoc" :is-open="!!quickEditDoc" :adapter="adapter" :document-id="quickEditDoc.id" :initial-values="adapter.getMetaValues(quickEditDoc)" @close="quickEditDoc = null" @saved="fetchDocuments" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useGoApplyStore, type CoverLetter } from '@/stores/goapply'
-import { useToast } from 'vue-toastification'
-import { formatDistanceToNow } from 'date-fns'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import '@/studio/adapters'
+import { getAdapter } from '@/studio/registry'
+import { useCoverLetterDocuments, type CoverLetterDocument } from '@/composables/useCoverLetterDocuments'
+import { formatRelativeDate } from '@/utils/formatRelativeDate'
+import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
+import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
 
-const store = useGoApplyStore()
-const toast = useToast()
+const router = useRouter()
+const adapter = getAdapter('cover-letter')
+const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cloneDocument, deleteDocument } = useCoverLetterDocuments()
+const creating = ref(false)
+const openMenuId = ref<string | null>(null)
+const quickEditDoc = ref<CoverLetterDocument | null>(null)
 
-const showGenerateForm = ref(false)
-const generateJobId = ref('')
-const generateJobDescription = ref('')
-const viewLetter = ref<CoverLetter | null>(null)
-
-async function handleGenerate() {
-  try {
-    await store.generateCoverLetter(
-      generateJobId.value || undefined,
-      generateJobDescription.value || undefined
-    )
-    showGenerateForm.value = false
-    generateJobId.value = ''
-    generateJobDescription.value = ''
-  } catch {
-    // handled by store
-  }
-}
-
-async function handleDelete(id: string) {
-  if (confirm('Delete this cover letter?')) {
-    await store.deleteCoverLetter(id)
-  }
-}
-
-function copyContent(text: string) {
-  navigator.clipboard.writeText(text).then(() => {
-    toast.success('Copied to clipboard')
-  }).catch(() => {
-    toast.error('Failed to copy')
-  })
-}
-
-function formatTimeAgo(dateStr: string) {
-  return formatDistanceToNow(new Date(dateStr), { addSuffix: true })
-}
+const openStudio = (id: string) => router.push({ name: 'studio-cover-letter', params: { id } })
+async function handleNew() { creating.value = true; try { openStudio((await createDocument()).id) } finally { creating.value = false } }
+function toggleMenu(id: string) { openMenuId.value = openMenuId.value === id ? null : id }
+function openQuickEdit(doc: CoverLetterDocument) { quickEditDoc.value = doc; openMenuId.value = null }
+async function handleClone(id: string) { openMenuId.value = null; await cloneDocument(id) }
+async function toggleTemplate(doc: CoverLetterDocument) { openMenuId.value = null; await updateDocument(doc.id, { isTemplate: !doc.isTemplate }); await fetchDocuments() }
+async function makeDefault(id: string) { openMenuId.value = null; await updateDocument(id, { isDefault: true }); await fetchDocuments() }
+async function clearDefault(id: string) { openMenuId.value = null; await updateDocument(id, { isDefault: false }); await fetchDocuments() }
+async function handleDelete(id: string) { openMenuId.value = null; if (confirm('Delete this cover letter? This cannot be undone.')) await deleteDocument(id) }
+const closeMenu = () => { openMenuId.value = null }
+onMounted(() => { fetchDocuments(); window.addEventListener('click', closeMenu) })
+onUnmounted(() => window.removeEventListener('click', closeMenu))
 </script>
