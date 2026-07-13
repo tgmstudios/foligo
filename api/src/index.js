@@ -312,7 +312,7 @@ app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);
 app.use('/api/admin/ai-models', authenticateToken, adminAiModelRoutes);
 
 // Static assets (publicly served, long cache)
-app.use(express.static(path.join(__dirname, '..', 'public'), {
+app.use(express.static(path.join(__dirname, '..', 'static'), {
   maxAge: '1d',
   setHeaders(res) { res.setHeader('Access-Control-Allow-Origin', '*'); }
 }));
