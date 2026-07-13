@@ -1234,7 +1234,6 @@ router.post('/create', [
 
     res.status(201).json({
       id: completeContent.id,
-      content: completeContent
     });
   } catch (error) {
     console.error('AI content creation error:', error);
