@@ -8,8 +8,8 @@
     "hash": "cf402d163e0971f0732181b8d8de4aa2"
   },
   "api/src/index.js": {
-    "mtime": 1783910385554.7405,
-    "hash": "b7605d793e6f7412a2ced53093c83b2c"
+    "mtime": 1783918914261.1877,
+    "hash": "92b18be8878289a953d3523088dd8712"
   },
   "api/src/middleware/auth.js": {
     "mtime": 1783700040582.5876,
@@ -32,8 +32,8 @@
     "hash": "35152462e76245341d717cd2ea11b877"
   },
   "api/src/routes/ai-providers.js": {
-    "mtime": 1783886508318.8628,
-    "hash": "ad7d574f75374a79ea9ae3db27a053f1"
+    "mtime": 1783918811696.5576,
+    "hash": "0193043844a8eac9a1791b26c1d284cb"
   },
   "api/src/routes/auth.js": {
     "mtime": 1783700040582.5876,
@@ -128,12 +128,12 @@
     "hash": "973e64e56446a9914fb039a17aaa5d03"
   },
   "api/src/services/ai/manager.js": {
-    "mtime": 1783885948831.6045,
-    "hash": "dc245b085180af0fba3f33bb22774b8f"
+    "mtime": 1783922095213.816,
+    "hash": "b63c29fc90ee96c3e5402bc3f7efc225"
   },
   "api/src/services/ai/providers/index.js": {
-    "mtime": 1783727141837.4224,
-    "hash": "ebb4fd2e8bb6398c885ab3f645cac163"
+    "mtime": 1783921720923.6245,
+    "hash": "f4b951820bfed1e035ce3c072a6eaecf"
   },
   "api/src/services/content-generation-prompts.js": {
     "mtime": 1763329710743.601,
@@ -572,8 +572,8 @@
     "hash": "9412b6dd071fee4c756b0be4bf893cfa"
   },
   "extension/core/api.js": {
-    "mtime": 1783910867047.6814,
-    "hash": "31a9ff60141d111e3b11e88ffe8f4b4a"
+    "mtime": 1783918960034.7505,
+    "hash": "0a2f6184f38923aca5b7832902c1bb14"
   },
   "extension/core/banners.js": {
     "mtime": 1783896198965.162,
@@ -592,36 +592,36 @@
     "hash": "da241b6e5600f1a3b491cbaa1295ec6f"
   },
   "extension/core/filler.js": {
-    "mtime": 1783912831687.3997,
-    "hash": "5ebafe3a02b0b14adff875dfa1173c16"
+    "mtime": 1783923539242.1992,
+    "hash": "909f0152d4349f2775d652fc2bc96e9f"
   },
   "extension/core/finder.js": {
-    "mtime": 1783896543531.9448,
-    "hash": "1f64f76e3fb322c75bcefb31a081d508"
+    "mtime": 1783922499234.2756,
+    "hash": "c02129e0010416b8e1d71002ca53afc8"
   },
   "extension/core/main.js": {
-    "mtime": 1783915353763.9985,
-    "hash": "27e746b40f8810141bc49c3670b92b6a"
+    "mtime": 1783922799638.056,
+    "hash": "1ddac1fc527511210c321e83de663698"
   },
   "extension/core/tracker.js": {
-    "mtime": 1783896629668.1807,
-    "hash": "e33181b0b3b2e8cf41573a4b696bdf74"
+    "mtime": 1783920008869.9731,
+    "hash": "5d03f3c79c7ebf631b62e7c8cf125f4e"
   },
   "extension/core/tutorial.js": {
     "mtime": 1783659092618.6519,
     "hash": "047243d330f1f1a8f47ea68dd0db56ba"
   },
   "extension/core/ui.js": {
-    "mtime": 1783912873668.389,
-    "hash": "1828d5c00e330abed94c0fad443fb19a"
+    "mtime": 1783922799642.0452,
+    "hash": "dc9befafa5e1949e0126880a295e5ccd"
   },
   "extension/options.js": {
     "mtime": 1783744313236.6292,
     "hash": "e3b4b9200b1f10cf08a2e692648f0281"
   },
   "extension/popup.js": {
-    "mtime": 1783896190769.7166,
-    "hash": "b8ec642c475bbdf0a7039a892db1d99a"
+    "mtime": 1783922799646.0347,
+    "hash": "cafcfd1114bf08fd18b8173a94a92c66"
   },
   "ios_app/foligo/Auth/AuthView.swift": {
     "mtime": 1761764389976.4014,
@@ -936,8 +936,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783915378208.458,
-    "hash": "3871174990addf88d56d2995e7d20b71"
+    "mtime": 1783920273294.983,
+    "hash": "c849d4fc99336211b07552a65cde25fa"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1016,8 +1016,8 @@
     "hash": "245292416e6ee9288514c23c071744cc"
   },
   "extension/popup.html": {
-    "mtime": 1783743949491.6157,
-    "hash": "99e8a3614aba6a46e0412e1fce10d9bb"
+    "mtime": 1783922799642.0452,
+    "hash": "01b24831803c6846d58fdfe85575f11e"
   },
   "extension/test-page.html": {
     "mtime": 1783658179962.8308,
@@ -1088,8 +1088,8 @@
     "hash": "0a51bdc358686dd243fb7904425ee511"
   },
   "api/src/services/ai/model-config.js": {
-    "mtime": 1783885962476.7266,
-    "hash": "5053e6943cf0d630f02c50d67e8274b1"
+    "mtime": 1783921705632.354,
+    "hash": "39e972ec113018b16c752982a85f16e4"
   },
   "api/src/services/content-editor-tools.js": {
     "mtime": 1783879931217.6719,
@@ -1140,8 +1140,8 @@
     "hash": "04a79827a8c2584ac767d26830f62df0"
   },
   ".github/workflows/build-and-deploy.yml": {
-    "mtime": 1783890647928.6008,
-    "hash": "9625c4fc0fc3bf48b72a236341cfe18b"
+    "mtime": 1783920244415.4407,
+    "hash": "42595b58ecd7519b9b47f82866797572"
   },
   "api/.graphify/GRAPH_REPORT.md": {
     "mtime": 1783885905408.2598,
@@ -1184,8 +1184,8 @@
     "hash": "fbbbc2bf1594a409d785adb4426dbd4e"
   },
   "api/src/services/job-assistant-tools.js": {
-    "mtime": 1783905323858.5952,
-    "hash": "7a565050c2dc837aa32b30986c744317"
+    "mtime": 1783918830743.31,
+    "hash": "dedc73e10ab0de2ce0e895330465d946"
   },
   "api/src/services/portfolio-context.js": {
     "mtime": 1783905158333.465,
@@ -1220,8 +1220,8 @@
     "hash": "9f0bca07532f96c4b0d1a72691ebb9a1"
   },
   "extension/background.js": {
-    "mtime": 1783910840951.086,
-    "hash": "1e177e812d17fd1c1aedc339c4b239e3"
+    "mtime": 1783923678976.9783,
+    "hash": "d6a17a52be3666231ba77466d43bd921"
   },
   ".claude/CLAUDE.md": {
     "mtime": 1783905422347.266,
@@ -1234,5 +1234,213 @@
   "CLAUDE.md": {
     "mtime": 1783905422347.266,
     "hash": "43933251c7da7a98da7b57cd858902b1"
+  },
+  "api/src/routes/github-auth.js": {
+    "mtime": 1783910372784.2559,
+    "hash": "fc2b2116e55de15f06a718fded6d739c"
+  },
+  "api/src/services/github-service.js": {
+    "mtime": 1783910445304.9453,
+    "hash": "62385c1027e153b82d54701ec7ca3633"
+  },
+  "api/src/services/github-tools.js": {
+    "mtime": 1783910481438.3572,
+    "hash": "cef70ce4aa624bfa822f6d9585a2ddad"
+  },
+  "extension/preview.js": {
+    "mtime": 1783915340034.5664,
+    "hash": "6c179b84131400502fdc2dae6bc9a374"
+  },
+  "extension/preview.html": {
+    "mtime": 1783915332461.7996,
+    "hash": "0df20f619c44001894a417d08a814eb0"
+  },
+  "api/prisma/migrations/20251112231030_init/migration.sql": {
+    "mtime": 1762989030900.6921,
+    "hash": "5b1607e47da686d9a72fef8dcc015db5"
+  },
+  "api/prisma/migrations/20251113232613_add_content_features/migration.sql": {
+    "mtime": 1763076373638.739,
+    "hash": "e4789e382967f3951fe14a9463d36399"
+  },
+  "api/prisma/migrations/20251113233443_add_revisions_and_status/migration.sql": {
+    "mtime": 1763076883555.4348,
+    "hash": "7fe5edea47d2600545ddb69388204f49"
+  },
+  "api/prisma/migrations/20251115054555_add_media_model/migration.sql": {
+    "mtime": 1763185555619.2468,
+    "hash": "f067951d0f06607c2b96e4a6ad179998"
+  },
+  "api/prisma/migrations/20251115054858_remove_asset_model/migration.sql": {
+    "mtime": 1763185738098.7456,
+    "hash": "5d72ad5f22e055c1b0652d6381482805"
+  },
+  "api/prisma/migrations/20251115195542_remove_aianalysis_table/migration.sql": {
+    "mtime": 1763236542329.2832,
+    "hash": "1fe8335d0c63b254eaf6e9a1e8910e58"
+  },
+  "api/prisma/migrations/20251115204147_/migration.sql": {
+    "mtime": 1763239307610.9202,
+    "hash": "b755b6c45363bd1ded1ce39ffe4ecf47"
+  },
+  "api/prisma/migrations/20251115223723_add_skill_category_remove_tag_relation/migration.sql": {
+    "mtime": 1763246674083.8538,
+    "hash": "254340dca8f83c890525a022a0705f70"
+  },
+  "api/prisma/migrations/20251125223122_add_post_order_table/migration.sql": {
+    "mtime": 1764109882414.1648,
+    "hash": "14324d414f0dee511aff16a6f6e77866"
+  },
+  "api/prisma/migrations/20251126031426_add_resume_templates_and_history/migration.sql": {
+    "mtime": 1764126866415.2065,
+    "hash": "c2b884ca8c382202dacf33a23b09b27b"
+  },
+  "api/prisma/migrations/20260710235418_add_goapply_tables/migration.sql": {
+    "mtime": 1783727658526.3176,
+    "hash": "a57b67da780410e4850493ec92c9621a"
+  },
+  "api/prisma/migrations/20260711045934_expand_user_profile_fields/migration.sql": {
+    "mtime": 1783745987409.824,
+    "hash": "d6b3c0d4772a34f90e829509d0a87a18"
+  },
+  "api/prisma/migrations/20260712000000_add_ai_models/migration.sql": {
+    "mtime": 1783885896963.1304,
+    "hash": "4d175dbc6f809703284e7aae3fbda6cd"
+  },
+  "api/prisma/migrations/20260712175227_add_resume_document_revisions/migration.sql": {
+    "mtime": 1783878747722.4512,
+    "hash": "e48ad349e8c7e624fb9efbc89670d338"
+  },
+  "api/prisma/migrations/20260712180636_goapply_link_experience/migration.sql": {
+    "mtime": 1783879607312.6353,
+    "hash": "f3fb131cba6095e5cb9e2c3f9b8cd16e"
+  },
+  "api/prisma/migrations/20260712184511_goapply_drop_flat_experience_fields/migration.sql": {
+    "mtime": 1783881927016.4084,
+    "hash": "39e3ca04aabc9b88f330025c2c8022a7"
+  },
+  "api/prisma/migrations/20260712210000_cover_letter_studio/migration.sql": {
+    "mtime": 1783894071029.771,
+    "hash": "7cc375db44d979bfe707111ed49be05a"
+  },
+  "api/prisma/migrations/20260712231500_document_templates/migration.sql": {
+    "mtime": 1783894976125.0713,
+    "hash": "2104cf3321d80b7b59d4402564cf7f6a"
+  },
+  "api/prisma/migrations/20260713000000_attach_saved_answers_to_jobs/migration.sql": {
+    "mtime": 1783903468616.431,
+    "hash": "c86e105fc567da64c5d63df827d40ac1"
+  },
+  "api/prisma/migrations/20260713120000_add_job_categories_tags/migration.sql": {
+    "mtime": 1783903729769.707,
+    "hash": "ab89fc4e20bf6b727048292d71b16329"
+  },
+  "api/prisma/migrations/20260713130000_cover_letter_chat_latex/migration.sql": {
+    "mtime": 1783905132201.7493,
+    "hash": "b0c7a933e7ea9962b50645cf9a3d1550"
+  },
+  "api/prisma/migrations/20260713140000_add_user_integrations/migration.sql": {
+    "mtime": 1783910285198.3977,
+    "hash": "e19a3d7b2eebe2fef531fab7348cf2a2"
+  },
+  "api/prisma/migrations/add_sso_providers.sql": {
+    "mtime": 1763241597398.418,
+    "hash": "55f78ae0f71734ce96b1e53eb658bfef"
+  },
+  "api/src/routes/extension-agent.js": {
+    "mtime": 1783920039503.8801,
+    "hash": "2b068933ef8e420f38980302184ef7e2"
+  },
+  "api/src/services/extension-agent-tools.js": {
+    "mtime": 1783920008866.0151,
+    "hash": "2771aa4025d4fda64a907bf19daf058d"
+  },
+  "api/src/services/goapply-content-generation.js": {
+    "mtime": 1783918760827.6248,
+    "hash": "5028432c9d716d37bc74fb6f32ff46c1"
+  },
+  "dashboard/public/env.js": {
+    "mtime": 1783716114574.719,
+    "hash": "9fc376e6359d17066dd88d0b0644c898"
+  },
+  "extension/core/agent-controller.js": {
+    "mtime": 1783920231408.0925,
+    "hash": "04ad557bec6d0e0a15650f922336725b"
+  },
+  "extension/core/chat-panel.js": {
+    "mtime": 1783920039503.8801,
+    "hash": "3e9afb6ecfe673654feb5bf027900ef4"
+  },
+  "sites/public/env.js": {
+    "mtime": 1763328662182.9304,
+    "hash": "3a64183fe8d12d8055d6ed2ce4db13b1"
+  },
+  "api/generated/resumes/003ed865-e5b1-453b-ae3e-e17a1c048be6.pdf": {
+    "mtime": 1783879027435.6538,
+    "hash": "a23bd95e92dfc4347cd2580bbb638240"
+  },
+  "api/generated/resumes/071b5cfd-9026-4289-bc39-bdda8a4455cd.pdf": {
+    "mtime": 1783746650365.4512,
+    "hash": "6d338f5b91c95d77484494ce5ea4ea49"
+  },
+  "api/generated/resumes/0f8a5f03-0b69-41fd-b60a-9189e900ddf6.pdf": {
+    "mtime": 1783746301219.2153,
+    "hash": "3e80cea5802fccc4bbcedab2c9e9426a"
+  },
+  "api/generated/resumes/11faee46-5f61-4fff-81b2-0f0d3fa6dd30.pdf": {
+    "mtime": 1783879210603.7795,
+    "hash": "59f61f4fc746036942f84160d0978f8a"
+  },
+  "api/generated/resumes/24d2e1a5-e10e-4c94-808d-a7e1d56692d1.pdf": {
+    "mtime": 1783877508962.63,
+    "hash": "da9cc283eaf716077ac3a6599e44d490"
+  },
+  "api/generated/resumes/29bc00c9-2bea-4d66-bba5-ca5f45ba8e0b.pdf": {
+    "mtime": 1783879402714.075,
+    "hash": "5e84a15cb692815febcffaa75edcd3ec"
+  },
+  "api/generated/resumes/3fd68170-1278-4600-84e1-10f110e544f2.pdf": {
+    "mtime": 1783746640129.406,
+    "hash": "1d55391b0a7a54056cd581b65f0166ca"
+  },
+  "api/generated/resumes/471b79f3-a2b4-45f2-91f3-909dd30efcbd.pdf": {
+    "mtime": 1783745849572.3281,
+    "hash": "81654078dc23c301f1418968fe38f538"
+  },
+  "api/generated/resumes/491e3308-dab5-4755-8e18-463d75f27569.pdf": {
+    "mtime": 1783879130234.0127,
+    "hash": "52c7d02dd8dffa45f729df53f068f4b8"
+  },
+  "api/generated/resumes/54b580c7-4b6d-4193-89ee-d87be0f70831.pdf": {
+    "mtime": 1783746385877.1418,
+    "hash": "a23a64c6793afcce3e667d861404ea57"
+  },
+  "api/generated/resumes/567229b6-d038-4fea-baed-273a128df207.pdf": {
+    "mtime": 1783746208009.8948,
+    "hash": "353d6bc4d1764327267db2cf4eb9531e"
+  },
+  "api/generated/resumes/62d8bcef-024f-435b-91a3-e6cfc8e6e1c9.pdf": {
+    "mtime": 1783745480290.322,
+    "hash": "4c1c3ec3b66e4e77294721eac39e8a47"
+  },
+  "api/generated/resumes/8dfeca5b-0a7e-4cba-aeea-f4acdc0f5f09.pdf": {
+    "mtime": 1783917346312.2727,
+    "hash": "1e64ce65c56090daa1db434131066d89"
+  },
+  "api/generated/resumes/9ba679c1-88f9-40db-b80f-1e0385514489.pdf": {
+    "mtime": 1783876781198.2053,
+    "hash": "ded84726ab1a3d417eda0afa3ef470f0"
+  },
+  "api/generated/resumes/f67feb58-ba7b-43df-80d1-a497ab516e8a.pdf": {
+    "mtime": 1783916012558.6038,
+    "hash": "855ee87e53af16ee7262bef566a92e48"
+  },
+  "api/generated/resumes/fa2d75e9-923e-4249-9a50-3b633b71dca5.pdf": {
+    "mtime": 1783879004683.0527,
+    "hash": "2dd5ee5095a94101a2457be9f648534c"
+  },
+  "api/generated/resumes/fe3073bb-ff8c-431c-a08e-785da8161279.pdf": {
+    "mtime": 1783746152933.3938,
+    "hash": "913b466f871f974e85df26dc1778c2a9"
   }
 }

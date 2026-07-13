@@ -8,6 +8,7 @@ const router = express.Router();
 const ai = require('../services/ai/manager');
 const { authenticateToken } = require('../middleware/auth');
 const { prisma } = require('../services/database');
+const { generateCoverLetter, generateCustomAnswer } = require('../services/goapply-content-generation');
 
 /**
  * GET /api/ai/providers
@@ -101,20 +102,7 @@ router.post('/cover-letter', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: jobDescription, company, role' });
     }
 
-    const prompt = `Write a professional cover letter for a ${role} position at ${company}.
-
-Job Description:
-${jobDescription}
-
-Requirements:
-- Be concise (300-400 words)
-- Include specific skills from the job description
-- Show enthusiasm for the company
-- Professional tone
-- Do not fabricate experience — use "[Your experience with X]" placeholders where appropriate
-- Format with "Dear Hiring Manager," opening and "Sincerely," closing`;
-
-    const result = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 4096 });
+    const result = await generateCoverLetter(ai, { jobDescription, company, role, provider });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Cover letter generation failed', message: error.message });
@@ -187,17 +175,7 @@ router.post('/custom-answer', authenticateToken, async (req, res) => {
     const { question, jobDescription, provider } = req.body;
     if (!question) return res.status(400).json({ error: 'Missing "question" field' });
 
-    const prompt = `Answer this job application question. Be honest, concise, and professional. Use the job description for context if provided.
-
-JOB DESCRIPTION:
-${jobDescription || 'Not provided'}
-
-QUESTION:
-${question}
-
-ANSWER (2-4 sentences):`;
-
-    const result = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 1024 });
+    const result = await generateCustomAnswer(ai, { question, jobDescription, provider });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
     res.status(500).json({ error: 'Answer generation failed', message: error.message });

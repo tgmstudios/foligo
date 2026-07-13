@@ -144,7 +144,7 @@ function listProviders() {
   const types = ['gemini', 'openai', 'opencode', 'ollama', 'anthropic', 'custom'];
   return types.map(type => {
     const preset = PRESETS[type];
-    const configured = (type === 'gemini' || type === 'anthropic') ? !!preset.apiKey : !!preset.endpoint;
+    const configured = isProviderConfigured(type);
 
     let instance;
     try { instance = createProvider(type); } catch { instance = null; }
@@ -159,4 +159,17 @@ function listProviders() {
   });
 }
 
-module.exports = { createProvider, listProviders, PRESETS };
+/** Environment presets are fallbacks only when explicitly configured. */
+function isProviderConfigured(type) {
+  switch (type) {
+    case 'gemini': return Boolean(PRESETS.gemini.apiKey);
+    case 'anthropic': return Boolean(PRESETS.anthropic.apiKey);
+    case 'openai': return Boolean(PRESETS.openai.apiKey);
+    case 'opencode': return Boolean(process.env.AI_OPENCODE_ENDPOINT || process.env.AI_OPENCODE_API_KEY);
+    case 'ollama': return Boolean(process.env.AI_OLLAMA_ENDPOINT || process.env.AI_OLLAMA_MODEL);
+    case 'custom': return Boolean(process.env.AI_CUSTOM_ENDPOINT || process.env.AI_CUSTOM_API_KEY);
+    default: return false;
+  }
+}
+
+module.exports = { createProvider, listProviders, isProviderConfigured, PRESETS };

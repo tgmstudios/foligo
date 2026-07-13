@@ -21,13 +21,17 @@ async function checkPage() {
   setStatus('idle', 'Checking...');
   $('platformInfo').style.display = 'none';
   $('autofillBtn').disabled = true;
+  $('aiRescanBtn').disabled = true;
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) { setStatus('error', 'No active tab'); return; }
     const r = await chrome.tabs.sendMessage(tab.id, { action: 'detect' });
+    // If the content script answered, AI Rescan can explicitly activate the
+    // agent even when ordinary form detection found no fields or form.
+    $('aiRescanBtn').disabled = false;
     if (r?.platform) {
-      setStatus('active', 'Application detected');
+      setStatus('active', r.fieldsFound ? 'Application detected' : 'ATS page detected');
       $('platformInfo').style.display = 'block';
       $('platformBadge').textContent = r.platform;
       $('fieldCount').textContent = ` · ${r.fieldsFound} fields`;
@@ -61,6 +65,24 @@ $('autofillBtn').addEventListener('click', async () => {
   } catch(e) {
     $('autofillBtn').textContent = e.message || 'Autofill failed';
     $('autofillBtn').disabled = false;
+  }
+});
+
+$('aiRescanBtn').addEventListener('click', async () => {
+  const btn = $('aiRescanBtn');
+  btn.disabled = true;
+  btn.textContent = 'AI rescanning...';
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const result = await chrome.tabs.sendMessage(tab.id, { action: 'ai-rescan' });
+    if (!result?.success) throw new Error(result?.message || 'AI Rescan failed');
+    btn.textContent = result.continuationLimitReached ? 'AI paused at safety limit' : '✓ AI Rescan complete';
+    setStatus('active', result.fieldsFound ? `${result.fieldsFound} fields detected` : 'AI Rescan complete');
+  } catch (e) {
+    btn.textContent = e.message || 'AI Rescan failed';
+    setStatus('error', 'AI Rescan failed');
+  } finally {
+    btn.disabled = false;
   }
 });
 

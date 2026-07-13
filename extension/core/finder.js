@@ -133,11 +133,11 @@ const Finder = (() => {
       if (Array.isArray(path)) {
         for (const p of path) {
           const node = Detector.getFirstXPathMatch(p, container);
-          if (node) return { node, ...metadata };
+          if (node) return { node, selectorPath: p, ...metadata };
         }
       } else if (typeof path === 'string') {
         const node = Detector.getFirstXPathMatch(path, container);
-        if (node) return { node, ...metadata };
+        if (node) return { node, selectorPath: path, ...metadata };
       }
     }
     return null;
@@ -152,6 +152,27 @@ const Finder = (() => {
       if (node) return node;
     }
     return document;
+  }
+
+  function dynamicControlRoot(element) {
+    return element?.closest?.('.select__container, .select-shell, .ant-select, .select2-container')
+      || element?.closest?.('[role="combobox"]')?.parentElement
+      || null;
+  }
+
+  function inferMethod(element, configuredMethod = 'default', hasActions = false) {
+    if (element.type === 'file') return 'uploadResume';
+    if (element.tagName === 'SELECT') return 'select';
+    if (element.type === 'checkbox' || element.type === 'radio') return 'selectCheckboxOrRadio';
+    if (
+      hasActions
+      || element.getAttribute?.('role') === 'combobox'
+      || element.getAttribute?.('aria-autocomplete')
+      || element.hasAttribute?.('list')
+      || dynamicControlRoot(element)
+      || /select|combobox|autocomplete/i.test(element.className || '')
+    ) return 'select';
+    return configuredMethod || 'default';
   }
 
   // ─── Primary: find fields using platform config ──────────────────
@@ -173,21 +194,17 @@ const Finder = (() => {
           if (!foundIds.has(elId + fieldName)) {
             foundIds.add(elId + fieldName);
             const configuredMethod = resolved.method || platformConfig.defaultMethod;
-            const method = element.type === 'file'
-              ? 'uploadResume'
-              : element.tagName === 'SELECT'
-              ? 'select'
-              : (element.type === 'checkbox' || element.type === 'radio')
-                ? 'selectCheckboxOrRadio'
-                : (resolved.actions || /select/i.test(element.className || '') || element.getAttribute?.('role') === 'combobox')
-                  ? 'select'
-                  : configuredMethod || 'default';
+            const method = inferMethod(element, configuredMethod, Boolean(resolved.actions));
             foundFields.push({
               fieldName,
               element,
               method,
               container,
               values: resolved.values,
+              actions: resolved.actions,
+              valuePath: resolved.valuePath,
+              valueKey: resolved.valueKey,
+              selectorPath: resolved.selectorPath,
             });
           }
           break;
@@ -206,10 +223,12 @@ const Finder = (() => {
     
     // Rich ATS configurations often contain aliases and fallback selectors that
     // resolve to the same control. A control must only be filled and counted once.
-    const seenElements = new WeakSet();
+    const seenControls = new WeakSet();
     return foundFields.filter(field => {
-      if (!field.element || seenElements.has(field.element)) return false;
-      seenElements.add(field.element);
+      if (!field.element || field.element.type === 'hidden') return false;
+      const identity = dynamicControlRoot(field.element) || field.element;
+      if (seenControls.has(identity)) return false;
+      seenControls.add(identity);
       return true;
     });
   }
@@ -238,10 +257,7 @@ const Finder = (() => {
       // Skip if already found via primary selectors
       if (skipIds.has(primaryName)) continue;
       
-      let method = 'default';
-      if (target.type === 'file') method = 'uploadResume';
-      if (target.tagName === 'SELECT') method = 'select';
-      if (target.type === 'checkbox' || target.type === 'radio') method = 'selectCheckboxOrRadio';
+      const method = inferMethod(target);
       
       fields.push({
         fieldName: primaryName,
@@ -281,9 +297,7 @@ const Finder = (() => {
       
       if (skipIds.has(primaryName)) continue;
       
-      let method = 'default';
-      if (el.type === 'file') method = 'uploadResume';
-      if (el.tagName === 'SELECT') method = 'select';
+      const method = inferMethod(el);
       
       fields.push({
         fieldName: primaryName,

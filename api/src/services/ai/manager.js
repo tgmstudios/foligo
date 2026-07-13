@@ -22,8 +22,8 @@
  */
 
 const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
-const { createProvider, listProviders } = require('./providers');
-const { resolveModel, ensureBootstrapModels } = require('./model-config');
+const { createProvider, listProviders, isProviderConfigured } = require('./providers');
+const { resolveModel, listModelSelections, ensureBootstrapModels } = require('./model-config');
 const { createAILogger } = require('../logger');
 const { SAFETY_SETTINGS } = require('../gemini-config');
 
@@ -77,6 +77,27 @@ class AIManager {
   /** Default provider */
   get defaultProvider() { return this.getProvider(); }
 
+  async _fallbackSelections(requestedProvider, modelType) {
+    if (requestedProvider) return [requestedProvider];
+
+    let databaseSelections = [];
+    try {
+      databaseSelections = await listModelSelections(modelType);
+    } catch (error) {
+      this.logger.warn(`Could not build database AI fallback chain: ${error.message}`);
+    }
+
+    const environmentSelections = [this._defaultProvider, ...this._fallbackChain]
+      .filter((selection, index, all) => all.indexOf(selection) === index)
+      .filter(isProviderConfigured);
+
+    // A null selection preserves the legacy database-default/environment
+    // lookup only when no concrete database candidates could be enumerated.
+    return databaseSelections.length
+      ? [...databaseSelections, ...environmentSelections]
+      : (environmentSelections.length ? environmentSelections : [null]);
+  }
+
   /**
    * Run an operation against the default provider, falling back to the next
    * provider in the chain if the *actual call* fails — not just a health
@@ -85,7 +106,7 @@ class AIManager {
    * rejecting a specific payload), so fallback has to cover real failures too.
    */
   async _withFallback(requestedProvider, modelType, fn) {
-    const types = requestedProvider ? [requestedProvider] : [null, ...this._fallbackChain];
+    const types = await this._fallbackSelections(requestedProvider, modelType);
 
     let lastError;
     for (const type of types) {
@@ -199,49 +220,80 @@ class AIManager {
    * @returns {AsyncGenerator<object>}
    */
   async *streamChat(messages, options = {}) {
-    const { provider: reqProvider, modelType = 'QUICK', systemInstruction, tools, maxSteps, temperature, maxTokens } = options;
-    const types = reqProvider ? [reqProvider] : [null, ...this._fallbackChain];
+    const {
+      provider: reqProvider, modelType = 'QUICK', systemInstruction, tools,
+      maxSteps, temperature, maxTokens, externalToolLoop = false,
+    } = options;
+    const types = await this._fallbackSelections(reqProvider, modelType);
 
     let lastError;
+    const attemptedProviders = new Set();
     for (const type of types) {
       const prov = await this.getProvider(type, {}, modelType);
       if (!prov) continue;
+      const providerKey = prov.cacheKey || type || prov.name;
+      if (attemptedProviders.has(providerKey)) continue;
+      attemptedProviders.add(providerKey);
 
       const result = sdkStreamText({
         model: prov.model,
         system: systemInstruction,
         messages,
         tools,
-        stopWhen: stepCountIs(maxSteps ?? 6),
+        stopWhen: stepCountIs(externalToolLoop ? 1 : (maxSteps ?? 6)),
         temperature,
         maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
         providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },
       });
 
       const iterator = result.fullStream[Symbol.asyncIterator]();
-      let first;
-      try {
-        first = await iterator.next();
-      } catch (e) {
-        lastError = e;
-        this.logger.warn(`Provider "${type}" stream failed before first chunk, trying next: ${e.message}`);
-        this._providers.delete(type);
-        continue;
-      }
-
-      this.logger.debug(`streamChat via ${prov.name}`, { msgCount: messages.length });
-      if (!first.done) yield first.value;
-
+      const buffered = [];
+      let committed = false;
+      let retryProvider = false;
       try {
         while (true) {
           const { value, done } = await iterator.next();
           if (done) break;
-          yield value;
+
+          // AI SDK reports provider request failures as stream parts (usually
+          // after start/start-step), not necessarily as thrown iterator
+          // errors. Until user-visible output or a tool action is emitted it
+          // is safe to discard bookkeeping parts and try the next provider.
+          if (!committed && (value?.type === 'error' || (value?.type === 'finish' && value.finishReason === 'error'))) {
+            lastError = value.error || new Error('Provider stream finished with an error before producing output.');
+            this.logger.warn(`Provider "${type}" stream failed before output, trying next: ${lastError?.message || lastError}`);
+            this._providers.delete(providerKey);
+            retryProvider = true;
+            break;
+          }
+
+          if (!committed) {
+            buffered.push(value);
+            if (['text-delta', 'reasoning-delta', 'tool-call', 'tool-result', 'tool-error'].includes(value?.type)) {
+              committed = true;
+              for (const part of buffered) yield part;
+              buffered.length = 0;
+            }
+          } else {
+            yield value;
+          }
         }
       } catch (e) {
-        this.logger.warn(`Provider "${type}" stream failed mid-stream: ${e.message}`);
-        yield { type: 'error', error: e.message || String(e) };
+        lastError = e;
+        if (!committed) {
+          this.logger.warn(`Provider "${type}" stream failed before output, trying next: ${e.message}`);
+          this._providers.delete(providerKey);
+          retryProvider = true;
+        } else {
+          this.logger.warn(`Provider "${type}" stream failed mid-stream: ${e.message}`);
+          yield { type: 'error', error: e };
+          return;
+        }
       }
+
+      if (retryProvider) continue;
+      this.logger.debug(`streamChat via ${prov.name}`, { msgCount: messages.length });
+      for (const part of buffered) yield part;
       return;
     }
 

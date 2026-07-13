@@ -3,6 +3,11 @@
  * success confirmation, and job info extraction.
  */
 const Tracker = (() => {
+  // Text-only signal that a control performs the final submit/apply action —
+  // deliberately not keyed off input type, since a multi-step wizard's
+  // "Next"/"Continue" button is very often also type="submit".
+  const FINAL_SUBMIT_TEXT_RE = /^\s*(?:submit\b|apply\b|send(?:\s+(?:your\s+)?application)?\b|finish\s+application\b|complete\s+application\b)/i;
+
   // ─── Job info extraction ──────────────────────────────────────────
 
   function extractJobInfo() {
@@ -119,12 +124,32 @@ const Tracker = (() => {
     const allButtons = document.querySelectorAll('button, input[type="submit"], [role="button"]');
     for (const btn of allButtons) {
       const text = (btn.textContent || btn.value || '').toLowerCase();
-      if (/submit|apply|send application/i.test(text) && btn.offsetParent !== null) {
+      if (FINAL_SUBMIT_TEXT_RE.test(text) && btn.offsetParent !== null) {
         return btn;
       }
     }
 
     return null;
+  }
+
+  // ─── Navigation candidates (for the AI agent's multi-step flow) ───
+
+  // Buttons/links a multi-step application wizard might use to advance
+  // ("Next", "Continue", "Save & Continue", ...). Excludes anything that
+  // looks like the final submit/apply action — the AI agent's click_element
+  // tool only ever operates on these candidates, never on findSubmitButton's
+  // target, so it can advance a wizard without ever being able to submit it.
+  function findNavigationCandidates() {
+    const candidates = [];
+    const elements = document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"], a');
+    for (const el of elements) {
+      if (el.offsetParent === null) continue; // hidden
+      if (el.disabled || el.getAttribute('aria-disabled') === 'true') continue;
+      const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim();
+      if (!text || text.length > 60) continue;
+      candidates.push({ element: el, label: text, likelyFinal: FINAL_SUBMIT_TEXT_RE.test(text) });
+    }
+    return candidates;
   }
 
   function highlightSubmitButton(button) {
@@ -283,6 +308,8 @@ const Tracker = (() => {
   return {
     extractJobInfo,
     findSubmitButton,
+    findNavigationCandidates,
+    FINAL_SUBMIT_TEXT_RE,
     highlightSubmitButton,
     detectSuccess,
     watchForSuccess,

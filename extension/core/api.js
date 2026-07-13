@@ -243,6 +243,28 @@ const GoApplyAPI = (() => {
     });
   }
 
+  // ─── Agent (streaming, tool-calling) ─────────────────────────────
+  // Streams over a long-lived Port instead of the one-shot sendMessage/fetch
+  // above — background.js's 'goapply-agent' port listener does the real
+  // fetch and relays parsed SSE frames back as they arrive.
+  function openAgentPort() {
+    return chrome.runtime.connect({ name: 'goapply-agent' });
+  }
+
+  async function buildAgentRequest(bodyObj) {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated. Open Foligo dashboard to sign in.');
+    const { api: BASE_URL } = await getEndpoints();
+    return {
+      url: `${BASE_URL}/api/ai/agent/turn`,
+      options: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(bodyObj),
+      },
+    };
+  }
+
   // ─── Auth check ─────────────────────────────────────────────────
   async function checkAuth() {
     try { await getProfile(); return true; } catch(e) { return false; }
@@ -303,6 +325,7 @@ const GoApplyAPI = (() => {
     getCoverLetters, saveCoverLetter, setDefaultCoverLetter, getCoverLetterPdf, compileCoverLetterPdf,
     getAnswers, saveAnswer,
     generateCoverLetter, tailorResume, generateEmail, generateCustomAnswer,
+    openAgentPort, buildAgentRequest,
     // Device code
     generateDeviceCode, exchangeDeviceCode,
   };

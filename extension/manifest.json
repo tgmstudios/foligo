@@ -32,6 +32,8 @@
         "core/finder.js",
         "core/filler.js",
         "core/tracker.js",
+        "core/agent-controller.js",
+        "core/chat-panel.js",
         "core/boards.js",
         "core/banners.js",
         "core/consent.js",

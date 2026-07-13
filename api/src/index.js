@@ -32,6 +32,7 @@ const adminAiModelRoutes = require('./routes/admin-ai-models');
 const ssoAuthRoutes = require('./routes/sso-auth');
 const resumeRoutes = require('./routes/resume');
 const aiProviderRoutes = require('./routes/ai-providers');
+const extensionAgentRoutes = require('./routes/extension-agent');
 const goapplyRoutes = require('./routes/goapply');
 const tokenRoutes = require('./routes/tokens');
 const githubAuthRoutes = require('./routes/github-auth');
@@ -274,6 +275,8 @@ app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
 app.use('/api/ai', authenticateToken, aiContentRoutes);
 // AI provider management + GoApply endpoints (model-agnostic)
 app.use('/api/ai', authenticateToken, aiProviderRoutes);
+// Extension page-filling agent (streaming, tool-calling)
+app.use('/api/ai/agent', authenticateToken, extensionAgentRoutes);
 // Old upload route deprecated - use /api/media instead
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 // Media routes - most require auth, but /view endpoint is public

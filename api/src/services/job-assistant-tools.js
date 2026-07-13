@@ -278,4 +278,4 @@ function createJobAssistantTools(prisma, userId) {
   };
 }
 
-module.exports = { createJobAssistantTools };
+module.exports = { createJobAssistantTools, jobAssistantTool, toJsonCompatible };

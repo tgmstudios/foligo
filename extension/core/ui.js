@@ -22,6 +22,10 @@ const UI = (() => {
 
   let rootEl = null;
 
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   // ─── Stylesheet ───────────────────────────────────────────────────
 
   function injectStyles() {
@@ -64,12 +68,18 @@ const UI = (() => {
       }
       .sr-badge-success { background: ${COLORS.successLight}; color: ${COLORS.success}; }
       .sr-badge-warning { background: #FFF8E7; color: ${COLORS.warning}; }
+      .sr-badge-flagged { background: #FFF0D6; color: #A85D00; border: 1px solid #FFD08A; }
       .sr-badge-muted { background: ${COLORS.background}; color: ${COLORS.muted}; }
       .sr-field-row {
         display: flex; align-items: center; justify-content: space-between;
         padding: 5px 0; border-bottom: 1px solid ${COLORS.border}; font-size: 12px;
       }
       .sr-field-row:last-child { border-bottom: none; }
+      .sr-ai-fill-btn {
+        background: transparent; border: 0; border-radius: 4px; cursor: pointer;
+        color: ${COLORS.primary}; font-size: 12px; padding: 2px 4px;
+      }
+      .sr-ai-fill-btn:hover { background: #F0EFFF; }
       .sr-separator { height: 1px; background: ${COLORS.border}; margin: 10px 0; }
       .sr-fade-in { animation: srFadeIn 0.2s ease-out; }
       @keyframes srFadeIn {
@@ -134,7 +144,7 @@ const UI = (() => {
 
   // ─── Full panel with all features ────────────────────────────────
 
-  function renderPanel(platform, foundFields, jobInfo, appCount, onAutofill, onClose, onSubmitFound, onPreview) {
+  function renderPanel(platform, foundFields, jobInfo, appCount, onAutofill, onClose, onSubmitFound, onPreview, agentActions = {}) {
     const root = mount();
     if (!root) return;
 
@@ -180,9 +190,20 @@ const UI = (() => {
         <div class="sr-separator"></div>
 
         <!-- Action buttons -->
-        <button class="sr-btn sr-btn-primary sr-btn-block" id="sr-autofill" style="margin-bottom:6px;">
+        <button class="sr-btn sr-btn-primary sr-btn-block" id="sr-autofill" style="margin-bottom:6px;" ${filledCount ? '' : 'disabled'}>
           ⚡ Autofill ${filledCount} Fields
         </button>
+
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button class="sr-btn sr-btn-secondary" id="sr-agent-rescan" style="flex:1;font-size:12px;">
+            ✨ Force AI Rescan
+          </button>
+          <button class="sr-btn sr-btn-secondary" id="sr-agent-chat" style="flex:1;font-size:12px;">
+            💬 Ask AI
+          </button>
+        </div>
+
+        <div id="sr-agent-status" aria-live="polite" style="display:none;color:${COLORS.muted};font-size:11px;margin:0 2px 7px;"></div>
 
         <div style="display:flex;gap:6px;">
           <button class="sr-btn sr-btn-secondary" id="sr-track-btn" style="flex:1;font-size:12px;">
@@ -197,9 +218,11 @@ const UI = (() => {
 
     // Populate field list
     const listEl = root.querySelector('#sr-field-list');
-    for (const field of foundFields.slice(0, 20)) {
+    const docRows = { resume: [], coverLetter: [] };
+    foundFields.slice(0, 20).forEach((field, index) => {
       const row = document.createElement('div');
       row.className = 'sr-field-row';
+      row.dataset.fieldRef = `f${index}`;
       const name = field.fieldName.replace(/_/g, ' ');
       const docKind = field.method === 'uploadResume' ? 'resume' : field.method === 'uploadCoverLetter' ? 'coverLetter' : null;
       const badge = docKind === 'resume' ? '📎 resume' :
@@ -209,12 +232,50 @@ const UI = (() => {
       const previewBtn = docKind
         ? `<button class="sr-preview-btn" data-kind="${docKind}" title="Preview" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;">👁</button>`
         : '';
-      row.innerHTML = `<span>${name}</span><span>${previewBtn}<span class="sr-badge ${badgeClass}">${badge}</span></span>`;
+      const aiFillBtn = docKind ? '' : `<button class="sr-ai-fill-btn" data-field-ref="f${index}" title="Fill this field with AI" aria-label="Fill ${escapeHtml(name)} with AI">✨</button>`;
+      row.innerHTML = `<span>${escapeHtml(name)}</span><span class="sr-doc-controls">${aiFillBtn}${previewBtn}<span class="sr-badge sr-field-badge ${badgeClass}">${badge}</span></span>`;
       listEl.appendChild(row);
+      if (docKind) docRows[docKind].push(row);
+    });
+
+    // When more than one resume/cover letter exists, swap the static badge
+    // for a dropdown so the user picks which one gets attached — autofill
+    // never silently guesses between multiple documents.
+    for (const kind of ['resume', 'coverLetter']) {
+      const rows = docRows[kind];
+      if (!rows.length || typeof Filler === 'undefined') continue;
+      (async () => {
+        const [docs, selectedId] = await Promise.all([Filler.listDocuments(kind), Filler.getSelectedDocId(kind)]);
+        if (docs.length <= 1) return;
+        const defaultDoc = docs.find(d => d.isDefault) || docs[0];
+        const currentId = (selectedId && docs.some(d => d.id === selectedId)) ? selectedId : defaultDoc.id;
+        const nameKey = kind === 'resume' ? 'name' : 'title';
+        const optionsHtml = docs.map(d => {
+          const label = escapeHtml(d[nameKey] || 'Untitled') + (d.isDefault ? ' (default)' : '');
+          return `<option value="${escapeHtml(d.id)}"${d.id === currentId ? ' selected' : ''}>${label}</option>`;
+        }).join('');
+        for (const row of rows) {
+          const badge = row.querySelector('.sr-doc-controls .sr-badge');
+          if (!badge) continue;
+          const select = document.createElement('select');
+          select.className = 'sr-doc-select';
+          select.style.cssText = `font-size:11px;max-width:120px;padding:1px 2px;border-radius:4px;border:1px solid ${COLORS.border};background:${COLORS.surface};color:${COLORS.text};`;
+          select.innerHTML = optionsHtml;
+          select.addEventListener('click', (e) => e.stopPropagation());
+          select.addEventListener('change', () => { Filler.setSelectedDocId(kind, select.value); });
+          badge.replaceWith(select);
+        }
+      })();
     }
 
     // Preview a resume/cover letter without leaving the page
     listEl.addEventListener('click', (e) => {
+      const aiBtn = e.target.closest('.sr-ai-fill-btn');
+      if (aiBtn) {
+        e.stopPropagation();
+        agentActions.onFieldFill?.(aiBtn.dataset.fieldRef);
+        return;
+      }
       const btn = e.target.closest('.sr-preview-btn');
       if (!btn) return;
       e.stopPropagation();
@@ -236,11 +297,15 @@ const UI = (() => {
 
     // Autofill
     root.querySelector('#sr-autofill').addEventListener('click', () => {
+      if (!filledCount) return;
       const btn = root.querySelector('#sr-autofill');
       btn.disabled = true;
       btn.textContent = 'Filling...';
       onAutofill();
     });
+
+    root.querySelector('#sr-agent-rescan').addEventListener('click', () => agentActions.onRescan?.());
+    root.querySelector('#sr-agent-chat').addEventListener('click', () => agentActions.onChat?.());
 
     // Track job
     root.querySelector('#sr-track-btn').addEventListener('click', async () => {
@@ -289,6 +354,39 @@ const UI = (() => {
       } else {
         btn.textContent = `Processing ${completed}/${total}`;
       }
+    }
+  }
+
+  function updateAgentProgress(message = '') {
+    if (!rootEl) return;
+    const status = rootEl.querySelector('#sr-agent-status');
+    const button = rootEl.querySelector('#sr-agent-rescan');
+    if (status) {
+      status.textContent = message;
+      status.style.display = message ? 'block' : 'none';
+    }
+    if (button) button.disabled = Boolean(message) && !/complete|ready|failed/i.test(message);
+  }
+
+  function setFieldBadge(fieldRef, state, reason = '') {
+    if (!rootEl) return;
+    const row = rootEl.querySelector(`.sr-field-row[data-field-ref="${fieldRef}"]`);
+    const badge = row?.querySelector('.sr-field-badge');
+    if (!badge) return;
+    badge.className = 'sr-badge sr-field-badge';
+    if (state === 'flagged') {
+      badge.classList.add('sr-badge-flagged');
+      badge.textContent = '⚠ Review';
+      badge.title = reason || 'AI-filled value needs review';
+    } else if (state === 'filled') {
+      badge.classList.add('sr-badge-success');
+      badge.textContent = '✓ AI filled';
+      badge.title = '';
+      row.querySelector('.sr-ai-fill-btn')?.remove();
+    } else {
+      badge.classList.add('sr-badge-muted');
+      badge.textContent = state || 'detected';
+      badge.title = '';
     }
   }
 
@@ -342,7 +440,7 @@ const UI = (() => {
   }
 
   return {
-    mount, unmount, renderPanel, updateAutofillProgress,
+    mount, unmount, renderPanel, updateAutofillProgress, updateAgentProgress, setFieldBadge,
     showSuccessModal, showToast, highlightField, COLORS,
   };
 })();

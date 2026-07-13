@@ -78,21 +78,277 @@ const Filler = (() => {
     element.dispatchEvent(new Event('blur', { bubbles: true }));
   }
 
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  function getLiveElement(fieldInfo) {
+    if (fieldInfo?.element?.isConnected !== false) return fieldInfo.element;
+    if (fieldInfo?.selectorPath && typeof Detector !== 'undefined') {
+      const container = fieldInfo.container?.isConnected ? fieldInfo.container : document;
+      const replacement = Detector.getFirstXPathMatch(fieldInfo.selectorPath, container);
+      if (replacement) {
+        fieldInfo.element = replacement;
+        return replacement;
+      }
+    }
+    return fieldInfo?.element || null;
+  }
+
+  function controlRoot(element) {
+    return element?.closest?.('.select__container, .select-shell, .ant-select, .select2-container')
+      || element?.closest?.('[data-testid*="select" i], [class*="select-container" i], [class*="selectControl" i], [class*="dropdown" i]')
+      || element?.closest?.('[role="combobox"]')?.parentElement
+      || element?.parentElement
+      || element;
+  }
+
+  function isVisibleElement(element) {
+    if (!element?.isConnected) return false;
+    const style = globalThis.getComputedStyle?.(element);
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    return !element.getClientRects || element.getClientRects().length > 0;
+  }
+
+  function findSelectOpener(element, root = controlRoot(element)) {
+    const candidates = [
+      element,
+      root?.querySelector?.('[role="combobox"]'),
+      root?.querySelector?.('input[aria-autocomplete]'),
+      root?.querySelector?.('[aria-haspopup="listbox"]'),
+      root?.querySelector?.('button[aria-haspopup]'),
+      root?.querySelector?.('[aria-expanded]'),
+    ].filter(Boolean);
+    return candidates.find(candidate => isVisibleElement(candidate)) || element;
+  }
+
+  function readFieldValue(fieldInfo) {
+    const element = getLiveElement(fieldInfo);
+    if (!element) return '';
+    if (element.type === 'checkbox' || element.type === 'radio') {
+      const checked = element.name
+        ? document.querySelector(`input[name="${CSS.escape(element.name)}"]:checked`)
+        : (element.checked ? element : null);
+      return checked
+        ? [checked.value, checked.getAttribute('aria-label'), ...(checked.labels ? Array.from(checked.labels).map(label => label.textContent) : [])].filter(Boolean).join(' ')
+        : '';
+    }
+    if (element.tagName === 'SELECT') return element.selectedOptions?.[0]?.textContent || element.value || '';
+
+    const root = controlRoot(element);
+    const selected = root?.querySelector?.(
+      '.select__single-value, .select__multi-value__label, [class*="singleValue"], [class*="selected-value" i], ' +
+      '.ant-select-selection-item, .select2-chosen, [role="option"][aria-selected="true"], [data-selected="true"]'
+    );
+    const hiddenSelect = root?.querySelector?.('select');
+    return selected?.textContent?.trim()
+      || hiddenSelect?.selectedOptions?.[0]?.textContent?.trim()
+      || element.getAttribute?.('aria-valuetext')
+      || element.value
+      || element.textContent?.trim()
+      || '';
+  }
+
+  // A searchable combobox's input value is only its current query. It must
+  // not be accepted as proof that an option was committed. Prefer selected
+  // display nodes/hidden selects, and only trust the opener's own value once
+  // the widget explicitly reports that its popup is closed.
+  function readCommittedSelectValue(fieldInfo, opener) {
+    const element = getLiveElement(fieldInfo);
+    if (!element) return '';
+    if (element.tagName === 'SELECT') return readFieldValue(fieldInfo);
+    const root = controlRoot(element);
+    const selected = root?.querySelector?.(
+      '.select__single-value, .select__multi-value__label, [class*="singleValue"], [class*="selected-value" i], ' +
+      '.ant-select-selection-item, .select2-chosen, [role="option"][aria-selected="true"], [data-selected="true"]'
+    );
+    const hiddenSelect = root?.querySelector?.('select');
+    const semanticValue = selected?.textContent?.trim()
+      || hiddenSelect?.selectedOptions?.[0]?.textContent?.trim()
+      || opener?.getAttribute?.('aria-valuetext');
+    if (semanticValue) return semanticValue;
+    if (opener?.matches?.('button, [role="button"]')) return opener.textContent?.trim() || '';
+    if (opener?.matches?.('input, textarea') && opener.getAttribute?.('aria-expanded') === 'false') {
+      return opener.value || '';
+    }
+    return '';
+  }
+
+  function valueMatches(actual, expectedChoices) {
+    const normalizedActual = normalizeChoice(actual);
+    if (!normalizedActual) return false;
+    return (expectedChoices || []).some(expected => {
+      const wanted = normalizeChoice(expected);
+      return wanted && (
+        normalizedActual === wanted
+        || normalizedActual.includes(wanted)
+        || wanted.includes(normalizedActual)
+        || normalizedActual.replace(/\s+/g, '').includes(wanted.replace(/\s+/g, ''))
+      );
+    });
+  }
+
   function choiceCandidates(value, valuesMap) {
-    const candidates = [String(value)];
+    const rawValues = Array.isArray(value) ? value : [value];
+    const candidates = rawValues.map(String);
     if (!valuesMap) return candidates;
-    const wanted = normalizeChoice(value);
-    for (const aliases of Object.values(valuesMap)) {
+    const wantedValues = rawValues.map(normalizeChoice).filter(Boolean);
+    for (const [key, aliases] of Object.entries(valuesMap)) {
       if (!Array.isArray(aliases)) continue;
-      if (aliases.some(alias => {
-        const normalized = normalizeChoice(alias);
-        return normalized === wanted || normalized.includes(wanted) || wanted.includes(normalized);
-      })) candidates.push(...aliases.map(String));
+      const optionNames = [key, ...aliases].map(normalizeChoice);
+      if (wantedValues.some(wanted => optionNames.some(normalized =>
+        normalized === wanted || normalized.includes(wanted) || wanted.includes(normalized)
+      ))) candidates.push(key, ...aliases.map(String));
     }
     return [...new Set(candidates.filter(Boolean))];
   }
 
-  function fillSelect(element, value, valuesMap) {
+  const OPTION_SELECTOR = [
+    '[role="option"]', '.select__option', '.ant-select-item-option',
+    '.select2-result', '[data-option-index]', '[id*="-option-"]',
+    '[class*="option" i]', '[role="menuitemradio"]'
+  ].join(',');
+
+  const POPUP_SELECTOR = [
+    '[role="listbox"]', '[role="menu"]', '[role="tree"]',
+    '.select__menu', '.ant-select-dropdown', '.select2-results',
+    '[data-radix-popper-content-wrapper]', '[class*="dropdown-menu" i]',
+    '[class*="listbox" i]'
+  ].join(',');
+
+  function isVisibleOption(option) {
+      if (!option.textContent?.trim() || option.getAttribute('aria-disabled') === 'true') return false;
+      const style = globalThis.getComputedStyle?.(option);
+      if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+      return !option.getClientRects || option.getClientRects().length > 0;
+  }
+
+  function visibleOptions(scope = document) {
+    return Array.from(scope.querySelectorAll?.(OPTION_SELECTOR) || []).filter(isVisibleOption);
+  }
+
+  function visiblePopupRoots() {
+    return Array.from(document.querySelectorAll(POPUP_SELECTOR)).filter(isVisibleElement);
+  }
+
+  function controlledPopupIds(opener, root) {
+    const controls = [opener, root?.querySelector?.('[role="combobox"]')].filter(Boolean);
+    return [...new Set(controls.flatMap(control =>
+      `${control.getAttribute?.('aria-controls') || ''} ${control.getAttribute?.('aria-owns') || ''}`
+        .trim().split(/\s+/).filter(Boolean)
+    ))];
+  }
+
+  function popupDistance(opener, popup) {
+    const a = opener?.getBoundingClientRect?.();
+    const b = popup?.getBoundingClientRect?.();
+    if (!a || !b) return Number.MAX_SAFE_INTEGER;
+    const horizontalGap = Math.max(0, a.left - b.right, b.left - a.right);
+    const verticalGap = Math.max(0, a.top - b.bottom, b.top - a.bottom);
+    return horizontalGap + verticalGap;
+  }
+
+  function scopedOptions(opener, root, baseline = new Map()) {
+    for (const id of controlledPopupIds(opener, root)) {
+      const popup = document.getElementById(id);
+      const options = popup ? visibleOptions(popup) : [];
+      if (options.length) return options;
+    }
+
+    const local = root ? visibleOptions(root) : [];
+    if (local.length) return local;
+
+    // Most React/Vue selects portal their menu under <body>. Associate the
+    // nearest visible popup with this opener; do not reuse options from a
+    // different field's stale portal.
+    const popupCandidates = visiblePopupRoots()
+      .map(popup => ({ popup, options: visibleOptions(popup) }))
+      .filter(candidate => candidate.options.length)
+      .sort((a, b) => popupDistance(opener, a.popup) - popupDistance(opener, b.popup));
+    if (popupCandidates.length) return popupCandidates[0].options;
+
+    const expanded = opener.getAttribute?.('aria-expanded') === 'true'
+      || root?.querySelector?.('[aria-expanded="true"]');
+    if (expanded) {
+      // Some libraries render bare option nodes without a listbox wrapper and
+      // recycle those nodes between controls. Treat changed text as fresh too.
+      const fresh = visibleOptions().filter(option =>
+        !baseline.has(option) || baseline.get(option) !== option.textContent?.trim()
+      );
+      if (fresh.length) return fresh;
+    }
+    return [];
+  }
+
+  async function closeOpenSelects() {
+    const expanded = Array.from(document.querySelectorAll('[aria-expanded="true"], [aria-haspopup="listbox"]'));
+    const active = document.activeElement;
+    for (const control of [...new Set([active, ...expanded].filter(Boolean))]) {
+      control.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+      control.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', code: 'Escape', bubbles: true }));
+    }
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+    await wait(100);
+  }
+
+  async function waitForOptions(opener, root, baseline, timeoutMs = 2500) {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      const options = scopedOptions(opener, root, baseline);
+      if (options.length) return options;
+      await wait(50);
+    }
+    return [];
+  }
+
+  function findMatchingOption(options, candidates) {
+    const wanted = candidates.map(normalizeChoice).filter(Boolean);
+    return options.find(option => wanted.includes(normalizeChoice(option.textContent)))
+      || options.find(option => {
+        const actual = normalizeChoice(option.textContent);
+        return wanted.some(candidate => actual.startsWith(candidate) || candidate.startsWith(actual));
+      })
+      || options.find(option => {
+        const actual = normalizeChoice(option.textContent);
+        return wanted.some(candidate => actual.includes(candidate) || candidate.includes(actual));
+      });
+  }
+
+  function dispatchPointerSequence(element) {
+    const pointerInit = { bubbles: true, cancelable: true, view: window, pointerType: 'mouse', isPrimary: true };
+    if (typeof PointerEvent === 'function') element.dispatchEvent(new PointerEvent('pointerdown', pointerInit));
+    element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+    if (typeof PointerEvent === 'function') element.dispatchEvent(new PointerEvent('pointerup', pointerInit));
+    element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+    element.click?.();
+  }
+
+  function writeSearchValue(element, value) {
+    const previousValue = element.value;
+    setNativeValue(element, value);
+    if (element._valueTracker) element._valueTracker.setValue(previousValue || '');
+    element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    return previousValue;
+  }
+
+  async function tryKeyboardSelection(opener, fieldInfo, candidates) {
+    if (!opener?.matches?.('input, textarea, [role="combobox"]')) return null;
+    opener.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+    opener.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+    await wait(75);
+    opener.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+    opener.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+    const started = Date.now();
+    while (Date.now() - started < 1500) {
+      const retainedValue = readCommittedSelectValue(fieldInfo, opener);
+      if (valueMatches(retainedValue, candidates)) return { expectedChoices: candidates, retainedValue };
+      await wait(50);
+    }
+    return null;
+  }
+
+  async function fillSelect(fieldInfo, value) {
+    const element = getLiveElement(fieldInfo);
+    const valuesMap = fieldInfo.values;
     const candidates = choiceCandidates(value, valuesMap);
     if (element.tagName === 'SELECT') {
       const options = Array.from(element.options);
@@ -110,27 +366,113 @@ const Filler = (() => {
       element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
       element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
       element.blur();
-      return;
+      const retainedValue = readFieldValue(fieldInfo);
+      if (!valueMatches(retainedValue, candidates)) throw new Error(`Selection "${option.textContent.trim()}" was not retained`);
+      return { expectedChoices: candidates, retainedValue };
     }
-    element.focus();
-    element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-    element.click();
-    setTimeout(() => {
-      const options = document.querySelectorAll(
-        '[role="option"], [role="listbox"] [role="option"], li[class*="option"]'
-      );
-      for (const opt of options) {
-        const actual = normalizeChoice(opt.textContent);
-        if (candidates.some(candidate => {
-          const wanted = normalizeChoice(candidate);
-          return actual === wanted || actual.includes(wanted) || wanted.includes(actual);
-        })) {
-          opt.click();
-          return;
-        }
+
+    await closeOpenSelects();
+    const root = controlRoot(element);
+    const opener = findSelectOpener(element, root);
+    const baseline = new Map(visibleOptions().map(option => [option, option.textContent?.trim()]));
+    opener.focus?.();
+    dispatchPointerSequence(opener);
+    // Greenhouse school/degree controls are searchable async selects. Merely
+    // opening them is insufficient: enter the desired label so React Select
+    // can fetch/filter its options before attempting the click.
+    let openerValueBefore;
+    if (opener.matches?.('input, textarea')) {
+      const searchValue = candidates.find(candidate => /[a-z]/i.test(candidate)) || candidates[0];
+      openerValueBefore = writeSearchValue(opener, searchValue);
+      await wait(150);
+    }
+    const options = await waitForOptions(opener, root, baseline, 4000);
+    const option = findMatchingOption(options, candidates);
+    if (!option) {
+      if (!options.length) {
+        const keyboardSelection = await tryKeyboardSelection(opener, fieldInfo, candidates);
+        if (keyboardSelection) return keyboardSelection;
       }
-    }, 100);
-    return candidates;
+      const available = options.map(opt => opt.textContent.trim()).filter(Boolean).slice(0, 20);
+      if (openerValueBefore !== undefined) writeSearchValue(opener, openerValueBefore);
+      await closeOpenSelects();
+      throw new Error(`No matching option for "${value}"${available.length ? `. Available: ${available.join(' | ')}` : ''}`);
+    }
+
+    option.scrollIntoView?.({ block: 'nearest' });
+    dispatchPointerSequence(option);
+
+    const started = Date.now();
+    while (Date.now() - started < 2500) {
+      const retainedValue = readCommittedSelectValue(fieldInfo, opener);
+      if (valueMatches(retainedValue, candidates)) return { expectedChoices: candidates, retainedValue };
+      await wait(50);
+    }
+    if (openerValueBefore !== undefined) writeSearchValue(opener, openerValueBefore);
+    await closeOpenSelects();
+    throw new Error(`Option "${option.textContent.trim()}" was clicked but the control did not retain it`);
+  }
+
+  async function inspectField(fieldInfo, { open = true, query } = {}) {
+    const element = getLiveElement(fieldInfo);
+    if (!element) return { found: false };
+    let options = [];
+    const root = controlRoot(element);
+    if (element.tagName === 'SELECT') {
+      options = Array.from(element.options).map(option => option.textContent.trim()).filter(Boolean);
+    } else if (element.type === 'radio') {
+      const group = element.name
+        ? Array.from(document.querySelectorAll(`input[type="radio"][name="${CSS.escape(element.name)}"]`))
+        : [element];
+      options = group.map(input => [
+        input.value,
+        ...(input.labels ? Array.from(input.labels).map(label => label.textContent.trim()) : []),
+        input.getAttribute('aria-label'),
+      ].filter(Boolean).join(' — '));
+    } else if (element.type === 'checkbox') {
+      options = ['checked', 'unchecked'];
+    } else if (open && fieldInfo.method === 'select') {
+      await closeOpenSelects();
+      const opener = findSelectOpener(element, root);
+      const baseline = new Map(visibleOptions().map(option => [option, option.textContent?.trim()]));
+      dispatchPointerSequence(opener);
+      let openerValueBefore;
+      if (query && opener.matches?.('input, textarea')) {
+        openerValueBefore = writeSearchValue(opener, query);
+      }
+      options = (await waitForOptions(opener, root, baseline, 4000)).map(option => option.textContent.trim()).filter(Boolean);
+      opener.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+      if (openerValueBefore !== undefined) writeSearchValue(opener, openerValueBefore);
+    }
+    const uniqueOptions = [...new Set(options)];
+    const combobox = element.matches?.('[role="combobox"]') ? element : element.querySelector?.('[role="combobox"]');
+    const labelText = [
+      ...(element.labels ? Array.from(element.labels).map(label => label.textContent) : []),
+      root?.querySelector?.('label')?.textContent,
+      element.getAttribute?.('aria-label'),
+    ].find(text => text?.trim())?.replace(/\s+/g, ' ').trim();
+    const controlKind = element.type === 'checkbox'
+      ? 'checkbox'
+      : element.type === 'radio'
+        ? 'radio-group'
+        : element.tagName === 'SELECT'
+          ? 'native-select'
+          : fieldInfo.method === 'select'
+            ? (combobox?.matches?.('input, textarea') ? 'autocomplete-select' : 'dynamic-select')
+            : (element.tagName || 'input').toLowerCase();
+    return {
+      found: true,
+      controlKind,
+      inputType: element.type || undefined,
+      role: combobox?.getAttribute?.('role') || element.getAttribute?.('role') || undefined,
+      labelText,
+      checked: element.type === 'checkbox' || element.type === 'radio' ? Boolean(element.checked) : undefined,
+      currentValue: readFieldValue(fieldInfo),
+      optionCount: uniqueOptions.length,
+      optionsTruncated: uniqueOptions.length > 50,
+      options: uniqueOptions.slice(0, 50),
+      query: query || undefined,
+    };
   }
 
   function normalizeChoice(value) {
@@ -205,17 +547,50 @@ const Filler = (() => {
     coverLetter: { list: 'getCoverLetters', pdf: 'getCoverLetterPdf', compile: 'compileCoverLetterPdf' },
   };
 
+  async function listDocuments(kind) {
+    if (typeof GoApplyAPI === 'undefined') return [];
+    try {
+      const docs = await GoApplyAPI[DOCUMENT_SOURCES[kind].list]();
+      return Array.isArray(docs) ? docs : [];
+    } catch (e) { return []; }
+  }
+
+  // When more than one resume/cover letter exists, the extension will not
+  // silently guess which one to attach — it waits for an explicit choice
+  // (surfaced as a dropdown in the panel) and remembers it here.
+  function selectedDocStorageKey(kind) { return kind === 'resume' ? 'selectedResumeId' : 'selectedCoverLetterId'; }
+
+  async function getSelectedDocId(kind) {
+    try {
+      const key = selectedDocStorageKey(kind);
+      const stored = await chrome.storage.local.get(key);
+      return stored[key] || null;
+    } catch (e) { return null; }
+  }
+
+  async function setSelectedDocId(kind, id) {
+    try { await chrome.storage.local.set({ [selectedDocStorageKey(kind)]: id }); } catch (e) {}
+    delete cachedDocFiles[kind];
+    delete cachedDocFilesAt[kind];
+  }
+
   let cachedDocFiles = { resume: null, coverLetter: null };
   let cachedDocFilesAt = { resume: 0, coverLetter: 0 };
   const DOC_FILE_TTL_MS = 10 * 60 * 1000;
 
-  async function fetchDefaultDocumentFile(kind, profile) {
+  async function fetchDocumentFile(kind, profile) {
     if (typeof GoApplyAPI === 'undefined') return null;
     const source = DOCUMENT_SOURCES[kind];
     let docs;
     try { docs = await GoApplyAPI[source.list](); } catch (e) { return null; }
     if (!Array.isArray(docs) || docs.length === 0) return null;
-    const doc = docs.find(d => d.isDefault) || docs[0];
+
+    let doc = null;
+    if (docs.length > 1) {
+      const selectedId = await getSelectedDocId(kind);
+      doc = selectedId ? docs.find(d => d.id === selectedId) : null;
+    }
+    if (!doc) doc = docs.find(d => d.isDefault) || docs[0];
 
     let blob = null;
     try { blob = await GoApplyAPI[source.pdf](doc.id); } catch (e) { /* not compiled yet */ }
@@ -230,7 +605,7 @@ const Filler = (() => {
     if (!forceRefresh && cachedDocFiles[kind] && (Date.now() - cachedDocFilesAt[kind]) < DOC_FILE_TTL_MS) {
       return cachedDocFiles[kind];
     }
-    const file = await fetchDefaultDocumentFile(kind, profile);
+    const file = await fetchDocumentFile(kind, profile);
     if (file) { cachedDocFiles[kind] = file; cachedDocFilesAt[kind] = Date.now(); }
     return file;
   }
@@ -621,8 +996,8 @@ const Filler = (() => {
         case 'dijit': fillDijit(element, value); break;
         case 'selectCheckboxOrRadio': fillCheckbox(element, value); break;
         case 'select': {
-          const expectedChoices = fillSelect(element, value, values);
-          return { success: true, expectedValue: value, expectedChoices };
+          const selection = await fillSelect(fieldInfo, value);
+          return { success: true, expectedValue: value, ...selection };
         }
         case 'click': fillClick(element, value); break;
         case 'defaultWithoutBlur':
@@ -654,6 +1029,8 @@ const Filler = (() => {
   return {
     fillField, fillAll, fillDefault, fillReact, fillDijit,
     resolveValue, resolveValueSync, loadProfile, invalidateCache,
-    fillWriteCoverLetter, loadDocumentFile, DEFAULT_VALUES
+    fillWriteCoverLetter, loadDocumentFile, listDocuments,
+    getSelectedDocId, setSelectedDocId, readFieldValue, valueMatches,
+    choiceCandidates, inspectField, DEFAULT_VALUES
   };
 })();

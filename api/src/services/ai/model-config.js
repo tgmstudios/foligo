@@ -57,4 +57,23 @@ async function resolveModel(selection, modelType = 'QUICK') {
     : null;
 }
 
-module.exports = { resolveModel, ensureBootstrapModels, VALID_MODEL_TYPES, VALID_PROVIDER_TYPES };
+/**
+ * Return enabled database models in fallback order: requested model class
+ * first, then the other class. Database IDs are returned as selections so
+ * AIManager reuses the normal decryption/cache path in resolveModel().
+ */
+async function listModelSelections(modelType = 'QUICK') {
+  await ensureBootstrapModels();
+  const normalizedType = VALID_MODEL_TYPES.includes(String(modelType).toUpperCase())
+    ? String(modelType).toUpperCase()
+    : 'QUICK';
+  const records = await prisma.aiModel.findMany({
+    where: { enabled: true },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+  });
+  return records
+    .sort((a, b) => Number(b.modelType === normalizedType) - Number(a.modelType === normalizedType))
+    .map(record => record.id);
+}
+
+module.exports = { resolveModel, listModelSelections, ensureBootstrapModels, VALID_MODEL_TYPES, VALID_PROVIDER_TYPES };

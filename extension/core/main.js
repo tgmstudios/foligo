@@ -8,7 +8,7 @@
   const log = (...a) => console.log('[GoApply]', ...a);
   const warn = (...a) => console.warn('[GoApply]', ...a);
 
-  let platform = null, foundFields = [], observer = null;
+  let platform = null, foundFields = [], observer = null, urlObserver = null;
   let boardsInterval = null, successWatcher = null, isActivated = false;
   let bannerInjected = false, currentJobInfo = null;
 
@@ -49,6 +49,62 @@
     if (!tab) UI.showToast('Preview blocked — allow popups for this site');
   }
 
+  // ─── AI agent actions ──────────────────────────────────────────────
+
+  function handleAgentEvent(event) {
+    if (event?.type === 'tool-call') {
+      const statuses = {
+        set_field_value: `Filling ${event.input?.fieldRef || 'field'}…`,
+        set_field_values: 'Filling fields…',
+        inspect_field_control: `Inspecting ${event.input?.fieldRef || 'field'}…`,
+        select_field_option: `Selecting ${event.input?.fieldRef || 'dropdown'}…`,
+        set_checkbox_state: `Updating ${event.input?.fieldRef || 'checkbox'}…`,
+        flag_field_uncertain: `Flagging ${event.input?.fieldRef || 'field'} for review…`,
+        click_element: `Opening ${event.input?.elementRef || 'next step'}…`,
+        find_submit_button: 'Finding the submit button…',
+        rescan_page: 'Rescanning page…',
+        generate_cover_letter: 'Drafting cover letter…',
+        generate_custom_answer: 'Drafting answer…',
+      };
+      UI.updateAgentProgress(statuses[event.toolName] || `Using ${String(event.toolName).replace(/_/g, ' ')}…`);
+    }
+  }
+
+  async function forceAIRescan() {
+    UI.updateAgentProgress('Rescanning with AI…');
+    try {
+      foundFields = Finder.findFields(platform?.config || { inputSelectors: [], containerPath: [] });
+      AgentController.initializePage(foundFields, platform, currentJobInfo);
+      const result = await AgentController.startRescan(foundFields, platform, currentJobInfo, handleAgentEvent);
+      UI.updateAgentProgress(result.continuationLimitReached ? 'AI stopped at the safety limit' : 'AI rescan complete');
+      UI.showToast(result.continuationLimitReached ? 'AI paused after too many steps' : '✨ AI rescan complete');
+      return {
+        success: true,
+        fieldsFound: foundFields.length,
+        continuationLimitReached: Boolean(result.continuationLimitReached),
+      };
+    } catch (error) {
+      UI.updateAgentProgress('AI rescan failed');
+      UI.showToast(`AI rescan failed: ${error.message}`);
+      return { success: false, message: error.message };
+    } finally {
+      setTimeout(() => UI.updateAgentProgress(''), 2500);
+    }
+  }
+
+  async function fillFieldWithAI(fieldRef) {
+    UI.updateAgentProgress(`Filling ${fieldRef} with AI…`);
+    try {
+      const result = await AgentController.startFieldFill(fieldRef, platform, currentJobInfo, handleAgentEvent);
+      UI.updateAgentProgress(result.continuationLimitReached ? 'AI stopped at the safety limit' : 'Field AI complete');
+    } catch (error) {
+      UI.updateAgentProgress('Field AI failed');
+      UI.showToast(`AI fill failed: ${error.message}`);
+    } finally {
+      setTimeout(() => UI.updateAgentProgress(''), 2500);
+    }
+  }
+
   // ─── Startup ──────────────────────────────────────────────────────
 
   async function startup() {
@@ -59,7 +115,7 @@
 
   // ─── Activation ───────────────────────────────────────────────────
 
-  async function tryActivate() {
+  async function tryActivate({ forceAgent = false } = {}) {
     if (isActivated) return true;
     try { platform = await Detector.shouldActivate(); } catch(e) { platform = null; }
     if (!platform) {
@@ -73,7 +129,7 @@
       } catch (e) {}
       let forms = [];
       try { forms = Finder.findAllForms(); } catch (e) {}
-      if (!forms.length) return false;
+      if (!knownPlatform && !forms.length && !forceAgent) return false;
       platform = knownPlatform || {
           platform: 'generic',
           config: { inputSelectors: [], containerPath: [], containerRequired: false },
@@ -87,17 +143,52 @@
 
     const jobInfo = Tracker.extractJobInfo();
     currentJobInfo = jobInfo;
+    AgentController.initializePage(foundFields, platform, jobInfo);
+    AgentController.setOnFieldsRefreshed((freshFields) => { foundFields = freshFields; });
+    ChatPanel.mount(document.body, () => ({ platform, jobInfo: currentJobInfo }));
     let appCount = 0;
     try { const kanban = await GoApplyAPI.getKanban().catch(() => []); appCount = kanban.reduce((s,c) => s + (c.cards?.length||0), 0); } catch(e) {}
 
-    if (foundFields.length > 0 || jobInfo.company) {
-      UI.renderPanel(platform, foundFields, jobInfo, appCount, fullAutofill, () => { platform = null; foundFields = []; isActivated = false; }, armSubmitWatcher, previewDocument);
-    }
+    UI.renderPanel(
+      platform,
+      foundFields,
+      jobInfo,
+      appCount,
+      fullAutofill,
+      () => { platform = null; foundFields = []; isActivated = false; },
+      armSubmitWatcher,
+      previewDocument,
+      { onRescan: forceAIRescan, onFieldFill: fillFieldWithAI, onChat: () => ChatPanel.toggle() },
+    );
 
     if (!bannerInjected) { try { await Banners.injectBanner(platform); bannerInjected = true; } catch(e) {} }
 
     try { armSubmitWatcher(Tracker.findSubmitButton(platform.config)); } catch(e) {}
+    AgentController.tryRestoreAfterNavigation(
+      platform,
+      jobInfo,
+      (event) => {
+        handleAgentEvent(event);
+        ChatPanel.handleAgentEvent(event);
+      },
+      (messages) => {
+        ChatPanel.restoreMessages(messages);
+        ChatPanel.open();
+      },
+    ).then((restored) => {
+      if (restored) {
+        ChatPanel.open();
+        UI.updateAgentProgress('Agent resumed after navigation');
+        setTimeout(() => UI.updateAgentProgress(''), 2500);
+      }
+    }).catch((error) => warn('Agent navigation restore failed:', error.message));
     return true;
+  }
+
+  async function runManualAIRescan() {
+    const activated = await tryActivate({ forceAgent: true });
+    if (!activated) return { success: false, message: 'AI Rescan could not start on this page' };
+    return forceAIRescan();
   }
 
   // ─── Autofill ─────────────────────────────────────────────────────
@@ -136,26 +227,9 @@
           // before claiming that the field was filled.
           await new Promise(resolve => setTimeout(resolve, f.method === 'select' ? 300 : 30));
           const element = f.element;
-          const normalize = input => String(input ?? '').toLowerCase().replace(/[^a-z0-9+]+/g, ' ').trim();
-          const candidates = (r.expectedChoices || [r.expectedValue]).map(normalize).filter(Boolean);
-          let actual = '';
-          if (element.type === 'checkbox' || element.type === 'radio') {
-            const checked = element.name
-              ? document.querySelector(`input[name="${CSS.escape(element.name)}"]:checked`)
-              : (element.checked ? element : null);
-            actual = checked
-              ? [checked.value, checked.getAttribute('aria-label'), ...(checked.labels ? Array.from(checked.labels).map(label => label.textContent) : [])].filter(Boolean).join(' ')
-              : '';
-          } else if (element.tagName === 'SELECT') {
-            actual = element.selectedOptions?.[0]?.textContent || element.value;
-          } else {
-            actual = element.value ?? element.textContent ?? '';
-          }
-          const normalizedActual = normalize(actual);
-          const retained = normalizedActual.length > 0 && candidates.some(expected =>
-            normalizedActual === expected || normalizedActual.includes(expected) || expected.includes(normalizedActual) ||
-            normalizedActual.replace(/\s+/g, '').includes(expected.replace(/\s+/g, ''))
-          );
+          const candidates = r.expectedChoices || [r.expectedValue];
+          const actual = r.retainedValue || Filler.readFieldValue(f);
+          const retained = Filler.valueMatches(actual, candidates);
           if (retained) {
             UI.highlightField(element);
             filled++;
@@ -197,25 +271,30 @@
         observer = obs.observer;
       } catch(e) {}
       
-      let lastUrl = window.location.href;
-      try {
-        new MutationObserver(() => {
-          if (window.location.href !== lastUrl) {
-            lastUrl = window.location.href;
-            platform = null; foundFields = []; isActivated = false; bannerInjected = false;
-            if (successWatcher) { successWatcher.disconnect(); successWatcher = null; }
-            Banners.removeBanner(); UI.unmount();
-            setTimeout(tryActivate, 1000);
-            try { boardsInterval = Boards.startWatching(); } catch(e) {}
-          }
-        }).observe(document, { subtree: true, childList: true });
-      } catch(e) {}
     }
+
+    // Reuse the existing DOM-observer approach for SPA URL changes, but keep
+    // it active even when the extension was already activated on first load.
+    let lastUrl = window.location.href;
+    try {
+      if (urlObserver) urlObserver.disconnect();
+      urlObserver = new MutationObserver(() => {
+        if (window.location.href !== lastUrl) {
+          lastUrl = window.location.href;
+          platform = null; foundFields = []; isActivated = false; bannerInjected = false;
+          if (successWatcher) { successWatcher.disconnect(); successWatcher = null; }
+          Banners.removeBanner(); UI.unmount();
+          setTimeout(tryActivate, 1000);
+        }
+      });
+      urlObserver.observe(document, { subtree: true, childList: true });
+    } catch(e) {}
   }
 
   // ─── Cleanup ──────────────────────────────────────────────────────
   window.addEventListener('beforeunload', () => {
     if (observer) try { observer.disconnect(); } catch(e) {}
+    if (urlObserver) try { urlObserver.disconnect(); } catch(e) {}
     if (boardsInterval) clearInterval(boardsInterval);
     if (successWatcher) try { successWatcher.disconnect(); } catch(e) {}
     Banners.removeBanner();
@@ -235,6 +314,12 @@
         const jobInfo = Tracker.extractJobInfo();
         sendResponse({ platform: platform?.platform || null, fieldsFound: foundFields.length, isActivated, jobInfo });
       })(); return true;
+    }
+    if (msg.action === 'ai-rescan') {
+      runManualAIRescan()
+        .then(sendResponse)
+        .catch(error => sendResponse({ success: false, message: error.message }));
+      return true;
     }
     if (msg.action === 'run') { start().then(() => sendResponse({ success: true })); return true; }
   });
