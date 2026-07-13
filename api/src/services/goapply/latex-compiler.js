@@ -23,16 +23,28 @@ const COMPILE_TIMEOUT_MS = 30000;
 function parseLatexErrors(output, source) {
   const errors = [];
   const sourceLines = source.split('\n');
-
-  // Pattern 1: tectonic-style "error: <msg>\n   --> <file>:<line>:<col>"
-  const tectonicPattern = /error:\s*(.+?)(?:\n|\r|$)\s*-->\s*\S+:(\d+):(\d+)/g;
   let match;
-  while ((match = tectonicPattern.exec(output)) !== null) {
+
+  // Pattern 1a: tectonic inline format "error: <file>:<line>:<col>?: <message>"
+  const tectonicInlinePattern = /error:\s*\S+:(\d+)(?::(\d+))?:\s*(.+?)(?=\n\S|\nerror:|\n$|$)/gs;
+  while ((match = tectonicInlinePattern.exec(output)) !== null) {
+    const line = parseInt(match[1], 10);
+    const col = match[2] ? parseInt(match[2], 10) : undefined;
+    const message = match[3].trim();
+    const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
+    errors.push({ line, col, message, context: contextLine });
+  }
+
+  // Pattern 1b: tectonic Rust-style "error: <msg>\n   --> <file>:<line>:<col>"
+  const tectonicRustPattern = /error:\s*(.+?)(?:\n|\r|$)\s*-->\s*\S+:(\d+):(\d+)/g;
+  while ((match = tectonicRustPattern.exec(output)) !== null) {
     const message = match[1].trim();
     const line = parseInt(match[2], 10);
     const col = parseInt(match[3], 10);
-    const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
-    errors.push({ line, col, message, context: contextLine });
+    if (!errors.some(e => e.line === line && e.message === message)) {
+      const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
+      errors.push({ line, col, message, context: contextLine });
+    }
   }
 
   // Pattern 2: traditional LaTeX "! <msg>.\nl.<line> <content>"

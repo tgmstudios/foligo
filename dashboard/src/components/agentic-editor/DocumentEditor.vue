@@ -204,6 +204,17 @@ function lintLatex(source: string): LintMarker[] {
     })
   }
 
+  // 7. microtype letterspacing with XeTeX — won't compile
+  if (/\\usepackage(\[.*?\])?\{microtype\}/.test(source) && /\\textls\{|\\lsstyle|\\SetTracking\{/.test(source)) {
+    const mtIdx = source.search(/\\textls\{|\\lsstyle|\\SetTracking\{/);
+    const lc = lineCol(source, mtIdx);
+    markers.push({
+      line: lc.line, col: lc.col, endCol: lc.col + 8,
+      message: 'microtype letterspacing (\\textls, \\lsstyle, \\SetTracking) doesn\'t work with XeTeX — remove or switch to LuaLaTeX',
+      severity: 'warning',
+    })
+  }
+
   return markers
 }
 
