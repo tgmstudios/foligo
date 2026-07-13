@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -310,6 +311,12 @@ app.use('/api/admin', authenticateToken, adminStatsRoutes);
 app.use('/api/admin/sso', authenticateToken, adminSsoRoutes);
 app.use('/api/admin/ai-models', authenticateToken, adminAiModelRoutes);
 
+// Static assets (publicly served, long cache)
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  maxAge: '1d',
+  setHeaders(res) { res.setHeader('Access-Control-Allow-Origin', '*'); }
+}));
+
 // Error handling middleware
 app.use(errorHandler);
 
@@ -335,6 +342,16 @@ async function startServer() {
     // Ensure MinIO bucket exists
     await ensureBucket();
     console.log('✅ MinIO bucket ready');
+
+    // Clear stale PDF paths from DB (generated/ dir is ephemeral, wiped on restart)
+    const staleClearStart = Date.now();
+    const [resumeCleared, coverCleared] = await Promise.all([
+      prisma.resumeDocument.updateMany({ where: { pdfPath: { not: null } }, data: { pdfPath: null } }),
+      prisma.coverLetter.updateMany({ where: { pdfPath: { not: null } }, data: { pdfPath: null } }),
+    ]);
+    if (resumeCleared.count > 0 || coverCleared.count > 0) {
+      console.log(`🧹 Cleared ${resumeCleared.count} resume + ${coverCleared.count} cover letter stale PDF paths (${Date.now() - staleClearStart}ms)`);
+    }
 
     // Start server
     app.listen(PORT, () => {

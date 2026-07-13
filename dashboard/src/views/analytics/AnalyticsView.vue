@@ -115,6 +115,16 @@
                 <button v-if="revealedKey" type="button" title="Copy write key" class="rounded p-2 text-gray-400 hover:bg-gray-800 hover:text-white" @click="copy(revealedKey)"><ClipboardIcon class="h-4 w-4" /></button>
               </div>
               <p v-if="revealedKey" class="mt-2 text-xs text-amber-300">Store this key now. It will not be shown again.</p>
+
+              <template v-if="property?.configured">
+                <p class="mt-6 text-xs font-medium uppercase text-gray-500">Site snippet</p>
+                <p class="mt-1 text-xs text-gray-400">Add this one line to your site's <code>&lt;head&gt;</code>:</p>
+                <div class="mt-2 flex items-start gap-2">
+                  <code class="min-w-0 flex-1 break-all rounded bg-gray-900 px-3 py-2 text-xs leading-relaxed text-gray-300">{{ snippet }}</code>
+                  <button type="button" title="Copy snippet" class="mt-0.5 flex-shrink-0 rounded p-2 text-gray-400 hover:bg-gray-800 hover:text-white" @click="copy(snippet)"><ClipboardIcon class="h-4 w-4" /></button>
+                </div>
+              </template>
+
               <a href="https://github.com/tgmstudios/foligo/blob/main/api/docs/ANALYTICS_INTEGRATION.md" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1 text-sm text-primary-500 hover:text-primary-400">Integration guide <ArrowTopRightOnSquareIcon class="h-4 w-4" /></a>
             </div>
           </div>
@@ -199,5 +209,6 @@ function openSetup() { showSetup.value = true }
 async function copy(value: string) { await navigator.clipboard.writeText(value); toast.success('Write key copied') }
 function onProjectChange(event: Event) { selectedId.value = (event as CustomEvent).detail.projectId; revealedKey.value = '' }
 function formatNumber(value: number) { return new Intl.NumberFormat(undefined, { notation: value >= 10000 ? 'compact' : 'standard' }).format(value) }
+const snippet = computed(() => `<script src="https://api.foligo.tech/analytics.js" data-key="${revealedKey.value || property.value?.writeKeyPrefix + '...' || 'fa_YOUR_KEY'}" defer><\\/script>`)
 watch([selectedId, days], load); onMounted(() => { window.addEventListener('project-changed', onProjectChange); load() }); onBeforeUnmount(() => window.removeEventListener('project-changed', onProjectChange))
 </script>

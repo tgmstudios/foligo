@@ -19,6 +19,7 @@
         <Meta name="description" :content="contentData ? (contentData.excerpt || contentData.title) : (siteData.siteConfig.metaDescription || siteData.project.description)" />
         <Meta name="theme-color" :content="siteData.siteConfig.primaryColor" />
         <Link v-if="siteData.siteConfig.favicon" rel="icon" :href="siteData.siteConfig.favicon" />
+        <Script v-if="config.public.analyticsKey" src="https://api.foligo.tech/analytics.js" :data-key="config.public.analyticsKey" defer />
       </Head>
 
       <!-- Unified Layout -->

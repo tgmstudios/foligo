@@ -324,6 +324,14 @@ router.get('/documents/:id/pdf', async (req, res) => {
     if (!document || !document.pdfPath) {
       return res.status(404).json({ error: 'Not Found', message: 'No compiled PDF for this document yet' });
     }
+    // Check if file still exists on disk (cleared on restart)
+    try {
+      await fs.access(document.pdfPath);
+    } catch {
+      // File gone — clear stale path and return 404
+      await prisma.resumeDocument.update({ where: { id: document.id }, data: { pdfPath: null } }).catch(() => {});
+      return res.status(404).json({ error: 'Not Found', message: 'PDF was cleared by server restart. Please recompile.' });
+    }
     const pdf = await fs.readFile(document.pdfPath);
     res.setHeader('Content-Type', 'application/pdf');
     res.send(pdf);

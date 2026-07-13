@@ -253,6 +253,14 @@ router.get('/cover-letters/:id/pdf', async (req, res) => {
     if (!letter || !letter.pdfPath) {
       return res.status(404).json({ error: 'Not Found', message: 'No compiled PDF for this cover letter yet' });
     }
+    // Check if file still exists on disk (cleared on restart)
+    try {
+      await fs.access(letter.pdfPath);
+    } catch {
+      // File gone — clear stale path and return 404
+      await prisma.coverLetter.update({ where: { id: letter.id }, data: { pdfPath: null } }).catch(() => {});
+      return res.status(404).json({ error: 'Not Found', message: 'PDF was cleared by server restart. Please recompile.' });
+    }
     const pdf = await fs.readFile(letter.pdfPath);
     res.setHeader('Content-Type', 'application/pdf');
     res.send(pdf);
