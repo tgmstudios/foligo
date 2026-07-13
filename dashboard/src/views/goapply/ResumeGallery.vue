@@ -18,7 +18,26 @@
       </button>
     </div>
 
+    <!-- Search -->
+    <div v-if="documents.length > 0 || search" class="mb-4">
+      <div class="relative max-w-xs">
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search resumes..."
+          class="w-full pl-9 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <svg class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </div>
+
     <div v-if="isLoading" class="text-center py-16 text-gray-400 text-sm">Loading…</div>
+
+    <div v-else-if="filteredDocuments.length === 0 && documents.length > 0" class="text-center py-16">
+      <p class="text-gray-400 text-sm">No resumes match your search.</p>
+    </div>
 
     <div v-else-if="documents.length === 0" class="text-center py-16">
       <p class="text-gray-400 text-sm">No resumes yet.</p>
@@ -26,7 +45,7 @@
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
-        v-for="doc in documents"
+        v-for="doc in filteredDocuments"
         :key="doc.id"
         @click="openStudio(doc.id)"
         class="relative bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-750 transition-all group"
@@ -34,8 +53,9 @@
         <div class="flex items-start justify-between mb-2">
           <div class="min-w-0 pr-6">
             <h3 class="font-medium text-sm text-white truncate">{{ doc.name }}</h3>
-            <div v-if="doc.isTemplate" class="flex gap-1 mt-1">
-              <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-700 text-gray-300">Template</span>
+            <div class="flex flex-wrap gap-1 mt-1">
+              <span v-if="doc.jobDescription" class="px-1.5 py-0.5 rounded text-[10px] bg-green-900 text-green-300">Tailored</span>
+              <span v-if="doc.isTemplate" class="px-1.5 py-0.5 rounded text-[10px] bg-gray-700 text-gray-300">Template</span>
               <span v-if="doc.isDefault" class="px-1.5 py-0.5 rounded text-[10px] bg-primary-900 text-primary-300">Default</span>
             </div>
           </div>
@@ -107,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import '@/studio/adapters'
 import { getAdapter } from '@/studio/registry'
@@ -124,6 +144,18 @@ const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cl
 const creating = ref(false)
 const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<ResumeDocumentSummary | null>(null)
+const search = ref('')
+
+const filteredDocuments = computed(() => {
+  if (!search.value.trim()) return documents.value
+  const q = search.value.toLowerCase()
+  return documents.value.filter(doc =>
+    doc.name.toLowerCase().includes(q) ||
+    (doc.jobDescription || '').toLowerCase().includes(q) ||
+    (doc.linkedJob?.company || '').toLowerCase().includes(q) ||
+    (doc.linkedJob?.position || '').toLowerCase().includes(q)
+  )
+})
 
 function openStudio(id: string) {
   router.push({ name: 'studio-resume', params: { id } })

@@ -109,9 +109,9 @@
               </span>
             </div>
 
-            <div v-if="job.notes" class="mt-2 pt-2 border-t border-gray-700">
+            <div v-if="job.notes" class="mt-2 pt-2 border-t border-gray-700 min-w-0">
               <p class="text-xs text-gray-500 mb-1">Notes:</p>
-              <div class="text-xs text-gray-400 markdown-body prose-sm" v-html="renderMarkdown(job.notes)"></div>
+              <div class="text-xs text-gray-400 markdown-body prose-sm line-clamp-4 overflow-hidden break-words" v-html="renderMarkdown(job.notes)"></div>
             </div>
 
             <!-- Mobile arrow buttons -->
