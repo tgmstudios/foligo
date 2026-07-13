@@ -604,6 +604,11 @@ router.post('/session', [
           return res.json({
             ...continuedResult,
             contentType: finalContentType,
+            reasoning: continuedResult.reasoning || result.reasoning,
+            toolActivity: [
+              ...(result.toolActivity || []),
+              ...(continuedResult.toolActivity || [])
+            ],
             fetchedPost: {
               id: post.id,
               title: post.title
@@ -639,6 +644,96 @@ router.post('/session', [
       error: 'Session Failed',
       message: error.message || 'Unable to process session'
     });
+  }
+});
+
+/** Stream a multi-step AI content-creator session over SSE. */
+router.post('/session/stream', [
+  body('mode').isIn(['create', 'edit']),
+  body('contentType').optional().isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
+  body('initialInfo').optional().isObject(),
+  body('chatHistory').isArray(),
+  body('projectId').optional().isUUID()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: 'Validation Error', message: 'Invalid input data', details: errors.array() });
+  }
+
+  let { mode, contentType, initialInfo = {}, chatHistory, projectId } = req.body;
+  const context = await getAIContext(req.user?.id, projectId);
+  if (!contentType && chatHistory.length > 0) {
+    contentType = await geminiService.inferContentType(chatHistory, initialInfo);
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const send = event => res.write(`data: ${JSON.stringify(event)}\n\n`);
+
+  const streamTurn = async history => {
+    let sessionResult = null;
+    for await (const part of geminiService.streamAISession(mode, contentType, initialInfo, history, context)) {
+      if (part.type === 'session-result') {
+        sessionResult = part;
+      } else if (['text-delta', 'reasoning-delta', 'tool-call', 'tool-result', 'tool-error'].includes(part.type)) {
+        send({
+          type: part.type,
+          text: part.text,
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          input: part.input,
+          output: part.output,
+          error: part.error?.message || part.error
+        });
+      } else if (part.type === 'error') {
+        send({ type: 'error', message: part.error?.message || String(part.error) });
+      }
+    }
+    return sessionResult;
+  };
+
+  try {
+    let completed = await streamTurn(chatHistory);
+    let result = completed?.result || { message: 'Unable to complete the AI session.', done: false };
+    let toolCall = completed?.toolCall;
+
+    if (toolCall?.name === 'fetchExistingPost' && result.postId) {
+      const post = await prisma.content.findUnique({
+        where: { id: result.postId },
+        select: { id: true, title: true, contentType: true, content: true, excerpt: true, metadata: true }
+      });
+      if (!post) {
+        send({ type: 'tool-error', toolCallId: toolCall.toolCallId, toolName: toolCall.name, error: 'Post not found' });
+        result = { message: 'Post not found.', done: false };
+      } else {
+        send({ type: 'tool-result', toolCallId: toolCall.toolCallId, toolName: toolCall.name, output: { id: post.id, title: post.title } });
+        const continuedHistory = [
+          ...chatHistory,
+          { role: 'assistant', content: result.message || `Fetching "${post.title}"...` },
+          { role: 'user', content: `Here is the full content of the post "${post.title}":\n\n${post.content}` }
+        ];
+        completed = await streamTurn(continuedHistory);
+        result = completed?.result || result;
+        toolCall = completed?.toolCall;
+        if (toolCall) {
+          send({ type: 'tool-result', toolCallId: toolCall.toolCallId, toolName: toolCall.name, output: { done: true } });
+        }
+      }
+    } else if (toolCall) {
+      send({ type: 'tool-result', toolCallId: toolCall.toolCallId, toolName: toolCall.name, output: { done: true } });
+    }
+
+    // Tool-only turns have no model text, so stream the friendly hand-off copy.
+    if (toolCall && result.message) send({ type: 'text-delta', text: result.message });
+    send({ type: 'session-done', ...result, contentType: result.contentType || contentType });
+  } catch (error) {
+    console.error('Streaming AI session error:', error);
+    send({ type: 'error', message: error.message || 'Unable to process session' });
+  } finally {
+    res.end();
   }
 });
 

@@ -220,7 +220,7 @@ class GeminiService {
       });
 
       // Call through AIManager — provider handles model, tools, system prompt
-      const { text: responseText, functionCalls } = await this._aiChat(messages, {
+      const { text: responseText, reasoning, functionCalls } = await this._aiChat(messages, {
         tools: toolsForMode,
         systemInstruction: systemPrompt,
         temperature: GENERATION_CONFIG.CHAT.temperature,
@@ -244,7 +244,17 @@ class GeminiService {
           contentType,
           argsPreview: JSON.stringify(functionCalls[0].args).substring(0, 200)
         });
-        return await this._handleFunctionCall({ name: functionCalls[0].name, args: functionCalls[0].args }, contentType);
+        const toolCall = functionCalls[0];
+        const handled = await this._handleFunctionCall({ name: toolCall.name, args: toolCall.args }, contentType);
+        return {
+          ...handled,
+          reasoning: reasoning || undefined,
+          toolActivity: [{
+            toolName: toolCall.name,
+            input: toolCall.args,
+            status: 'done'
+          }]
+        };
       }
       
       this.logger.debug('Checking for function calls', {
@@ -286,6 +296,7 @@ class GeminiService {
 
       return {
         message: responseText,
+        reasoning: reasoning || undefined,
         done: false,
         contentType: contentType
       };
@@ -301,6 +312,51 @@ class GeminiService {
       });
       throw new GeminiAPIError(`Failed to handle AI session: ${error.message}`, error);
     }
+  }
+
+  /**
+   * Stream a content-creator conversation turn. Raw reasoning, text, and tool
+   * events are yielded immediately; the final session state is returned as a
+   * synthetic session-result event so the route can execute server-side tools.
+   */
+  async *streamAISession(mode, contentType, initialInfo, chatHistory, context = {}) {
+    const systemInstruction = buildConversationalSystemPrompt(mode, contentType, initialInfo, context);
+    const tools = mode === 'edit' ? AI_CONTENT_EDIT_TOOLS : AI_CONTENT_CREATE_TOOLS;
+    const messages = chatHistory.slice(-10).map(message => ({
+      role: message.role === 'user' ? 'user' : 'assistant',
+      content: message.content
+    }));
+
+    while (messages.length > 0 && messages[0].role !== 'user') messages.shift();
+    if (messages.length === 0) {
+      messages.push({
+        role: 'user',
+        content: contentType
+          ? `I want to create ${contentType === 'BLOG' ? 'a blog post' : contentType === 'PROJECT' ? 'a project description' : contentType === 'EXPERIENCE' ? 'a work experience entry' : 'content'}.`
+          : 'Hi, I want to create some content.'
+      });
+    }
+
+    let text = '';
+    let toolCall = null;
+    for await (const part of ai.streamChat(messages, {
+      systemInstruction,
+      tools,
+      maxSteps: 1,
+      temperature: GENERATION_CONFIG.CHAT.temperature,
+      maxTokens: GENERATION_CONFIG.CHAT.maxOutputTokens
+    })) {
+      if (part.type === 'text-delta') text += part.text;
+      if (part.type === 'tool-call' && !toolCall) {
+        toolCall = { name: part.toolName, args: part.input, toolCallId: part.toolCallId };
+      }
+      yield part;
+    }
+
+    const result = toolCall
+      ? await this._handleFunctionCall(toolCall, contentType)
+      : { message: text || 'I apologize, but I ran into an issue. Please try again.', done: false, contentType };
+    yield { type: 'session-result', result, toolCall };
   }
 
   /**
