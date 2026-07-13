@@ -1208,33 +1208,12 @@ router.post('/create', [
       }
     }
 
-    // Fetch complete content with all relationships
-    const completeContent = await prisma.content.findUnique({
-      where: { id: newContent.id },
-      include: {
-        tags: true,
-        meta: true,
-        blocks: {
-          orderBy: { order: 'asc' }
-        },
-        roles: {
-          include: {
-            skills: true
-          },
-          orderBy: { startDate: 'desc' }
-        },
-        linkedSkills: true
-      }
-    });
-
     // Clear project content cache so new content appears immediately
     await cache.del(`project:${projectId}`);
     await cache.del(`project:${projectId}:content`);
     console.log(`[ai-content/create] Cleared cache for project ${projectId}`);
 
-    res.status(201).json({
-      id: completeContent.id,
-    });
+    res.status(201).json({ id: newContent.id });
   } catch (error) {
     console.error('AI content creation error:', error);
     res.status(500).json({
