@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import api, { aiApi } from '@/services/api'
-import type { Content, Skill } from '@/stores/projects'
+import type { Content, Skill } from '@/types/project'
+import { withErrorToast } from '@/composables/useApiAction'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -246,19 +247,17 @@ export const useGoApplyStore = defineStore('goapply', () => {
   }
 
   async function saveProfile(data: GoApplyProfile) {
-    try {
+    return withErrorToast(async () => {
       isSaving.value = true
-      // Backend uses PUT /api/goapply/profile (upsert)
-      const { data: result } = await api.put('/goapply/profile', data)
-      profile.value = result
-      toast.success('Profile saved')
-      return result
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save profile')
-      throw err
-    } finally {
-      isSaving.value = false
-    }
+      try {
+        // Backend uses PUT /api/goapply/profile (upsert)
+        const { data: result } = await api.put('/goapply/profile', data)
+        profile.value = result
+        return result
+      } finally {
+        isSaving.value = false
+      }
+    }, 'Failed to save profile', 'Profile saved')
   }
 
   // Search the user's own portfolio Content(EXPERIENCE) items for the "link existing"
@@ -274,46 +273,34 @@ export const useGoApplyStore = defineStore('goapply', () => {
   }
 
   async function linkJobs(contentIds: string[]) {
-    try {
+    return withErrorToast(async () => {
       const { data } = await api.put('/goapply/profile/jobs', { contentIds })
       profile.value = data
       return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update linked jobs')
-      throw err
-    }
+    }, 'Failed to update linked jobs')
   }
 
   async function linkEducation(contentIds: string[]) {
-    try {
+    return withErrorToast(async () => {
       const { data } = await api.put('/goapply/profile/education', { contentIds })
       profile.value = data
       return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update linked education')
-      throw err
-    }
+    }, 'Failed to update linked education')
   }
 
   async function createGlobalSkill(name: string, category?: string) {
-    try {
+    return withErrorToast(async () => {
       const { data } = await api.post('/goapply/skills', { name, category })
       return data as Skill
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to create skill')
-      throw err
-    }
+    }, 'Failed to create skill')
   }
 
   async function linkSkills(skillIds: string[]) {
-    try {
+    return withErrorToast(async () => {
       const { data } = await api.put('/goapply/profile/skills', { skillIds })
       profile.value = data
       return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update linked skills')
-      throw err
-    }
+    }, 'Failed to update linked skills')
   }
 
   // ── Jobs ───────────────────────────────────────────────────────────
@@ -333,34 +320,30 @@ export const useGoApplyStore = defineStore('goapply', () => {
   }
 
   async function createJob(form: JobFormData) {
-    try {
+    return withErrorToast(async () => {
       isSaving.value = true
-      const { data } = await api.post('/goapply/jobs', form)
-      jobs.value.unshift(data)
-      toast.success('Job created')
-      return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to create job')
-      throw err
-    } finally {
-      isSaving.value = false
-    }
+      try {
+        const { data } = await api.post('/goapply/jobs', form)
+        jobs.value.unshift(data)
+        return data
+      } finally {
+        isSaving.value = false
+      }
+    }, 'Failed to create job', 'Job created')
   }
 
   async function updateJob(id: string, form: Partial<JobFormData>) {
-    try {
+    return withErrorToast(async () => {
       isSaving.value = true
-      const { data } = await api.put(`/goapply/jobs/${id}`, form)
-      const idx = jobs.value.findIndex((j) => j.id === id)
-      if (idx !== -1) jobs.value[idx] = data
-      toast.success('Job updated')
-      return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update job')
-      throw err
-    } finally {
-      isSaving.value = false
-    }
+      try {
+        const { data } = await api.put(`/goapply/jobs/${id}`, form)
+        const idx = jobs.value.findIndex((j) => j.id === id)
+        if (idx !== -1) jobs.value[idx] = data
+        return data
+      } finally {
+        isSaving.value = false
+      }
+    }, 'Failed to update job', 'Job updated')
   }
 
   async function updateJobStatus(id: string, status: JobStatus) {
@@ -368,24 +351,17 @@ export const useGoApplyStore = defineStore('goapply', () => {
   }
 
   async function reorderJobs(items: { id: string; sortOrder: number; status?: JobStatus }[]) {
-    try {
+    return withErrorToast(async () => {
       const { data } = await api.put('/goapply/jobs/reorder', { items })
       return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to reorder jobs')
-      throw err
-    }
+    }, 'Failed to reorder jobs')
   }
 
   async function deleteJob(id: string) {
-    try {
+    return withErrorToast(async () => {
       await api.delete(`/goapply/jobs/${id}`)
       jobs.value = jobs.value.filter((j) => j.id !== id)
-      toast.success('Job deleted')
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to delete job')
-      throw err
-    }
+    }, 'Failed to delete job', 'Job deleted')
   }
 
   // ── Saved Answers ──────────────────────────────────────────────────
@@ -405,45 +381,37 @@ export const useGoApplyStore = defineStore('goapply', () => {
   }
 
   async function createAnswer(form: { question: string; answer: string; category: string; jobIds: string[] }) {
-    try {
+    return withErrorToast(async () => {
       isSaving.value = true
-      const { data } = await api.post('/goapply/answers', form)
-      answers.value.unshift(data)
-      toast.success('Answer saved')
-      return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save answer')
-      throw err
-    } finally {
-      isSaving.value = false
-    }
+      try {
+        const { data } = await api.post('/goapply/answers', form)
+        answers.value.unshift(data)
+        return data
+      } finally {
+        isSaving.value = false
+      }
+    }, 'Failed to save answer', 'Answer saved')
   }
 
   async function updateAnswer(id: string, form: { question: string; answer: string; category: string; jobIds: string[] }) {
-    try {
+    return withErrorToast(async () => {
       isSaving.value = true
-      const { data } = await api.put(`/goapply/answers/${id}`, form)
-      const idx = answers.value.findIndex((a) => a.id === id)
-      if (idx !== -1) answers.value[idx] = data
-      toast.success('Answer updated')
-      return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update answer')
-      throw err
-    } finally {
-      isSaving.value = false
-    }
+      try {
+        const { data } = await api.put(`/goapply/answers/${id}`, form)
+        const idx = answers.value.findIndex((a) => a.id === id)
+        if (idx !== -1) answers.value[idx] = data
+        return data
+      } finally {
+        isSaving.value = false
+      }
+    }, 'Failed to update answer', 'Answer updated')
   }
 
   async function deleteAnswer(id: string) {
-    try {
+    return withErrorToast(async () => {
       await api.delete(`/goapply/answers/${id}`)
       answers.value = answers.value.filter((a) => a.id !== id)
-      toast.success('Answer deleted')
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to delete answer')
-      throw err
-    }
+    }, 'Failed to delete answer', 'Answer deleted')
   }
 
   // ── Cover Letters ──────────────────────────────────────────────────
@@ -463,34 +431,28 @@ export const useGoApplyStore = defineStore('goapply', () => {
   }
 
   async function generateCoverLetter(jobId?: string, jobDescription?: string) {
-    try {
+    return withErrorToast(async () => {
       isGenerating.value = true
-      const { data } = await aiApi.post('/ai/cover-letter', {
-        jobId,
-        jobDescription,
-      })
-      if (data) {
-        coverLetters.value.unshift(data)
-        toast.success('Cover letter generated')
+      try {
+        const { data } = await aiApi.post('/ai/cover-letter', {
+          jobId,
+          jobDescription,
+        })
+        if (data) {
+          coverLetters.value.unshift(data)
+        }
+        return data
+      } finally {
+        isGenerating.value = false
       }
-      return data
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to generate cover letter')
-      throw err
-    } finally {
-      isGenerating.value = false
-    }
+    }, 'Failed to generate cover letter', (data) => (data ? 'Cover letter generated' : undefined))
   }
 
   async function deleteCoverLetter(id: string) {
-    try {
+    return withErrorToast(async () => {
       await api.delete(`/goapply/cover-letters/${id}`)
       coverLetters.value = coverLetters.value.filter((c) => c.id !== id)
-      toast.success('Cover letter deleted')
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to delete cover letter')
-      throw err
-    }
+    }, 'Failed to delete cover letter', 'Cover letter deleted')
   }
 
   // ── Init ───────────────────────────────────────────────────────────

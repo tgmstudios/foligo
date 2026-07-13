@@ -290,7 +290,7 @@
             <h3 class="text-lg font-medium text-white">Recent Activity</h3>
           </div>
           <div class="p-6">
-            <div v-if="projectStore.recentActivity.length === 0" class="text-center py-8">
+            <div v-if="recentActivity.length === 0" class="text-center py-8">
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -298,7 +298,7 @@
               <p class="mt-1 text-sm text-gray-400">Start creating to see activity here.</p>
             </div>
             <div v-else class="space-y-4">
-              <div v-for="(activity, index) in projectStore.recentActivity" :key="index" class="flex items-start">
+              <div v-for="(activity, index) in recentActivity" :key="index" class="flex items-start">
                 <div class="flex-shrink-0">
                   <div :class="`h-8 w-8 ${activity.color === 'green' ? 'bg-green-100' : activity.color === 'purple' ? 'bg-purple-100' : 'bg-blue-100'} rounded-full flex items-center justify-center`">
                     <svg :class="`h-4 w-4 ${activity.color === 'green' ? 'text-green-600' : activity.color === 'purple' ? 'text-purple-600' : 'text-blue-600'}`" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -343,6 +343,7 @@ import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Project } from '@/stores/projects'
+import { useRecentActivity } from '@/composables/useRecentActivity'
 import { format, formatDistanceToNow } from 'date-fns'
 import { formatContentType } from '@/utils'
 import { useToast } from 'vue-toastification'
@@ -353,6 +354,7 @@ import CreateContentModal from '@/components/content/CreateContentModal.vue'
 const authStore = useAuthStore()
 const projectStore = useProjectStore()
 const toast = useToast()
+const { recentActivity } = useRecentActivity(computed(() => projectStore.projects))
 
 const showCreateProjectModal = ref(false)
 const showCreateContentModal = ref(false)

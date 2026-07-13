@@ -1,219 +1,46 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useToast } from 'vue-toastification'
 import api from '@/services/api'
-import { formatContentType } from '@/utils'
 import { useAuthStore } from './auth'
+import { withErrorToast, syncEntityInState, syncNestedEntityInState } from '@/composables/useApiAction'
+import type { Project, SiteConfig, Content, CreateProjectData, UpdateProjectData } from '@/types/project'
 
-export interface Project {
-  id: string
-  name: string
-  description?: string
-  ownerId: string
-  subdomain?: string
-  isPublished: boolean
-  createdAt: string
-  updatedAt: string
-  owner?: {
-    id: string
-    name: string
-    email: string
-  }
-  members?: ProjectMember[]
-  content?: Content[]
-  siteConfig?: SiteConfig
-  _count?: {
-    content: number
-    members: number
-    media: number
-  }
-}
-
-export interface SiteConfig {
-  id: string
-  projectId: string
-  siteName?: string
-  siteDescription?: string
-  profileName?: string
-  profileBio?: string
-  profileImage?: string
-  socialLinks?: {
-    twitter?: string
-    github?: string
-    linkedin?: string
-    instagram?: string
-  } | null
-  primaryColor: string
-  secondaryColor: string
-  accentColor: string
-  backgroundColor: string
-  textColor: string
-  indexLayout: string
-  archiveLayout: string
-  singleLayout: string
-  metaTitle?: string
-  metaDescription?: string
-  favicon?: string
-  layoutConfig?: any
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ProjectMember {
-  id: string
-  userId: string
-  projectId: string
-  role: 'ADMIN' | 'EDITOR' | 'VIEWER'
-  user: {
-    id: string
-    name: string
-    email: string
-  }
-}
-
-export interface Content {
-  id: string
-  projectId: string
-  type: 'PROJECT' | 'BLOG' | 'EXPERIENCE' | 'SKILL'
-  contentType: string
-  title: string
-  slug?: string
-  excerpt?: string
-  content: string // Markdown content
-  metadata?: any // Additional metadata (deprecated, use meta instead)
-  order: number
-  status: 'DRAFT' | 'PUBLISHED' | 'HIDDEN' | 'REVISION'
-  revisionOf?: string
-  revisionNumber?: number
-  revisedAt?: string
-  createdAt: string
-  updatedAt: string
-  projectName?: string
-  
-  // Project-specific fields
-  startDate?: string
-  endDate?: string
-  isOngoing?: boolean
-  featuredImage?: string
-  projectLinks?: {
-    github?: string
-    devpost?: string
-    other?: string[]
-  }
-  contributors?: string[]
-  
-  // Experience-specific fields
-  experienceCategory?: 'JOB' | 'EDUCATION' | 'CERTIFICATION'
-  location?: string
-  locationType?: 'REMOTE' | 'HYBRID' | 'ONSITE'
-  
-  // Relationships
-  tags?: ContentTag[]
-  meta?: ContentMeta[]
-  blocks?: ContentBlock[]
-  roles?: ExperienceRole[]
-  linkedProjects?: Project[]
-  linkedSkills?: Skill[]
-  linkedExperiences?: Content[]
-  linkedBlogs?: Content[]
-  revisions?: Content[]
-  parentContent?: Content
-}
-
-export interface ContentLink {
-  id: string
-  sourceId: string
-  targetId: string
-  sourceType: 'content' | 'project'
-  targetType: 'content' | 'project'
-  linkType: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ContentTag {
-  id: string
-  name: string
-  category?: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ContentMeta {
-  id: string
-  key: string
-  value: string
-  contentType?: string
-  contentId?: string
-  projectId?: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ContentBlock {
-  id: string
-  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'CODE' | 'LINK' | 'EMBED' | 'GALLERY' | 'QUOTE' | 'CUSTOM'
-  content: string
-  order: number
-  contentId: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface Skill {
-  id: string
-  name: string
-  category?: string
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ExperienceRole {
-  id: string
-  contentId: string
-  title: string
-  description?: string
-  startDate: string
-  endDate?: string
-  isCurrent: boolean
-  createdAt: string
-  updatedAt: string
-  skills?: Skill[]
-}
-
-export interface CreateProjectData {
-  name: string
-  description?: string
-  subdomain?: string
-}
-
-export interface UpdateProjectData {
-  name?: string
-  description?: string
-  subdomain?: string
-}
+// Re-exported so existing `import { Content, ... } from '@/stores/projects'`
+// call sites across the dashboard keep working unchanged.
+export type {
+  Project,
+  SiteConfig,
+  ProjectMember,
+  Content,
+  ContentLink,
+  ContentTag,
+  ContentMeta,
+  ContentBlock,
+  Skill,
+  ExperienceRole,
+  CreateProjectData,
+  UpdateProjectData
+} from '@/types/project'
 
 export const useProjectStore = defineStore('projects', () => {
-  const toast = useToast()
-  
-  // State
+  // ── State ────────────────────────────────────────────────────────────
   const projects = ref<Project[]>([])
   const currentProject = ref<Project | null>(null)
   const isLoading = ref(false)
   const isCreating = ref(false)
 
-  // Getters
-  const ownedProjects = computed(() => 
+  // ── Getters ──────────────────────────────────────────────────────────
+  const ownedProjects = computed(() =>
     projects.value.filter(p => p.ownerId === useAuthStore().user?.id)
   )
-  
-  const memberProjects = computed(() => 
+
+  const memberProjects = computed(() =>
     projects.value.filter(p => p.ownerId !== useAuthStore().user?.id)
   )
-  
+
   const totalProjects = computed(() => projects.value.length)
-  
-  const recentProjects = computed(() => 
+
+  const recentProjects = computed(() =>
     [...projects.value]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 5)
@@ -240,211 +67,135 @@ export const useProjectStore = defineStore('projects', () => {
       .slice(0, 5)
   })
 
-  const recentActivity = computed(() => {
-    const activities: Array<{type: string, title: string, description: string, timestamp: Date, color: string, icon: string}> = []
-    
-    projects.value.forEach(project => {
-      // Project activities
-      activities.push({
-        type: 'project',
-        title: project.name,
-        description: 'Project ' + (project.isPublished ? 'published' : 'updated'),
-        timestamp: new Date(project.updatedAt),
-        color: 'blue',
-        icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
-      })
-      
-      // Content activities - filter out revisions
-      if (project.content) {
-        project.content.forEach(content => {
-          // Only include real posts, not revisions
-          if (content.status !== 'REVISION' && !content.revisionOf) {
-            activities.push({
-              type: 'content',
-              title: content.title,
-              description: formatContentType(content.type) + ' created in ' + project.name,
-              timestamp: new Date(content.updatedAt),
-              color: 'green',
-              icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
-            })
+  // Note: the "recentActivity" mixed activity feed getter (project + content
+  // events with inline SVG icon paths) was extracted to
+  // composables/useRecentActivity.ts. Its only consumer, DashboardView.vue,
+  // now calls useRecentActivity(computed(() => projectStore.projects))
+  // directly instead of going through the store.
+
+  // ── Actions: Project CRUD ───────────────────────────────────────────
+  async function fetchProjects() {
+    return withErrorToast(async () => {
+      isLoading.value = true
+      try {
+        const response = await api.get('/projects')
+        projects.value = [...response.data.ownedProjects, ...response.data.memberProjects]
+
+        // Fetch content for each project in parallel via the dedicated content endpoint
+        const results = await Promise.allSettled(
+          projects.value.map(project => api.get(`/projects/${project.id}/content`))
+        )
+        results.forEach((result, index) => {
+          const project = projects.value[index]
+          if (result.status === 'fulfilled') {
+            project.content = result.value.data
+          } else {
+            console.error(`Failed to fetch content for project ${project.name}:`, result.reason)
           }
         })
-      }
-    })
-    
-    return activities
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 10)
-  })
 
-  // Actions
-  async function fetchProjects() {
-    try {
-      isLoading.value = true
-      const response = await api.get('/projects')
-      projects.value = [...response.data.ownedProjects, ...response.data.memberProjects]
-      
-      // Also fetch content for each project using the dedicated content endpoint
-      for (const project of projects.value) {
-        try {
-          const contentResponse = await api.get(`/projects/${project.id}/content`)
-          if (project.content) {
-            project.content = contentResponse.data
-          } else {
-            project.content = contentResponse.data
-          }
-          console.log(`Fetched content for project ${project.name}:`, contentResponse.data.length, 'items')
-        } catch (error) {
-          console.error(`Failed to fetch content for project ${project.name}:`, error)
-        }
+        return response.data
+      } finally {
+        isLoading.value = false
       }
-      
-      return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to fetch projects'
-      toast.error(message)
-      throw error
-    } finally {
-      isLoading.value = false
-    }
+    }, 'Failed to fetch projects')
   }
 
   async function fetchProject(id: string) {
-    try {
+    return withErrorToast(async () => {
       isLoading.value = true
-      const response = await api.get(`/projects/${id}`)
-      currentProject.value = response.data
-      
-      // Update project in projects array with proper reactivity
-      const index = projects.value.findIndex(p => p.id === id)
-      if (index !== -1) {
-        // Use splice to ensure Vue reactivity
-        projects.value.splice(index, 1, response.data)
-      } else {
-        // Project not in array, add it
-        projects.value.push(response.data)
+      try {
+        const response = await api.get(`/projects/${id}`)
+        currentProject.value = response.data
+
+        // Update project in projects array with proper reactivity
+        const index = projects.value.findIndex(p => p.id === id)
+        if (index !== -1) {
+          // Use splice to ensure Vue reactivity
+          projects.value.splice(index, 1, response.data)
+        } else {
+          // Project not in array, add it
+          projects.value.push(response.data)
+        }
+
+        return response.data
+      } finally {
+        isLoading.value = false
       }
-      
-      console.log(`[projects store] Refreshed project ${response.data.name} with ${response.data.content?.length || 0} content items`)
-      
-      return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to fetch project'
-      toast.error(message)
-      throw error
-    } finally {
-      isLoading.value = false
-    }
+    }, 'Failed to fetch project')
   }
 
   async function createProject(data: CreateProjectData) {
-    try {
+    return withErrorToast(async () => {
       isCreating.value = true
-      const response = await api.post('/projects', data)
-      projects.value.unshift(response.data)
-      toast.success(`Project "${data.name}" created successfully`)
-      return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to create project'
-      toast.error(message)
-      throw error
-    } finally {
-      isCreating.value = false
-    }
+      try {
+        const response = await api.post('/projects', data)
+        projects.value.unshift(response.data)
+        return response.data
+      } finally {
+        isCreating.value = false
+      }
+    }, 'Failed to create project', `Project "${data.name}" created successfully`)
   }
 
   async function updateProject(id: string, data: UpdateProjectData) {
-    try {
+    return withErrorToast(async () => {
       isLoading.value = true
-      const response = await api.put(`/projects/${id}`, data)
-      
-      // Update project in array
-      const index = projects.value.findIndex(p => p.id === id)
-      if (index !== -1) {
-        projects.value[index] = response.data
+      try {
+        const response = await api.put(`/projects/${id}`, data)
+        syncEntityInState(projects, currentProject, id, () => response.data)
+        return response.data
+      } finally {
+        isLoading.value = false
       }
-      
-      // Update current project if it's the same
-      if (currentProject.value?.id === id) {
-        currentProject.value = response.data
-      }
-      
-      toast.success('Project updated successfully')
-      return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update project'
-      toast.error(message)
-      throw error
-    } finally {
-      isLoading.value = false
-    }
+    }, 'Failed to update project', 'Project updated successfully')
   }
 
   async function deleteProject(id: string) {
-    try {
+    return withErrorToast(async () => {
       isLoading.value = true
-      await api.delete(`/projects/${id}`)
-      
-      // Remove from projects array
-      projects.value = projects.value.filter(p => p.id !== id)
-      
-      // Clear current project if it's the same
-      if (currentProject.value?.id === id) {
-        currentProject.value = null
+      try {
+        await api.delete(`/projects/${id}`)
+        syncEntityInState(projects, currentProject, id, null, { remove: true })
+      } finally {
+        isLoading.value = false
       }
-      
-      toast.success('Project deleted successfully')
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to delete project'
-      toast.error(message)
-      throw error
-    } finally {
-      isLoading.value = false
-    }
+    }, 'Failed to delete project', 'Project deleted successfully')
   }
 
+  function setCurrentProject(project: Project | null) {
+    currentProject.value = project
+  }
+
+  // ── Actions: Membership ──────────────────────────────────────────────
   async function addProjectMember(projectId: string, email: string, role: 'ADMIN' | 'EDITOR' | 'VIEWER') {
-    try {
+    return withErrorToast(async () => {
       const response = await api.post(`/projects/${projectId}/members`, { email, role })
-      
-      // Update project members
+
       const project = projects.value.find(p => p.id === projectId)
       if (project && project.members) {
         project.members.push(response.data)
       }
-      
-      toast.success('Member added successfully')
+
       return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to add member'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to add member', 'Member added successfully')
   }
 
   async function removeProjectMember(projectId: string, userId: string) {
-    try {
+    return withErrorToast(async () => {
       await api.delete(`/projects/${projectId}/members/${userId}`)
-      
-      // Update project members
+
       const project = projects.value.find(p => p.id === projectId)
       if (project && project.members) {
         project.members = project.members.filter(m => m.userId !== userId)
       }
-      
-      toast.success('Member removed successfully')
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to remove member'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to remove member', 'Member removed successfully')
   }
 
   async function updateMemberRole(projectId: string, userId: string, role: 'ADMIN' | 'EDITOR' | 'VIEWER') {
-    try {
+    return withErrorToast(async () => {
       const response = await api.put(`/projects/${projectId}/members/${userId}`, { role })
-      
-      // Update project members
+
       const project = projects.value.find(p => p.id === projectId)
       if (project && project.members) {
         const member = project.members.find(m => m.userId === userId)
@@ -452,79 +203,46 @@ export const useProjectStore = defineStore('projects', () => {
           member.role = role
         }
       }
-      
-      toast.success('Member role updated successfully')
+
       return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update member role'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to update member role', 'Member role updated successfully')
   }
 
-  function setCurrentProject(project: Project | null) {
-    currentProject.value = project
-  }
-
+  // ── Actions: Site Config ──────────────────────────────────────────────
   async function fetchSiteConfig(projectId: string) {
-    try {
-      const response = await api.get(`/projects/${projectId}/site-config`)
-      return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to fetch site configuration'
-      toast.error(message)
-      throw error
-    }
+    return withErrorToast(
+      async () => (await api.get(`/projects/${projectId}/site-config`)).data,
+      'Failed to fetch site configuration'
+    )
   }
 
   async function updateSiteConfig(projectId: string, config: Partial<SiteConfig>) {
-    try {
+    return withErrorToast(async () => {
       const response = await api.put(`/projects/${projectId}/site-config`, config)
-      
-      // Update project in array
-      const index = projects.value.findIndex(p => p.id === projectId)
-      if (index !== -1) {
-        projects.value[index].siteConfig = response.data
-      }
-      
-      // Update current project if it's the same
-      if (currentProject.value?.id === projectId) {
-        currentProject.value.siteConfig = response.data
-      }
-      
-      toast.success('Site configuration updated successfully')
+      syncEntityInState(projects, currentProject, projectId, (project) => ({
+        ...project,
+        siteConfig: response.data
+      }))
       return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update site configuration'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to update site configuration', 'Site configuration updated successfully')
   }
 
   async function publishProject(projectId: string, isPublished: boolean) {
-    try {
-      const response = await api.post(`/projects/${projectId}/publish`, { isPublished })
-      
-      // Update project in array
-      const index = projects.value.findIndex(p => p.id === projectId)
-      if (index !== -1) {
-        projects.value[index].isPublished = isPublished
-      }
-      
-      // Update current project if it's the same
-      if (currentProject.value?.id === projectId) {
-        currentProject.value.isPublished = isPublished
-      }
-      
-      toast.success(response.data.message)
-      return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update publish status'
-      toast.error(message)
-      throw error
-    }
+    return withErrorToast(
+      async () => {
+        const response = await api.post(`/projects/${projectId}/publish`, { isPublished })
+        syncEntityInState(projects, currentProject, projectId, (project) => ({
+          ...project,
+          isPublished
+        }))
+        return response.data
+      },
+      'Failed to update publish status',
+      (result) => result.message
+    )
   }
 
+  // ── Actions: Content CRUD ─────────────────────────────────────────────
   async function createContent(projectId: string, contentData: {
     contentType: 'PROJECT' | 'BLOG' | 'EXPERIENCE' | 'SKILL'
     title: string
@@ -552,121 +270,54 @@ export const useProjectStore = defineStore('projects', () => {
     location?: string
     locationType?: 'REMOTE' | 'HYBRID' | 'ONSITE'
   }) {
-    try {
-      console.log('Creating content for project:', projectId)
-      console.log('Content data:', contentData)
-      console.log('Skills and tags being sent:', {
-        skillsCount: contentData.skills?.length || 0,
-        skills: contentData.skills,
-        tagsCount: contentData.tags?.length || 0,
-        tags: contentData.tags
-      })
-      console.log('Auth token:', localStorage.getItem('auth_token'))
-      console.log('Available projects:', projects.value.map(p => ({ id: p.id, name: p.name, ownerId: p.ownerId })))
-      console.log('Current project:', currentProject.value)
-      
+    return withErrorToast(async () => {
       // Check if project exists and user has access
       const project = projects.value.find(p => p.id === projectId)
       if (!project) {
         throw new Error(`Project ${projectId} not found`)
       }
-      
+
       const response = await api.post(`/projects/${projectId}/content`, contentData)
-      
+
       // Update project content
       const index = projects.value.findIndex(p => p.id === projectId)
       if (index !== -1 && projects.value[index].content) {
         projects.value[index].content!.push(response.data)
       }
-      
+
       // Update current project if it's the same
       if (currentProject.value?.id === projectId && currentProject.value.content) {
         currentProject.value.content.push(response.data)
       }
-      
-      toast.success('Content created successfully')
+
       return response.data
-    } catch (error: any) {
-      console.error('Create content error:', error)
-      console.error('Error response:', error.response)
-      console.error('Error status:', error.response?.status)
-      console.error('Error data:', error.response?.data)
-      
-      const message = error.response?.data?.message || 'Failed to create content'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to create content', 'Content created successfully')
   }
 
   async function updatePostOrder(projectId: string, order: Array<{ contentId: string; order: number }>) {
-    try {
+    return withErrorToast(async () => {
       const response = await api.put(`/projects/${projectId}/content/order`, { order })
-      
+
       // Refresh projects to get updated order
       await fetchProjects()
-      
-      toast.success('Post order updated successfully')
+
       return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update post order'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to update post order', 'Post order updated successfully')
   }
 
   async function updateContent(contentId: string, contentData: Partial<Content>) {
-    try {
+    return withErrorToast(async () => {
       const response = await api.put(`/content/${contentId}/fields`, contentData)
-      
-      // Update content in projects array
-      projects.value.forEach(project => {
-        if (project.content) {
-          const contentIndex = project.content.findIndex(c => c.id === contentId)
-          if (contentIndex !== -1) {
-            project.content[contentIndex] = response.data
-          }
-        }
-      })
-      
-      // Update current project if it has this content
-      if (currentProject.value?.content) {
-        const contentIndex = currentProject.value.content.findIndex(c => c.id === contentId)
-        if (contentIndex !== -1) {
-          currentProject.value.content[contentIndex] = response.data
-        }
-      }
-      
-      toast.success('Content updated successfully')
+      syncNestedEntityInState(projects, currentProject, contentId, () => response.data)
       return response.data
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to update content'
-      toast.error(message)
-      throw error
-    }
+    }, 'Failed to update content', 'Content updated successfully')
   }
 
   async function deleteContent(contentId: string) {
-    try {
+    return withErrorToast(async () => {
       await api.delete(`/content/${contentId}`)
-      
-      // Remove content from projects array
-      projects.value.forEach(project => {
-        if (project.content) {
-          project.content = project.content.filter(c => c.id !== contentId)
-        }
-      })
-      
-      // Remove from current project if it has this content
-      if (currentProject.value?.content) {
-        currentProject.value.content = currentProject.value.content.filter(c => c.id !== contentId)
-      }
-      
-      toast.success('Content deleted successfully')
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to delete content'
-      toast.error(message)
-      throw error
-    }
+      syncNestedEntityInState(projects, currentProject, contentId, null, { remove: true })
+    }, 'Failed to delete content', 'Content deleted successfully')
   }
 
   return {
@@ -675,15 +326,14 @@ export const useProjectStore = defineStore('projects', () => {
     currentProject,
     isLoading,
     isCreating,
-    
+
     // Getters
     ownedProjects,
     memberProjects,
     totalProjects,
     recentProjects,
     recentContent,
-    recentActivity,
-    
+
     // Actions
     fetchProjects,
     fetchProject,
@@ -703,4 +353,3 @@ export const useProjectStore = defineStore('projects', () => {
     updatePostOrder
   }
 })
-
