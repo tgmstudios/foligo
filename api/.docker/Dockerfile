@@ -55,7 +55,10 @@ RUN --mount=type=secret,id=TURBO_TOKEN \
 # starter template once, so the first real request doesn't need outbound
 # network access (tectonic normally fetches+caches packages on first use).
 # The upstream bundle service occasionally drops requests, and Tectonic does
-# not retry them itself, so retry the complete warmup before failing the build.
+# not retry them itself, so retry the complete warmup a few times. The CI
+# build runner's network doesn't always reach the bundle host even though the
+# running container does, so a persistent failure here is non-fatal — it just
+# means the first real request will pay the fetch cost instead of this build.
 RUN mkdir -p /tmp/tectonic-warmup && \
     success=0 && \
     for attempt in 1 2 3 4 5; do \
@@ -66,8 +69,10 @@ RUN mkdir -p /tmp/tectonic-warmup && \
       fi; \
       echo "Tectonic bundle warmup failed (attempt ${attempt}/5)" >&2; \
       sleep $((attempt * 5)); \
-    done && \
-    test "$success" -eq 1 && \
+    done; \
+    if [ "$success" -ne 1 ]; then \
+      echo "Tectonic bundle warmup did not succeed after 5 attempts; continuing build without it" >&2; \
+    fi; \
     rm -rf /tmp/tectonic-warmup
 
 EXPOSE 3000
