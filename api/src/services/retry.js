@@ -3,7 +3,25 @@
  */
 
 const { GeminiAPIError } = require('./errors');
-const { RETRY_CONFIG } = require('./gemini-config');
+
+// Retry configuration (previously lived in gemini-config.js)
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  maxDelayMs: 10000,
+  backoffMultiplier: 2,
+  retryableErrors: [
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'ECONNREFUSED',
+    '429', // Too many requests
+    '500', // Internal server error
+    '502', // Bad gateway
+    '503', // Service unavailable
+    '504'  // Gateway timeout
+  ]
+};
 
 /**
  * Check if an error is retryable

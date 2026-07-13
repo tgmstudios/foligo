@@ -20,8 +20,6 @@ jest.mock('../logger', () => ({
   createAILogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
 }));
 
-jest.mock('../gemini-config', () => ({ SAFETY_SETTINGS: [] }));
-
 const { streamText, stepCountIs } = require('ai');
 const { createProvider, isProviderConfigured } = require('./providers');
 const { resolveModel, listModelSelections } = require('./model-config');

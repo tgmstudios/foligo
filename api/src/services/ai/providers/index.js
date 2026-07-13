@@ -62,6 +62,20 @@ const PRESETS = {
 
 const OPENAI_COMPATIBLE_LABEL = { opencode: 'OpenCode', ollama: 'Ollama', openai: 'OpenAI' };
 
+// Safety settings: only consulted by the Google provider (passed through
+// providerOptions.google.safetySettings); harmlessly ignored by others.
+// Using BLOCK_ONLY_HIGH to be more permissive for portfolio content.
+// These are plain string identifiers matching @google/generative-ai's
+// HarmCategory/HarmBlockThreshold enums, hardcoded here so this module (and
+// the rest of the provider-agnostic AI layer) doesn't need that SDK as a
+// dependency just to build this config.
+const SAFETY_SETTINGS = [
+  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+];
+
 /**
  * Create a provider instance: { name, displayName, model, capabilities }
  * @param {string} type — 'gemini' | 'openai' | 'opencode' | 'ollama' | 'anthropic' | 'custom'
@@ -172,4 +186,4 @@ function isProviderConfigured(type) {
   }
 }
 
-module.exports = { createProvider, listProviders, isProviderConfigured, PRESETS };
+module.exports = { createProvider, listProviders, isProviderConfigured, PRESETS, SAFETY_SETTINGS };

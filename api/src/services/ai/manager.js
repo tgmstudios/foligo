@@ -22,10 +22,9 @@
  */
 
 const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
-const { createProvider, listProviders, isProviderConfigured } = require('./providers');
+const { createProvider, listProviders, isProviderConfigured, SAFETY_SETTINGS } = require('./providers');
 const { resolveModel, listModelSelections, ensureBootstrapModels } = require('./model-config');
 const { createAILogger } = require('../logger');
-const { SAFETY_SETTINGS } = require('../gemini-config');
 
 class AIManager {
   constructor() {
