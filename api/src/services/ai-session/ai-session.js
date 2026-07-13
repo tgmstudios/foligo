@@ -21,6 +21,7 @@ const { buildConversationalSystemPrompt } = require('../content/conversation-pro
 const { GENERATION_CONFIG } = require('./config');
 const {
   extractStructuredData,
+  extractStructuredDataUniversal,
   buildMetadataFromStructuredData,
   extractTitleFromConversation
 } = require('./metadata');
@@ -265,24 +266,35 @@ async function generateFinalContent(mode, contentType, chatHistory, currentConte
 
     const { markdownContent, structuredData } = extractStructuredData(fullResponse, { logger });
 
-    const extractedSkills = structuredData?.skills || [];
-    const extractedTags = structuredData?.tags || [];
+    // Fallback: if the model didn't produce the XML structured_data block
+    // (common with non-Gemini models like DeepSeek), extract via a separate
+    // universal JSON-extraction call that works with any model.
+    let finalStructuredData = structuredData;
+    if (!finalStructuredData) {
+      logger.info('XML structured_data not found, running universal extraction');
+      finalStructuredData = await extractStructuredDataUniversal(
+        contentType, markdownContent, chatHistory, context, { aiText, logger }
+      );
+    }
 
-    let title = structuredData?.title;
+    const extractedSkills = finalStructuredData?.skills || [];
+    const extractedTags = finalStructuredData?.tags || [];
+
+    let title = finalStructuredData?.title;
     if (!title || title.length < 3) {
       title = await extractTitleFromConversation(contentType, chatHistory, markdownContent, { aiText, logger });
     }
 
-    const metadata = buildMetadataFromStructuredData(structuredData, contentType);
+    const metadata = buildMetadataFromStructuredData(finalStructuredData, contentType);
 
     const result = {
       content: markdownContent,
       title,
-      excerpt: structuredData?.excerpt || null,
+      excerpt: finalStructuredData?.excerpt || null,
       metadata,
       skills: extractedSkills,
       tags: extractedTags,
-      structuredData
+      structuredData: finalStructuredData
     };
 
     const shouldCreateMultiple = await shouldCreateMultiplePosts(chatHistory, contentType, { aiText, logger });

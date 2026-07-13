@@ -13,6 +13,8 @@ const { cleanGeneratedContent } = require('./text-cleanup');
 /**
  * Extract structured_data block and markdown content.
  * Parses the XML-style structured_data tag and returns both parts.
+ * Gemini models reliably produce this format; other models may not.
+ * Fallback: use extractStructuredDataUniversal() instead.
  */
 function extractStructuredData(fullResponse, { logger }) {
   // Look for <structured_data> ... </structured_data> block
@@ -51,6 +53,91 @@ function extractStructuredData(fullResponse, { logger }) {
   markdownContent = cleanGeneratedContent(markdownContent);
 
   return { markdownContent, structuredData };
+}
+
+/**
+ * Universal structured-data extraction via a separate AI call.
+ * Works with ANY model — sends the generated markdown and conversation
+ * context, asks for JSON output.  No XML tags or model-specific formatting
+ * required.  Used as fallback when extractStructuredData finds nothing.
+ */
+async function extractStructuredDataUniversal(contentType, markdownContent, chatHistory, context, { aiText, logger }) {
+  logger.info('Running universal structured-data extraction', { contentType, contentLength: markdownContent.length });
+
+  const conversationText = chatHistory.map(m => m.role + ': ' + m.content).join('\n');
+
+  const typeFieldSchemas = {
+    PROJECT: `,
+  "startDate": "YYYY-MM-DD or null",
+  "endDate": "YYYY-MM-DD or null",
+  "isOngoing": true or false,
+  "featuredImage": "URL or null",
+  "projectLinks": {"github": "url or null", "devpost": "url or null", "other": ["url"]},
+  "contributors": ["Name"]`,
+    EXPERIENCE: `,
+  "experienceCategory": "JOB" | "EDUCATION" | "CERTIFICATION",
+  "location": "City, State or null",
+  "locationType": "REMOTE" | "HYBRID" | "ONSITE" | null,
+  "startDate": "YYYY-MM-DD or null",
+  "endDate": "YYYY-MM-DD or null",
+  "isOngoing": true or false,
+  "roles": [{"title": "...", "description": "...", "startDate": "...", "endDate": "...", "isCurrent": false, "skills": [{"name":"...","category":"..."}]}]`,
+    BLOG: '',
+  };
+
+  const typeExtra = typeFieldSchemas[contentType] || '';
+
+  const prompt = `Extract structured metadata from the following portfolio content. Return ONLY valid JSON — no markdown, no explanation, no code fences.
+
+Content type: ${contentType}
+
+## Conversation Context
+${conversationText.substring(0, 2000)}
+
+## Generated Content
+${markdownContent.substring(0, 6000)}
+
+## Required JSON schema
+{
+  "title": "Compelling title for this ${contentType.toLowerCase()} content",
+  "excerpt": "1-2 sentence summary for preview cards, max 200 characters"${typeExtra},
+  "skills": [{"name": "Skill name", "category": "Category like Frontend/Backend/Database/Language/etc"}],
+  "tags": [{"name": "Tag name", "category": "Category like Domain/Feature/Technical/etc"}]
+}
+
+Extract ALL skills and technologies mentioned. Categorize each skill (Frontend Framework, Backend Runtime, Database, Language, DevOps, Cloud, Protocol, Library, Tool, etc). Include 3-8 relevant tags with categories (Domain, Feature, Technical, Industry, etc).
+
+Return ONLY the JSON object:`;
+
+  try {
+    const result = await aiText(prompt, {
+      temperature: 0.3,
+      maxTokens: 2048,
+      context: 'Extract structured data',
+    });
+
+    // Clean up common wrapper issues
+    let json = result.trim();
+    json = json.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+
+    // Find the outermost JSON object
+    const start = json.indexOf('{');
+    const end = json.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      json = json.substring(start, end + 1);
+    }
+
+    const data = JSON.parse(json);
+    logger.info('Universal extraction succeeded', {
+      hasTitle: !!data.title,
+      skillsCount: data.skills?.length || 0,
+      tagsCount: data.tags?.length || 0,
+    });
+    return data;
+  } catch (error) {
+    logger.warn('Universal extraction failed, returning empty data', { error: error.message });
+    return null;
+  }
 }
 
 /**
@@ -315,6 +402,7 @@ async function extractMetadataFromConversation(contentType, chatHistory, generat
 
 module.exports = {
   extractStructuredData,
+  extractStructuredDataUniversal,
   buildMetadataFromStructuredData,
   extractTitleFromConversation,
   getFallbackTitle,
