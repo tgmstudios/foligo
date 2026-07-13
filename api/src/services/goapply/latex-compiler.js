@@ -1,6 +1,7 @@
 /**
- * LaTeX compilation via tectonic — a self-contained TeX engine (no system TeX Live install needed).
- * Compiles a .tex source string to a PDF buffer in an isolated temp directory.
+ * LaTeX compilation via LuaLaTeX (TeX Live) — supports microtype letterspacing,
+ * fontspec, Unicode, and system fonts. Replaces the former tectonic-based compiler
+ * which was XeTeX-only and incompatible with microtype's \textls{} commands.
  */
 const { spawn } = require('child_process');
 const fs = require('fs').promises;
@@ -8,13 +9,33 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const TECTONIC_BIN = process.env.TECTONIC_BIN || 'tectonic';
-const TECTONIC_BUNDLE_URL = process.env.TECTONIC_BUNDLE_URL;
+const LUALATEX_BIN = process.env.LUALATEX_BIN || 'lualatex';
 const COMPILE_TIMEOUT_MS = 30000;
 
 /**
+ * Check if a line looks like a lualatex "note:" / info line (not an error).
+ * LuaLaTeX and TeX Live emit various info lines starting with words like
+ * "note:", "(", ")", "This is", "Document Class:", etc. that are not errors.
+ */
+function isInfoLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed) return true;
+  if (trimmed.startsWith('(') || trimmed.startsWith(')')) return true;
+  if (trimmed.startsWith('This is ')) return true;
+  if (trimmed.startsWith('Document Class:')) return true;
+  if (/^\[?\d+\]?$/.test(trimmed)) return true; // page numbers like [1]
+  if (trimmed.startsWith('Output written on ')) return true;
+  if (trimmed.startsWith('Transcript written on ')) return true;
+  if (trimmed.startsWith('<') && trimmed.includes('>')) return true; // font loading
+  if (trimmed.startsWith('No file ') && trimmed.endsWith('.aux.')) return true;
+  if (trimmed.startsWith('No file ') && trimmed.endsWith('.toc.')) return true;
+  return false;
+}
+
+/**
  * Parse LaTeX compiler output for structured error information.
- * Handles both tectonic's `error:` prefix format and traditional `! ... l.X` format.
+ * Handles lualatex's traditional `! <msg>.\nl.<line>` format and
+ * the modern `file:line: error: <msg>` format.
  *
  * @param {string} output - raw compiler stdout/stderr
  * @param {string} source - original .tex source (for context extraction)
@@ -23,70 +44,93 @@ const COMPILE_TIMEOUT_MS = 30000;
 function parseLatexErrors(output, source) {
   const errors = [];
   const sourceLines = source.split('\n');
+
+  // Pattern 1: traditional LaTeX "! <message>.\nl.<line> <content>"
+  // This is the primary format from lualatex
+  const latexPattern = /!\s+(.+?)\.\s*\nl\.(\d+)\s*(.*?)(?=\n[!?]|\n\n|\n\s*\n|$)/gs;
   let match;
-
-  // Pattern 1a: tectonic inline format "error: <file>:<line>:<col>?: <message>"
-  const tectonicInlinePattern = /error:\s*\S+:(\d+)(?::(\d+))?:\s*(.+?)(?=\n\S|\nerror:|\n$|$)/gs;
-  while ((match = tectonicInlinePattern.exec(output)) !== null) {
-    const line = parseInt(match[1], 10);
-    const col = match[2] ? parseInt(match[2], 10) : undefined;
-    const message = match[3].trim();
-    const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
-    errors.push({ line, col, message, context: contextLine });
-  }
-
-  // Pattern 1b: tectonic Rust-style "error: <msg>\n   --> <file>:<line>:<col>"
-  const tectonicRustPattern = /error:\s*(.+?)(?:\n|\r|$)\s*-->\s*\S+:(\d+):(\d+)/g;
-  while ((match = tectonicRustPattern.exec(output)) !== null) {
-    const message = match[1].trim();
-    const line = parseInt(match[2], 10);
-    const col = parseInt(match[3], 10);
-    if (!errors.some(e => e.line === line && e.message === message)) {
-      const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
-      errors.push({ line, col, message, context: contextLine });
-    }
-  }
-
-  // Pattern 2: traditional LaTeX "! <msg>.\nl.<line> <content>"
-  const latexPattern = /!\s+(.+?)\.\s*\nl\.(\d+)\s+(.*?)(?=\n[!?]|\n\n|$)/gs;
   while ((match = latexPattern.exec(output)) !== null) {
     const message = match[1].trim();
     const line = parseInt(match[2], 10);
     const context = match[3].trim().slice(0, 120);
-    // Avoid duplicates (same line)
     if (!errors.some(e => e.line === line && e.message === message)) {
       errors.push({ line, col: undefined, message, context });
     }
   }
 
-  // Pattern 3: "Undefined control sequence" from tectonic
-  const undefPattern = /Undefined control sequence[:\s]*(.*?)(?:\n|$)/g;
-  while ((match = undefPattern.exec(output)) !== null) {
-    const cmd = match[1].trim();
-    errors.push({
-      line: undefined,
-      message: `Undefined control sequence: ${cmd || '(unknown)'}`,
-      context: cmd ? `\\${cmd}...` : undefined,
-    });
-  }
-
-  // Pattern 4: "Emergency stop" — last-resort catch
-  if (errors.length === 0 && output.includes('Emergency stop')) {
-    // Extract whatever context we can
-    const lines = output.split('\n');
-    const errorStart = lines.findIndex(l => l.includes('!') || l.includes('error:'));
-    if (errorStart >= 0) {
-      const msg = lines.slice(errorStart, errorStart + 5).join('\n').trim();
-      errors.push({ message: msg.slice(0, 300) });
+  // Pattern 2: lualatex "file:line: error: <message>" or "file:line: <message>"
+  const modernPattern = /^(?:! )?([^:\s]+\.tex):(\d+):(?:\s*error:)?\s*(.+)$/gm;
+  while ((match = modernPattern.exec(output)) !== null) {
+    const line = parseInt(match[2], 10);
+    const message = match[3].trim();
+    if (!errors.some(e => e.line === line && e.message === message)) {
+      const contextLine = sourceLines[line - 1]?.trim().slice(0, 120) || '';
+      errors.push({ line, col: undefined, message, context: contextLine });
     }
   }
 
-  // If we still found nothing, grab the last 20 lines as raw context
+  // Pattern 3: lualatex "Package <name> Error: <message>"
+  const packagePattern = /Package (\S+) Error:\s*(.+?)(?=\n|$)/g;
+  while ((match = packagePattern.exec(output)) !== null) {
+    const pkg = match[1];
+    const message = match[2].trim();
+    // Try to find the line number near this error
+    const pos = match.index;
+    const surrounding = output.substring(Math.max(0, pos - 200), pos);
+    const lineMatch = surrounding.match(/l\.(\d+)\s/);
+    const line = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
+    if (!errors.some(e => e.line === line && e.message.includes(pkg))) {
+      const contextLine = line ? sourceLines[line - 1]?.trim().slice(0, 120) : undefined;
+      errors.push({ line, col: undefined, message: `[${pkg}] ${message}`, context: contextLine });
+    }
+  }
+
+  // Pattern 4: "Undefined control sequence" from lualatex
+  const undefPattern = /Undefined control sequence[:\\s]*(\\\S+)?/g;
+  while ((match = undefPattern.exec(output)) !== null) {
+    const cmd = match[1]?.trim() || '(unknown)';
+    // Find the line number
+    const pos = match.index;
+    const surrounding = output.substring(Math.max(0, pos - 200), pos);
+    const lineMatch = surrounding.match(/l\.(\d+)\s/);
+    const line = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
+    const contextLine = line ? sourceLines[line - 1]?.trim().slice(0, 120) : undefined;
+    errors.push({ line, message: `Undefined control sequence: ${cmd}`, context: contextLine });
+  }
+
+  // Pattern 5: "Emergency stop" — last-resort catch-all
+  if (errors.length === 0 && output.includes('Emergency stop')) {
+    const lines = output.split('\n');
+    // Find the line with the actual error, skipping info lines
+    const errorLines = [];
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('!') || line.includes('Error')) {
+        errorLines.unshift(line);
+        if (errorLines.length >= 5) break;
+      }
+    }
+    if (errorLines.length > 0) {
+      errors.push({ message: errorLines.join(' | ').slice(0, 500) });
+    } else {
+      errors.push({ message: 'Emergency stop — compilation aborted' });
+    }
+  }
+
+  // If we found nothing, scan for non-info lines that might be errors
   if (errors.length === 0) {
-    const trimmed = output.trim();
-    if (trimmed) {
-      const tail = trimmed.split('\n').slice(-15).join('\n');
-      errors.push({ message: tail.slice(0, 500) });
+    const nonInfoLines = output.split('\n')
+      .filter(l => !isInfoLine(l))
+      .join('\n')
+      .trim();
+    if (nonInfoLines) {
+      const clean = nonInfoLines.split('\n')
+        .filter(l => l.trim())
+        .slice(-15)
+        .join('\n');
+      if (clean) {
+        errors.push({ message: clean.slice(0, 500) });
+      }
     }
   }
 
@@ -106,7 +150,7 @@ function parseLatexErrors(output, source) {
 }
 
 /**
- * Compile LaTeX source to a PDF buffer.
+ * Compile LaTeX source to a PDF buffer using LuaLaTeX.
  * @param {string} source - Full .tex document source
  * @returns {Promise<{ pdf: Buffer } | { error: string, log: string, errors?: Array }>}
  */
@@ -119,13 +163,13 @@ async function compile(source) {
     await fs.mkdir(workDir, { recursive: true });
     await fs.writeFile(texPath, source, 'utf8');
 
-    const { code, output } = await runTectonic(texPath, workDir);
+    const { code, output } = await runLuaLatex(texPath, workDir);
 
     if (code !== 0) {
       const parsed = parseLatexErrors(output, source);
       return {
         error: parsed.message,
-        log: output.slice(-3000), // Keep log manageable
+        log: output.slice(-3000),
         errors: parsed.errors,
       };
     }
@@ -143,15 +187,16 @@ async function compile(source) {
   }
 }
 
-function runTectonic(texPath, workDir) {
+function runLuaLatex(texPath, workDir) {
   return new Promise((resolve) => {
-    const args = [];
-    if (TECTONIC_BUNDLE_URL) {
-      args.push('--bundle', TECTONIC_BUNDLE_URL);
-    }
-    args.push('--outdir', workDir, texPath);
+    const args = [
+      '-interaction=nonstopmode',
+      '-halt-on-error',
+      '-output-directory', workDir,
+      texPath,
+    ];
 
-    const proc = spawn(TECTONIC_BIN, args, {
+    const proc = spawn(LUALATEX_BIN, args, {
       cwd: workDir,
       timeout: COMPILE_TIMEOUT_MS,
     });
@@ -161,7 +206,7 @@ function runTectonic(texPath, workDir) {
     proc.stderr.on('data', (d) => { output += d.toString(); });
 
     proc.on('error', (err) => {
-      resolve({ code: -1, output: `Failed to launch tectonic: ${err.message}` });
+      resolve({ code: -1, output: `Failed to launch lualatex: ${err.message}` });
     });
     proc.on('close', (code) => {
       resolve({ code, output });
