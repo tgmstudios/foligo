@@ -83,23 +83,29 @@ model AnalyticsProperty {
 }
 
 model AnalyticsEvent {
-  id          String   @id @default(uuid())
-  propertyId  String
-  name        String
-  occurredAt  DateTime
-  receivedAt  DateTime @default(now())
-  visitorHash String?
-  sessionHash String?
-  url         String?
-  path        String?
-  title       String?
-  referrer    String?
-  country     String?
-  city        String?
-  region      String?
-  duration    Int?
-  device      String?
-  metadata    Json?
+  id           String   @id @default(uuid())
+  propertyId   String
+  name         String
+  occurredAt   DateTime
+  receivedAt   DateTime @default(now())
+  visitorHash  String?
+  sessionHash  String?
+  url          String?
+  path         String?
+  title        String?
+  referrer     String?
+  country      String?
+  city         String?
+  region       String?
+  duration     Int?
+  device       String?
+  domain       String?
+  previousPath String?
+  visitCount   Int?
+  os           String?
+  browser      String?
+  deviceType   String?
+  metadata     Json?
 
   property AnalyticsProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 

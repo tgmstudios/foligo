@@ -26,8 +26,8 @@
           <div v-for="i in 4" :key="i" class="card h-28 animate-pulse p-6"><div class="h-3 w-20 rounded bg-gray-700"></div><div class="mt-4 h-7 w-16 rounded bg-gray-700"></div></div>
         </div>
 
-          <section v-else-if="summary?.configured" class="space-y-8">
-          <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+        <section v-else-if="summary?.configured" class="space-y-8">
+          <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-6">
             <div v-for="metric in metrics" :key="metric.label" class="card p-6">
               <div class="flex items-center">
                 <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg" :class="metric.iconClass">
@@ -57,6 +57,32 @@
 
           <section class="grid gap-6 lg:grid-cols-2">
             <RankingTable title="Top countries" empty="No country data yet" :rows="summary.topCountries" :is-country="true" />
+            <RankingTable v-if="summary.topDomains?.length" title="Top sites" empty="No domain data yet" :rows="summary.topDomains" />
+          </section>
+
+          <section v-if="summary.topTransitions?.length" class="card min-w-0 p-6">
+            <h2 class="mb-3 text-sm font-semibold text-white">Navigation flows</h2>
+            <div class="divide-y divide-gray-700 border-t border-gray-700">
+              <div v-for="(row, index) in summary.topTransitions" :key="row.label" class="flex items-center gap-3 py-3 text-sm">
+                <span class="w-5 text-xs tabular-nums text-gray-500">{{ String(index + 1).padStart(2, '0') }}</span>
+                <span class="min-w-0 flex-1 truncate text-gray-300" :title="row.label">{{ row.label }}</span>
+                <span class="tabular-nums text-white">{{ row.value.toLocaleString() }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card overflow-hidden">
+            <div class="flex border-b border-gray-700" role="tablist">
+              <button v-for="tab in deviceTabs" :key="tab.key" type="button" role="tab"
+                class="px-4 py-3 text-sm font-medium transition-colors"
+                :class="deviceTab === tab.key ? 'border-b-2 border-primary-500 text-white' : 'text-gray-400 hover:text-white'"
+                @click="deviceTab = tab.key">{{ tab.label }}</button>
+            </div>
+            <div class="p-6">
+              <RankingTable v-if="deviceTab === 'device'" title="Device types" empty="No device data yet" :rows="summary.deviceBreakdown || []" />
+              <RankingTable v-if="deviceTab === 'os'" title="Operating systems" empty="No OS data yet" :rows="summary.osBreakdown || []" />
+              <RankingTable v-if="deviceTab === 'browser'" title="Browsers" empty="No browser data yet" :rows="summary.browserBreakdown || []" />
+            </div>
           </section>
         </section>
 
@@ -102,14 +128,24 @@
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Line } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler } from 'chart.js'
-import { ArrowTopRightOnSquareIcon, ChartBarIcon, ChevronDownIcon, ClipboardIcon, ClockIcon, CodeBracketIcon, CursorArrowRaysIcon, EyeIcon, SignalIcon, UserGroupIcon } from '@heroicons/vue/24/outline'
+import { ArrowPathRoundedSquareIcon, ArrowTopRightOnSquareIcon, ChartBarIcon, ChevronDownIcon, ClipboardIcon, ClockIcon, CodeBracketIcon, CursorArrowRaysIcon, EyeIcon, SignalIcon, UserGroupIcon } from '@heroicons/vue/24/outline'
 import { useToast } from 'vue-toastification'
 import api from '@/services/api'
 import { useProjectStore } from '@/stores/projects'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler)
 type Row = { label: string; value: number; avgDuration?: number; visitors?: number }
-type Summary = { configured: boolean; totals: { events: number; pageViews: number; visitors: number; sessions: number }; series: Array<{ date: string; views: number; visitors: number }>; topPages: Row[]; topReferrers: Row[]; topEvents: Row[]; topCountries: Row[]; avgTimeOnPage: number }
+type ReturnRate = { label: string; value: number }
+type Summary = {
+  configured: boolean; days: number
+  totals: { events: number; pageViews: number; visitors: number; sessions: number }
+  series: Array<{ date: string; views: number; visitors: number }>
+  topPages: Row[]; topReferrers: Row[]; topEvents: Row[]; topCountries: Row[]
+  topDomains: Row[]; topTransitions: Row[]
+  deviceBreakdown: Row[]; osBreakdown: Row[]; browserBreakdown: Row[]
+  returnRate: ReturnRate[]
+  avgTimeOnPage: number
+}
 type Property = { configured: boolean; writeKeyPrefix?: string; allowedOrigins: string[] }
 
 function countryFlag(code: string) { return String.fromCodePoint(...code.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) }
@@ -122,17 +158,37 @@ const RankingTable = defineComponent({
 
 const toast = useToast(); const projectStore = useProjectStore()
 const days = ref(30); const loading = ref(false); const saving = ref(false); const showSetup = ref(false)
+const deviceTab = ref<'device' | 'os' | 'browser'>('device')
 const summary = ref<Summary | null>(null); const property = ref<Property | null>(null); const originsText = ref(''); const revealedKey = ref('')
 const ranges = [{ label: '7D', days: 7 }, { label: '30D', days: 30 }, { label: '90D', days: 90 }]
+const deviceTabs = [
+  { key: 'device' as const, label: 'Devices' },
+  { key: 'os' as const, label: 'OS' },
+  { key: 'browser' as const, label: 'Browsers' },
+]
 const selectedId = ref((window as any).selectedProjectId || '')
 const selectedProject = computed(() => projectStore.projects.find(project => project.id === selectedId.value))
-const metrics = computed(() => [
-  { label: 'Page views', value: summary.value?.totals.pageViews || 0, icon: EyeIcon, iconClass: 'bg-primary-100 text-primary-600' },
-  { label: 'Visitors', value: summary.value?.totals.visitors || 0, icon: UserGroupIcon, iconClass: 'bg-green-100 text-green-600' },
-  { label: 'Sessions', value: summary.value?.totals.sessions || 0, icon: ChartBarIcon, iconClass: 'bg-purple-100 text-purple-600' },
-  { label: 'All events', value: summary.value?.totals.events || 0, icon: CursorArrowRaysIcon, iconClass: 'bg-yellow-100 text-yellow-600' },
-  { label: 'Avg. time on page', value: summary.value?.avgTimeOnPage || 0, formatted: formatDuration(summary.value?.avgTimeOnPage || 0), icon: ClockIcon, iconClass: 'bg-indigo-100 text-indigo-600' }
-])
+
+function returnRatePct(): string {
+  const rates = summary.value?.returnRate || []
+  const ret = rates.find(r => r.label === 'returning')
+  const neu = rates.find(r => r.label === 'new')
+  const total = (ret?.value || 0) + (neu?.value || 0)
+  if (!total) return '0%'
+  return `${Math.round(((ret?.value || 0) / total) * 100)}%`
+}
+
+const metrics = computed(() => {
+  const m = [
+    { label: 'Page views', value: summary.value?.totals.pageViews || 0, icon: EyeIcon, iconClass: 'bg-primary-100 text-primary-600' },
+    { label: 'Visitors', value: summary.value?.totals.visitors || 0, icon: UserGroupIcon, iconClass: 'bg-green-100 text-green-600' },
+    { label: 'Sessions', value: summary.value?.totals.sessions || 0, icon: ChartBarIcon, iconClass: 'bg-purple-100 text-purple-600' },
+    { label: 'All events', value: summary.value?.totals.events || 0, icon: CursorArrowRaysIcon, iconClass: 'bg-yellow-100 text-yellow-600' },
+    { label: 'Avg. time on page', value: summary.value?.avgTimeOnPage || 0, formatted: formatDuration(summary.value?.avgTimeOnPage || 0), icon: ClockIcon, iconClass: 'bg-indigo-100 text-indigo-600' },
+    { label: 'Return rate', value: 0, formatted: returnRatePct(), icon: ArrowPathRoundedSquareIcon, iconClass: 'bg-cyan-100 text-cyan-600' },
+  ]
+  return m
+})
 const filledSeries = computed(() => { const map = new Map((summary.value?.series || []).map(row => [row.date, row])); const rows = []; const cursor = new Date(); cursor.setUTCHours(0, 0, 0, 0); cursor.setUTCDate(cursor.getUTCDate() - days.value + 1); for (let i = 0; i < days.value; i++) { const date = cursor.toISOString().slice(0, 10); rows.push(map.get(date) || { date, views: 0, visitors: 0 }); cursor.setUTCDate(cursor.getUTCDate() + 1) } return rows })
 const chartData = computed(() => ({ labels: filledSeries.value.map(row => new Date(`${row.date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })), datasets: [{ data: filledSeries.value.map(row => row.views), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)', fill: true, tension: .3, pointRadius: 0, borderWidth: 2 }, { data: filledSeries.value.map(row => row.visitors), borderColor: '#a855f7', tension: .3, pointRadius: 0, borderWidth: 2 }] }))
 const chartOptions = { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' as const }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', borderColor: '#374151', borderWidth: 1 } }, scales: { x: { grid: { display: false }, ticks: { color: '#6b7280', maxTicksLimit: 8 } }, y: { beginAtZero: true, grid: { color: '#1f2937' }, ticks: { color: '#6b7280', precision: 0 } } } }

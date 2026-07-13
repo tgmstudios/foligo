@@ -74,6 +74,12 @@ function normalizeEvent(input, propertyId) {
     region: cleanString(input.region, 128),
     duration: Number.isFinite(input.duration) && input.duration > 0 && input.duration <= 3600000 ? Math.round(input.duration) : null,
     device: cleanString(input.device, 32),
+    domain: cleanString(input.domain, 256),
+    previousPath: cleanString(input.previousPath, 512),
+    visitCount: Number.isFinite(input.visitCount) && input.visitCount > 0 && input.visitCount <= 10000 ? Math.round(input.visitCount) : null,
+    os: cleanString(input.os, 64),
+    browser: cleanString(input.browser, 64),
+    deviceType: cleanString(input.deviceType, 64),
     metadata,
   };
 }
