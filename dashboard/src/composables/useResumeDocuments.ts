@@ -7,7 +7,7 @@ export interface ResumeDocumentSummary {
   name: string
   jobDescription: string | null
   linkedJobId: string | null
-  linkedJob: { id: string; company: string; position: string } | null
+  linkedJob: { id: string; company: string; position: string; category: string | null } | null
   isTemplate: boolean
   isDefault: boolean
   createdAt: string

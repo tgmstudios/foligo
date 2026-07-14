@@ -57,7 +57,7 @@ router.get('/cover-letters', async (req, res) => {
     const letters = await prisma.coverLetter.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
-      include: { job: { select: { id: true, company: true, position: true } } }
+      include: { job: { select: { id: true, company: true, position: true, category: true } } }
     });
 
     res.json(letters);
@@ -75,7 +75,7 @@ router.get('/cover-letters/:id', async (req, res) => {
   try {
     const letter = await prisma.coverLetter.findFirst({
       where: { id: req.params.id, userId: req.user.id },
-      include: { job: { select: { id: true, company: true, position: true } } }
+      include: { job: { select: { id: true, company: true, position: true, category: true } } }
     });
     if (!letter) return res.status(404).json({ error: 'Cover Letter Not Found', message: 'Cover letter not found' });
     res.json(letter);

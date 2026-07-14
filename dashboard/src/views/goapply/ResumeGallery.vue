@@ -41,6 +41,13 @@
         <option value="default">Default</option>
       </select>
       <select
+        v-model="categoryFilter"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="all">All categories</option>
+        <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+      </select>
+      <select
         v-model="sort"
         class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
       >
@@ -74,6 +81,7 @@
               <span v-if="doc.jobDescription" class="px-1.5 py-0.5 rounded text-[10px] bg-green-900 text-green-300">Tailored</span>
               <span v-if="doc.isTemplate" class="px-1.5 py-0.5 rounded text-[10px] bg-gray-700 text-gray-300">Template</span>
               <span v-if="doc.isDefault" class="px-1.5 py-0.5 rounded text-[10px] bg-primary-900 text-primary-300">Default</span>
+              <span v-if="doc.linkedJob?.category" class="px-1.5 py-0.5 rounded text-[10px] bg-blue-900 text-blue-300">{{ doc.linkedJob.category }}</span>
             </div>
           </div>
           <button
@@ -163,7 +171,12 @@ const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<ResumeDocumentSummary | null>(null)
 const search = ref('')
 const filter = ref<'all' | 'tailored' | 'template' | 'default'>('all')
+const categoryFilter = ref('all')
 const sort = ref<'updated' | 'name-asc' | 'name-desc'>('updated')
+
+const categories = computed(() =>
+  [...new Set(documents.value.map(doc => doc.linkedJob?.category).filter((value): value is string => Boolean(value)))].sort()
+)
 
 const filteredDocuments = computed(() => {
   let docs = documents.value
@@ -181,6 +194,8 @@ const filteredDocuments = computed(() => {
   if (filter.value === 'tailored') docs = docs.filter(doc => !!doc.jobDescription)
   else if (filter.value === 'template') docs = docs.filter(doc => doc.isTemplate)
   else if (filter.value === 'default') docs = docs.filter(doc => doc.isDefault)
+
+  if (categoryFilter.value !== 'all') docs = docs.filter(doc => doc.linkedJob?.category === categoryFilter.value)
 
   docs = [...docs]
   if (sort.value === 'name-asc') docs.sort((a, b) => a.name.localeCompare(b.name))

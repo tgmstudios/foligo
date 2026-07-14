@@ -8,192 +8,40 @@
     "hash": "cf402d163e0971f0732181b8d8de4aa2"
   },
   "api/src/index.js": {
-    "mtime": 1783918914261.1877,
-    "hash": "92b18be8878289a953d3523088dd8712"
+    "mtime": 1784044422098.3206,
+    "hash": "5820bf674c7730bc06759f5a4788f767"
   },
   "api/src/middleware/auth.js": {
-    "mtime": 1783700040582.5876,
-    "hash": "dc79810a46cb7ec83588ff570cf1bad7"
+    "mtime": 1783927170080.078,
+    "hash": "62ab9c860b08bc7266001a2acef80cb8"
   },
   "api/src/middleware/errorHandler.js": {
     "mtime": 1761764389191.6013,
     "hash": "afea0039e0b96e7276a7feaa31349935"
   },
-  "api/src/routes/admin-sso.js": {
-    "mtime": 1763329671407.5583,
-    "hash": "05d6ad39bfdae5272d94b5e530e430cb"
-  },
-  "api/src/routes/admin.js": {
-    "mtime": 1783886311735.0967,
-    "hash": "12f12849f706b8c3b7d7b9bd10c88501"
-  },
-  "api/src/routes/ai-content.js": {
-    "mtime": 1783896273564.4817,
-    "hash": "35152462e76245341d717cd2ea11b877"
-  },
-  "api/src/routes/ai-providers.js": {
-    "mtime": 1783918811696.5576,
-    "hash": "0193043844a8eac9a1791b26c1d284cb"
-  },
-  "api/src/routes/auth.js": {
-    "mtime": 1783700040582.5876,
-    "hash": "90bd1991d7ba533a9636fc08c2c14e8f"
-  },
-  "api/src/routes/content-blocks.js": {
-    "mtime": 1763329641898.2183,
-    "hash": "a2422c300d9bcd97d958dffb9212e6a0"
-  },
-  "api/src/routes/content-links.js": {
-    "mtime": 1783890933726.118,
-    "hash": "94ee26fc1fd70a311be22beb73df0614"
-  },
-  "api/src/routes/content-meta.js": {
-    "mtime": 1763329644264.6348,
-    "hash": "16aa8500ee76fb8b2a3a84372f25e951"
-  },
-  "api/src/routes/content-tags.js": {
-    "mtime": 1763329640383.687,
-    "hash": "343ced60f4a4625bcc1153824321ba67"
-  },
-  "api/src/routes/content.js": {
-    "mtime": 1783910579444.7507,
-    "hash": "61fbded6ba37a371b009d5186720bb13"
-  },
-  "api/src/routes/experience-roles.js": {
-    "mtime": 1763246674083.8538,
-    "hash": "97b8de0617c75a23a8e9b358513f5ff1"
-  },
-  "api/src/routes/goapply.js": {
-    "mtime": 1783910525939.3105,
-    "hash": "2c47a3563273368fe32ffb7becd622f5"
-  },
-  "api/src/routes/media.js": {
-    "mtime": 1763329661524.3982,
-    "hash": "695e979b2f1784b4be2bcedeef208f12"
-  },
-  "api/src/routes/projectAccess.js": {
-    "mtime": 1761764389288.8013,
-    "hash": "640523964eb4c9bd77ea60a1e42934c3"
-  },
-  "api/src/routes/projects.js": {
-    "mtime": 1764180422388.304,
-    "hash": "b067684020c1a91731ef3fb827d2bb1f"
-  },
-  "api/src/routes/public-content.js": {
-    "mtime": 1764180422388.304,
-    "hash": "36924b0a8e06d6e439762343c96c6cd3"
-  },
   "api/src/routes/resume.js": {
-    "mtime": 1783910550997.5999,
-    "hash": "a9304efd14052e3970246c7f6a9992b7"
-  },
-  "api/src/routes/revisions.js": {
-    "mtime": 1763246674083.8538,
-    "hash": "3d07c5c556b270b3d202171d9dcdf668"
-  },
-  "api/src/routes/site.js": {
-    "mtime": 1763358776506.1807,
-    "hash": "78c7f2fbfb6aeaf12b8fc9da0553720b"
-  },
-  "api/src/routes/skills.js": {
-    "mtime": 1763329690618.5935,
-    "hash": "d236136ebf69d6787714dd14bcc35463"
-  },
-  "api/src/routes/sso-auth.js": {
-    "mtime": 1763243027883.0835,
-    "hash": "51369132a02308bd4d6c94c3c1c65914"
-  },
-  "api/src/routes/upload.js": {
-    "mtime": 1761764389342.8013,
-    "hash": "b8ac3db8d2e1a208883c14197329d7af"
+    "mtime": 1784045587136.686,
+    "hash": "df323b9485a17362886048443fd2c55f"
   },
   "api/src/routes/users.js": {
-    "mtime": 1761764389357.2014,
-    "hash": "ed8f8b89d067aa16e49ba62d5eadbcc0"
-  },
-  "api/src/routes/voice-webhook.js": {
-    "mtime": 1763236626597.218,
-    "hash": "108dd8d68cd4021552e134de0493dc96"
+    "mtime": 1783927170087.9265,
+    "hash": "284e4b22e0f34a7dbe65aa5b0950f1f7"
   },
   "api/src/seed.js": {
     "mtime": 1763236626597.218,
     "hash": "fdfb67545fd58d23ee576eddf4e36cad"
-  },
-  "api/src/services/ai.js": {
-    "mtime": 1783727214682.071,
-    "hash": "a59185f737e14b0f3ee3bd3f8f10a4b0"
   },
   "api/src/services/ai/index.js": {
     "mtime": 1783727156933.8667,
     "hash": "973e64e56446a9914fb039a17aaa5d03"
   },
   "api/src/services/ai/manager.js": {
-    "mtime": 1783922095213.816,
-    "hash": "b63c29fc90ee96c3e5402bc3f7efc225"
+    "mtime": 1784044422106.3225,
+    "hash": "280a6f7bcf35af8cd033887523de1230"
   },
   "api/src/services/ai/providers/index.js": {
-    "mtime": 1783921720923.6245,
-    "hash": "f4b951820bfed1e035ce3c072a6eaecf"
-  },
-  "api/src/services/content-generation-prompts.js": {
-    "mtime": 1763329710743.601,
-    "hash": "968febae35bbd2363c8acda2701aaa94"
-  },
-  "api/src/services/conversation-prompts.js": {
-    "mtime": 1763329710693.6711,
-    "hash": "4738ac149493ac3d4e19c0cdef0c6ad7"
-  },
-  "api/src/services/database.js": {
-    "mtime": 1761764389440.0015,
-    "hash": "dd406c1339e82e92640ef1c25f06819a"
-  },
-  "api/src/services/errors.js": {
-    "mtime": 1763314334562.5867,
-    "hash": "0158ac936aaeac7d2af5166d327f972f"
-  },
-  "api/src/services/gemini-config.js": {
-    "mtime": 1763322398580.5525,
-    "hash": "f88da7e330fb678ea51516c9dd2feef2"
-  },
-  "api/src/services/gemini-tools.js": {
-    "mtime": 1783744615670.198,
-    "hash": "84340758f1daf5822926fee1a7b6d497"
-  },
-  "api/src/services/gemini.js": {
-    "mtime": 1783896236047.7693,
-    "hash": "076a43b1032aa57c94be04d7a354d598"
-  },
-  "api/src/services/latex-compiler.js": {
-    "mtime": 1783893092033.38,
-    "hash": "07cf97ef800c4d2f464bc591ce066e68"
-  },
-  "api/src/services/logger.js": {
-    "mtime": 1783727943876.4082,
-    "hash": "49bca2398083dbeb466e4fddbcb3093b"
-  },
-  "api/src/services/minio.js": {
-    "mtime": 1763329659357.786,
-    "hash": "dc9a7baaf7ebb92fb7cef5af3774d898"
-  },
-  "api/src/services/prompt-utils.js": {
-    "mtime": 1763320638851.5378,
-    "hash": "07894d4bd7b176686d892304407d5246"
-  },
-  "api/src/services/redis.js": {
-    "mtime": 1761764389483.2014,
-    "hash": "03692ab4aa1a9fdb7bd42b02740079b4"
-  },
-  "api/src/services/resume-chatbot-prompts.js": {
-    "mtime": 1783744631359.4653,
-    "hash": "eae0b00adbdcf0ba56ee48b29ea00547"
-  },
-  "api/src/services/resume-editor-tools.js": {
-    "mtime": 1783744461494.0908,
-    "hash": "d1a21d6b08517cf3a470755398a2f183"
-  },
-  "api/src/services/retry.js": {
-    "mtime": 1763314334562.5867,
-    "hash": "4dd8830c558e863909ca81e0974f0efc"
+    "mtime": 1784044422106.3225,
+    "hash": "1342ef208a632d03f2d732dee78bdb08"
   },
   "api/src/utils/encryption.js": {
     "mtime": 1763329672010.5503,
@@ -208,20 +56,20 @@
     "hash": "6975a4b69538bdd3885f845c9ef12ee3"
   },
   "dashboard/src/components/AIContentCreatorModal.vue": {
-    "mtime": 1783896344352.334,
-    "hash": "f1912efda8f1e0a196402b44a80a057d"
+    "mtime": 1784044422110.3235,
+    "hash": "f5a807fbafcc485d88ec3dc3bd4dbcc5"
   },
   "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
     "mtime": 1783903364818.268,
     "hash": "a9cb57fdfb34829e8f10d1c93a279e81"
   },
   "dashboard/src/components/agentic-editor/DocumentEditor.vue": {
-    "mtime": 1783746309114.7114,
-    "hash": "91884651b79d1c47e6ca6ac89058a9f3"
+    "mtime": 1784044422110.3235,
+    "hash": "9f46888b85b98da372bb525bc4786fc7"
   },
   "dashboard/src/components/agentic-editor/PreviewPane.vue": {
-    "mtime": 1783745896667.6921,
-    "hash": "b12bd6d33f706564d0e48940f4ddaee5"
+    "mtime": 1784044422114.3242,
+    "hash": "62c7a331b7fe8a82fc6e00acc407440f"
   },
   "dashboard/src/components/content/ContentBlocksEditor.vue": {
     "mtime": 1763329645676.8572,
@@ -328,8 +176,8 @@
     "hash": "a2b2be54d02c8700a2491256835f13d6"
   },
   "dashboard/src/components/studio/StudioShell.vue": {
-    "mtime": 1783904797263.808,
-    "hash": "6c4af729d73e3e0967a331a963b33dc0"
+    "mtime": 1784045472236.0686,
+    "hash": "7161d2015d211c1be7b51f37ca9723bb"
   },
   "dashboard/src/composables/useAgenticChat.ts": {
     "mtime": 1783897311213.2024,
@@ -348,12 +196,12 @@
     "hash": "9bcd24bb17473ce65148b0f3ec5734bd"
   },
   "dashboard/src/composables/useResumeDocuments.ts": {
-    "mtime": 1783903657664.0044,
-    "hash": "03b58ef49cc8f30ef2fc74644f0bf4b8"
+    "mtime": 1784045607113.7063,
+    "hash": "fefc7ea90105c4c8d44a72f243fbfa72"
   },
   "dashboard/src/layouts/DashboardLayout.vue": {
-    "mtime": 1783891452792.3667,
-    "hash": "c234075c8d15a79a3642bd03ad42e86b"
+    "mtime": 1784044422114.3242,
+    "hash": "c0441012c12a64edd1fec7c88e7ea3c3"
   },
   "dashboard/src/lib/monaco.ts": {
     "mtime": 1783746272269.3135,
@@ -368,8 +216,8 @@
     "hash": "cf4a77b7af992632895c98d52f2bafe3"
   },
   "dashboard/src/router/index.ts": {
-    "mtime": 1783894242846.6162,
-    "hash": "85f7d308517cfaf3ca32140cda15bdb0"
+    "mtime": 1784044422114.3242,
+    "hash": "37994787841f0b3bc7df2eaf9c311c69"
   },
   "dashboard/src/services/api.ts": {
     "mtime": 1783744725627.544,
@@ -388,12 +236,12 @@
     "hash": "2b5d0bcab2631e914daced83814354b9"
   },
   "dashboard/src/stores/goapply.ts": {
-    "mtime": 1783903729769.707,
-    "hash": "1b5bfd4271a1d01115df5aac7915f3ee"
+    "mtime": 1783925470503.1218,
+    "hash": "d3162aaaaefd86a7ca8ad94ae67a0858"
   },
   "dashboard/src/stores/projects.ts": {
-    "mtime": 1764180422388.304,
-    "hash": "7bb5e0daf5edfe27a6af25231ce56727"
+    "mtime": 1783925470503.1218,
+    "hash": "fb7d5a9eb263449ae53addeb6545145f"
   },
   "dashboard/src/studio/adapters/index.ts": {
     "mtime": 1783894144283.3997,
@@ -440,8 +288,8 @@
     "hash": "c6a1637cdc6228a8f0735297016f8318"
   },
   "dashboard/src/views/analytics/AnalyticsView.vue": {
-    "mtime": 1783891477473.9216,
-    "hash": "cd47bbc4460499be3058667e8d903d09"
+    "mtime": 1784044422114.3242,
+    "hash": "2850ac9e27c7ba20874f6f5014aa018b"
   },
   "dashboard/src/views/auth/AuthCallbackView.vue": {
     "mtime": 1763241597398.418,
@@ -476,12 +324,12 @@
     "hash": "6cfefbfd86d12b2f574af2704819c227"
   },
   "dashboard/src/views/dashboard/DashboardView.vue": {
-    "mtime": 1783890960937.3225,
-    "hash": "a40c362ab1c7dbe43fb8c36a7d07f9e7"
+    "mtime": 1783925470503.1218,
+    "hash": "fc17e3f94156c544cff9b53ec2f4f9e0"
   },
   "dashboard/src/views/goapply/CoverLetters.vue": {
-    "mtime": 1783903657668.0112,
-    "hash": "6ad66af41f44febee673ad45d885a54e"
+    "mtime": 1784045673245.5034,
+    "hash": "f7228f24bc6ee06355c2aa3d00d45fd9"
   },
   "dashboard/src/views/goapply/JobAssistant.vue": {
     "mtime": 1783897275692.5518,
@@ -500,20 +348,20 @@
     "hash": "d3058cad6eabf92d02cbc108b7ab666d"
   },
   "dashboard/src/views/goapply/KanbanBoard.vue": {
-    "mtime": 1783904301156.172,
-    "hash": "5d0fded75d6b364fc4622d0df272e692"
+    "mtime": 1784044422118.3252,
+    "hash": "21f695218e1d55b00fa15d7fd3bb1b8d"
   },
   "dashboard/src/views/goapply/ProfileSettings.vue": {
     "mtime": 1783893999706.5862,
     "hash": "cb13b3afdb98e72255c1a9b1b57fa2ee"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
-    "mtime": 1783903657664.0044,
-    "hash": "a8adf9f27194ff47f5080e4c8e6c800f"
+    "mtime": 1784045648036.5906,
+    "hash": "19b81dcefa2cbfe66f29085c0048b876"
   },
   "dashboard/src/views/goapply/SavedAnswers.vue": {
-    "mtime": 1783903657668.0112,
-    "hash": "2feead73b9095800c0004d7db6badce4"
+    "mtime": 1784044898235.342,
+    "hash": "01a98888b7300227a95edde934bc6cde"
   },
   "dashboard/src/views/media/MediaLibraryView.vue": {
     "mtime": 1763329657921.0063,
@@ -548,8 +396,8 @@
     "hash": "463b69e9a3500828686b0bb35e53981f"
   },
   "dashboard/src/views/studio/EditorStudioView.vue": {
-    "mtime": 1783904568427.996,
-    "hash": "1469be91217104c9b93cb6be3bb3046f"
+    "mtime": 1784044422118.3252,
+    "hash": "d78534271564e9cd6e4c1cf7d4c9eb81"
   },
   "dashboard/src/views/users/UsersView.vue": {
     "mtime": 1783886532256.7795,
@@ -864,12 +712,12 @@
     "hash": "77df68cd76bb4460bad830511218ca8f"
   },
   "sites/nuxt.config.ts": {
-    "mtime": 1763328521621.6953,
-    "hash": "8038727c50d54b8af01cfdee001bebed"
+    "mtime": 1784044422118.3252,
+    "hash": "b18326d1dbd4173cd16c725c174c45e2"
   },
   "sites/pages/[...slug].vue": {
-    "mtime": 1763357071707.4688,
-    "hash": "4ed8e09ec030a30ed52285d3df491806"
+    "mtime": 1784044422118.3252,
+    "hash": "be1ea595118e2bb77665d28279360506"
   },
   "sites/pages/blog/[slug].vue": {
     "mtime": 1763328364906.6665,
@@ -936,8 +784,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1783920273294.983,
-    "hash": "c849d4fc99336211b07552a65cde25fa"
+    "mtime": 1784045492038.2507,
+    "hash": "3f5996f60210f66267794e8d8629e922"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1024,8 +872,8 @@
     "hash": "aaf9632234d1c606aa58ef9b279483c9"
   },
   "pnpm-lock.yaml": {
-    "mtime": 1783910321392.91,
-    "hash": "86fd323b75fca649899649edc6d9c387"
+    "mtime": 1783926331906.6497,
+    "hash": "e23c6109155945996195878e38eaf630"
   },
   "pnpm-workspace.yaml": {
     "mtime": 1776035307111.8552,
@@ -1083,25 +931,17 @@
     "mtime": 1761764392431.6013,
     "hash": "094b19ab150581e628d742c2d74a1224"
   },
-  "api/src/routes/admin-ai-models.js": {
-    "mtime": 1783886508318.8628,
-    "hash": "0a51bdc358686dd243fb7904425ee511"
-  },
   "api/src/services/ai/model-config.js": {
-    "mtime": 1783921705632.354,
-    "hash": "39e972ec113018b16c752982a85f16e4"
-  },
-  "api/src/services/content-editor-tools.js": {
-    "mtime": 1783879931217.6719,
-    "hash": "81e5384fc1a4fd3e72689b2f92762f9d"
+    "mtime": 1783927170087.9265,
+    "hash": "90e74b05a5bfe82ef8a6b2c15ad57228"
   },
   "dashboard/src/components/common/ListActionIcon.vue": {
     "mtime": 1783886500253.5667,
     "hash": "87d041398a65eb6c0a0dc4954a0084d3"
   },
   "dashboard/src/components/editor/MarkdownCodeEditor.vue": {
-    "mtime": 1783884646215.4993,
-    "hash": "b5e39d787792ffe66f300fee618cf846"
+    "mtime": 1784044422114.3242,
+    "hash": "2885a56410f734fc4cd37f8375fb7001"
   },
   "dashboard/src/components/studio/InsertMenuFlyout.vue": {
     "mtime": 1783882680668.0344,
@@ -1148,48 +988,16 @@
     "hash": "57b597f49862ac0de1b2a5747c7da8cb"
   },
   "api/src/routes/analytics.js": {
-    "mtime": 1783891025913.6123,
-    "hash": "868035d28ebed8118b2de4be5bb24b2b"
-  },
-  "api/src/services/analytics.js": {
-    "mtime": 1783890972909.259,
-    "hash": "ff647f5141d39236a16a6c1f1e5077bf"
-  },
-  "api/src/services/analytics.test.js": {
-    "mtime": 1783891141924.6072,
-    "hash": "715959be8affe34440fb7cdc9e7da7c6"
-  },
-  "api/src/services/post-similarity.js": {
-    "mtime": 1783891256344.4194,
-    "hash": "957726155120b4585109bf53608dcb60"
-  },
-  "api/src/services/post-similarity.test.js": {
-    "mtime": 1783891232394.405,
-    "hash": "fd2ddfd49751e68ab5d86ae3ac353b24"
+    "mtime": 1784044422102.3215,
+    "hash": "af2ab155dcce20a8c6780ea530eabd67"
   },
   "api/docs/ANALYTICS_INTEGRATION.md": {
-    "mtime": 1783891141917.051,
-    "hash": "4ddee04d91b23bffd5ee78d6369043d3"
+    "mtime": 1784044422098.3206,
+    "hash": "b8925a65fa2015831526b6c0ede1d315"
   },
   "api/prisma/migrations/20260712223000_job_assistant_attachments/migration.sql": {
     "mtime": 1783894567852.0627,
     "hash": "3b936feaaf3c425f7ce1f215a25d3f4a"
-  },
-  "api/src/services/ai-attachment-text.js": {
-    "mtime": 1783897275684.5693,
-    "hash": "231c0b4a54472aa6eb505e55dc4dbf10"
-  },
-  "api/src/services/cover-letter-editor-tools.js": {
-    "mtime": 1783905194936.574,
-    "hash": "fbbbc2bf1594a409d785adb4426dbd4e"
-  },
-  "api/src/services/job-assistant-tools.js": {
-    "mtime": 1783918830743.31,
-    "hash": "dedc73e10ab0de2ce0e895330465d946"
-  },
-  "api/src/services/portfolio-context.js": {
-    "mtime": 1783905158333.465,
-    "hash": "ee57d9f75d83c6d7fd715b382114c8c3"
   },
   "dashboard/src/components/goapply/AddressAutocomplete.vue": {
     "mtime": 1783903874120.3394,
@@ -1204,8 +1012,8 @@
     "hash": "f10143bcff6db41470e9c092552209f8"
   },
   "dashboard/src/composables/useCoverLetterDocuments.ts": {
-    "mtime": 1783905367188.9194,
-    "hash": "d6d846465bd917c1ffe6cb467575699e"
+    "mtime": 1784045623464.5342,
+    "hash": "08b6df3a90984506ea8307f368819270"
   },
   "dashboard/src/studio/adapters/cover-letter/index.ts": {
     "mtime": 1783905397436.2283,
@@ -1234,18 +1042,6 @@
   "CLAUDE.md": {
     "mtime": 1783905422347.266,
     "hash": "43933251c7da7a98da7b57cd858902b1"
-  },
-  "api/src/routes/github-auth.js": {
-    "mtime": 1783910372784.2559,
-    "hash": "fc2b2116e55de15f06a718fded6d739c"
-  },
-  "api/src/services/github-service.js": {
-    "mtime": 1783910445304.9453,
-    "hash": "62385c1027e153b82d54701ec7ca3633"
-  },
-  "api/src/services/github-tools.js": {
-    "mtime": 1783910481438.3572,
-    "hash": "cef70ce4aa624bfa822f6d9585a2ddad"
   },
   "extension/preview.js": {
     "mtime": 1783915340034.5664,
@@ -1347,29 +1143,17 @@
     "mtime": 1763241597398.418,
     "hash": "55f78ae0f71734ce96b1e53eb658bfef"
   },
-  "api/src/routes/extension-agent.js": {
-    "mtime": 1783920039503.8801,
-    "hash": "2b068933ef8e420f38980302184ef7e2"
-  },
-  "api/src/services/extension-agent-tools.js": {
-    "mtime": 1783920008866.0151,
-    "hash": "2771aa4025d4fda64a907bf19daf058d"
-  },
-  "api/src/services/goapply-content-generation.js": {
-    "mtime": 1783918760827.6248,
-    "hash": "5028432c9d716d37bc74fb6f32ff46c1"
-  },
   "dashboard/public/env.js": {
     "mtime": 1783716114574.719,
     "hash": "9fc376e6359d17066dd88d0b0644c898"
   },
   "extension/core/agent-controller.js": {
-    "mtime": 1783920231408.0925,
-    "hash": "04ad557bec6d0e0a15650f922336725b"
+    "mtime": 1783923678980.9438,
+    "hash": "1a912909c8cbbf163b5b2109646fcbec"
   },
   "extension/core/chat-panel.js": {
-    "mtime": 1783920039503.8801,
-    "hash": "3e9afb6ecfe673654feb5bf027900ef4"
+    "mtime": 1783923678980.9438,
+    "hash": "5a36316a7f6e4165cab95b8e3e45aa74"
   },
   "sites/public/env.js": {
     "mtime": 1763328662182.9304,
@@ -1442,5 +1226,385 @@
   "api/generated/resumes/fe3073bb-ff8c-431c-a08e-785da8161279.pdf": {
     "mtime": 1783746152933.3938,
     "hash": "913b466f871f974e85df26dc1778c2a9"
+  },
+  "api/prisma/migrations/20260713194553_add_geo_and_duration/migration.sql": {
+    "mtime": 1784044422098.3206,
+    "hash": "0f2c0cf77c20b46bcbfc42b0f664a3c5"
+  },
+  "api/prisma/migrations/20260713195150_add_fingerprinting_and_flow/migration.sql": {
+    "mtime": 1784044422098.3206,
+    "hash": "aaae1ae3d716bdffbea68789013f47f1"
+  },
+  "api/prisma/migrations/20260713210604_add_platform_settings/migration.sql": {
+    "mtime": 1784044422098.3206,
+    "hash": "abe487079cd91ec5272887a0307370ec"
+  },
+  "api/src/middleware/async-handler.js": {
+    "mtime": 1783925997102.2017,
+    "hash": "8b0ab335c2f1cd3ac5edad8c69039933"
+  },
+  "api/src/middleware/handle-validation.js": {
+    "mtime": 1783925997102.2017,
+    "hash": "b34baac106cfb2448439bfa1d99e8c13"
+  },
+  "api/src/routes/admin/admin-ai-models.js": {
+    "mtime": 1783927170080.078,
+    "hash": "4374a537dc3f8f0c5fb54b726a396f7b"
+  },
+  "api/src/routes/admin/admin-content.js": {
+    "mtime": 1783927170080.078,
+    "hash": "e9e3efd5ffc2e8620283750e4ed9fd14"
+  },
+  "api/src/routes/admin/admin-projects.js": {
+    "mtime": 1783927170080.078,
+    "hash": "5aaf5cb7c8964d188f937987242d9c2b"
+  },
+  "api/src/routes/admin/admin-settings.js": {
+    "mtime": 1784044422098.3206,
+    "hash": "1ac5e049b19e4f047b9a876bfeacfd1d"
+  },
+  "api/src/routes/admin/admin-sso.js": {
+    "mtime": 1783927170080.078,
+    "hash": "0defc6f1e5e8d4fb990e38dee11192d4"
+  },
+  "api/src/routes/admin/admin-stats.js": {
+    "mtime": 1783927170080.078,
+    "hash": "2ee464efb8821869f90de537cb09fd2e"
+  },
+  "api/src/routes/admin/admin-users.js": {
+    "mtime": 1783927170080.078,
+    "hash": "546dfe3a841f5e5cc5d770a86284f4d2"
+  },
+  "api/src/routes/ai/ai-content.js": {
+    "mtime": 1784044422102.3215,
+    "hash": "01d5d3a7c4ba376ccfd0d3c0a1007bbb"
+  },
+  "api/src/routes/ai/ai-providers.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "513fe6b671fdb3be8dc6828157bf12b0"
+  },
+  "api/src/routes/ai/extension-agent.js": {
+    "mtime": 1784044535190.1086,
+    "hash": "e9ecb53515f61200eed9482b2c6cafed"
+  },
+  "api/src/routes/ai/voice-webhook.js": {
+    "mtime": 1784044422102.3215,
+    "hash": "ba9c2e8848ac5768839b685379f21fb9"
+  },
+  "api/src/routes/auth/auth.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "873b36f3afe92786b260e7354a7bdd0a"
+  },
+  "api/src/routes/auth/github-auth.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "dd3dcc80baafbd5d1349ced8dcdd3ddf"
+  },
+  "api/src/routes/auth/sso-auth.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "5471442fbdcedbdb0aabced19de0609d"
+  },
+  "api/src/routes/content/content-blocks.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "0b316c7489be0ad37e507b18e360ae59"
+  },
+  "api/src/routes/content/content-chat.js": {
+    "mtime": 1784044422102.3215,
+    "hash": "c91d5bf8c4a4de645ab90ce0038fa79b"
+  },
+  "api/src/routes/content/content-crud.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "a502b3d975977aacf0b187bac1ae582e"
+  },
+  "api/src/routes/content/content-links.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "916fc267c9cda5857af0f5eae34a0a16"
+  },
+  "api/src/routes/content/content-meta.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "adf16021e0e7976103b0803b56e36dfd"
+  },
+  "api/src/routes/content/content-order.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "c93dd5ae312d0e638945e23c34c50656"
+  },
+  "api/src/routes/content/content-tags.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "95aa5db78aa72380e0f48abdc8b225d4"
+  },
+  "api/src/routes/content/experience-roles.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "45a60a493866ddf5ac6e065f471ffbe0"
+  },
+  "api/src/routes/content/revisions.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "1b7ff3460faa20912c244b10d7c16f10"
+  },
+  "api/src/routes/content/skills.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "77a08a96b2f7bca2dbba13d92ead5f5d"
+  },
+  "api/src/routes/goapply/goapply-cover-letters.js": {
+    "mtime": 1784045592089.15,
+    "hash": "fc78c8b536a414d751f917da48ba389b"
+  },
+  "api/src/routes/goapply/goapply-job-applications.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "9c8ee9e6ae5da9f7a6a335f04ad37d3e"
+  },
+  "api/src/routes/goapply/goapply-job-assistant.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "6a864b71634031db73110a2ed2245195"
+  },
+  "api/src/routes/goapply/goapply-profile.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "582d25682b4124ff15627b506323da5a"
+  },
+  "api/src/routes/goapply/goapply-saved-answers.js": {
+    "mtime": 1783927170084.0022,
+    "hash": "fc0880481ecb5737fdb7b0d9e92c13c6"
+  },
+  "api/src/routes/media/media.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "62f5a24ba78dd711f8c1b640e1287aaf"
+  },
+  "api/src/routes/media/public-content.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "220059f509c286853be6486379feebdf"
+  },
+  "api/src/routes/media/site.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "78c7f2fbfb6aeaf12b8fc9da0553720b"
+  },
+  "api/src/routes/media/upload.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "3d96a310f77ad95404a4c40bd1238ed5"
+  },
+  "api/src/routes/projects/projectAccess.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "20d3c0001addca79d3390bcb9108ab5b"
+  },
+  "api/src/routes/projects/projects-crud.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "5f030c9170451e39284ff5634a3ff2c9"
+  },
+  "api/src/routes/projects/projects-site-config.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "391cd8c69dddd391bb9536b51b21a733"
+  },
+  "api/src/services/ai-session/ai-client.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "0123e6cddab35cff23b5180370138cb2"
+  },
+  "api/src/services/ai-session/ai-session.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "2ecd049c810fcfc9f5b659eec9dbf50b"
+  },
+  "api/src/services/ai-session/config.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "84bb44bb111d165768fa84533bedcc56"
+  },
+  "api/src/services/ai-session/index.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "d35d9b8961fa2fdcf4d3d4d91d4b1170"
+  },
+  "api/src/services/ai-session/metadata.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "8196181f846ea6f578fd07c6871c58cb"
+  },
+  "api/src/services/ai-session/multi-post.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "ce8a30e8324dfc5468b84b2ade1c9f92"
+  },
+  "api/src/services/ai-session/resume-chatbot.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "8f029934a1d63cafb6205690c04405a8"
+  },
+  "api/src/services/ai-session/social-post.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "91891d7592217b08cb16b3571ed6fab8"
+  },
+  "api/src/services/ai-session/text-cleanup.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "620b8372e36bdd07653e622e26b6e710"
+  },
+  "api/src/services/ai/ai.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "ad9c41c3d5a2a86b753ac059aa1ded47"
+  },
+  "api/src/services/ai/manager.test.js": {
+    "mtime": 1783927170087.9265,
+    "hash": "13abdeb68c495b9c9fc1863a8550c161"
+  },
+  "api/src/services/ai/message-history.js": {
+    "mtime": 1783922095209.8691,
+    "hash": "285a76844023f9c880e19a694d0a0756"
+  },
+  "api/src/services/ai/message-history.test.js": {
+    "mtime": 1783922115971.9648,
+    "hash": "6640bc7b70a29e78c207b270d5aeb070"
+  },
+  "api/src/services/ai/tools.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "ba32c81f917b3e64122268e36832ca49"
+  },
+  "api/src/services/analytics/analytics.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "d50daab5695ec449ca1ca4f067579a4b"
+  },
+  "api/src/services/analytics/analytics.test.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "715959be8affe34440fb7cdc9e7da7c6"
+  },
+  "api/src/services/content/content-editor-tools.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "5666bc262a295684f742085f8e3217eb"
+  },
+  "api/src/services/content/content-generation-prompts.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "968febae35bbd2363c8acda2701aaa94"
+  },
+  "api/src/services/content/conversation-prompts.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "d0aa18304c012138f48215e44fd72d4a"
+  },
+  "api/src/services/content/post-similarity.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "957726155120b4585109bf53608dcb60"
+  },
+  "api/src/services/content/post-similarity.test.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "fd2ddfd49751e68ab5d86ae3ac353b24"
+  },
+  "api/src/services/content/prompt-utils.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "07894d4bd7b176686d892304407d5246"
+  },
+  "api/src/services/content/resume-chatbot-prompts.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "eae0b00adbdcf0ba56ee48b29ea00547"
+  },
+  "api/src/services/content/skill-tag-matcher.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "b1f72530126c07f489340b2af2928aab"
+  },
+  "api/src/services/core/database.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "dd406c1339e82e92640ef1c25f06819a"
+  },
+  "api/src/services/core/errors.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "0158ac936aaeac7d2af5166d327f972f"
+  },
+  "api/src/services/core/logger.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "49bca2398083dbeb466e4fddbcb3093b"
+  },
+  "api/src/services/core/minio.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "dc9a7baaf7ebb92fb7cef5af3774d898"
+  },
+  "api/src/services/core/redis.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "03692ab4aa1a9fdb7bd42b02740079b4"
+  },
+  "api/src/services/core/retry.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "be408f626b028080c576abea70671f2f"
+  },
+  "api/src/services/extension/extension-agent-tools.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "64a3883a67e2303a3fc9af0f4ffb9135"
+  },
+  "api/src/services/github/github-service.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "efb1642d78a55e11dff717c6cf857e39"
+  },
+  "api/src/services/github/github-tools.js": {
+    "mtime": 1783927170091.8508,
+    "hash": "cef70ce4aa624bfa822f6d9585a2ddad"
+  },
+  "api/src/services/goapply/ai-attachment-text.js": {
+    "mtime": 1783927170095.7751,
+    "hash": "231c0b4a54472aa6eb505e55dc4dbf10"
+  },
+  "api/src/services/goapply/cover-letter-editor-tools.js": {
+    "mtime": 1784044422106.3225,
+    "hash": "c1beb9f961009d26c225949369f70b34"
+  },
+  "api/src/services/goapply/goapply-content-generation.js": {
+    "mtime": 1783927170095.7751,
+    "hash": "5028432c9d716d37bc74fb6f32ff46c1"
+  },
+  "api/src/services/goapply/job-assistant-tools.js": {
+    "mtime": 1784044422110.3235,
+    "hash": "f256994a403505aa265ac25d7c3ab80c"
+  },
+  "api/src/services/goapply/latex-compiler.js": {
+    "mtime": 1784044422110.3235,
+    "hash": "38c46986e30a04d820b69cabccd6539e"
+  },
+  "api/src/services/goapply/portfolio-context.js": {
+    "mtime": 1783927170095.7751,
+    "hash": "9b019fa61d482b1c819e7a5346ef3972"
+  },
+  "api/src/services/goapply/resume-editor-tools.js": {
+    "mtime": 1784044422110.3235,
+    "hash": "f06a8a2d561377e1e40755d91c835826"
+  },
+  "api/src/services/goapply/web-search-tool.js": {
+    "mtime": 1784044422110.3235,
+    "hash": "f932f96e3c564e99138f28999773d77d"
+  },
+  "api/src/utils/content-access.js": {
+    "mtime": 1783925997106.169,
+    "hash": "287dc6be7d66b5193bb92070d38f1ef4"
+  },
+  "api/src/utils/pagination.js": {
+    "mtime": 1783925997106.169,
+    "hash": "4578a5e8bc61248f7496837d401cebf3"
+  },
+  "api/src/utils/project-access-where.js": {
+    "mtime": 1783925997106.169,
+    "hash": "c8f7cff2e72fc745ee261795d96fa822"
+  },
+  "api/src/utils/project-include.js": {
+    "mtime": 1783925997106.169,
+    "hash": "5048e1555502eb0f48739208ff972913"
+  },
+  "api/src/utils/search-where.js": {
+    "mtime": 1783925997106.169,
+    "hash": "4f2e7c439891b850b20e8d3601361562"
+  },
+  "api/src/utils/sse.js": {
+    "mtime": 1784044422110.3235,
+    "hash": "9fc9df08913bec0353557bb40367cd9b"
+  },
+  "api/src/utils/uniqueness-check.js": {
+    "mtime": 1783925997106.169,
+    "hash": "fe5688b2f638355d9104741e1cdc7903"
+  },
+  "api/static/analytics.js": {
+    "mtime": 1784044422110.3235,
+    "hash": "0d49f3c4dc16065249ed0274e0d82354"
+  },
+  "dashboard/src/composables/useApiAction.ts": {
+    "mtime": 1783925470499.1802,
+    "hash": "0d9ee2678b6e509ffbf9caec10cdfbe0"
+  },
+  "dashboard/src/composables/useRecentActivity.ts": {
+    "mtime": 1783925470503.1218,
+    "hash": "b24a35869713176e96a6049cfda9e12c"
+  },
+  "dashboard/src/types/project.ts": {
+    "mtime": 1783925470503.1218,
+    "hash": "b42665775fa57e7d1cd962b5cd20f3d6"
+  },
+  "dashboard/src/views/admin/AdminSettingsView.vue": {
+    "mtime": 1784044422114.3242,
+    "hash": "814df7cb07b921b0d1a03a0256d45ae7"
+  },
+  "sites/plugins/analytics.client.ts": {
+    "mtime": 1784044422118.3252,
+    "hash": "2339edf4d986f642c1039d639fd5edbb"
   }
 }

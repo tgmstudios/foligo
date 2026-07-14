@@ -65,7 +65,7 @@ router.get('/documents', async (req, res) => {
       orderBy: { updatedAt: 'desc' },
       select: {
         id: true, name: true, jobDescription: true, linkedJobId: true,
-        linkedJob: { select: { id: true, company: true, position: true } },
+        linkedJob: { select: { id: true, company: true, position: true, category: true } },
         isTemplate: true, isDefault: true, createdAt: true, updatedAt: true,
       },
     });

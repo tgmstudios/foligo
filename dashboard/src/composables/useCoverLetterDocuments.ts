@@ -11,7 +11,7 @@ export interface CoverLetterDocument {
   jobId: string | null
   isTemplate: boolean
   isDefault: boolean
-  job?: { id: string; company: string; position: string } | null
+  job?: { id: string; company: string; position: string; category: string | null } | null
   createdAt: string
   updatedAt: string
 }
