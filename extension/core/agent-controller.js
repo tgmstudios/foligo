@@ -12,7 +12,7 @@
  *     calling client tools.
  */
 const AgentController = (() => {
-  const MAX_CONTINUATIONS = 20;
+  const MAX_CONTINUATIONS = 100;
   const SNAPSHOT_TTL_MS = 5 * 60 * 1000;
 
   let fieldRefs = new Map();   // ref -> fieldInfo (Finder shape: {fieldName, element, method, container, values})
