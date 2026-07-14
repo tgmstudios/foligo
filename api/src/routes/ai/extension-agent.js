@@ -119,7 +119,7 @@ router.post('/turn', authenticateToken, async (req, res) => {
   } catch (error) {
     sendSse(res, { type: 'error', message: error.message || 'Agent request failed.' });
   } finally {
-    cleanup();
+    clearInterval(heartbeat);
     res.end();
   }
 });
