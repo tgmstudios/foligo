@@ -39,6 +39,7 @@ const adminAiModelRoutes = require('./routes/admin/admin-ai-models');
 const adminSettingsRoutes = require('./routes/admin/admin-settings');
 const ssoAuthRoutes = require('./routes/auth/sso-auth');
 const resumeRoutes = require('./routes/resume');
+const resumeScoring = require('./routes/resume-scoring');
 const aiProviderRoutes = require('./routes/ai/ai-providers');
 const extensionAgentRoutes = require('./routes/ai/extension-agent');
 const goapplyJobAssistantRoutes = require('./routes/goapply/goapply-job-assistant');
@@ -298,6 +299,7 @@ app.use('/api/ai/agent', authenticateToken, extensionAgentRoutes);
 app.use('/api', mediaRoutes);
 // Resume routes - require authentication
 app.use('/api/resume', authenticateToken, resumeRoutes);
+app.post('/api/resume/documents/:id/score', authenticateToken, resumeScoring.scoreResume);
 // GoApply routes - require authentication
 app.use('/api/goapply', authenticateToken, goapplyJobAssistantRoutes);
 app.use('/api/goapply', authenticateToken, goapplyProfileRoutes);
