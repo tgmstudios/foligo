@@ -18,9 +18,9 @@
       </button>
     </div>
 
-    <!-- Search -->
-    <div v-if="documents.length > 0 || search" class="mb-4">
-      <div class="relative max-w-xs">
+    <!-- Search, filter, sort -->
+    <div v-if="documents.length > 0 || search" class="mb-4 flex flex-wrap items-center gap-3">
+      <div class="relative max-w-xs flex-1 min-w-[12rem]">
         <input
           v-model="search"
           type="text"
@@ -31,6 +31,23 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </div>
+      <select
+        v-model="filter"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="all">All resumes</option>
+        <option value="tailored">Tailored</option>
+        <option value="template">Templates</option>
+        <option value="default">Default</option>
+      </select>
+      <select
+        v-model="sort"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="updated">Recently updated</option>
+        <option value="name-asc">Name (A-Z)</option>
+        <option value="name-desc">Name (Z-A)</option>
+      </select>
     </div>
 
     <div v-if="isLoading" class="text-center py-16 text-gray-400 text-sm">Loading…</div>
@@ -145,16 +162,32 @@ const creating = ref(false)
 const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<ResumeDocumentSummary | null>(null)
 const search = ref('')
+const filter = ref<'all' | 'tailored' | 'template' | 'default'>('all')
+const sort = ref<'updated' | 'name-asc' | 'name-desc'>('updated')
 
 const filteredDocuments = computed(() => {
-  if (!search.value.trim()) return documents.value
-  const q = search.value.toLowerCase()
-  return documents.value.filter(doc =>
-    doc.name.toLowerCase().includes(q) ||
-    (doc.jobDescription || '').toLowerCase().includes(q) ||
-    (doc.linkedJob?.company || '').toLowerCase().includes(q) ||
-    (doc.linkedJob?.position || '').toLowerCase().includes(q)
-  )
+  let docs = documents.value
+
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase()
+    docs = docs.filter(doc =>
+      doc.name.toLowerCase().includes(q) ||
+      (doc.jobDescription || '').toLowerCase().includes(q) ||
+      (doc.linkedJob?.company || '').toLowerCase().includes(q) ||
+      (doc.linkedJob?.position || '').toLowerCase().includes(q)
+    )
+  }
+
+  if (filter.value === 'tailored') docs = docs.filter(doc => !!doc.jobDescription)
+  else if (filter.value === 'template') docs = docs.filter(doc => doc.isTemplate)
+  else if (filter.value === 'default') docs = docs.filter(doc => doc.isDefault)
+
+  docs = [...docs]
+  if (sort.value === 'name-asc') docs.sort((a, b) => a.name.localeCompare(b.name))
+  else if (sort.value === 'name-desc') docs.sort((a, b) => b.name.localeCompare(a.name))
+  else docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
+  return docs
 })
 
 function openStudio(id: string) {

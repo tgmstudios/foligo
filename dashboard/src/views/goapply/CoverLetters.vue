@@ -11,9 +11,9 @@
       </button>
     </div>
 
-    <!-- Search -->
-    <div v-if="documents.length > 0 || search" class="mb-4">
-      <div class="relative max-w-xs">
+    <!-- Search, filter, sort -->
+    <div v-if="documents.length > 0 || search" class="mb-4 flex flex-wrap items-center gap-3">
+      <div class="relative max-w-xs flex-1 min-w-[12rem]">
         <input
           v-model="search"
           type="text"
@@ -24,6 +24,23 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </div>
+      <select
+        v-model="filter"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="all">All cover letters</option>
+        <option value="linked">Linked to a job</option>
+        <option value="template">Templates</option>
+        <option value="default">Default</option>
+      </select>
+      <select
+        v-model="sort"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="updated">Recently updated</option>
+        <option value="name-asc">Title (A-Z)</option>
+        <option value="name-desc">Title (Z-A)</option>
+      </select>
     </div>
 
     <div v-if="isLoading" class="text-center py-16 text-gray-400 text-sm">Loading…</div>
@@ -80,16 +97,32 @@ const creating = ref(false)
 const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<CoverLetterDocument | null>(null)
 const search = ref('')
+const filter = ref<'all' | 'linked' | 'template' | 'default'>('all')
+const sort = ref<'updated' | 'name-asc' | 'name-desc'>('updated')
 
 const filteredDocuments = computed(() => {
-  if (!search.value.trim()) return documents.value
-  const q = search.value.toLowerCase()
-  return documents.value.filter(doc =>
-    doc.title.toLowerCase().includes(q) ||
-    (doc.content || '').toLowerCase().includes(q) ||
-    (doc.job?.company || '').toLowerCase().includes(q) ||
-    (doc.job?.position || '').toLowerCase().includes(q)
-  )
+  let docs = documents.value
+
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase()
+    docs = docs.filter(doc =>
+      doc.title.toLowerCase().includes(q) ||
+      (doc.content || '').toLowerCase().includes(q) ||
+      (doc.job?.company || '').toLowerCase().includes(q) ||
+      (doc.job?.position || '').toLowerCase().includes(q)
+    )
+  }
+
+  if (filter.value === 'linked') docs = docs.filter(doc => !!doc.job)
+  else if (filter.value === 'template') docs = docs.filter(doc => doc.isTemplate)
+  else if (filter.value === 'default') docs = docs.filter(doc => doc.isDefault)
+
+  docs = [...docs]
+  if (sort.value === 'name-asc') docs.sort((a, b) => a.title.localeCompare(b.title))
+  else if (sort.value === 'name-desc') docs.sort((a, b) => b.title.localeCompare(a.title))
+  else docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
+  return docs
 })
 
 const openStudio = (id: string) => router.push({ name: 'studio-cover-letter', params: { id } })

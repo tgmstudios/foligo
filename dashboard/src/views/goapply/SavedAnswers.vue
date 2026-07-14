@@ -11,6 +11,36 @@
       </button>
     </div>
 
+    <!-- Search, filter, sort -->
+    <div v-if="store.answers.length > 0 || search" class="mb-4 flex flex-wrap items-center gap-3">
+      <div class="relative max-w-xs flex-1 min-w-[12rem]">
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search questions or answers..."
+          class="w-full pl-9 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <svg class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <select
+        v-model="categoryFilter"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="all">All categories</option>
+        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+      </select>
+      <select
+        v-model="sort"
+        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        <option value="updated">Recently updated</option>
+        <option value="question-asc">Question (A-Z)</option>
+        <option value="question-desc">Question (Z-A)</option>
+      </select>
+    </div>
+
     <!-- List -->
     <div v-if="store.answers.length === 0 && !store.isLoading" class="text-center py-12 text-gray-400">
       <p>No saved answers yet.</p>
@@ -19,9 +49,13 @@
       </button>
     </div>
 
+    <div v-else-if="filteredAnswers.length === 0" class="text-center py-12 text-gray-400">
+      <p>No saved answers match your search.</p>
+    </div>
+
     <div v-else class="space-y-3">
       <div
-        v-for="answer in store.answers"
+        v-for="answer in filteredAnswers"
         :key="answer.id"
         class="card p-4"
       >
@@ -143,7 +177,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useGoApplyStore, type SavedAnswer } from '@/stores/goapply'
 import { formatDistanceToNow } from 'date-fns'
 import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
@@ -152,6 +186,41 @@ const store = useGoApplyStore()
 
 const showForm = ref(false)
 const editingAnswer = ref<SavedAnswer | null>(null)
+const search = ref('')
+const categoryFilter = ref('all')
+const sort = ref<'updated' | 'question-asc' | 'question-desc'>('updated')
+
+const categories = computed(() => {
+  const set = new Set<string>()
+  for (const answer of store.answers) {
+    if (answer.category) set.add(answer.category)
+  }
+  return Array.from(set).sort()
+})
+
+const filteredAnswers = computed(() => {
+  let answers = store.answers
+
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase()
+    answers = answers.filter(a =>
+      a.question.toLowerCase().includes(q) ||
+      a.answer.toLowerCase().includes(q) ||
+      (a.category || '').toLowerCase().includes(q)
+    )
+  }
+
+  if (categoryFilter.value !== 'all') {
+    answers = answers.filter(a => a.category === categoryFilter.value)
+  }
+
+  answers = [...answers]
+  if (sort.value === 'question-asc') answers.sort((a, b) => a.question.localeCompare(b.question))
+  else if (sort.value === 'question-desc') answers.sort((a, b) => b.question.localeCompare(a.question))
+  else answers.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
+  return answers
+})
 
 const form = reactive({
   question: '',
