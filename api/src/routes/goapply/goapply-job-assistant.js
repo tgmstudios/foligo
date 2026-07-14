@@ -184,11 +184,7 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
   }
   const modelMessage = buildModelMessage(message, attachments);
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
+  const { send, aborted, cleanup } = setupSSE(req, res);
 
   const prior = Array.isArray(session.chatHistory) ? session.chatHistory : [];
   const messages = [...prior.map((m) => ({ role: m.role, content: m.modelContent || m.content })), { role: 'user', content: modelMessage }];
@@ -199,12 +195,12 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
   let assistantText = '';
   try {
     for await (const part of ai.streamChat(messages, { systemInstruction: buildJobAssistantPrompt(context), tools, maxSteps: 40, provider: req.body.provider })) {
-      if (part.type === 'text-delta') { assistantText += part.text; sendSse(res, { type: 'text-delta', text: part.text }); }
-      else if (part.type === 'reasoning-delta') sendSse(res, { type: 'reasoning-delta', text: part.text });
-      else if (part.type === 'tool-call') sendSse(res, { type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
-      else if (part.type === 'tool-result') sendSse(res, { type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
-      else if (part.type === 'tool-error') sendSse(res, { type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
-      else if (part.type === 'error') sendSse(res, { type: 'error', message: part.error?.message || String(part.error) });
+      if (part.type === 'text-delta') { assistantText += part.text; send({ type: 'text-delta', text: part.text }); }
+      else if (part.type === 'reasoning-delta') send({ type: 'reasoning-delta', text: part.text });
+      else if (part.type === 'tool-call') send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
+      else if (part.type === 'tool-result') send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
+      else if (part.type === 'tool-error') send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
+      else if (part.type === 'error') send({ type: 'error', message: part.error?.message || String(part.error) });
     }
     await prisma.resumeChatSession.update({
       where: { id: session.id },
@@ -214,7 +210,8 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
       }, { role: 'assistant', content: assistantText }] },
     });
   } catch (error) {
-    sendSse(res, { type: 'error', message: error.message || 'Assistant request failed.' });
+    console.error('Job assistant chat error:', error);
+    if (!aborted) send({ type: 'error', message: error.message || 'Assistant request failed.' });
   } finally {
     cleanup();
     res.end();

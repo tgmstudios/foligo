@@ -84,19 +84,7 @@ router.post('/turn', authenticateToken, async (req, res) => {
   if (!buildSystemPrompt) return res.status(400).json({ error: 'Validation Error', message: 'mode must be one of rescan, field, chat.' });
   if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'Validation Error', message: 'messages must be a non-empty array.' });
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  // Provider-side tools such as cover-letter generation can be quiet for
-  // longer than extension workers/proxies tolerate. A real SSE event keeps
-  // every hop alive; clients deliberately ignore its payload.
-  const heartbeat = setInterval(() => {
-    if (!res.writableEnded && !res.destroyed) sendSse(res, { type: 'heartbeat' });
-  }, 10000);
-  res.on('close', () => clearInterval(heartbeat));
+  const { send, aborted, cleanup } = setupSSE(req, res);
 
   const tools = {
     ...createExtensionAgentServerTools(prisma, req.user.id, ai),
@@ -109,17 +97,18 @@ router.post('/turn', authenticateToken, async (req, res) => {
       systemInstruction: buildSystemPrompt(context), tools, maxSteps: 40,
       provider, modelType: 'QUICK', externalToolLoop: true,
     })) {
-      if (part.type === 'text-delta') sendSse(res, { type: 'text-delta', text: part.text });
-      else if (part.type === 'reasoning-delta') sendSse(res, { type: 'reasoning-delta', text: part.text });
-      else if (part.type === 'tool-call') sendSse(res, { type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
-      else if (part.type === 'tool-result') sendSse(res, { type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
-      else if (part.type === 'tool-error') sendSse(res, { type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
-      else if (part.type === 'error') sendSse(res, { type: 'error', message: part.error?.message || String(part.error) });
+      if (part.type === 'text-delta') send({ type: 'text-delta', text: part.text });
+      else if (part.type === 'reasoning-delta') send({ type: 'reasoning-delta', text: part.text });
+      else if (part.type === 'tool-call') send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
+      else if (part.type === 'tool-result') send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
+      else if (part.type === 'tool-error') send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
+      else if (part.type === 'error') send({ type: 'error', message: part.error?.message || String(part.error) });
     }
   } catch (error) {
-    sendSse(res, { type: 'error', message: error.message || 'Agent request failed.' });
+    console.error('Extension agent turn error:', error);
+    if (!aborted) send({ type: 'error', message: error.message || 'Agent request failed.' });
   } finally {
-    clearInterval(heartbeat);
+    cleanup();
     res.end();
   }
 });

@@ -43,13 +43,7 @@ router.post('/content/:id/chat', [
     return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this content' });
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = (event) => sendSse(res, event);
+  const { send, aborted, cleanup } = setupSSE(req, res);
 
   const userMessage = req.body.message;
   // Content has no chatHistory column (unlike ResumeDocument) — the client
@@ -122,7 +116,7 @@ RULES:
     send({ type: 'done' });
   } catch (error) {
     console.error('Content chat error:', error);
-    send({ type: 'error', message: error.message || 'Agent request failed' });
+    if (!aborted) send({ type: 'error', message: error.message || 'Agent request failed' });
   } finally {
     cleanup();
     res.end();

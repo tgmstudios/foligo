@@ -372,6 +372,15 @@ async function startServer() {
   }
 }
 
+// Safety net: a bug in a route handler (e.g. a ReferenceError inside a
+// catch block) must not take down the whole process. Log and keep serving.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');

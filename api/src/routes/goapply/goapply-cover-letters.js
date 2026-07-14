@@ -286,11 +286,7 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
     return res.status(404).json({ error: 'Not Found', message: 'Cover letter does not exist' });
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
+  const { send, aborted, cleanup } = setupSSE(req, res);
 
   const priorHistory = Array.isArray(letter.chatHistory) ? letter.chatHistory : [];
   const messages = [
@@ -318,22 +314,22 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
       switch (part.type) {
         case 'text-delta':
           assistantText += part.text;
-          sendSse(res, { type: 'text-delta', text: part.text });
+          send({ type: 'text-delta', text: part.text });
           break;
         case 'reasoning-delta':
-          sendSse(res, { type: 'reasoning-delta', text: part.text });
+          send({ type: 'reasoning-delta', text: part.text });
           break;
         case 'tool-call':
-          sendSse(res, { type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
+          send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
           break;
         case 'tool-result':
-          sendSse(res, { type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
+          send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
           break;
         case 'tool-error':
-          sendSse(res, { type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
+          send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
           break;
         case 'error':
-          sendSse(res, { type: 'error', message: part.error?.message || String(part.error) });
+          send({ type: 'error', message: part.error?.message || String(part.error) });
           break;
         default:
           break;
@@ -360,24 +356,24 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
       data: { content: doc.content, chatHistory: finalChatHistory },
     });
 
-    sendSse(res, { type: 'document-updated', content: doc.content });
+    send({ type: 'document-updated', content: doc.content });
 
     // Auto-compile once the agent is done, so the preview stays in sync.
     const compileResult = await latexCompiler.compile(doc.content);
     if (compileResult.error) {
-      sendSse(res, { type: 'compile-error', message: compileResult.error, log: compileResult.log });
+      send({ type: 'compile-error', message: compileResult.error, log: compileResult.log });
     } else {
       await ensureCoverLetterPdfDir();
       const pdfPath = path.join(COVER_LETTER_PDF_DIR, `${letter.id}.pdf`);
       await fs.writeFile(pdfPath, compileResult.pdf);
       await prisma.coverLetter.update({ where: { id: letter.id }, data: { pdfPath } });
-      sendSse(res, { type: 'compiled', pdfUrl: `/goapply/cover-letters/${letter.id}/pdf` });
+      send({ type: 'compiled', pdfUrl: `/goapply/cover-letters/${letter.id}/pdf` });
     }
 
-    sendSse(res, { type: 'done' });
+    send({ type: 'done' });
   } catch (error) {
     console.error('Cover letter chat error:', error);
-    sendSse(res, { type: 'error', message: error.message || 'Agent request failed' });
+    if (!aborted) send({ type: 'error', message: error.message || 'Agent request failed' });
   } finally {
     cleanup();
     res.end();
