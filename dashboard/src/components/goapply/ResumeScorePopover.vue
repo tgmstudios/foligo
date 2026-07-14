@@ -117,7 +117,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import api from '@/services/api'
+import { aiApi } from '@/services/api'
 
 const props = defineProps<{ documentId: string }>()
 defineEmits<{ (e: 'close'): void }>()
@@ -157,7 +157,7 @@ async function run() {
   error.value = ''
   result.value = null
   try {
-    const { data } = await api.post(`/resume/documents/${props.documentId}/score`)
+    const { data } = await aiApi.post(`/resume/documents/${props.documentId}/score`)
     result.value = data
     documentName.value = data.documentName || ''
   } catch (e: any) {

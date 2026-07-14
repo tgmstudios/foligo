@@ -104,10 +104,10 @@ async function scoreResume(req, res) {
       return res.status(400).json({ error: 'Insufficient Content', message: 'Resume is too short to evaluate meaningfully.' });
     }
 
-    // Send to AI for scoring — use LONG model type for thorough evaluation
+    // Send to AI for scoring — use QUICK model for fast response
     const result = await ai.generateChat([
       { role: 'user', content: `Evaluate this resume according to the HackerRank Hiring Agent rubric:\n\n${document.content}` },
-    ], { systemInstruction: SCORING_SYSTEM, modelType: 'LONG', temperature: 0.1 });
+    ], { systemInstruction: SCORING_SYSTEM, modelType: 'QUICK', temperature: 0.1 });
 
     const text = result.text || '';
     // Extract JSON from the response (handle possible markdown wrapping)
