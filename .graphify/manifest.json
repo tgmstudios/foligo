@@ -176,8 +176,8 @@
     "hash": "a2b2be54d02c8700a2491256835f13d6"
   },
   "dashboard/src/components/studio/StudioShell.vue": {
-    "mtime": 1784045472236.0686,
-    "hash": "7161d2015d211c1be7b51f37ca9723bb"
+    "mtime": 1784045756216.8125,
+    "hash": "f48884f89071201480703b9d72892cb5"
   },
   "dashboard/src/composables/useAgenticChat.ts": {
     "mtime": 1783897311213.2024,
@@ -784,8 +784,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784045492038.2507,
-    "hash": "3f5996f60210f66267794e8d8629e922"
+    "mtime": 1784045695469.9885,
+    "hash": "f3eb73585f9f9b0ef24d9434f86b5800"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
