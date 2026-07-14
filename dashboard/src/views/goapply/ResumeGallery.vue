@@ -157,12 +157,14 @@ import { useRouter } from 'vue-router'
 import '@/studio/adapters'
 import { getAdapter } from '@/studio/registry'
 import { useResumeDocuments, type ResumeDocumentSummary } from '@/composables/useResumeDocuments'
+import { useGoApplyStore } from '@/stores/goapply'
 import { formatRelativeDate } from '@/utils/formatRelativeDate'
 import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
 import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
 
 const router = useRouter()
 const adapter = getAdapter('resume')
+const goApplyStore = useGoApplyStore()
 
 const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cloneDocument, deleteDocument } = useResumeDocuments()
 
@@ -175,7 +177,7 @@ const categoryFilter = ref('all')
 const sort = ref<'updated' | 'name-asc' | 'name-desc'>('updated')
 
 const categories = computed(() =>
-  [...new Set(documents.value.map(doc => doc.linkedJob?.category).filter((value): value is string => Boolean(value)))].sort()
+  [...new Set(goApplyStore.jobs.map(job => job.category).filter((value): value is string => Boolean(value)))].sort()
 )
 
 const filteredDocuments = computed(() => {
@@ -264,6 +266,7 @@ function handleWindowClick() {
 
 onMounted(() => {
   fetchDocuments()
+  if (goApplyStore.jobs.length === 0) goApplyStore.fetchJobs()
   window.addEventListener('click', handleWindowClick)
 })
 

@@ -94,12 +94,14 @@ import { useRouter } from 'vue-router'
 import '@/studio/adapters'
 import { getAdapter } from '@/studio/registry'
 import { useCoverLetterDocuments, type CoverLetterDocument } from '@/composables/useCoverLetterDocuments'
+import { useGoApplyStore } from '@/stores/goapply'
 import { formatRelativeDate } from '@/utils/formatRelativeDate'
 import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
 import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
 
 const router = useRouter()
 const adapter = getAdapter('cover-letter')
+const goApplyStore = useGoApplyStore()
 const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cloneDocument, deleteDocument } = useCoverLetterDocuments()
 const creating = ref(false)
 const openMenuId = ref<string | null>(null)
@@ -110,7 +112,7 @@ const categoryFilter = ref('all')
 const sort = ref<'updated' | 'name-asc' | 'name-desc'>('updated')
 
 const categories = computed(() =>
-  [...new Set(documents.value.map(doc => doc.job?.category).filter((value): value is string => Boolean(value)))].sort()
+  [...new Set(goApplyStore.jobs.map(job => job.category).filter((value): value is string => Boolean(value)))].sort()
 )
 
 const filteredDocuments = computed(() => {
@@ -150,6 +152,10 @@ async function makeDefault(id: string) { openMenuId.value = null; await updateDo
 async function clearDefault(id: string) { openMenuId.value = null; await updateDocument(id, { isDefault: false }); await fetchDocuments() }
 async function handleDelete(id: string) { openMenuId.value = null; if (confirm('Delete this cover letter? This cannot be undone.')) await deleteDocument(id) }
 const closeMenu = () => { openMenuId.value = null }
-onMounted(() => { fetchDocuments(); window.addEventListener('click', closeMenu) })
+onMounted(() => {
+  fetchDocuments()
+  if (goApplyStore.jobs.length === 0) goApplyStore.fetchJobs()
+  window.addEventListener('click', closeMenu)
+})
 onUnmounted(() => window.removeEventListener('click', closeMenu))
 </script>

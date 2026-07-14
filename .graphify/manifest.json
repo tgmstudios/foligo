@@ -8,8 +8,8 @@
     "hash": "cf402d163e0971f0732181b8d8de4aa2"
   },
   "api/src/index.js": {
-    "mtime": 1784044422098.3206,
-    "hash": "5820bf674c7730bc06759f5a4788f767"
+    "mtime": 1784048153434.1768,
+    "hash": "644d3b06a022300885e48bcae8f62bd2"
   },
   "api/src/middleware/auth.js": {
     "mtime": 1783927170080.078,
@@ -328,8 +328,8 @@
     "hash": "fc17e3f94156c544cff9b53ec2f4f9e0"
   },
   "dashboard/src/views/goapply/CoverLetters.vue": {
-    "mtime": 1784045673245.5034,
-    "hash": "f7228f24bc6ee06355c2aa3d00d45fd9"
+    "mtime": 1784048319256.6238,
+    "hash": "2f18e644e74b611a9fecc8603ea04b7a"
   },
   "dashboard/src/views/goapply/JobAssistant.vue": {
     "mtime": 1783897275692.5518,
@@ -356,8 +356,8 @@
     "hash": "cb13b3afdb98e72255c1a9b1b57fa2ee"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
-    "mtime": 1784045648036.5906,
-    "hash": "19b81dcefa2cbfe66f29085c0048b876"
+    "mtime": 1784048294303.8638,
+    "hash": "be53dc4e68f41ac322d7be759f07f474"
   },
   "dashboard/src/views/goapply/SavedAnswers.vue": {
     "mtime": 1784044898235.342,
@@ -784,8 +784,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784045695469.9885,
-    "hash": "f3eb73585f9f9b0ef24d9434f86b5800"
+    "mtime": 1784045799881.6409,
+    "hash": "2bfc49bd7ee5bdb5f72f3a794dc03f84"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1284,8 +1284,8 @@
     "hash": "513fe6b671fdb3be8dc6828157bf12b0"
   },
   "api/src/routes/ai/extension-agent.js": {
-    "mtime": 1784044535190.1086,
-    "hash": "e9ecb53515f61200eed9482b2c6cafed"
+    "mtime": 1784048064129.3347,
+    "hash": "5541c46926a4ad623ff29b585b3ef98a"
   },
   "api/src/routes/ai/voice-webhook.js": {
     "mtime": 1784044422102.3215,
@@ -1308,8 +1308,8 @@
     "hash": "0b316c7489be0ad37e507b18e360ae59"
   },
   "api/src/routes/content/content-chat.js": {
-    "mtime": 1784044422102.3215,
-    "hash": "c91d5bf8c4a4de645ab90ce0038fa79b"
+    "mtime": 1784048078630.097,
+    "hash": "e8542197f958ee400c6934a16ea231c2"
   },
   "api/src/routes/content/content-crud.js": {
     "mtime": 1783927170084.0022,
@@ -1344,16 +1344,16 @@
     "hash": "77a08a96b2f7bca2dbba13d92ead5f5d"
   },
   "api/src/routes/goapply/goapply-cover-letters.js": {
-    "mtime": 1784045592089.15,
-    "hash": "fc78c8b536a414d751f917da48ba389b"
+    "mtime": 1784048122322.1113,
+    "hash": "773944bff6e73f0edb917c077f21c47b"
   },
   "api/src/routes/goapply/goapply-job-applications.js": {
     "mtime": 1783927170084.0022,
     "hash": "9c8ee9e6ae5da9f7a6a335f04ad37d3e"
   },
   "api/src/routes/goapply/goapply-job-assistant.js": {
-    "mtime": 1784044422106.3225,
-    "hash": "6a864b71634031db73110a2ed2245195"
+    "mtime": 1784048092278.9932,
+    "hash": "03777bf43349ac311086e73b981ad6d1"
   },
   "api/src/routes/goapply/goapply-profile.js": {
     "mtime": 1783927170084.0022,
