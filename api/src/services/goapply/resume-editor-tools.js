@@ -8,6 +8,7 @@
 const { tool } = require('ai');
 const { z } = require('zod');
 const { createWebSearchTool } = require('./web-search-tool');
+const { createPullPageTool } = require('./pull-page-tool');
 
 /**
  * @param {{ content: string }} doc - mutable box holding the current LaTeX source
@@ -15,9 +16,11 @@ const { createWebSearchTool } = require('./web-search-tool');
  */
 function createResumeEditorTools(doc, fetchPost) {
   const webSearch = createWebSearchTool({ toolFn: tool, z });
+  const pullPage = createPullPageTool({ toolFn: tool, z });
 
   return {
     web_search: webSearch,
+    pull_page: pullPage,
     write_resume: tool({
       description: 'Replace the ENTIRE resume document with new LaTeX source. Use this for the first draft, or for large restructures where a targeted edit would be unwieldy. Always produce a complete, valid, compilable .tex document (including \\documentclass and \\begin{document}...\\end{document}).',
       inputSchema: z.object({

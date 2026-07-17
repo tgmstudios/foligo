@@ -1,4 +1,4 @@
-const { createWriteKey, hash, normalizeEvent, normalizeOrigin, originAllowed } = require('./analytics');
+const { createWriteKey, hash, normalizeCountry, normalizeEvent, normalizeOrigin, originAllowed } = require('./analytics');
 
 describe('analytics service', () => {
   test('creates opaque prefixed write keys', () => {
@@ -14,6 +14,13 @@ describe('analytics service', () => {
     const event = normalizeEvent({ name: 'page_view', url: 'https://example.com/work?id=1', visitorId: 'abc' }, 'property');
     expect(event).toMatchObject({ propertyId: 'property', name: 'page_view', path: '/work' });
     expect(event.visitorHash).toHaveLength(64);
+  });
+
+  test('uses a valid edge-derived country ahead of client country data', () => {
+    expect(normalizeCountry(' us ')).toBe('US');
+    expect(normalizeCountry('unknown')).toBeNull();
+    expect(normalizeEvent({ name: 'page_view', country: 'CA', city: 'Toronto' }, 'property', { country: 'de', city: 'Berlin' })).toMatchObject({ country: 'DE', city: 'Berlin' });
+    expect(normalizeEvent({ name: 'page_view', country: 'CA' }, 'property').country).toBe('CA');
   });
 
   test('rejects invalid event names and oversized metadata', () => {

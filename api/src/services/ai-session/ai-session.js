@@ -338,7 +338,7 @@ async function* streamGenerateFinalContent(mode, contentType, chatHistory, curre
 
   // Phase 1: stream the markdown generation
   let fullResponse = '';
-  yield { type: 'status', phase: 'generating', message: 'Writing content...' };
+  yield { type: 'status', phase: 'generating', message: 'The model is drafting your content…' };
 
   try {
     for await (const part of ai.streamGenerate(prompt, {
@@ -346,8 +346,12 @@ async function* streamGenerateFinalContent(mode, contentType, chatHistory, curre
       maxTokens: GENERATION_CONFIG.CREATIVE.maxOutputTokens,
       modelType: 'LONG',
     })) {
-      fullResponse += part.text;
-      yield { type: 'text-delta', text: part.text };
+      if (part.type === 'reasoning-delta') {
+        yield { type: 'reasoning-delta', text: part.text };
+      } else {
+        fullResponse += part.text;
+        yield { type: 'text-delta', text: part.text };
+      }
     }
   } catch (error) {
     logger.error('Stream generation error', { error: error.message });
@@ -356,7 +360,7 @@ async function* streamGenerateFinalContent(mode, contentType, chatHistory, curre
   }
 
   // Phase 2: extract structured data
-  yield { type: 'status', phase: 'extracting', message: 'Extracting metadata...' };
+  yield { type: 'status', phase: 'extracting', message: 'Separating the draft from its metadata…' };
 
   const { markdownContent, structuredData: xmlData } = extractStructuredData(fullResponse, { logger });
   let finalStructuredData = xmlData;

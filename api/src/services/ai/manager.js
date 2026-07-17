@@ -324,7 +324,7 @@ class AIManager {
         });
 
         for await (const part of result.fullStream) {
-          if (part.type === 'text-delta') yield part;
+          if (part.type === 'text-delta' || part.type === 'reasoning-delta') yield part;
           else if (part.type === 'error') {
             lastError = part.error;
             break;

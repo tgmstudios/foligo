@@ -197,11 +197,12 @@
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                     :class="{
-                      'bg-green-500/20 text-green-400 border border-green-700/50': content.isPublished,
-                      'bg-amber-500/20 text-amber-400 border border-amber-700/50': !content.isPublished
+                      'bg-green-500/20 text-green-400 border border-green-700/50': content.status === 'PUBLISHED',
+                      'bg-amber-500/20 text-amber-400 border border-amber-700/50': content.status === 'DRAFT',
+                      'bg-gray-500/20 text-gray-400 border border-gray-600/50': content.status === 'HIDDEN'
                     }"
                   >
-                    {{ content.isPublished ? 'Published' : 'Draft' }}
+                    {{ formatContentStatus(content.status) }}
                   </span>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">
@@ -718,7 +719,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type ProjectMember, type Content } from '@/stores/projects'
 import { format } from 'date-fns'
-import { formatContentType } from '@/utils'
+import { formatContentStatus, formatContentType } from '@/utils'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
 const route = useRoute()

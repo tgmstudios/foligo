@@ -25,6 +25,7 @@ export interface AgenticChatCallbacks {
   onDocumentUpdated?: (content: string) => void
   onCompiled?: (pdfUrl: string) => void
   onCompileError?: (message: string, log?: string) => void
+  onTurnComplete?: (history: Array<{ role: string; content: string }>) => void | Promise<void>
 }
 
 function uid() {
@@ -186,6 +187,12 @@ export function useAgenticChat(
     } finally {
       reactiveMsg.streaming = false
       streaming.value = false
+      const savedHistory = messages.value.filter(m => m.content).map(m => ({ role: m.role, content: m.content }))
+      try {
+        await callbacks.onTurnComplete?.(savedHistory)
+      } catch (error) {
+        console.error('Failed to save chat history:', error)
+      }
     }
   }
 

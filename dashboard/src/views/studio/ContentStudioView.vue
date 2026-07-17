@@ -22,16 +22,27 @@
     </template>
 
     <template #editor>
-      <MarkdownCodeEditor
-        ref="editorRef"
-        class="h-full"
-        :model-value="content"
-        :project-id="projectId"
-        :saving="isSaving"
-        @update:model-value="onContentInput"
-        @scroll-position="editorScrollPosition = $event"
-        @save="saveDocument"
-      />
+      <div class="relative h-full">
+        <Transition name="draft-arrival">
+          <div
+            v-if="isReceivingContent"
+            class="pointer-events-none absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-gray-950/85 px-3 py-1.5 text-xs font-medium text-purple-200 shadow-lg backdrop-blur"
+          >
+            <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400"></span>
+            {{ liveStatus || 'AI draft arriving' }}
+          </div>
+        </Transition>
+        <MarkdownCodeEditor
+          ref="editorRef"
+          class="h-full"
+          :model-value="content"
+          :project-id="projectId"
+          :saving="isSaving"
+          @update:model-value="onContentInput"
+          @scroll-position="editorScrollPosition = $event"
+          @save="saveDocument"
+        />
+      </div>
     </template>
 
     <template #preview>
@@ -43,9 +54,14 @@
         v-model="selectedProvider"
         :messages="chat.messages.value"
         :streaming="chat.streaming.value"
+        :sessions="chatSessions.sessions.value"
+        :active-session-id="chatSessions.activeSessionId.value"
+        :sessions-loading="chatSessions.loadingSessions.value"
         placeholder="Ask the agent to edit this content…"
         empty-state-text="Ask the agent to draft a section, restructure the post, or tweak wording — it'll edit the document directly."
         @send="chat.sendMessage"
+        @select-session="selectChatSession"
+        @new-session="newChatSession"
       />
     </template>
 
@@ -118,6 +134,7 @@ import MarkdownCodeEditor, { type DiagramAtCursor } from '@/components/editor/Ma
 import MarkdownPreview from '@/components/studio/MarkdownPreview.vue'
 import DrawIOEditor from '@/components/editor/DrawIOEditor.vue'
 import { useAgenticChat } from '@/composables/useAgenticChat'
+import { useChatSessions } from '@/composables/useChatSessions'
 import { createContentAdapter } from '@/studio/adapters/content'
 import type { Content } from '@/stores/projects'
 
@@ -142,6 +159,9 @@ const selectedProvider = ref<string | undefined>(undefined)
 const editorRef = ref<InstanceType<typeof MarkdownCodeEditor>>()
 const editingDiagram = ref<DiagramAtCursor | null>(null)
 const editorScrollPosition = ref({ line: 1, lineProgress: 0 })
+const isReceivingContent = ref(false)
+const liveStatus = ref('')
+let arrivalRun = 0
 
 // The Studio shell's generic media picker (left toolbar) normally just
 // copies a URL to the clipboard — for content, we can do better since the
@@ -153,6 +173,8 @@ adapter.onMediaSelected = (media) => {
   editorRef.value?.insertText(markdown)
 }
 
+const chatSessions = useChatSessions('studio-content', () => documentId.value)
+
 const chat = useAgenticChat(
   () => adapter.getChatUrl!(documentId.value),
   {
@@ -160,9 +182,26 @@ const chat = useAgenticChat(
       content.value = newContent
       dirty.value = false
     },
+    onTurnComplete: async (history) => { await chatSessions.save(history) },
   },
   () => selectedProvider.value
 )
+
+async function selectChatSession(id: string) {
+  const session = await chatSessions.open(id)
+  chat.loadHistory(session.chatHistory || [])
+}
+
+async function newChatSession() {
+  await chatSessions.create()
+  chat.reset()
+}
+
+async function loadChatSessions() {
+  const sessions = await chatSessions.refresh()
+  if (sessions.length) await selectChatSession(sessions[0].id)
+  else await newChatSession()
+}
 
 function onContentInput(value: string) {
   content.value = value
@@ -199,11 +238,73 @@ async function openDocument(id: string) {
     loadedDoc.value = doc
     documentId.value = doc.id
     documentTitle.value = doc.title
-    content.value = doc.content
+    const handoffKey = `ai-content-handoff:${id}`
+    const rawHandoff = sessionStorage.getItem(handoffKey)
+    sessionStorage.removeItem(handoffKey)
+    const handoff = rawHandoff ? JSON.parse(rawHandoff) as { content?: string; animate?: boolean; createdAt?: number } : null
+    const freshHandoff = handoff?.animate && Date.now() - (handoff.createdAt || 0) < 60_000
+
+    if (freshHandoff) {
+      await revealGeneratedContent(handoff?.content || doc.content)
+    } else {
+      content.value = doc.content
+    }
     dirty.value = false
+    await loadChatSessions()
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to load content')
     goBack()
+  }
+}
+
+async function revealGeneratedContent(generatedContent: string) {
+  const run = ++arrivalRun
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  isReceivingContent.value = true
+  content.value = ''
+  const chunkSize = reduceMotion ? generatedContent.length : Math.max(3, Math.ceil(generatedContent.length / 90))
+
+  for (let index = 0; index < generatedContent.length; index += chunkSize) {
+    if (run !== arrivalRun) return
+    content.value = generatedContent.slice(0, index + chunkSize)
+    await new Promise((resolve) => window.setTimeout(resolve, reduceMotion ? 1 : 14))
+  }
+
+  content.value = generatedContent
+  isReceivingContent.value = false
+}
+
+function handleLiveGeneration(event: Event) {
+  const detail = (event as CustomEvent).detail
+  if (!detail || detail.generationId !== documentId.value) return
+
+  if (detail.type === 'content') {
+    content.value = detail.content || ''
+    isReceivingContent.value = true
+  } else if (detail.type === 'status') {
+    liveStatus.value = detail.status || ''
+  } else if (detail.type === 'complete') {
+    content.value = detail.content || content.value
+    isReceivingContent.value = false
+    const realId = detail.id as string
+    documentId.value = realId
+    router.replace({ name: 'studio-content', params: { projectId, id: realId } })
+    openDocument(realId)
+  } else if (detail.type === 'error') {
+    isReceivingContent.value = false
+    toast.error(detail.message || 'AI generation failed')
+    router.replace({ name: 'portfolio-detail', params: { id: projectId } })
+  }
+}
+
+function openLiveDocument(id: string) {
+  documentTitle.value = 'AI draft'
+  isReceivingContent.value = true
+  const cached = sessionStorage.getItem(`ai-content-live:${id}`)
+  if (cached) {
+    const state = JSON.parse(cached)
+    content.value = state.content || ''
+    liveStatus.value = state.status || ''
   }
 }
 
@@ -250,11 +351,22 @@ function handleBeforeUnload(event: BeforeUnloadEvent) {
 }
 
 onMounted(() => {
-  openDocument(documentId.value)
+  window.addEventListener('ai-content-live', handleLiveGeneration)
+  if (documentId.value.startsWith('ai-live-')) openLiveDocument(documentId.value)
+  else openDocument(documentId.value)
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onBeforeUnmount(() => {
+  arrivalRun += 1
+  window.removeEventListener('ai-content-live', handleLiveGeneration)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
+
+<style scoped>
+.draft-arrival-enter-active,
+.draft-arrival-leave-active { transition: opacity 220ms ease, transform 220ms ease; }
+.draft-arrival-enter-from,
+.draft-arrival-leave-to { opacity: 0; transform: translateY(-6px) scale(.96); }
+</style>

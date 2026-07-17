@@ -19,6 +19,7 @@ const contentChatRoutes = require('./routes/content/content-chat');
 const publicContentRoutes = require('./routes/media/public-content');
 // const aiRoutes = require('./routes/ai');
 const aiContentRoutes = require('./routes/ai/ai-content');
+const aiChatSessionRoutes = require('./routes/ai/chat-sessions');
 const voiceWebhookRoutes = require('./routes/ai/voice-webhook');
 const uploadRoutes = require('./routes/media/upload');
 const siteRoutes = require('./routes/media/site');
@@ -280,6 +281,7 @@ app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api', authenticateToken, contentCrudRoutes); // Protected content routes
 app.use('/api', authenticateToken, contentOrderRoutes); // Content reorder routes
 app.use('/api', authenticateToken, contentChatRoutes); // Content AI chat route
+app.use('/api/ai', authenticateToken, aiChatSessionRoutes); // Persistent editor/content-creator chats
 app.use('/api', authenticateToken, contentLinksRoutes); // Content links routes
 app.use('/api', authenticateToken, contentTagsRoutes); // Content tags routes
 app.use('/api', authenticateToken, contentMetaRoutes); // Content meta routes

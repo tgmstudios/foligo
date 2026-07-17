@@ -953,17 +953,13 @@ const handleContentCreated = async (data: { id: string; content: any }) => {
   }
 
   try {
-    // Refresh project data to ensure the new content appears in lists
-    console.log("[DashboardLayout] Refreshing project data...");
-    await projectStore.fetchProject(selectedProjectId.value);
+    await router.push({
+      name: "studio-content",
+      params: { projectId: selectedProjectId.value, id: data.id },
+    });
 
-    // Small delay to ensure reactivity has propagated
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Navigate to the content editor
-    const editorUrl = `/portfolios/${selectedProjectId.value}/content/${data.id}/edit`;
-    console.log("[DashboardLayout] Navigating to:", editorUrl);
-    await router.push(editorUrl);
+    // Keep cached project lists current without delaying the Studio hand-off.
+    void projectStore.fetchProject(selectedProjectId.value);
 
     console.log("[DashboardLayout] Navigation complete");
   } catch (error) {

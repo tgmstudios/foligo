@@ -120,7 +120,11 @@ function cleanGeneratedContent(content) {
   // Remove any stray # title headings at the start
   content = content.replace(/^#\s+.+$/m, '').trim();
 
-  // Remove any leftover closing structured_data tags and JSON blocks
+  // Remove structured metadata envelopes, including a truncated envelope
+  // whose closing tag never arrived. These are internal generation artifacts,
+  // never part of the Markdown shown in Editor Studio.
+  content = content.replace(/<structured_data>\s*[\s\S]*?<\/structured_data>\s*/gi, '');
+  content = content.replace(/<structured_data>\s*[\s\S]*$/gi, '');
   content = content.replace(/<\/structured_data>\s*/g, '');
   content = content.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '');
 

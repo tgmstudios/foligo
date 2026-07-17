@@ -2,6 +2,7 @@ const { tool } = require('ai');
 const { z } = require('zod');
 const { projectAccessWhere } = require('../../utils/project-access-where');
 const { createWebSearchTool } = require('./web-search-tool');
+const { createPullPageTool } = require('./pull-page-tool');
 
 const optionalText = z.string().nullable().optional();
 
@@ -59,9 +60,11 @@ function slugify(value) {
 
 function createJobAssistantTools(prisma, userId) {
   const webSearch = createWebSearchTool({ toolFn: tool, z });
+  const pullPage = createPullPageTool({ toolFn: tool, z });
 
   return {
     web_search: webSearch,
+    pull_page: pullPage,
     get_resume: jobAssistantTool({
       description: 'Load the full LaTeX content and job description of one of the user’s resumes. Use an ID from the available resume catalog.',
       inputSchema: z.object({ resumeId: z.string() }),

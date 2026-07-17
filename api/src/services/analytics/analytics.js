@@ -42,7 +42,13 @@ function cleanString(value, maxLength) {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, maxLength) : null;
 }
 
-function normalizeEvent(input, propertyId) {
+function normalizeCountry(value) {
+  if (typeof value !== 'string') return null;
+  const country = value.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(country) && country !== 'XX' ? country : null;
+}
+
+function normalizeEvent(input, propertyId, context = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Each event must be an object');
   const name = input.name || input.event;
   if (typeof name !== 'string' || !EVENT_NAME.test(name)) throw new Error('Event name must be 1-64 letters, numbers, dots, colons, underscores, or hyphens');
@@ -69,9 +75,9 @@ function normalizeEvent(input, propertyId) {
     path,
     title: cleanString(input.title, 512),
     referrer: cleanString(input.referrer, 2048),
-    country: cleanString(input.country, 2)?.toUpperCase(),
-    city: cleanString(input.city, 128),
-    region: cleanString(input.region, 128),
+    country: normalizeCountry(context.country) || normalizeCountry(input.country),
+    city: cleanString(context.city, 128) || cleanString(input.city, 128),
+    region: cleanString(context.region, 128) || cleanString(input.region, 128),
     duration: Number.isFinite(input.duration) && input.duration > 0 && input.duration <= 3600000 ? Math.round(input.duration) : null,
     device: cleanString(input.device, 32),
     domain: cleanString(input.domain, 256),
@@ -84,4 +90,4 @@ function normalizeEvent(input, propertyId) {
   };
 }
 
-module.exports = { MAX_BATCH_SIZE, hash, createWriteKey, normalizeOrigin, originAllowed, normalizeEvent };
+module.exports = { MAX_BATCH_SIZE, hash, createWriteKey, normalizeOrigin, originAllowed, normalizeCountry, normalizeEvent };

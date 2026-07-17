@@ -66,6 +66,7 @@ export default defineNuxtPlugin(() => {
 
   // ── Send event ─────────────────────────────────────────────────
   function send(name: string, extra?: Record<string, unknown>) {
+    const params = new URLSearchParams(location.search)
     const payload: Record<string, unknown> = {
       name,
       visitorId,
@@ -80,6 +81,14 @@ export default defineNuxtPlugin(() => {
       os: parseOS(),
       browser: parseBrowser(),
       deviceType: detectDeviceType(),
+      metadata: {
+        language: navigator.language || undefined,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+        screen: screen.width && screen.height ? `${screen.width}x${screen.height}` : undefined,
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+      },
       timestamp: new Date().toISOString(),
       ...extra,
     }

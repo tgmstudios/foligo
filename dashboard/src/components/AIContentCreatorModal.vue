@@ -1,9 +1,23 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
+  <div v-if="isOpen" class="creator-overlay fixed inset-0 z-50 overflow-y-auto" :class="{ 'creator-overlay--complete': creationComplete }">
     <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
+      <div class="creator-backdrop fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
       
-      <div class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
+      <div class="creator-card inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full" :class="{ 'creator-card--complete': creationComplete }">
+        <div v-if="creationComplete" class="creation-success" role="status" aria-live="polite">
+          <div class="generation-orbit" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="status-line mt-7">
+            <Transition name="status-drift" mode="out-in">
+              <p :key="loadingMessage" class="text-sm font-medium text-purple-100">{{ loadingMessage }}</p>
+            </Transition>
+          </div>
+          <div class="studio-portal mt-7" aria-hidden="true"><span></span></div>
+        </div>
+        <div v-else>
         <!-- Header -->
         <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 pt-6 pb-4">
           <div class="flex items-center justify-between">
@@ -36,6 +50,16 @@
 
         <!-- Chat Interface -->
         <div class="bg-gray-800 px-6 py-4">
+          <div class="mb-4">
+            <ChatSessionPicker
+              :sessions="chatSessions.sessions.value"
+              :active-session-id="chatSessions.activeSessionId.value"
+              :loading="chatSessions.loadingSessions.value"
+              :disabled="isTyping || isLoading"
+              @select="openSavedChat"
+              @new="newChat"
+            />
+          </div>
           <!-- Mode Selection -->
           <div v-if="!modeSelected && isOpen" class="space-y-4">
             <div class="text-center py-6">
@@ -70,13 +94,17 @@
 
           <!-- Loading / Streaming generation -->
           <div v-else-if="isLoading" class="py-4">
-            <div class="flex items-center space-x-2 mb-3">
-              <div v-if="!generatingText" class="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-              <span class="text-sm text-gray-400">{{ loadingMessage }}</span>
-            </div>
-            <div v-if="generatingText" class="bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-              <div class="text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">{{ generatingText }}</div>
-              <div class="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-0.5 align-text-bottom"></div>
+            <div class="generation-progress" role="status" aria-live="polite">
+              <div class="generation-orbit" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="status-line">
+                <Transition name="status-drift" mode="out-in">
+                  <p :key="loadingMessage" class="text-sm text-gray-300">{{ loadingMessage }}</p>
+                </Transition>
+              </div>
             </div>
           </div>
 
@@ -191,13 +219,26 @@
         </div>
 
         <!-- Footer -->
-        <div class="bg-gray-800 px-6 py-4 flex justify-end space-x-3">
+        <div class="bg-gray-800 px-6 py-4 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            @click="previewSuccessAnimation"
+            :disabled="isLoading || isTyping || isPreviewing"
+            class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-purple-300 hover:text-white hover:bg-purple-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            title="Preview the completion animation"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Test animation
+          </button>
           <button
             @click="close"
             class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-colors"
           >
             Cancel
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -206,7 +247,9 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
-import api, { aiApi, API_URL } from '@/services/api'
+import api, { API_URL } from '@/services/api'
+import ChatSessionPicker from '@/components/chat/ChatSessionPicker.vue'
+import { useChatSessions } from '@/composables/useChatSessions'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -242,11 +285,15 @@ type ChatMessage = {
 const messages = ref<ChatMessage[]>([])
 const currentMessage = ref('')
 const chatHistory = ref<Array<{ role: string; content: string }>>([])
+const chatSessions = useChatSessions('content-creator', () => props.projectId)
 const messageTextarea = ref<HTMLTextAreaElement | null>(null)
 const sessionDone = ref(false)
 const modeSelected = ref(false)
 const selectedInteractionMode = ref<'text' | 'voice'>('text')
 const voiceAgentId = ref('')
+const creationComplete = ref(false)
+const isPreviewing = ref(false)
+let previewRun = 0
 
 const canRespond = computed(() => !isTyping.value && !sessionDone.value && modeSelected.value && selectedInteractionMode.value === 'text')
 
@@ -333,14 +380,10 @@ async function loadVoiceConfig() {
 
 onMounted(loadVoiceConfig)
 
-const open = () => {
+const open = async () => {
   isOpen.value = true
-  modeSelected.value = false
-  selectedInteractionMode.value = 'text'
-  messages.value = []
-  currentMessage.value = ''
-  chatHistory.value = []
-  sessionDone.value = false
+  await chatSessions.refresh()
+  await newChat()
   // Reset textarea height
   nextTick(() => {
     if (messageTextarea.value) {
@@ -349,16 +392,107 @@ const open = () => {
   })
 }
 
+const newChat = async () => {
+  await chatSessions.create({ mode: props.mode, contentType: props.contentType })
+  modeSelected.value = false
+  selectedInteractionMode.value = 'text'
+  messages.value = []
+  currentMessage.value = ''
+  chatHistory.value = []
+  sessionDone.value = false
+  creationComplete.value = false
+}
+
+const openSavedChat = async (id: string) => {
+  const session = await chatSessions.open(id)
+  chatHistory.value = Array.isArray(session.chatHistory) ? session.chatHistory : []
+  messages.value = chatHistory.value.map((message) => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    role: message.role as 'user' | 'assistant',
+    content: message.content,
+  }))
+  inferredContentType.value = session.metadata?.contentType || props.contentType
+  selectedInteractionMode.value = 'text'
+  modeSelected.value = true
+  sessionDone.value = false
+  creationComplete.value = false
+}
+
+const persistChat = async () => {
+  chatHistory.value = messages.value
+    .filter(message => message.content)
+    .map(message => ({ role: message.role, content: message.content }))
+  try {
+    await chatSessions.save(chatHistory.value, { mode: props.mode, contentType: inferredContentType.value || props.contentType })
+  } catch (error) {
+    console.error('Failed to save chat history:', error)
+  }
+}
+
 const close = () => {
+  previewRun += 1
   isOpen.value = false
   modeSelected.value = false
   messages.value = []
   currentMessage.value = ''
   chatHistory.value = []
   sessionDone.value = false
+  creationComplete.value = false
+  isPreviewing.value = false
   // Reset textarea height
   if (messageTextarea.value) {
     messageTextarea.value.style.height = 'auto'
+  }
+}
+
+const previewSuccessAnimation = async () => {
+  const run = ++previewRun
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  isPreviewing.value = true
+  isLoading.value = false
+  loadingMessage.value = 'Loading your latest post…'
+  creationComplete.value = true
+  generatingText.value = ''
+
+  try {
+    if (!props.projectId) throw new Error('Select a project before testing the animation.')
+    const response = await api.get(`/projects/${props.projectId}/content`)
+    const contentItems = Array.isArray(response.data) ? response.data : []
+    const posts = contentItems.filter((item: any) =>
+      item.content && (item.contentType === 'BLOG' || item.type === 'BLOG')
+    )
+    const candidates = posts.length ? posts : contentItems.filter((item: any) => item.content)
+    const latestPost = [...candidates].sort((a: any, b: any) =>
+      new Date(b.createdAt || b.updatedAt || 0).getTime() -
+      new Date(a.createdAt || a.updatedAt || 0).getTime()
+    )[0]
+
+    if (!latestPost) throw new Error('Create a post first, then test the animation.')
+    const sourceText = latestPost.content as string
+    loadingMessage.value = 'Opening the latest post in Editor Studio…'
+    if (run !== previewRun) return
+    isLoading.value = false
+    sessionStorage.setItem(
+      `ai-content-handoff:${latestPost.id}`,
+      JSON.stringify({ content: sourceText, animate: true, createdAt: Date.now() })
+    )
+
+    await new Promise((resolve) => window.setTimeout(resolve, reduceMotion ? 120 : 850))
+    if (run !== previewRun) return
+    emit('content-created', { id: latestPost.id, content: sourceText, preview: true })
+  } catch (error: any) {
+    console.error('Failed to preview the latest post animation:', error)
+    creationComplete.value = false
+    const message = error.response?.data?.message || error.message || 'Unable to load the latest post.'
+    messages.value.push({
+      id: `${Date.now()}-preview-error`,
+      role: 'assistant',
+      content: message,
+    })
+    modeSelected.value = true
+    isLoading.value = false
+    generatingText.value = ''
+    isPreviewing.value = false
   }
 }
 
@@ -394,6 +528,7 @@ const initializeSession = async () => {
     } catch (error) {
       console.error('Failed to initialize session:', error)
     } finally {
+      await persistChat()
       isTyping.value = false
     }
   } else {
@@ -421,6 +556,7 @@ const initializeSession = async () => {
     } catch (error) {
       console.error('Failed to initialize session:', error)
     } finally {
+      await persistChat()
       isTyping.value = false
     }
   }
@@ -477,9 +613,6 @@ const sendMessage = async () => {
       inferredContentType.value = result.contentType
     }
 
-    const assistantMessage = messages.value[messages.value.length - 1]
-    chatHistory.value.push({ role: 'assistant', content: assistantMessage.content })
-    
     if (result.done) {
       sessionDone.value = true
       await generateFinalContent()
@@ -487,6 +620,7 @@ const sendMessage = async () => {
   } catch (error) {
     console.error('Failed to send message:', error)
   } finally {
+    await persistChat()
     isTyping.value = false
   }
 }
@@ -518,9 +652,13 @@ const startVoiceSession = async () => {
 const generatingText = ref('')
 
 const generateFinalContent = async () => {
-  isLoading.value = true
-  loadingMessage.value = 'Generating your content...'
+  isLoading.value = false
+  loadingMessage.value = 'Preparing the model with your conversation…'
   generatingText.value = ''
+  creationComplete.value = true
+  const studioTransitionStartedAt = Date.now()
+  const liveGenerationId = `ai-live-${crypto.randomUUID()}`
+  sessionStorage.setItem(`ai-content-live:${liveGenerationId}`, JSON.stringify({ content: '', status: loadingMessage.value }))
 
   try {
     const finalContentType = inferredContentType.value || props.contentType || 'BLOG'
@@ -544,7 +682,21 @@ const generateFinalContent = async () => {
 
     if (!response.ok || !response.body) throw new Error(`Request failed (${response.status})`)
 
+    // Enter Studio while the API stream is still active. This component's
+    // reader continues after the dashboard layout unmounts and bridges updates
+    // through a window event plus sessionStorage for race-free startup.
+    const initialTransition = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 500
+    const elapsedTransition = Date.now() - studioTransitionStartedAt
+    if (elapsedTransition < initialTransition) {
+      await new Promise((resolve) => window.setTimeout(resolve, initialTransition - elapsedTransition))
+    }
+    emit('content-created', { id: liveGenerationId, content: undefined, live: true })
+
     let contentId: string | null = null
+    let cleanedContent = ''
+    let reasoningBuffer = ''
+    let lastReasoningPaint = 0
+    let visibleMarkdown = ''
     let buffer = ''
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
@@ -561,10 +713,34 @@ const generateFinalContent = async () => {
         const event = JSON.parse(line.slice(6))
         if (event.type === 'text-delta') {
           generatingText.value += event.text || ''
+          visibleMarkdown = generatingText.value.split(/<structured_data>/i)[0]
+          const liveDetail = { generationId: liveGenerationId, type: 'content', content: visibleMarkdown }
+          sessionStorage.setItem(`ai-content-live:${liveGenerationId}`, JSON.stringify({ content: visibleMarkdown, status: loadingMessage.value }))
+          window.dispatchEvent(new CustomEvent('ai-content-live', { detail: liveDetail }))
+        } else if (event.type === 'reasoning-delta') {
+          reasoningBuffer += event.text || ''
+          const now = Date.now()
+          if (now - lastReasoningPaint > 600) {
+            const normalizedThought = reasoningBuffer.replace(/\s+/g, ' ').trim()
+            const sentences = normalizedThought.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || []
+            const conciseThought = sentences.slice(-2).join(' ').trim().slice(-280)
+            if (conciseThought) {
+              loadingMessage.value = `Thinking · ${conciseThought}`
+              window.dispatchEvent(new CustomEvent('ai-content-live', {
+                detail: { generationId: liveGenerationId, type: 'status', status: loadingMessage.value }
+              }))
+            }
+            lastReasoningPaint = now
+          }
         } else if (event.type === 'status') {
           loadingMessage.value = event.message
+          window.dispatchEvent(new CustomEvent('ai-content-live', {
+            detail: { generationId: liveGenerationId, type: 'status', status: event.message }
+          }))
         } else if (event.type === 'content-created') {
           contentId = event.id
+          cleanedContent = event.content || ''
+          loadingMessage.value = 'Opening your finished draft…'
         } else if (event.type === 'error') {
           throw new Error(event.message || 'Stream failed')
         }
@@ -572,17 +748,32 @@ const generateFinalContent = async () => {
     }
 
     if (contentId) {
-      emit('content-created', { id: contentId, content: undefined })
-      close()
+      isLoading.value = false
+      sessionStorage.removeItem(`ai-content-live:${liveGenerationId}`)
+      window.dispatchEvent(new CustomEvent('ai-content-live', {
+        detail: { generationId: liveGenerationId, type: 'complete', id: contentId, content: cleanedContent }
+      }))
     } else {
       throw new Error('No content ID received from stream')
     }
   } catch (error) {
     console.error('Failed to create content:', error)
-    loadingMessage.value = 'Failed to create content. Please try again.'
-  } finally {
+    creationComplete.value = false
     isLoading.value = false
-    generatingText.value = ''
+    loadingMessage.value = 'Failed to create content. Please try again.'
+    sessionStorage.removeItem(`ai-content-live:${liveGenerationId}`)
+    window.dispatchEvent(new CustomEvent('ai-content-live', {
+      detail: {
+        generationId: liveGenerationId,
+        type: 'error',
+        message: error instanceof Error ? error.message : loadingMessage.value
+      }
+    }))
+  } finally {
+    if (!creationComplete.value) {
+      isLoading.value = false
+      generatingText.value = ''
+    }
   }
 }
 
@@ -590,3 +781,40 @@ const generateFinalContent = async () => {
 // Expose open and close methods
 defineExpose({ open, close })
 </script>
+
+<style scoped>
+.creator-card { transform-origin: center; }
+.creator-backdrop { transition: background-color 700ms ease, backdrop-filter 700ms ease; }
+.creator-overlay--complete .creator-backdrop { background-color: rgb(3 7 18 / 0.92); backdrop-filter: blur(12px); }
+.creator-card--complete { width: min(30rem, calc(100vw - 2rem)); border-radius: 1.75rem; background: radial-gradient(circle at 50% 15%, rgb(124 58 237 / 0.25), transparent 45%), #111827; animation: card-morph 700ms cubic-bezier(.2,.9,.2,1) both; }
+.creation-success { min-height: 28rem; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center; }
+.generation-progress { min-height: 18rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.75rem; text-align: center; }
+.generation-orbit { position: relative; width: 5rem; height: 5rem; border: 1px solid rgb(139 92 246 / .35); border-radius: 9999px; animation: generation-breathe 1.8s ease-in-out infinite; }
+.generation-orbit::before { content: ''; position: absolute; inset: .65rem; border-radius: 9999px; background: radial-gradient(circle, rgb(168 85 247 / .55), rgb(59 130 246 / .08) 65%, transparent 70%); filter: blur(2px); }
+.generation-orbit span { position: absolute; top: 50%; left: 50%; width: .45rem; height: .45rem; margin: -.225rem; border-radius: 9999px; background: #d8b4fe; box-shadow: 0 0 12px #a855f7; animation: generation-orbit 1.65s linear infinite; }
+.generation-orbit span:nth-child(2) { animation-delay: -.55s; }
+.generation-orbit span:nth-child(3) { animation-delay: -1.1s; }
+.status-line { min-height: 3.5rem; width: min(36rem, 92%); overflow: hidden; display: flex; align-items: center; justify-content: center; line-height: 1.45; }
+.status-drift-enter-active, .status-drift-leave-active { transition: opacity 280ms ease, transform 280ms ease; }
+.status-drift-enter-from { opacity: 0; transform: translateY(.8rem); }
+.status-drift-leave-to { opacity: 0; transform: translateY(-.8rem); }
+.success-orbit { position: relative; width: 7rem; height: 7rem; display: grid; place-items: center; }
+.success-orbit::before { content: ''; position: absolute; inset: -.65rem; border: 1px solid rgb(168 85 247 / .3); border-radius: 9999px; animation: orbit-pulse 1.4s ease-out infinite; }
+.success-check { width: 6rem; height: 6rem; filter: drop-shadow(0 0 20px rgb(139 92 246 / .5)); }
+.success-check__circle { stroke: #8b5cf6; stroke-width: 2; stroke-dasharray: 145; stroke-dashoffset: 145; animation: draw-line 550ms 180ms ease-out forwards; }
+.success-check__tick { stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 42; stroke-dashoffset: 42; animation: draw-line 380ms 620ms ease-out forwards; }
+.success-spark { position: absolute; width: .45rem; height: .45rem; border-radius: 9999px; background: #c084fc; box-shadow: 0 0 12px #a855f7; animation: spark 850ms ease-out both; }
+.success-spark--one { --x: -4.6rem; --y: -3rem; }
+.success-spark--two { --x: 4.8rem; --y: -1.7rem; animation-delay: 100ms; }
+.success-spark--three { --x: 3.2rem; --y: 4rem; animation-delay: 180ms; }
+.studio-portal { width: 11rem; height: .3rem; overflow: hidden; border-radius: 9999px; background: rgb(55 65 81); }
+.studio-portal span { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, #7c3aed, #60a5fa, #fff); animation: portal-fill 1.25s 150ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes card-morph { from { opacity: .7; transform: scale(.96); border-radius: .5rem; } to { opacity: 1; transform: scale(1); border-radius: 1.75rem; } }
+@keyframes draw-line { to { stroke-dashoffset: 0; } }
+@keyframes orbit-pulse { 0% { opacity: 0; transform: scale(.75); } 45% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes spark { from { opacity: 0; transform: translate(0, 0) scale(.2); } 45% { opacity: 1; } to { opacity: 0; transform: translate(var(--x), var(--y)) scale(1); } }
+@keyframes portal-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes generation-orbit { from { transform: rotate(0deg) translateX(2.5rem) rotate(0deg); } to { transform: rotate(360deg) translateX(2.5rem) rotate(-360deg); } }
+@keyframes generation-breathe { 0%, 100% { transform: scale(.94); opacity: .7; } 50% { transform: scale(1.04); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .creator-card--complete, .success-orbit::before, .success-check__circle, .success-check__tick, .success-spark, .studio-portal span, .generation-orbit, .generation-orbit span { animation-duration: 1ms; animation-delay: 0ms; } .status-drift-enter-active, .status-drift-leave-active { transition-duration: 1ms; } }
+</style>

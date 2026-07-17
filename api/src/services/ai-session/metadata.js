@@ -25,13 +25,14 @@ function extractStructuredData(fullResponse, { logger }) {
   let markdownContent = fullResponse;
 
   if (match) {
+    // The metadata envelope is never editor content. Remove it even when the
+    // model emitted JSON that is too malformed to parse; the universal
+    // extractor below can recover metadata from the clean Markdown.
+    markdownContent = fullResponse.replace(structuredDataRegex, '').trim();
     try {
       // Parse the JSON inside the structured_data block
       const jsonString = match[1].trim();
       structuredData = JSON.parse(jsonString);
-
-      // Remove the structured_data block from the content
-      markdownContent = fullResponse.replace(structuredDataRegex, '').trim();
 
       logger.debug('Extracted structured data', {
         hasTitle: !!structuredData.title,

@@ -67,6 +67,18 @@
   var deviceType = detectDeviceType(ua, sw);
   var domain = location.hostname;
 
+  function environmentMetadata() {
+    var params = new URLSearchParams(location.search);
+    return {
+      language: navigator.language || undefined,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+      screen: screen.width && screen.height ? screen.width + 'x' + screen.height : undefined,
+      utmSource: params.get('utm_source') || undefined,
+      utmMedium: params.get('utm_medium') || undefined,
+      utmCampaign: params.get('utm_campaign') || undefined
+    };
+  }
+
   // ---- Track function ----
   function sendEvent(name, extra) {
     var payload = {
@@ -84,11 +96,12 @@
       os: os,
       browser: browser,
       deviceType: deviceType,
-      device: /mobile/i.test(deviceType) ? 'mobile' : /tablet/i.test(deviceType) ? 'tablet' : 'desktop'
+      device: /mobile/i.test(deviceType) ? 'mobile' : /tablet/i.test(deviceType) ? 'tablet' : 'desktop',
+      metadata: environmentMetadata()
     };
     if (extra) {
       if (extra.duration) payload.duration = extra.duration;
-      if (extra.metadata) payload.metadata = extra.metadata;
+      if (extra.metadata) payload.metadata = Object.assign({}, payload.metadata, extra.metadata);
     }
 
     try {
@@ -132,7 +145,12 @@
       duration: duration
     };
     try {
-      navigator.sendBeacon(ENDPOINT, JSON.stringify(payload));
+      fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Analytics-Key': KEY },
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
     } catch (e) {}
   });
 

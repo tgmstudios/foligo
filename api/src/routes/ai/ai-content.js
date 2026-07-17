@@ -23,6 +23,7 @@ const { authorizeProjectAccess, authenticateToken } = require('../../middleware/
 const geminiService = require('../../services/ai-session');
 const { findSimilarPostPairs } = require('../../services/content/post-similarity');
 const { matchOrCreateSkills, matchOrCreateTags } = require('../../services/content/skill-tag-matcher');
+const { setupSSE } = require('../../utils/sse');
 
 // Configure multer for resume uploads
 const upload = multer({
@@ -687,12 +688,8 @@ router.post('/session/stream', [
     contentType = await geminiService.inferContentType(chatHistory, initialInfo);
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-  const send = event => res.write(`data: ${JSON.stringify(event)}\n\n`);
+  const sse = setupSSE(req, res);
+  const send = sse.send;
 
   try {
     // Track completion signals from the stream
@@ -747,6 +744,7 @@ router.post('/session/stream', [
     console.error('Streaming AI session error:', error);
     send({ type: 'error', message: error.message || 'Unable to process session' });
   } finally {
+    sse.cleanup();
     res.end();
   }
 });
@@ -1287,7 +1285,7 @@ router.post('/create/stream', [
     }
 
     // Phase 2: save to database (same logic as /create endpoint)
-    send({ type: 'status', phase: 'saving', message: 'Saving content...' });
+    send({ type: 'status', phase: 'matching', message: 'Matching skills and tags to your project…' });
 
     const generatedData = generatedResult;
     const matchedSkills = await matchOrCreateSkills(prisma, generatedData.skills || [], projectId);
@@ -1344,6 +1342,7 @@ router.post('/create/stream', [
       }
     }
 
+    send({ type: 'status', phase: 'saving', message: 'Saving the cleaned draft to Editor Studio…' });
     const newContent = await prisma.content.create({ data: contentData });
     await prisma.postOrder.create({ data: { projectId, contentId: newContent.id, order } });
 
@@ -1357,7 +1356,7 @@ router.post('/create/stream', [
     await cache.del(`project:${projectId}`);
     await cache.del(`project:${projectId}:content`);
 
-    send({ type: 'content-created', id: newContent.id });
+    send({ type: 'content-created', id: newContent.id, content: generatedData.content });
   } catch (error) {
     console.error('Streaming create error:', error);
     send({ type: 'error', message: error.message || 'Creation failed' });

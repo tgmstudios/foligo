@@ -7,15 +7,18 @@
 const { tool } = require('ai');
 const { z } = require('zod');
 const { createWebSearchTool } = require('../goapply/web-search-tool');
+const { createPullPageTool } = require('../goapply/pull-page-tool');
 
 /**
  * @param {{ content: string }} doc - mutable box holding the current Markdown source
  */
 function createContentEditorTools(doc) {
   const webSearch = createWebSearchTool({ toolFn: tool, z });
+  const pullPage = createPullPageTool({ toolFn: tool, z });
 
   return {
     web_search: webSearch,
+    pull_page: pullPage,
     write_content: tool({
       description: 'Replace the ENTIRE content body with new Markdown. Use this for a first draft or a large restructure where a targeted edit would be unwieldy.',
       inputSchema: z.object({

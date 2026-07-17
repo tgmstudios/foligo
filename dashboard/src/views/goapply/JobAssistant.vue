@@ -57,8 +57,29 @@
               </div>
               <p class="text-xs text-gray-500 mt-3">Linked documents are selected automatically. Add or remove optional context for this workspace—the assistant can still discover other Foligo information with tools.</p>
 
+              <section class="mt-7">
+                <div class="flex items-end justify-between gap-4 mb-3">
+                  <div>
+                    <h2 class="text-sm font-medium text-gray-200">Start with a prompt</h2>
+                    <p class="text-xs text-gray-500 mt-1">Optional · Your choice will be sent when the workspace opens.</p>
+                  </div>
+                  <button v-if="selectedStarterPrompt" type="button" class="text-xs text-gray-500 hover:text-gray-300" @click="selectedStarterPrompt = ''">Clear</button>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-3">
+                  <button
+                    v-for="prompt in starterPrompts" :key="prompt.title" type="button"
+                    class="rounded-xl border p-4 text-left transition-colors"
+                    :class="selectedStarterPrompt === prompt.prompt ? 'border-primary-500 bg-primary-500/10' : 'border-gray-700 bg-gray-800/40 hover:border-gray-600 hover:bg-gray-800/70'"
+                    @click="selectedStarterPrompt = prompt.prompt"
+                  >
+                    <span class="block text-sm font-medium text-white">{{ prompt.title }}</span>
+                    <span class="block text-xs text-gray-400 mt-1">{{ prompt.prompt }}</span>
+                  </button>
+                </div>
+              </section>
+
               <button @click="createSession" :disabled="!selectedJobId || creating" class="mt-8 w-full sm:w-auto px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-                {{ creating ? 'Creating workspace…' : 'Open assistant workspace' }}
+                {{ creating ? 'Creating workspace…' : selectedStarterPrompt ? 'Open workspace and send prompt' : 'Open assistant workspace' }}
               </button>
             </div>
           </div>
@@ -144,6 +165,13 @@ const AttachmentPicker = defineComponent({
 const route = useRoute(); const router = useRouter(); const toast = useToast()
 const jobs = ref<GoApplyJob[]>([]); const resumes = ref<Resume[]>([]); const coverLetters = ref<CoverLetter[]>([]); const sessions = ref<Session[]>([])
 const selectedJobId = ref(''); const selectedResumeIds = ref<string[]>([]); const selectedCoverLetterIds = ref<string[]>([])
+const selectedStarterPrompt = ref('')
+const starterPrompts = [
+  { title: 'Act like an interviewer', prompt: 'Interview me for this role, one question at a time.' },
+  { title: 'Check my fit', prompt: 'Compare my background with this job and identify my strengths and gaps.' },
+  { title: 'Tailor my resume', prompt: 'Suggest specific resume changes for this position.' },
+  { title: 'Draft a cover letter', prompt: 'Write a tailored cover letter using my attached resume and this job.' },
+]
 const activeSession = ref<Session | null>(null); const creating = ref(false); const selectedProvider = ref<string | undefined>()
 const sessionId = computed(() => (route.params.sessionId as string) || '')
 const selectedJob = computed(() => jobs.value.find((job) => job.id === selectedJobId.value))
@@ -169,8 +197,10 @@ async function loadData() {
 async function createSession() {
   creating.value = true
   try {
+    const initialPrompt = selectedStarterPrompt.value
     const { data } = await api.post('/goapply/assistant/sessions', { jobId: selectedJobId.value, resumeIds: selectedResumeIds.value, coverLetterIds: selectedCoverLetterIds.value })
     await loadData(); await router.push({ name: 'goapply-assistant-session', params: { sessionId: data.id } }); await openSession(data.id, false)
+    if (initialPrompt) await sendMessage(initialPrompt, [])
   } catch (error: any) { toast.error(error.response?.data?.message || 'Could not create assistant workspace') } finally { creating.value = false }
 }
 async function openSession(id: string, navigate = true) {
@@ -179,7 +209,7 @@ async function openSession(id: string, navigate = true) {
     if (navigate && sessionId.value !== id) await router.push({ name: 'goapply-assistant-session', params: { sessionId: id } })
   } catch (error: any) { toast.error(error.response?.data?.message || 'Could not open assistant workspace'); newSession() }
 }
-function newSession() { activeSession.value = null; chat.reset(); selectedJobId.value = ''; selectedResumeIds.value = []; selectedCoverLetterIds.value = []; router.push({ name: 'goapply-assistant' }) }
+function newSession() { activeSession.value = null; chat.reset(); selectedJobId.value = ''; selectedResumeIds.value = []; selectedCoverLetterIds.value = []; selectedStarterPrompt.value = ''; router.push({ name: 'goapply-assistant' }) }
 async function sendMessage(message: string, files: File[]) { await chat.sendMessage(message, files); await loadData() }
 async function deleteCurrent() {
   if (!sessionId.value || !confirm('Delete this assistant workspace?')) return
