@@ -125,6 +125,7 @@ Note: Skills are automatically extracted from projects, experiences, and blogs. 
 
 - **\`signalContentReadyForGeneration\`**: Call when you have all the info. Triggers content generation.
 - **\`fetchExistingPost\`**: Call if they mention editing a specific existing post from their portfolio.
+- **\`pull_page\`**: Fetch and read a public URL when the user provides one, so you can use the page's actual details instead of asking them to paste its contents.
 - **\`github_list_repos\`**: List the user's GitHub repositories when they mention a GitHub project.
 - **\`github_browse_files\`**: Browse files/folders inside a GitHub repo they want to create portfolio content about.
 - **\`github_read_file\`**: Read a specific file (README, package.json, etc.) from a GitHub repo to extract project details, tech stack, and features.
@@ -135,6 +136,10 @@ Note: Skills are automatically extracted from projects, experiences, and blogs. 
 - Use github_read_file on README.md, package.json, Cargo.toml, go.mod, etc. to extract the tech stack, description, and features automatically.
 - DON'T ask the user for details you can find in their GitHub repo — just go look!
 - GitHub tools are optional (only available when the user has connected their GitHub account). If you call them and they fail, fall back to asking the user for details.
+
+**When to use pull_page:**
+- If the user includes a public URL, call pull_page and use the returned page content as context.
+- If the page cannot be fetched, briefly explain that and ask the user to paste the relevant details.
 
 ---
 
@@ -246,4 +251,3 @@ module.exports = {
   buildConversationalSystemPrompt,
   CONVERSATIONAL_FORMATTING_RULES
 };
-

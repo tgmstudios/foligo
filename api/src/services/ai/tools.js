@@ -14,6 +14,7 @@
 const { tool } = require('ai');
 const { z } = require('zod');
 const { createGithubTools } = require('../github/github-tools');
+const { createPullPageTool } = require('../goapply/pull-page-tool');
 
 /**
  * Core Foligo tools — mode-agnostic.  These always have execute handlers so
@@ -24,6 +25,8 @@ const { createGithubTools } = require('../github/github-tools');
  */
 function _coreFoligoBaseTools({ fetchPost } = {}) {
   return {
+    pull_page: createPullPageTool({ toolFn: tool, z }),
+
     signalContentReadyForGeneration: tool({
       description:
         'Call this function when ALL necessary information has been gathered and you are ready to hand off to the writing AI. This signals the end of the conversation phase. ONLY call this when you have sufficient details for high-quality content generation.',
