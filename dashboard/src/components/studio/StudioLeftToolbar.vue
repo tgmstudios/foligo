@@ -139,10 +139,13 @@ defineEmits<{
 const open = ref<'documents' | 'insert' | 'media' | 'score' | null>(null)
 
 function toggle(panel: 'documents' | 'insert' | 'media' | 'score') {
+  // The scoring popup is intentionally modal-like: only its X closes it.
+  if (open.value === 'score') return
   open.value = open.value === panel ? null : panel
 }
 
 function closeOnOutsideClick() {
+  if (open.value === 'score') return
   open.value = null
 }
 

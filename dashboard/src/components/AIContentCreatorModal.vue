@@ -406,15 +406,21 @@ const openSavedChat = async (id: string) => {
   creationComplete.value = false
 }
 
-const persistChat = async () => {
-  chatHistory.value = messages.value
+const snapshotChatHistory = () => {
+  return messages.value
     .filter(message => message.content)
     .map(message => ({ role: message.role, content: message.content }))
+}
+
+const persistChat = async () => {
+  const completeHistory = snapshotChatHistory()
+  chatHistory.value = completeHistory
   try {
-    await chatSessions.save(chatHistory.value, { mode: props.mode, contentType: inferredContentType.value || props.contentType })
+    await chatSessions.save(completeHistory, { mode: props.mode, contentType: inferredContentType.value || props.contentType })
   } catch (error) {
     console.error('Failed to save chat history:', error)
   }
+  return completeHistory
 }
 
 const close = () => {
@@ -458,9 +464,10 @@ const initializeSession = async () => {
         projectId: props.projectId
       })
       
+      const completeHistory = await persistChat()
       if (result.done) {
         sessionDone.value = true
-        generateFinalContent()
+        await generateFinalContent(completeHistory)
       }
     } catch (error) {
       console.error('Failed to initialize session:', error)
@@ -486,9 +493,10 @@ const initializeSession = async () => {
         inferredContentType.value = result.contentType
       }
 
+      const completeHistory = await persistChat()
       if (result.done) {
         sessionDone.value = true
-        generateFinalContent()
+        await generateFinalContent(completeHistory)
       }
     } catch (error) {
       console.error('Failed to initialize session:', error)
@@ -550,9 +558,10 @@ const sendMessage = async () => {
       inferredContentType.value = result.contentType
     }
 
+    const completeHistory = await persistChat()
     if (result.done) {
       sessionDone.value = true
-      await generateFinalContent()
+      await generateFinalContent(completeHistory)
     }
   } catch (error) {
     console.error('Failed to send message:', error)
@@ -588,7 +597,7 @@ const startVoiceSession = async () => {
 
 const generatingText = ref('')
 
-const generateFinalContent = async () => {
+const generateFinalContent = async (completeHistory = snapshotChatHistory()) => {
   isLoading.value = false
   loadingMessage.value = 'Preparing the model with your conversation…'
   generatingText.value = ''
@@ -610,7 +619,7 @@ const generateFinalContent = async () => {
       body: JSON.stringify({
         mode: props.mode,
         contentType: finalContentType,
-        chatHistory: chatHistory.value,
+        chatHistory: completeHistory,
         currentContent: props.currentContent || '',
         changes: '',
         projectId: props.projectId

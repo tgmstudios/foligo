@@ -1,7 +1,8 @@
 jest.mock('../services/core/database', () => ({ prisma: {} }));
-jest.mock('../services/ai/manager', () => ({}));
+const mockGenerateChat = jest.fn();
+jest.mock('../services/ai/manager', () => ({ generateChat: mockGenerateChat }));
 
-const { parseEvaluation } = require('./resume-scoring');
+const { parseEvaluation, requestEvaluation } = require('./resume-scoring');
 
 describe('resume scoring response parsing', () => {
   const evaluation = {
@@ -21,5 +22,16 @@ describe('resume scoring response parsing', () => {
   test('rejects malformed or structurally incomplete responses', () => {
     expect(parseEvaluation({ text: '{"not_scores": true}' })).toBeNull();
     expect(parseEvaluation({ text: '', reasoning: '' })).toBeNull();
+  });
+
+  test('gives reasoning models enough output budget and preserves the requested model pool', async () => {
+    mockGenerateChat.mockResolvedValueOnce({ text: JSON.stringify(evaluation) });
+
+    await requestEvaluation('resume content', 'LONG');
+
+    expect(mockGenerateChat).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ modelType: 'LONG', maxTokens: 12000 }),
+    );
   });
 });

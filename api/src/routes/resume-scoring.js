@@ -111,7 +111,10 @@ async function requestEvaluation(content, modelType) {
     systemInstruction: SCORING_SYSTEM,
     modelType,
     temperature: 0.1,
-    maxTokens: 4096,
+    // Reasoning models may use several thousand output tokens before emitting
+    // the final JSON. A 4K cap caused DeepSeek Flash to finish with reasoning
+    // only and an empty text channel.
+    maxTokens: 12000,
   });
 }
 
@@ -141,7 +144,7 @@ async function scoreResume(req, res) {
     // Empty text is possible with reasoning-capable models, and malformed JSON
     // should not turn a transient model response into an immediate 500.
     if (!evaluation) {
-      result = await requestEvaluation(document.content, 'PRO');
+      result = await requestEvaluation(document.content, 'LONG');
       evaluation = parseEvaluation(result);
     }
 
@@ -163,7 +166,7 @@ async function scoreResume(req, res) {
     const deductions = (evaluation.deductions?.total || 0);
     const total = Math.min(baseScore + bonuses - deductions, 120);
 
-    res.json({
+    const response = {
       documentId: document.id,
       documentName: document.name,
       total: Math.round(total * 10) / 10,
@@ -174,11 +177,46 @@ async function scoreResume(req, res) {
       key_strengths: evaluation.key_strengths || [],
       areas_for_improvement: evaluation.areas_for_improvement || [],
       gradedAt: new Date().toISOString(),
+    };
+
+    await prisma.resumeScoreResult.create({
+      data: {
+        documentId: document.id,
+        result: response,
+        gradedAt: new Date(response.gradedAt),
+      },
     });
+
+    res.json(response);
   } catch (error) {
     console.error('Resume scoring error:', error);
     res.status(500).json({ error: 'Scoring Failed', message: error.message });
   }
 }
 
-module.exports = { scoreResume, parseEvaluation };
+async function getLatestResumeScore(req, res) {
+  try {
+    const document = await prisma.resumeDocument.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+      select: { id: true },
+    });
+    if (!document) {
+      return res.status(404).json({ error: 'Not Found', message: 'Resume not found' });
+    }
+
+    const score = await prisma.resumeScoreResult.findFirst({
+      where: { documentId: document.id },
+      orderBy: { gradedAt: 'desc' },
+      select: { result: true },
+    });
+    if (!score) {
+      return res.status(404).json({ error: 'Not Scored', message: 'This resume has not been scored yet.' });
+    }
+    res.json(score.result);
+  } catch (error) {
+    console.error('Get resume score error:', error);
+    res.status(500).json({ error: 'Score Load Failed', message: error.message });
+  }
+}
+
+module.exports = { scoreResume, getLatestResumeScore, parseEvaluation, requestEvaluation };

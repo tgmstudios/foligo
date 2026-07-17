@@ -8,6 +8,9 @@ node_modules
 .graphify/worktree.json
 .graphify/needs_update
 .graphify/cache/
+.graphify/.graphify_node
+.graphify/.graphify_runtime.json
+.graphify/.graphify_runtime_script
 
 # Personal Claude Code settings, not shared project config
 .claude/settings.local.json

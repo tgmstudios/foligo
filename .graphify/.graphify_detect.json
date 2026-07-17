@@ -75,6 +75,7 @@
       "api/src/routes/projects/projects-crud.js",
       "api/src/routes/projects/projects-site-config.js",
       "api/src/routes/resume-scoring.js",
+      "api/src/routes/resume-scoring.test.js",
       "api/src/routes/resume.js",
       "api/src/routes/users.js",
       "api/src/seed.js",
@@ -400,8 +401,8 @@
     ],
     "video": []
   },
-  "total_files": 391,
-  "total_words": 342053,
+  "total_files": 392,
+  "total_words": 342766,
   "needs_graph": true,
   "warning": null,
   "skipped_sensitive": [
@@ -410,7 +411,7 @@
   "graphifyignore_patterns": 11,
   "git": {
     "source_owner": "git",
-    "source_hash": "38dc01a01cde62caeebbe71bc60244763a158dbe",
+    "source_hash": "170fb21540b10435ee11caec411b9ee14a44e95a",
     "branches": [
       "main"
     ],
@@ -423,11 +424,11 @@
     "source": "default-auto",
     "root": ".",
     "git_root": ".",
-    "head": "38dc01a01cde62caeebbe71bc60244763a158dbe",
-    "candidate_count": 516,
-    "included_count": 391,
-    "excluded_untracked_count": 3,
-    "excluded_ignored_count": 122000,
+    "head": "170fb21540b10435ee11caec411b9ee14a44e95a",
+    "candidate_count": 517,
+    "included_count": 392,
+    "excluded_untracked_count": 4,
+    "excluded_ignored_count": 122018,
     "excluded_sensitive_count": 1,
     "missing_committed_count": 0,
     "warnings": [],

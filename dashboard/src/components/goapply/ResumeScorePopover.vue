@@ -9,14 +9,24 @@
         <h3 class="text-sm font-semibold text-white">HackerRank Score</h3>
         <p v-if="documentName" class="text-xs text-gray-400 mt-0.5">{{ documentName }}</p>
       </div>
-      <button
-        @click="$emit('close')"
-        class="text-gray-400 hover:text-white transition-colors"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <div class="flex items-center gap-3">
+        <button
+          @click="run"
+          :disabled="loading"
+          class="text-xs font-medium text-primary-400 hover:text-primary-300 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+        >
+          {{ loading ? 'Scoring…' : 'Rerun' }}
+        </button>
+        <button
+          @click="$emit('close')"
+          class="text-gray-400 hover:text-white transition-colors"
+          aria-label="Close score popup"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -28,6 +38,7 @@
     <!-- Error -->
     <div v-else-if="error" class="p-6 text-center">
       <p class="text-red-400 text-sm">{{ error }}</p>
+      <button @click="run" class="mt-3 text-xs font-medium text-primary-400 hover:text-primary-300">Rerun score</button>
     </div>
 
     <!-- Results -->
@@ -104,12 +115,7 @@
       <!-- Footer -->
       <div class="px-4 py-2 border-t border-gray-700 flex justify-between items-center">
         <span class="text-xs text-gray-500">Powered by HackerRank rubric</span>
-        <button
-          @click="run"
-          class="text-xs text-primary-400 hover:text-primary-300 transition-colors"
-        >
-          Re-score
-        </button>
+        <span v-if="result.gradedAt" class="text-xs text-gray-500">{{ new Date(result.gradedAt).toLocaleString() }}</span>
       </div>
     </div>
   </div>
@@ -131,6 +137,7 @@ interface ScoreResult {
   key_strengths: string[]
   areas_for_improvement: string[]
   documentName: string
+  gradedAt: string
 }
 
 const loading = ref(false)
@@ -167,5 +174,23 @@ async function run() {
   }
 }
 
-onMounted(run)
+async function loadLatest() {
+  loading.value = true
+  error.value = ''
+  try {
+    const { data } = await aiApi.get(`/resume/documents/${props.documentId}/score`)
+    result.value = data
+    documentName.value = data.documentName || ''
+  } catch (e: any) {
+    if (e.response?.status === 404) {
+      await run()
+      return
+    }
+    error.value = e.response?.data?.message || e.message || 'Failed to load score'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadLatest)
 </script>

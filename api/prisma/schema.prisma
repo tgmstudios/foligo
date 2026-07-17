@@ -550,11 +550,26 @@ model ResumeDocument {
   user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedJob JobApplication?          @relation(fields: [linkedJobId], references: [id], onDelete: SetNull)
   revisions ResumeDocumentRevision[]
+  scoreResults ResumeScoreResult[]
 
   @@index([userId])
   @@index([createdAt])
   @@index([linkedJobId])
   @@map("resume_documents")
+}
+
+// Immutable HackerRank rubric evaluations. Keeping each run allows the latest
+// result to load instantly while preserving historical scores for later trends.
+model ResumeScoreResult {
+  id         String   @id @default(uuid())
+  documentId String
+  result     Json
+  gradedAt   DateTime @default(now())
+
+  document ResumeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, gradedAt])
+  @@map("resume_score_results")
 }
 
 // Point-in-time snapshots of a ResumeDocument's content, created on manual

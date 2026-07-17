@@ -301,6 +301,7 @@ app.use('/api/ai/agent', authenticateToken, extensionAgentRoutes);
 app.use('/api', mediaRoutes);
 // Resume routes - require authentication
 app.use('/api/resume', authenticateToken, resumeRoutes);
+app.get('/api/resume/documents/:id/score', authenticateToken, resumeScoring.getLatestResumeScore);
 app.post('/api/resume/documents/:id/score', authenticateToken, resumeScoring.scoreResume);
 // GoApply routes - require authentication
 app.use('/api/goapply', authenticateToken, goapplyJobAssistantRoutes);
