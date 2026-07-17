@@ -219,19 +219,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="bg-gray-800 px-6 py-4 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            @click="previewSuccessAnimation"
-            :disabled="isLoading || isTyping || isPreviewing"
-            class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-purple-300 hover:text-white hover:bg-purple-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            title="Preview the completion animation"
-          >
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Test animation
-          </button>
+        <div class="bg-gray-800 px-6 py-4 flex items-center justify-end gap-3">
           <button
             @click="close"
             class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-colors"
@@ -442,57 +430,6 @@ const close = () => {
   // Reset textarea height
   if (messageTextarea.value) {
     messageTextarea.value.style.height = 'auto'
-  }
-}
-
-const previewSuccessAnimation = async () => {
-  const run = ++previewRun
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  isPreviewing.value = true
-  isLoading.value = false
-  loadingMessage.value = 'Loading your latest post…'
-  creationComplete.value = true
-  generatingText.value = ''
-
-  try {
-    if (!props.projectId) throw new Error('Select a project before testing the animation.')
-    const response = await api.get(`/projects/${props.projectId}/content`)
-    const contentItems = Array.isArray(response.data) ? response.data : []
-    const posts = contentItems.filter((item: any) =>
-      item.content && (item.contentType === 'BLOG' || item.type === 'BLOG')
-    )
-    const candidates = posts.length ? posts : contentItems.filter((item: any) => item.content)
-    const latestPost = [...candidates].sort((a: any, b: any) =>
-      new Date(b.createdAt || b.updatedAt || 0).getTime() -
-      new Date(a.createdAt || a.updatedAt || 0).getTime()
-    )[0]
-
-    if (!latestPost) throw new Error('Create a post first, then test the animation.')
-    const sourceText = latestPost.content as string
-    loadingMessage.value = 'Opening the latest post in Editor Studio…'
-    if (run !== previewRun) return
-    isLoading.value = false
-    sessionStorage.setItem(
-      `ai-content-handoff:${latestPost.id}`,
-      JSON.stringify({ content: sourceText, animate: true, createdAt: Date.now() })
-    )
-
-    await new Promise((resolve) => window.setTimeout(resolve, reduceMotion ? 120 : 850))
-    if (run !== previewRun) return
-    emit('content-created', { id: latestPost.id, content: sourceText, preview: true })
-  } catch (error: any) {
-    console.error('Failed to preview the latest post animation:', error)
-    creationComplete.value = false
-    const message = error.response?.data?.message || error.message || 'Unable to load the latest post.'
-    messages.value.push({
-      id: `${Date.now()}-preview-error`,
-      role: 'assistant',
-      content: message,
-    })
-    modeSelected.value = true
-    isLoading.value = false
-    generatingText.value = ''
-    isPreviewing.value = false
   }
 }
 
