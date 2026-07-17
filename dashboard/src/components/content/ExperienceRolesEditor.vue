@@ -237,6 +237,7 @@ const saveRole = async () => {
     
     const data = {
       ...roleForm.value,
+      endDate: roleForm.value.endDate || undefined,
       skillIds: roleForm.value.skills.map(s => s.id)
     }
     
@@ -319,4 +320,3 @@ onMounted(() => {
   text-decoration: underline;
 }
 </style>
-

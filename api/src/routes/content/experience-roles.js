@@ -17,7 +17,7 @@ router.post('/projects/:projectId/content/:contentId/roles', [
   body('title').trim().isLength({ min: 1 }).withMessage('Title is required'),
   body('description').optional().trim(),
   body('startDate').isISO8601().withMessage('Start date is required'),
-  body('endDate').optional().isISO8601(),
+  body('endDate').optional({ values: 'falsy' }).isISO8601(),
   body('isCurrent').optional().isBoolean(),
   body('skillIds').optional().isArray(),
   body('skillIds.*').optional().isUUID()
@@ -146,7 +146,7 @@ router.put('/experience-roles/:id', [
   body('title').optional().trim().isLength({ min: 1 }),
   body('description').optional().trim(),
   body('startDate').optional().isISO8601(),
-  body('endDate').optional().isISO8601(),
+  body('endDate').optional({ values: 'falsy' }).isISO8601(),
   body('isCurrent').optional().isBoolean(),
   body('skillIds').optional().isArray(),
   body('skillIds.*').optional().isUUID()
@@ -308,5 +308,4 @@ router.delete('/experience-roles/:id', async (req, res) => {
 });
 
 module.exports = router;
-
 
