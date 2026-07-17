@@ -47,9 +47,14 @@
         v-model="selectedProvider"
         :messages="chat.messages.value"
         :streaming="chat.streaming.value"
+        :sessions="chatSessions.sessions.value"
+        :active-session-id="chatSessions.activeSessionId.value"
+        :sessions-loading="chatSessions.loadingSessions.value"
         placeholder="Ask the agent to edit your cover letter…"
         empty-state-text="Ask the agent to draft a paragraph, tailor the letter to the linked job, or tweak wording — it'll edit the document directly."
         @send="chat.sendMessage"
+        @select-session="selectChatSession"
+        @new-session="newChatSession"
       />
     </template>
 
@@ -66,6 +71,7 @@ import { useToast } from 'vue-toastification'
 import '@/studio/adapters'
 import { getAdapter } from '@/studio/registry'
 import { useAgenticChat } from '@/composables/useAgenticChat'
+import { useChatSessions } from '@/composables/useChatSessions'
 import { useAutosave } from '@/composables/useAutosave'
 import type { CoverLetterDocument } from '@/composables/useCoverLetterDocuments'
 import StudioShell from '@/components/studio/StudioShell.vue'
@@ -84,6 +90,7 @@ const pdfUrl = ref<string | null>(null)
 const compileError = ref<string | null>(null)
 const awaitingCompile = ref(false)
 const selectedProvider = ref<string | undefined>(undefined)
+const chatSessions = useChatSessions('studio-cover-letter', () => documentId.value)
 
 const chat = useAgenticChat(
   () => adapter.getChatUrl!(documentId.value),
@@ -111,9 +118,36 @@ const chat = useAgenticChat(
       compileError.value = message
       awaitingCompile.value = false
     },
+    onTurnComplete: async (history) => { await chatSessions.save(history) },
   },
   () => selectedProvider.value
 )
+
+async function selectChatSession(id: string) {
+  const session = await chatSessions.open(id)
+  chat.loadHistory(session.chatHistory || [])
+}
+
+async function newChatSession() {
+  await chatSessions.create()
+  chat.reset()
+}
+
+async function loadChatSessions(fallbackHistory: CoverLetterDocument['chatHistory']) {
+  const sessions = await chatSessions.refresh()
+  if (sessions.length) {
+    await selectChatSession(sessions[0].id)
+    return
+  }
+  const session = await chatSessions.create()
+  if (fallbackHistory.length) {
+    chat.loadHistory(fallbackHistory)
+    await chatSessions.save(fallbackHistory)
+  } else {
+    chatSessions.activeSessionId.value = session.id
+    chat.reset()
+  }
+}
 
 const compiling = computed(() => chat.streaming.value || awaitingCompile.value)
 
@@ -152,7 +186,7 @@ async function openDocument(id: string) {
         // No compiled PDF yet, or it failed to load — leave preview empty rather than blocking the page.
       }
     }
-    chat.loadHistory(doc.chatHistory || [])
+    await loadChatSessions(doc.chatHistory || [])
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to load cover letter')
     goBack()

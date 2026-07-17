@@ -288,7 +288,11 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
 
   const { send, aborted, cleanup } = setupSSE(req, res);
 
-  const priorHistory = Array.isArray(letter.chatHistory) ? letter.chatHistory : [];
+  // Prefer the client-selected session history when supplied. Falling back to
+  // the document column keeps older clients and existing conversations working.
+  const priorHistory = Array.isArray(req.body.history)
+    ? req.body.history
+    : (Array.isArray(letter.chatHistory) ? letter.chatHistory : []);
   const messages = [
     ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user', content: message },

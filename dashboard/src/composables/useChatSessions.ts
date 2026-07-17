@@ -10,7 +10,13 @@ export interface SavedChatSession {
   updatedAt: string
 }
 
-export function useChatSessions(scope: 'studio-content' | 'content-creator', getContextId: () => string | undefined) {
+export type ChatSessionScope =
+  | 'studio-content'
+  | 'studio-resume'
+  | 'studio-cover-letter'
+  | 'content-creator'
+
+export function useChatSessions(scope: ChatSessionScope, getContextId: () => string | undefined) {
   const sessions = ref<SavedChatSession[]>([])
   const activeSessionId = ref<string | null>(null)
   const loadingSessions = ref(false)

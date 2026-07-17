@@ -3,7 +3,7 @@ const { body, query, validationResult } = require('express-validator');
 const { prisma } = require('../../services/core/database');
 
 const router = express.Router();
-const allowedScopes = ['studio-content', 'content-creator'];
+const allowedScopes = ['studio-content', 'studio-resume', 'studio-cover-letter', 'content-creator'];
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 
 function titleFromHistory(history) {

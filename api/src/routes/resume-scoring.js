@@ -85,6 +85,36 @@ Return a JSON object matching this exact schema:
 
 IMPORTANT: Respond ONLY with the JSON object, no other text.`;
 
+function parseEvaluation(result) {
+  const candidates = [result?.text, result?.reasoning]
+    .filter((value) => typeof value === 'string' && value.trim());
+
+  for (const candidate of candidates) {
+    const jsonMatch = candidate.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) continue;
+    try {
+      const evaluation = JSON.parse(jsonMatch[0]);
+      if (evaluation && typeof evaluation.scores === 'object' && evaluation.scores !== null) {
+        return evaluation;
+      }
+    } catch {
+      // Try the next response channel (or the retry below).
+    }
+  }
+  return null;
+}
+
+async function requestEvaluation(content, modelType) {
+  return ai.generateChat([
+    { role: 'user', content: `Evaluate this resume according to the HackerRank Hiring Agent rubric:\n\n${content}` },
+  ], {
+    systemInstruction: SCORING_SYSTEM,
+    modelType,
+    temperature: 0.1,
+    maxTokens: 4096,
+  });
+}
+
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -105,18 +135,24 @@ async function scoreResume(req, res) {
     }
 
     // Send to AI for scoring — use QUICK model for fast response
-    const result = await ai.generateChat([
-      { role: 'user', content: `Evaluate this resume according to the HackerRank Hiring Agent rubric:\n\n${document.content}` },
-    ], { systemInstruction: SCORING_SYSTEM, modelType: 'QUICK', temperature: 0.1 });
+    let result = await requestEvaluation(document.content, 'QUICK');
+    let evaluation = parseEvaluation(result);
 
-    const text = result.text || '';
-    // Extract JSON from the response (handle possible markdown wrapping)
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.status(500).json({ error: 'Scoring Failed', message: 'AI did not return valid JSON.', raw: text.substring(0, 500) });
+    // Empty text is possible with reasoning-capable models, and malformed JSON
+    // should not turn a transient model response into an immediate 500.
+    if (!evaluation) {
+      result = await requestEvaluation(document.content, 'PRO');
+      evaluation = parseEvaluation(result);
     }
 
-    const evaluation = JSON.parse(jsonMatch[0]);
+    if (!evaluation) {
+      const raw = result?.text || result?.reasoning || '';
+      return res.status(502).json({
+        error: 'Scoring Failed',
+        message: 'The scoring model returned an empty or invalid response. Please try again.',
+        raw: raw.substring(0, 500),
+      });
+    }
 
     // Calculate composite score
     const scores = evaluation.scores || {};
@@ -145,4 +181,4 @@ async function scoreResume(req, res) {
   }
 }
 
-module.exports = { scoreResume };
+module.exports = { scoreResume, parseEvaluation };

@@ -77,9 +77,14 @@
           v-model="selectedProvider"
           :messages="chat.messages.value"
           :streaming="chat.streaming.value"
+          :sessions="chatSessions.sessions.value"
+          :active-session-id="chatSessions.activeSessionId.value"
+          :sessions-loading="chatSessions.loadingSessions.value"
           placeholder="Ask the agent to edit your resume…"
           empty-state-text="Ask the agent to draft a section, tailor the resume to a job description, or tweak wording — it'll edit the document directly."
           @send="chat.sendMessage"
+          @select-session="selectChatSession"
+          @new-session="newChatSession"
         />
       </div>
     </template>
@@ -127,6 +132,7 @@ import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
 import StudioChatSidebar from '@/components/studio/StudioChatSidebar.vue'
 import StudioLeftToolbar from '@/components/studio/StudioLeftToolbar.vue'
 import { useAgenticChat } from '@/composables/useAgenticChat'
+import { useChatSessions } from '@/composables/useChatSessions'
 import { useAutosave } from '@/composables/useAutosave'
 import type { ResumeDocument } from '@/composables/useResumeDocuments'
 import api from '@/services/api'
@@ -156,6 +162,7 @@ const showHistory = ref(false)
 const showMeta = ref(false)
 const loadedDoc = ref<ResumeDocument | null>(null)
 const selectedProvider = ref<string | undefined>(undefined)
+const chatSessions = useChatSessions('studio-resume', () => documentId.value)
 
 const chat = useAgenticChat(
   () => adapter.getChatUrl!(documentId.value),
@@ -200,9 +207,36 @@ const chat = useAgenticChat(
       compileLog.value = null
       awaitingCompile.value = false
     },
+    onTurnComplete: async (history) => { await chatSessions.save(history) },
   },
   () => selectedProvider.value
 )
+
+async function selectChatSession(id: string) {
+  const session = await chatSessions.open(id)
+  chat.loadHistory(session.chatHistory || [])
+}
+
+async function newChatSession() {
+  await chatSessions.create()
+  chat.reset()
+}
+
+async function loadChatSessions(fallbackHistory: ResumeDocument['chatHistory']) {
+  const sessions = await chatSessions.refresh()
+  if (sessions.length) {
+    await selectChatSession(sessions[0].id)
+    return
+  }
+  const session = await chatSessions.create()
+  if (fallbackHistory.length) {
+    chat.loadHistory(fallbackHistory)
+    await chatSessions.save(fallbackHistory)
+  } else {
+    chatSessions.activeSessionId.value = session.id
+    chat.reset()
+  }
+}
 
 const compiling = computed(() => chat.streaming.value || awaitingCompile.value)
 
@@ -247,7 +281,7 @@ async function openDocument(id: string) {
         // No compiled PDF yet, or it failed to load — leave preview empty rather than blocking the page.
       }
     }
-    chat.loadHistory(doc.chatHistory || [])
+    await loadChatSessions(doc.chatHistory || [])
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to load resume')
     goBack()

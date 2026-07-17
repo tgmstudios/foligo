@@ -357,6 +357,7 @@ router.get('/documents/:id/pdf', async (req, res) => {
 router.post('/documents/:id/chat', [
   body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
   body('provider').optional().isString(),
+  body('history').optional().isArray(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -372,7 +373,11 @@ router.post('/documents/:id/chat', [
   const { send, aborted, cleanup } = setupSSE(req, res);
 
   const userMessage = req.body.message;
-  const priorHistory = Array.isArray(document.chatHistory) ? document.chatHistory : [];
+  // Prefer the client-selected session history when supplied. Falling back to
+  // the document column keeps older clients and existing conversations working.
+  const priorHistory = Array.isArray(req.body.history)
+    ? req.body.history
+    : (Array.isArray(document.chatHistory) ? document.chatHistory : []);
   const messages = [
     ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user', content: userMessage },

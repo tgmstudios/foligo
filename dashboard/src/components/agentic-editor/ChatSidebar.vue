@@ -1,6 +1,6 @@
 <template>
-  <div class="chat-sidebar flex-1 flex flex-col min-h-0">
-    <div class="flex-1 overflow-y-auto p-4 space-y-4" ref="scrollContainer">
+  <div class="chat-sidebar flex-1 flex flex-col min-h-0 min-w-0 overflow-x-hidden">
+    <div class="flex-1 min-w-0 overflow-x-hidden overflow-y-auto p-4 space-y-4" ref="scrollContainer">
       <div v-if="messages.length === 0" class="text-center py-10 text-gray-400 text-sm px-4">
         {{ emptyStateText }}
       </div>
@@ -8,7 +8,7 @@
       <div
         v-for="message in messages"
         :key="message.id"
-        :class="['flex items-start space-x-2.5', message.role === 'user' ? 'flex-row-reverse space-x-reverse' : '']"
+        :class="['flex w-full min-w-0 items-start space-x-2.5', message.role === 'user' ? 'flex-row-reverse space-x-reverse' : '']"
       >
         <div :class="[
           'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
@@ -256,6 +256,13 @@ watch(() => props.messages, () => {
 
 <style scoped>
 .markdown-content :deep(p) { margin-bottom: 0.65em; }
+.markdown-content {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.markdown-content :deep(*) { max-width: 100%; }
 .markdown-content :deep(p:last-child) { margin-bottom: 0; }
 .markdown-content :deep(h1),
 .markdown-content :deep(h2),
@@ -321,18 +328,21 @@ watch(() => props.messages, () => {
 .markdown-content :deep(pre) {
   margin: 0.75rem 0;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   border: 1px solid #4b5563;
   border-radius: 0.5rem;
   background-color: #111827;
   padding: 0.75rem 0.875rem;
   color: #d1d5db;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   tab-size: 2;
 }
 .markdown-content :deep(pre code) {
   display: block;
-  min-width: max-content;
+  min-width: 0;
+  white-space: inherit;
   border: 0;
   border-radius: 0;
   background: transparent;
