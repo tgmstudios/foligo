@@ -4,31 +4,6 @@
  *           uploadResume, uploadCoverLetter, writeCoverLetter
  */
 const Filler = (() => {
-  // ─── React internals detection ────────────────────────────────────
-
-  function getReactInternals(element) {
-    const key = Object.keys(element).find(k => 
-      k.startsWith('__reactFiber$') || 
-      k.startsWith('__reactInternalInstance$')
-    );
-    return key ? element[key] : null;
-  }
-
-  function getReactProps(element) {
-    const fiber = getReactInternals(element);
-    if (fiber) {
-      let node = fiber;
-      while (node) {
-        const props = node.memoizedProps || node.pendingProps;
-        if (props && (props.onChange || props.value !== undefined || props.onInput)) {
-          return props;
-        }
-        node = node.return;
-      }
-    }
-    return null;
-  }
-
   // ─── Native setter (bypasses React) ──────────────────────────────
 
   function setNativeValue(element, value) {
@@ -79,6 +54,57 @@ const Filler = (() => {
   }
 
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  // ─── CDP-backed input (real Input-domain events via background.js) ────
+  //
+  // Content scripts can't call chrome.debugger directly, so these ask the
+  // background service worker to dispatch real Input.dispatchMouseEvent /
+  // Input.insertText against this tab. Frameworks (React, custom comboboxes)
+  // receive these identically to genuine user input, unlike a synthetic DOM
+  // event — this is the fix for values a site's own JS silently reverts.
+  // Falls back to the pre-CDP DOM-event path (via the caller) whenever the
+  // background worker reports failure — e.g. debugger permission denied, or
+  // another DevTools session already attached to this tab.
+  function sendToBackgroundCDP(action, payload) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ action, ...payload }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn('[GoApply:Filler] CDP', action, 'unreachable, falling back to DOM events:', chrome.runtime.lastError.message);
+            resolve({ ok: false, error: chrome.runtime.lastError.message });
+            return;
+          }
+          if (!response?.ok) console.warn('[GoApply:Filler] CDP', action, 'failed, falling back to DOM events:', response?.error);
+          resolve(response || { ok: false, error: 'No response from background' });
+        });
+      } catch (e) { resolve({ ok: false, error: e.message }); }
+    });
+  }
+
+  // Coordinates are relative to the frame this content script runs in — CDP
+  // input dispatch targets the tab's main frame, so a field inside a
+  // cross-origin iframe will fall back to the DOM-event path automatically
+  // (the click will land on the wrong coordinates and fail verification).
+  async function cdpClick(element) {
+    if (!element?.getBoundingClientRect) return { ok: false, error: 'No element' };
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+    await wait(50);
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return { ok: false, error: 'Element not visible' };
+    return sendToBackgroundCDP('cdp-click', { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  }
+
+  async function cdpType(element, text) {
+    if (!element?.focus) return { ok: false, error: 'No element' };
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+    element.focus();
+    await wait(30);
+    return sendToBackgroundCDP('cdp-type', { text });
+  }
+
+  function cdpKey(key) {
+    return sendToBackgroundCDP('cdp-key', { key });
+  }
 
   function getLiveElement(fieldInfo) {
     if (fieldInfo?.element?.isConnected !== false) return fieldInfo.element;
@@ -321,12 +347,15 @@ const Filler = (() => {
     element.click?.();
   }
 
-  function writeSearchValue(element, value) {
+  async function writeSearchValue(element, value) {
     const previousValue = element.value;
-    setNativeValue(element, value);
-    if (element._valueTracker) element._valueTracker.setValue(previousValue || '');
-    element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    const cdpResult = await cdpType(element, value);
+    if (!cdpResult.ok) {
+      setNativeValue(element, value);
+      if (element._valueTracker) element._valueTracker.setValue(previousValue || '');
+      element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    }
     return previousValue;
   }
 
@@ -383,7 +412,7 @@ const Filler = (() => {
     let openerValueBefore;
     if (opener.matches?.('input, textarea')) {
       const searchValue = candidates.find(candidate => /[a-z]/i.test(candidate)) || candidates[0];
-      openerValueBefore = writeSearchValue(opener, searchValue);
+      openerValueBefore = await writeSearchValue(opener, searchValue);
       await wait(150);
     }
     const options = await waitForOptions(opener, root, baseline, 4000);
@@ -394,13 +423,17 @@ const Filler = (() => {
         if (keyboardSelection) return keyboardSelection;
       }
       const available = options.map(opt => opt.textContent.trim()).filter(Boolean).slice(0, 20);
-      if (openerValueBefore !== undefined) writeSearchValue(opener, openerValueBefore);
+      if (openerValueBefore !== undefined) await writeSearchValue(opener, openerValueBefore);
       await closeOpenSelects();
       throw new Error(`No matching option for "${value}"${available.length ? `. Available: ${available.join(' | ')}` : ''}`);
     }
 
     option.scrollIntoView?.({ block: 'nearest' });
-    dispatchPointerSequence(option);
+    await clickWithFallback(option);
+    await wait(150);
+    // If CDP dispatched but the framework did not commit the choice, retry
+    // through the component's own DOM event handlers before verification.
+    if (option.isConnected && isVisibleOption(option)) dispatchPointerSequence(option);
 
     const started = Date.now();
     while (Date.now() - started < 2500) {
@@ -408,7 +441,26 @@ const Filler = (() => {
       if (valueMatches(retainedValue, candidates)) return { expectedChoices: candidates, retainedValue };
       await wait(50);
     }
-    if (openerValueBefore !== undefined) writeSearchValue(opener, openerValueBefore);
+    // React Select/Greenhouse occasionally ignores a pointer commit while
+    // still accepting trusted keyboard selection. The query already narrows
+    // the list to the intended value, so select its first match with real
+    // CDP key events and verify once more.
+    opener.focus?.();
+    dispatchPointerSequence(opener);
+    if (opener.matches?.('input, textarea')) {
+      const searchValue = candidates.find(candidate => /[a-z]/i.test(candidate)) || candidates[0];
+      await cdpType(opener, searchValue);
+      await wait(200);
+    }
+    await cdpKey('ArrowDown');
+    await cdpKey('Enter');
+    const keyboardStarted = Date.now();
+    while (Date.now() - keyboardStarted < 1800) {
+      const retainedValue = readCommittedSelectValue(fieldInfo, opener);
+      if (valueMatches(retainedValue, candidates)) return { expectedChoices: candidates, retainedValue };
+      await wait(50);
+    }
+    if (openerValueBefore !== undefined) await writeSearchValue(opener, openerValueBefore);
     await closeOpenSelects();
     throw new Error(`Option "${option.textContent.trim()}" was clicked but the control did not retain it`);
   }
@@ -438,11 +490,11 @@ const Filler = (() => {
       dispatchPointerSequence(opener);
       let openerValueBefore;
       if (query && opener.matches?.('input, textarea')) {
-        openerValueBefore = writeSearchValue(opener, query);
+        openerValueBefore = await writeSearchValue(opener, query);
       }
       options = (await waitForOptions(opener, root, baseline, 4000)).map(option => option.textContent.trim()).filter(Boolean);
       opener.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
-      if (openerValueBefore !== undefined) writeSearchValue(opener, openerValueBefore);
+      if (openerValueBefore !== undefined) await writeSearchValue(opener, openerValueBefore);
     }
     const uniqueOptions = [...new Set(options)];
     const combobox = element.matches?.('[role="combobox"]') ? element : element.querySelector?.('[role="combobox"]');
@@ -484,14 +536,20 @@ const Filler = (() => {
       .trim();
   }
 
-  function fillClick(element, _value) {
+  async function clickWithFallback(element) {
+    const cdpResult = await cdpClick(element);
+    if (cdpResult.ok) return;
     element.focus();
     element.click();
     element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
   }
 
-  function fillCheckbox(element, value) {
+  async function fillClick(element, _value) {
+    await clickWithFallback(element);
+  }
+
+  async function fillCheckbox(element, value) {
     if (element.type === 'radio') {
       const group = element.name
         ? Array.from(document.querySelectorAll(`input[type="radio"][name="${CSS.escape(element.name)}"]`))
@@ -507,13 +565,13 @@ const Filler = (() => {
           });
       });
       if (!match) throw new Error(`No matching radio option for "${value}"`);
-      if (!match.checked) match.click();
+      if (!match.checked) await clickWithFallback(match);
       match.dispatchEvent(new Event('change', { bubbles: true }));
       return;
     }
     const shouldCheck = value === true || value === 'true' || value === 'yes' || value === 'on';
     if (element.checked !== shouldCheck) {
-      element.click();
+      await clickWithFallback(element);
       element.dispatchEvent(new Event('change', { bubbles: true }));
     }
   }
@@ -543,8 +601,8 @@ const Filler = (() => {
   }
 
   const DOCUMENT_SOURCES = {
-    resume: { list: 'getResumes', pdf: 'getResumePdf', compile: 'compileResumePdf' },
-    coverLetter: { list: 'getCoverLetters', pdf: 'getCoverLetterPdf', compile: 'compileCoverLetterPdf' },
+    resume: { list: 'getResumes', get: 'getResume', pdf: 'getResumePdf', compile: 'compileResumePdf' },
+    coverLetter: { list: 'getCoverLetters', get: 'getCoverLetter', pdf: 'getCoverLetterPdf', compile: 'compileCoverLetterPdf' },
   };
 
   async function listDocuments(kind) {
@@ -555,9 +613,16 @@ const Filler = (() => {
     } catch (e) { return []; }
   }
 
-  // When more than one resume/cover letter exists, the extension will not
-  // silently guess which one to attach — it waits for an explicit choice
-  // (surfaced as a dropdown in the panel) and remembers it here.
+  async function getDocument(kind, documentId) {
+    if (typeof GoApplyAPI === 'undefined' || !documentId) return null;
+    const source = DOCUMENT_SOURCES[kind];
+    if (!source || typeof GoApplyAPI[source.get] !== 'function') return null;
+    return GoApplyAPI[source.get](documentId);
+  }
+
+  // Remember the last explicit model/user choice for continuity and display.
+  // Merely having a remembered/default document never causes an upload:
+  // attachDocument() still requires the exact document id for every field.
   function selectedDocStorageKey(kind) { return kind === 'resume' ? 'selectedResumeId' : 'selectedCoverLetterId'; }
 
   async function getSelectedDocId(kind) {
@@ -568,8 +633,21 @@ const Filler = (() => {
     } catch (e) { return null; }
   }
 
-  async function setSelectedDocId(kind, id) {
-    try { await chrome.storage.local.set({ [selectedDocStorageKey(kind)]: id }); } catch (e) {}
+  async function getSelectedDocSource(kind) {
+    try {
+      const key = `${selectedDocStorageKey(kind)}Source`;
+      const stored = await chrome.storage.local.get(key);
+      return stored[key] || null;
+    } catch (e) { return null; }
+  }
+
+  async function setSelectedDocId(kind, id, source = 'model') {
+    try {
+      const idKey = selectedDocStorageKey(kind);
+      const sourceKey = `${idKey}Source`;
+      if (id) await chrome.storage.local.set({ [idKey]: id, [sourceKey]: source });
+      else await chrome.storage.local.remove([idKey, sourceKey]);
+    } catch (e) {}
     delete cachedDocFiles[kind];
     delete cachedDocFilesAt[kind];
   }
@@ -578,19 +656,17 @@ const Filler = (() => {
   let cachedDocFilesAt = { resume: 0, coverLetter: 0 };
   const DOC_FILE_TTL_MS = 10 * 60 * 1000;
 
-  async function fetchDocumentFile(kind, profile) {
+  async function fetchDocumentFile(kind, profile, documentId) {
     if (typeof GoApplyAPI === 'undefined') return null;
     const source = DOCUMENT_SOURCES[kind];
     let docs;
     try { docs = await GoApplyAPI[source.list](); } catch (e) { return null; }
     if (!Array.isArray(docs) || docs.length === 0) return null;
 
-    let doc = null;
-    if (docs.length > 1) {
-      const selectedId = await getSelectedDocId(kind);
-      doc = selectedId ? docs.find(d => d.id === selectedId) : null;
-    }
-    if (!doc) doc = docs.find(d => d.isDefault) || docs[0];
+    const selectedId = documentId || await getSelectedDocId(kind);
+    if (!selectedId) return null;
+    const doc = docs.find(d => d.id === selectedId);
+    if (!doc) throw new Error(`The selected Foligo ${kind} is no longer available.`);
 
     let blob = null;
     try { blob = await GoApplyAPI[source.pdf](doc.id); } catch (e) { /* not compiled yet */ }
@@ -601,12 +677,13 @@ const Filler = (() => {
     return new File([blob], buildDocumentFileName(kind, profile), { type: 'application/pdf' });
   }
 
-  async function loadDocumentFile(kind, profile = {}, forceRefresh = false) {
-    if (!forceRefresh && cachedDocFiles[kind] && (Date.now() - cachedDocFilesAt[kind]) < DOC_FILE_TTL_MS) {
-      return cachedDocFiles[kind];
+  async function loadDocumentFile(kind, profile = {}, forceRefresh = false, documentId) {
+    if (!forceRefresh && cachedDocFiles[kind]?.documentId === documentId
+      && (Date.now() - cachedDocFilesAt[kind]) < DOC_FILE_TTL_MS) {
+      return cachedDocFiles[kind].file;
     }
-    const file = await fetchDocumentFile(kind, profile);
-    if (file) { cachedDocFiles[kind] = file; cachedDocFilesAt[kind] = Date.now(); }
+    const file = await fetchDocumentFile(kind, profile, documentId);
+    if (file) { cachedDocFiles[kind] = { documentId, file }; cachedDocFilesAt[kind] = Date.now(); }
     return file;
   }
 
@@ -629,25 +706,89 @@ const Filler = (() => {
     }, 5000);
   }
 
-  async function fillUploadDocument(element, kind, profile) {
+  function resolveFileInput(element, kind) {
+    if (element?.matches?.('input[type="file"]')) return element;
+    const localRoot = element?.closest?.('label, [class*="upload" i], [class*="attach" i], [data-testid*="upload" i], fieldset, form')
+      || element?.parentElement;
+    const local = localRoot?.querySelector?.('input[type="file"]');
+    if (local) return local;
+    const hints = kind === 'resume'
+      ? /resume|cv/i
+      : /cover.?letter|cover_letter/i;
+    const inputs = [...document.querySelectorAll('input[type="file"]')];
+    return inputs.find(input => hints.test([
+      input.name, input.id, input.getAttribute('aria-label'), input.getAttribute('data-testid'),
+      ...(input.labels ? [...input.labels].map(label => label.textContent) : []),
+    ].filter(Boolean).join(' '))) || (inputs.length === 1 ? inputs[0] : null);
+  }
+
+  async function fillUploadDocument(element, kind, profile, documentId) {
+    const input = resolveFileInput(element, kind);
+    if (!input) {
+      highlightForManualUpload(element);
+      return { success: false, note: 'No file input was found behind this upload control.', manual: true };
+    }
+    if (!documentId) {
+      return {
+        success: false,
+        manual: false,
+        note: 'No Foligo document was explicitly selected for this field.',
+      };
+    }
     let file = null;
-    try { file = await loadDocumentFile(kind, profile); } catch (e) { file = null; }
+    try {
+      file = await loadDocumentFile(kind, profile, true, documentId);
+    } catch (e) {
+      return { success: false, manual: false, note: e.message };
+    }
 
     if (file) {
       try {
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
-        element.files = dataTransfer.files;
-        element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-        return { success: true, note: `attached ${file.name}`, expectedValue: file.name, manual: false };
+        input.files = dataTransfer.files;
+        input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+        const dropTarget = input.closest?.('[class*="upload" i], [class*="drop" i], [class*="attach" i]') || input.parentElement;
+        try {
+          dropTarget?.dispatchEvent?.(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+        } catch (error) {
+          // The FileList assignment/change event is the primary path; some
+          // Chrome builds do not accept dataTransfer in DragEventInit.
+        }
+        await wait(150);
+        const attached = input.files?.[0];
+        if (!attached || attached.name !== file.name) {
+          throw new Error('The page did not retain the attached file.');
+        }
+        return { success: true, note: `attached ${attached.name}`, expectedValue: attached.name, retainedValue: attached.name, manual: false };
       } catch (e) {
         console.warn('[GoApply:Filler] Programmatic file attach failed, falling back to manual:', e.message);
       }
     }
 
-    highlightForManualUpload(element);
-    return { success: true, note: 'highlighted for manual upload', manual: true };
+    highlightForManualUpload(input);
+    return {
+      success: false,
+      note: file
+        ? 'The site rejected the selected Foligo document; the upload control was highlighted for manual recovery.'
+        : 'The selected Foligo document has no available PDF; the upload control was highlighted.',
+      manual: true,
+    };
+  }
+
+  async function attachDocument(fieldInfo, kind, documentId, profile = {}) {
+    if (!fieldInfo?.element) return { success: false, reason: 'no element' };
+    if (!documentId) return { success: false, note: 'An explicit Foligo documentId is required.' };
+    const [selectedId, selectedSource] = await Promise.all([
+      getSelectedDocId(kind),
+      getSelectedDocSource(kind),
+    ]);
+    // Attaching the document must not erase a choice the user made in the
+    // side-panel selector. A different ID is necessarily a model choice.
+    const source = selectedId === documentId && selectedSource === 'user' ? 'user' : 'model';
+    await setSelectedDocId(kind, documentId, source);
+    return fillUploadDocument(fieldInfo.element, kind, profile, documentId);
   }
 
   // ─── Cover letter (contentEditable / textarea) ────────────────────
@@ -976,9 +1117,25 @@ const Filler = (() => {
     return resolveValueSync(fieldName, profile);
   }
 
+  // fillDefault/fillReact only dispatch synthetic events — unlike fillSelect
+  // (which already polls readCommittedSelectValue), they never confirmed the
+  // page actually kept the value. A site that reverts an input on blur (or a
+  // React component that ignores the synthetic event) would otherwise be
+  // reported as filled. Give the page a tick to react, then read back.
+  async function verifyTextFill(fieldInfo, value, values) {
+    await wait(30);
+    const expectedChoices = choiceCandidates(value, values);
+    const retainedValue = readFieldValue(fieldInfo);
+    if (!valueMatches(retainedValue, expectedChoices)) {
+      return { success: false, reason: 'The page did not retain the typed value.', expectedValue: value, expectedChoices, retainedValue };
+    }
+    return { success: true, expectedValue: value, expectedChoices, retainedValue };
+  }
+
   // ─── Main fill function ──────────────────────────────────────────
 
   async function fillField(fieldInfo, profile = {}) {
+    profile = profile && typeof profile === 'object' ? profile : {};
     const { element, method, fieldName, values } = fieldInfo;
 
     const value = Object.keys(profile).length > 0
@@ -992,14 +1149,19 @@ const Filler = (() => {
 
     try {
       switch (method) {
-        case 'react': fillReact(element, value); break;
+        case 'react': {
+          const cdpResult = await cdpType(element, value);
+          if (cdpResult.ok) element.dispatchEvent(new Event('blur', { bubbles: true }));
+          else fillReact(element, value);
+          return verifyTextFill(fieldInfo, value, values);
+        }
         case 'dijit': fillDijit(element, value); break;
-        case 'selectCheckboxOrRadio': fillCheckbox(element, value); break;
+        case 'selectCheckboxOrRadio': await fillCheckbox(element, value); break;
         case 'select': {
           const selection = await fillSelect(fieldInfo, value);
           return { success: true, expectedValue: value, ...selection };
         }
-        case 'click': fillClick(element, value); break;
+        case 'click': await fillClick(element, value); break;
         case 'defaultWithoutBlur':
           element.focus(); setNativeValue(element, value);
           element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
@@ -1009,7 +1171,11 @@ const Filler = (() => {
         case 'uploadCoverLetter': return await fillUploadDocument(element, 'coverLetter', profile);
         case 'writeCoverLetter':
           return fillWriteCoverLetter(element, value);
-        default: fillDefault(element, value);
+        default: {
+          const cdpResult = await cdpType(element, value);
+          if (!cdpResult.ok) fillDefault(element, value);
+          return verifyTextFill(fieldInfo, value, values);
+        }
       }
       return { success: true, expectedValue: value, expectedChoices: choiceCandidates(value, values) };
     } catch (e) {
@@ -1029,8 +1195,8 @@ const Filler = (() => {
   return {
     fillField, fillAll, fillDefault, fillReact, fillDijit,
     resolveValue, resolveValueSync, loadProfile, invalidateCache,
-    fillWriteCoverLetter, loadDocumentFile, listDocuments,
-    getSelectedDocId, setSelectedDocId, readFieldValue, valueMatches,
-    choiceCandidates, inspectField, DEFAULT_VALUES
+    fillWriteCoverLetter, loadDocumentFile, listDocuments, getDocument, attachDocument,
+    getSelectedDocId, getSelectedDocSource, setSelectedDocId, readFieldValue, valueMatches,
+    choiceCandidates, inspectField, DEFAULT_VALUES, clickElement: clickWithFallback
   };
 })();

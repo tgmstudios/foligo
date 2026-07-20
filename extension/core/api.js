@@ -13,6 +13,25 @@ const GoApplyAPI = (() => {
     local: { api: 'http://localhost:3000', web: 'http://localhost' },
   };
   const DEFAULT_ENV = 'production';
+  const REQUIRED_AGENT_PROTOCOL_VERSION = 2;
+  const REQUIRED_AGENT_IDENTITY = 'foligo-browser-agent';
+  const REQUIRED_AGENT_TOOLS = [
+    'read_page',
+    'form_input',
+    'computer',
+    'browser_batch',
+    'tabs_context_mcp',
+    'tabs_create_mcp',
+    'tabs_close_mcp',
+    'list_foligo_documents',
+    'inspect_foligo_document',
+    'attach_document',
+    'track_current_job',
+    'list_tracked_jobs',
+    'update_job_status',
+  ];
+  const AGENT_CAPABILITIES_TTL_MS = 60_000;
+  let agentCapabilitiesCache = null;
 
   async function getEnvironment() {
     try {
@@ -38,6 +57,7 @@ const GoApplyAPI = (() => {
     if (env !== 'custom' && !ENVIRONMENTS[env]) throw new Error(`Unknown environment: ${env}`);
     await chrome.storage.local.set({ goapplyEnv: env });
     await chrome.storage.local.remove('profileFetchedAt');
+    agentCapabilitiesCache = null;
   }
 
   async function setCustomEndpoints(api, web) {
@@ -46,6 +66,7 @@ const GoApplyAPI = (() => {
       goapplyCustomEndpoints: { api: api.replace(/\/+$/, ''), web: web.replace(/\/+$/, '') },
     });
     await chrome.storage.local.remove('profileFetchedAt');
+    agentCapabilitiesCache = null;
   }
 
   async function getToken() {
@@ -60,6 +81,7 @@ const GoApplyAPI = (() => {
     // A token can represent a different user. Never reuse the previous user's
     // profile freshness marker after login or device-code exchange.
     await chrome.storage.local.remove('profileFetchedAt');
+    agentCapabilitiesCache = null;
   }
 
   async function getAIPreference() {
@@ -195,11 +217,13 @@ const GoApplyAPI = (() => {
 
   // ─── Resumes (Foligo Resume Studio documents) ────────────────────
   async function getResumes() { return request('/api/resume/documents'); }
+  async function getResume(id) { return request(`/api/resume/documents/${id}`); }
   async function getResumePdf(id) { return requestBinary(`/api/resume/documents/${id}/pdf`); }
   async function compileResumePdf(id) { return requestBinary(`/api/resume/documents/${id}/compile`, { method: 'POST' }); }
 
   // ─── Cover Letters ──────────────────────────────────────────────
   async function getCoverLetters() { return request('/api/goapply/cover-letters'); }
+  async function getCoverLetter(id) { return request(`/api/goapply/cover-letters/${id}`); }
   async function saveCoverLetter(data) { return request('/api/goapply/cover-letters', { method: 'POST', body: JSON.stringify(data) }); }
   async function setDefaultCoverLetter(id) { return request(`/api/goapply/cover-letters/${id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) }); }
   async function getCoverLetterPdf(id) { return requestBinary(`/api/goapply/cover-letters/${id}/pdf`); }
@@ -251,16 +275,79 @@ const GoApplyAPI = (() => {
     return chrome.runtime.connect({ name: 'goapply-agent' });
   }
 
+  async function getAgentCapabilities({ force = false } = {}) {
+    const { api, env } = await getEnvironment();
+    const now = Date.now();
+    if (
+      !force
+      && agentCapabilitiesCache?.api === api
+      && now - agentCapabilitiesCache.checkedAt < AGENT_CAPABILITIES_TTL_MS
+    ) {
+      return agentCapabilitiesCache.value;
+    }
+
+    let capabilities;
+    try {
+      capabilities = await request('/api/ai/agent/capabilities');
+    } catch (error) {
+      const endpointLabel = env === 'custom' ? `custom API ${api}` : `${env} API ${api}`;
+      const compatibilityError = new Error(
+        `Browser agent compatibility check failed for the ${endpointLabel}. `
+        + 'This server may be offline or running an old Foligo API without full browser control. '
+        + `Deploy/restart the current API, then retry. (${error.message || error})`,
+      );
+      compatibilityError.code = 'AGENT_BACKEND_INCOMPATIBLE';
+      throw compatibilityError;
+    }
+
+    const protocolVersion = Number(capabilities?.protocolVersion || 0);
+    const availableTools = new Set(Array.isArray(capabilities?.tools) ? capabilities.tools : []);
+    const missingTools = REQUIRED_AGENT_TOOLS.filter((name) => !availableTools.has(name));
+    if (
+      capabilities?.agentIdentity !== REQUIRED_AGENT_IDENTITY
+      || protocolVersion < REQUIRED_AGENT_PROTOCOL_VERSION
+      || missingTools.length
+    ) {
+      const details = [
+        capabilities?.agentIdentity !== REQUIRED_AGENT_IDENTITY
+          ? `identity ${JSON.stringify(capabilities?.agentIdentity || 'missing')}`
+          : null,
+        protocolVersion < REQUIRED_AGENT_PROTOCOL_VERSION
+          ? `protocol ${protocolVersion || 'missing'} (need ${REQUIRED_AGENT_PROTOCOL_VERSION})`
+          : null,
+        missingTools.length ? `missing tools: ${missingTools.join(', ')}` : null,
+      ].filter(Boolean).join('; ');
+      const compatibilityError = new Error(
+        `The Foligo API at ${api} is outdated or incompatible with this extension (${details}). `
+        + 'Deploy/restart the current API before using the browser agent.',
+      );
+      compatibilityError.code = 'AGENT_BACKEND_INCOMPATIBLE';
+      compatibilityError.capabilities = capabilities;
+      throw compatibilityError;
+    }
+
+    agentCapabilitiesCache = { api, checkedAt: now, value: capabilities };
+    return capabilities;
+  }
+
   async function buildAgentRequest(bodyObj) {
     const token = await getToken();
     if (!token) throw new Error('Not authenticated. Open Foligo dashboard to sign in.');
+    const capabilities = await getAgentCapabilities();
     const { api: BASE_URL } = await getEndpoints();
     return {
       url: `${BASE_URL}/api/ai/agent/turn`,
       options: {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(bodyObj),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-Foligo-Agent-Protocol': String(capabilities.protocolVersion),
+        },
+        body: JSON.stringify({
+          ...bodyObj,
+          clientAgentProtocolVersion: REQUIRED_AGENT_PROTOCOL_VERSION,
+        }),
       },
     };
   }
@@ -321,11 +408,11 @@ const GoApplyAPI = (() => {
     getProfile, getGoApplyProfile, syncProfile,
     getJobs, trackJob, updateJob, deleteJob,
     getKanban, reorderCards,
-    getResumes, getResumePdf, compileResumePdf,
-    getCoverLetters, saveCoverLetter, setDefaultCoverLetter, getCoverLetterPdf, compileCoverLetterPdf,
+    getResumes, getResume, getResumePdf, compileResumePdf,
+    getCoverLetters, getCoverLetter, saveCoverLetter, setDefaultCoverLetter, getCoverLetterPdf, compileCoverLetterPdf,
     getAnswers, saveAnswer,
     generateCoverLetter, tailorResume, generateEmail, generateCustomAnswer,
-    openAgentPort, buildAgentRequest,
+    openAgentPort, getAgentCapabilities, buildAgentRequest,
     // Device code
     generateDeviceCode, exchangeDeviceCode,
   };

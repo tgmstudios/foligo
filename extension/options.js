@@ -9,15 +9,16 @@ async function refreshStatus() {
   try {
     const authed = await GoApplyAPI.checkAuth();
     if (authed) {
+      const capabilities = await GoApplyAPI.getAgentCapabilities({ force: true });
       $('syncDot').className = 'status-dot dot-on';
-      $('syncStatus').textContent = 'Connected';
+      $('syncStatus').textContent = `Connected · Browser agent protocol ${capabilities.protocolVersion} · ${capabilities.tools.length} tools`;
     } else {
       $('syncDot').className = 'status-dot dot-off';
-      $('syncStatus').textContent = 'Disconnected — sign in from the extension popup';
+      $('syncStatus').textContent = 'Disconnected — sign in from the GoApply side panel';
     }
   } catch (e) {
     $('syncDot').className = 'status-dot dot-off';
-    $('syncStatus').textContent = 'Cannot reach ' + web;
+    $('syncStatus').textContent = e.message || ('Cannot reach ' + web);
   }
 }
 

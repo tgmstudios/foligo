@@ -1,17 +1,27 @@
 {
   "manifest_version": 3,
   "name": "GoApply by Foligo",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "One-click job applications. AI cover letters. Kanban tracking. Powered by Foligo.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "activeTab"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "debugger",
+    "scripting",
+    "sidePanel",
+    "tabs",
+    "tabGroups",
+    "alarms",
+    "notifications",
+    "downloads"
+  ],
   "host_permissions": ["*://*/*"],
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -23,6 +33,18 @@
   "background": {
     "service_worker": "background.js"
   },
+  "side_panel": {
+    "default_path": "side-panel.html"
+  },
+  "commands": {
+    "toggle-side-panel": {
+      "suggested_key": {
+        "default": "Ctrl+E",
+        "mac": "Command+E"
+      },
+      "description": "Open the GoApply AI side panel"
+    }
+  },
   "content_scripts": [
     {
       "matches": ["*://*/*"],
@@ -33,7 +55,6 @@
         "core/filler.js",
         "core/tracker.js",
         "core/agent-controller.js",
-        "core/chat-panel.js",
         "core/boards.js",
         "core/banners.js",
         "core/consent.js",

@@ -12,6 +12,29 @@
   let boardsInterval = null, successWatcher = null, isActivated = false;
   let bannerInjected = false, currentJobInfo = null;
 
+  // ─── Side panel bridge ────────────────────────────────────────────
+  // Content scripts don't know their own tab id; cache it once so streamed
+  // agent events can be tagged for the side panel to filter by.
+
+  let ownTabId = null;
+  async function getOwnTabId() {
+    if (ownTabId != null) return ownTabId;
+    try {
+      const res = await chrome.runtime.sendMessage({ action: 'get-own-tab-id' });
+      ownTabId = res?.tabId ?? null;
+    } catch (e) { ownTabId = null; }
+    return ownTabId;
+  }
+
+  function broadcastToSidePanel(tabId, event) {
+    if (tabId == null) return;
+    try { chrome.runtime.sendMessage({ type: 'sp-agent-event', tabId, event }); } catch (e) {}
+  }
+
+  function broadcastTurnCompletion(tabId, result) {
+    broadcastToSidePanel(tabId, { type: 'turn-complete', result });
+  }
+
   // ─── Submit tracking ──────────────────────────────────────────────
 
   // Success is only inferred after the user actually clicks the real submit
@@ -47,62 +70,6 @@
     const url = chrome.runtime.getURL(`preview.html?kind=${encodeURIComponent(kind)}`);
     const tab = window.open(url, '_blank');
     if (!tab) UI.showToast('Preview blocked — allow popups for this site');
-  }
-
-  // ─── AI agent actions ──────────────────────────────────────────────
-
-  function handleAgentEvent(event) {
-    if (event?.type === 'tool-call') {
-      const statuses = {
-        set_field_value: `Filling ${event.input?.fieldRef || 'field'}…`,
-        set_field_values: 'Filling fields…',
-        inspect_field_control: `Inspecting ${event.input?.fieldRef || 'field'}…`,
-        select_field_option: `Selecting ${event.input?.fieldRef || 'dropdown'}…`,
-        set_checkbox_state: `Updating ${event.input?.fieldRef || 'checkbox'}…`,
-        flag_field_uncertain: `Flagging ${event.input?.fieldRef || 'field'} for review…`,
-        click_element: `Opening ${event.input?.elementRef || 'next step'}…`,
-        find_submit_button: 'Finding the submit button…',
-        rescan_page: 'Rescanning page…',
-        generate_cover_letter: 'Drafting cover letter…',
-        generate_custom_answer: 'Drafting answer…',
-      };
-      UI.updateAgentProgress(statuses[event.toolName] || `Using ${String(event.toolName).replace(/_/g, ' ')}…`);
-    }
-  }
-
-  async function forceAIRescan() {
-    UI.updateAgentProgress('Rescanning with AI…');
-    try {
-      foundFields = Finder.findFields(platform?.config || { inputSelectors: [], containerPath: [] });
-      AgentController.initializePage(foundFields, platform, currentJobInfo);
-      const result = await AgentController.startRescan(foundFields, platform, currentJobInfo, handleAgentEvent);
-      UI.updateAgentProgress(result.continuationLimitReached ? 'AI stopped at the safety limit' : 'AI rescan complete');
-      UI.showToast(result.continuationLimitReached ? 'AI paused after too many steps' : '✨ AI rescan complete');
-      return {
-        success: true,
-        fieldsFound: foundFields.length,
-        continuationLimitReached: Boolean(result.continuationLimitReached),
-      };
-    } catch (error) {
-      UI.updateAgentProgress('AI rescan failed');
-      UI.showToast(`AI rescan failed: ${error.message}`);
-      return { success: false, message: error.message };
-    } finally {
-      setTimeout(() => UI.updateAgentProgress(''), 2500);
-    }
-  }
-
-  async function fillFieldWithAI(fieldRef) {
-    UI.updateAgentProgress(`Filling ${fieldRef} with AI…`);
-    try {
-      const result = await AgentController.startFieldFill(fieldRef, platform, currentJobInfo, handleAgentEvent);
-      UI.updateAgentProgress(result.continuationLimitReached ? 'AI stopped at the safety limit' : 'Field AI complete');
-    } catch (error) {
-      UI.updateAgentProgress('Field AI failed');
-      UI.showToast(`AI fill failed: ${error.message}`);
-    } finally {
-      setTimeout(() => UI.updateAgentProgress(''), 2500);
-    }
   }
 
   // ─── Startup ──────────────────────────────────────────────────────
@@ -145,50 +112,65 @@
     currentJobInfo = jobInfo;
     AgentController.initializePage(foundFields, platform, jobInfo);
     AgentController.setOnFieldsRefreshed((freshFields) => { foundFields = freshFields; });
-    ChatPanel.mount(document.body, () => ({ platform, jobInfo: currentJobInfo }));
-    let appCount = 0;
-    try { const kanban = await GoApplyAPI.getKanban().catch(() => []); appCount = kanban.reduce((s,c) => s + (c.cards?.length||0), 0); } catch(e) {}
-
-    UI.renderPanel(
-      platform,
-      foundFields,
-      jobInfo,
-      appCount,
-      fullAutofill,
-      () => { platform = null; foundFields = []; isActivated = false; },
-      armSubmitWatcher,
-      previewDocument,
-      { onRescan: forceAIRescan, onFieldFill: fillFieldWithAI, onChat: () => ChatPanel.toggle() },
-    );
 
     if (!bannerInjected) { try { await Banners.injectBanner(platform); bannerInjected = true; } catch(e) {} }
 
     try { armSubmitWatcher(Tracker.findSubmitButton(platform.config)); } catch(e) {}
+    // A multi-step agent turn can outlive a real page navigation (the script
+    // context that started it is destroyed); the resumed turn's events go to
+    // whichever side panel is open for this tab, same as any other turn.
+    const tabId = await getOwnTabId();
     AgentController.tryRestoreAfterNavigation(
       platform,
       jobInfo,
-      (event) => {
-        handleAgentEvent(event);
-        ChatPanel.handleAgentEvent(event);
-      },
-      (messages) => {
-        ChatPanel.restoreMessages(messages);
-        ChatPanel.open();
-      },
+      (event) => broadcastToSidePanel(tabId, event),
+      () => { try { chrome.runtime.sendMessage({ action: 'open-side-panel' }); } catch (e) {} },
     ).then((restored) => {
-      if (restored) {
-        ChatPanel.open();
-        UI.updateAgentProgress('Agent resumed after navigation');
-        setTimeout(() => UI.updateAgentProgress(''), 2500);
-      }
-    }).catch((error) => warn('Agent navigation restore failed:', error.message));
+      if (restored) broadcastTurnCompletion(tabId, { success: true, restored: true });
+    }).catch((error) => {
+      warn('Agent navigation restore failed:', error.message);
+      broadcastTurnCompletion(tabId, { success: false, message: error.message, stopped: error.code === 'USER_STOPPED' });
+    });
     return true;
   }
 
-  async function runManualAIRescan() {
+  // ─── Side panel entry points ───────────────────────────────────────
+  // The side panel is the only chat/control surface now — it can't reach
+  // into this page's DOM, so AgentController still runs here and every
+  // event is streamed to it via broadcastToSidePanel.
+
+  async function sidePanelRescan() {
     const activated = await tryActivate({ forceAgent: true });
-    if (!activated) return { success: false, message: 'AI Rescan could not start on this page' };
-    return forceAIRescan();
+    if (!activated) return { success: false, message: 'No fillable page detected here.' };
+    const tabId = await getOwnTabId();
+    try {
+      const result = await AgentController.startRescan(foundFields, platform, currentJobInfo, (event) => broadcastToSidePanel(tabId, event));
+      return { success: true, continuationLimitReached: Boolean(result.continuationLimitReached) };
+    } catch (error) {
+      return { success: false, message: error.message, stopped: error.code === 'USER_STOPPED' };
+    }
+  }
+
+  async function sidePanelChat(text) {
+    await tryActivate();
+    const tabId = await getOwnTabId();
+    try {
+      const result = await AgentController.sendChatMessage(text, platform, currentJobInfo, (event) => broadcastToSidePanel(tabId, event));
+      return { success: true, assistantText: result.assistantText };
+    } catch (error) {
+      return { success: false, message: error.message, stopped: error.code === 'USER_STOPPED' };
+    }
+  }
+
+  async function sidePanelFieldFill(fieldRef) {
+    await tryActivate();
+    const tabId = await getOwnTabId();
+    try {
+      const result = await AgentController.startFieldFill(fieldRef, platform, currentJobInfo, (event) => broadcastToSidePanel(tabId, event));
+      return { success: true, continuationLimitReached: Boolean(result.continuationLimitReached) };
+    } catch (error) {
+      return { success: false, message: error.message, stopped: error.code === 'USER_STOPPED' };
+    }
   }
 
   // ─── Autofill ─────────────────────────────────────────────────────
@@ -206,7 +188,6 @@
     if (Object.keys(profile).length === 0) {
       const message = 'Profile sync returned no data. Sign in and sync your GoApply profile.';
       console.error('[GoApply:Autofill]', message);
-      UI.updateAutofillProgress(0, foundFields.length, 'Profile sync failed');
       UI.showToast(message);
       return { success: false, filled: 0, total: foundFields.length, skipped: foundFields.length, manual: 0, message };
     }
@@ -244,18 +225,91 @@
         console.error('[GoApply:Autofill]', f.fieldName, 'error:', e.message);
       }
       if (i % 3 === 0 && i > 0) await new Promise(r => setTimeout(r, 50));
-      UI.updateAutofillProgress(i + 1, foundFields.length);
     }
-    
+
     log('Autofill finished:', { filled, skipped, manual, total: foundFields.length });
-    UI.updateAutofillProgress(foundFields.length, foundFields.length, `Filled ${filled}/${foundFields.length}`);
     UI.showToast(`Filled ${filled}/${foundFields.length}` + (skipped ? ` (${skipped} skipped)` : '') + (manual ? ` (${manual} manual)` : ''));
     
     setTimeout(() => {
       const btn = Tracker.findSubmitButton(platform?.config);
       if (btn) { Tracker.highlightSubmitButton(btn); armSubmitWatcher(btn); UI.showToast('🎯 Review & submit'); }
     }, 800);
-    return { success: filled > 0, filled, total: foundFields.length, skipped, manual };
+    let tracking = null;
+    const trackable = String(currentJobInfo?.company || '').trim()
+      && String(currentJobInfo?.jobTitle || currentJobInfo?.position || '').trim();
+    if (filled > 0 && trackable) {
+      try { tracking = await Tracker.trackApplication(currentJobInfo, 'saved'); }
+      catch (error) { warn('Automatic job tracking failed:', error.message); }
+    }
+    return { success: filled > 0, filled, total: foundFields.length, skipped, manual, tracking };
+  }
+
+  // ─── Side panel control actions ─────────────────────────────────────
+  // Autofill/Track/Find-Submit/field-list used to be buttons on the
+  // in-page floating panel; that panel is gone, so the side panel drives
+  // these the same way it drives rescan/chat/field-fill — via messages.
+
+  function findAndHighlightSubmit() {
+    const btn = Tracker.findSubmitButton(platform?.config);
+    if (btn) { Tracker.highlightSubmitButton(btn); armSubmitWatcher(btn); }
+    return Boolean(btn);
+  }
+
+  async function trackCurrentJob(status = 'saved', allowStatusChange = false) {
+    // The extension may not have activated when the panel first opened, and
+    // SPA job pages can replace their metadata without a full reload. Always
+    // read the live page at the moment the user asks to track it.
+    currentJobInfo = Tracker.extractJobInfo();
+    const company = String(currentJobInfo?.company || '').trim();
+    const position = String(currentJobInfo?.jobTitle || currentJobInfo?.position || '').trim();
+    try {
+      // A board card already matched by URL needs no second company/title
+      // identification pass. This is especially important inside embedded
+      // application steps whose header metadata has disappeared.
+      const existing = await Tracker.getTrackedApplication(currentJobInfo);
+      if (!existing && (!Tracker.isTrackableJobInfo(currentJobInfo) || !company || !position)) {
+        return {
+          success: false,
+          unavailable: true,
+          message: 'The page needs AI identification before it can be tracked.',
+          jobInfo: currentJobInfo,
+        };
+      }
+      const result = await Tracker.trackApplication(currentJobInfo, status, {
+        allowStatusChange,
+        ...(company ? { company } : {}),
+        ...(position ? { position } : {}),
+      });
+      return { success: true, created: result.created, changed: result.changed, job: result.job };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async function getCurrentJobTracking() {
+    try {
+      currentJobInfo = Tracker.extractJobInfo();
+      // URL identity still lets a previously tracked card be found when a
+      // site's title/company metadata is temporarily absent during rendering.
+      const job = await Tracker.getTrackedApplication(currentJobInfo, { reconcile: true });
+      return { success: true, job, jobInfo: currentJobInfo };
+    } catch (error) {
+      return { success: false, job: null, jobInfo: currentJobInfo, message: error.message };
+    }
+  }
+
+  function summarizeFoundFields() {
+    const flagged = AgentController.getFlaggedRefs();
+    return foundFields.map((f, i) => {
+      const ref = `f${i}`;
+      const docKind = f.method === 'uploadResume' ? 'resume' : f.method === 'uploadCoverLetter' ? 'coverLetter' : null;
+      return {
+        ref,
+        label: (f.fieldName || '').replace(/_/g, ' '),
+        docKind,
+        flaggedReason: flagged.get(ref) || null,
+      };
+    });
   }
 
   // ─── Observer ─────────────────────────────────────────────────────
@@ -283,7 +337,7 @@
           lastUrl = window.location.href;
           platform = null; foundFields = []; isActivated = false; bannerInjected = false;
           if (successWatcher) { successWatcher.disconnect(); successWatcher = null; }
-          Banners.removeBanner(); UI.unmount();
+          Banners.removeBanner();
           setTimeout(tryActivate, 1000);
         }
       });
@@ -298,30 +352,50 @@
     if (boardsInterval) clearInterval(boardsInterval);
     if (successWatcher) try { successWatcher.disconnect(); } catch(e) {}
     Banners.removeBanner();
-    try { UI.unmount(); } catch(e) {}
   });
 
   // ─── Messages ─────────────────────────────────────────────────────
   chrome.runtime?.onMessage?.addListener((msg, sender, sendResponse) => {
-    if (msg.action === 'autofill') {
-      fullAutofill()
-        .then(sendResponse)
-        .catch(error => sendResponse({ success: false, message: error.message }));
-      return true;
-    }
     if (msg.action === 'detect') {
       (async () => {
         const jobInfo = Tracker.extractJobInfo();
         sendResponse({ platform: platform?.platform || null, fieldsFound: foundFields.length, isActivated, jobInfo });
       })(); return true;
     }
-    if (msg.action === 'ai-rescan') {
-      runManualAIRescan()
-        .then(sendResponse)
-        .catch(error => sendResponse({ success: false, message: error.message }));
+    if (msg.action === 'sp-rescan') {
+      getOwnTabId().then(tabId => sidePanelRescan().then(result => broadcastTurnCompletion(tabId, result)));
+      sendResponse({ success: true, accepted: true });
+      return false;
+    }
+    if (msg.action === 'sp-chat') {
+      getOwnTabId().then(tabId => sidePanelChat(msg.text).then(result => broadcastTurnCompletion(tabId, result)));
+      sendResponse({ success: true, accepted: true });
+      return false;
+    }
+    if (msg.action === 'sp-field-fill') {
+      getOwnTabId().then(tabId => sidePanelFieldFill(msg.fieldRef).then(result => broadcastTurnCompletion(tabId, result)));
+      sendResponse({ success: true, accepted: true });
+      return false;
+    }
+    if (msg.action === 'sp-stop') { sendResponse({ stopped: AgentController.stop() }); return false; }
+    if (msg.action === 'sp-is-busy') { sendResponse({ busy: AgentController.isBusy() }); return false; }
+    if (msg.action === 'sp-new-chat') { sendResponse({ success: AgentController.resetSession() }); return false; }
+    if (msg.action === 'sp-autofill') { fullAutofill().then(sendResponse); return true; }
+    if (msg.action === 'sp-track') {
+      trackCurrentJob(msg.status || 'saved', msg.allowStatusChange === true).then(sendResponse);
       return true;
     }
-    if (msg.action === 'run') { start().then(() => sendResponse({ success: true })); return true; }
+    if (msg.action === 'sp-get-job-tracking') { getCurrentJobTracking().then(sendResponse); return true; }
+    if (msg.action === 'sp-find-submit') { sendResponse({ found: findAndHighlightSubmit() }); return false; }
+    if (msg.action === 'sp-preview') { previewDocument(msg.kind); sendResponse({ success: true }); return false; }
+    if (msg.action === 'sp-get-fields') { sendResponse({ fields: summarizeFoundFields(), jobInfo: currentJobInfo }); return false; }
+    if (msg.action === 'agent-execute-tool') {
+      tryActivate({ forceAgent: true })
+        .then(() => AgentController.executeExternalTool(msg.toolName, msg.input || {}))
+        .then(sendResponse)
+        .catch((error) => sendResponse({ error: error.message }));
+      return true;
+    }
   });
 
   try { await startup(); log('Ready'); } catch(e) { warn('Startup:', e.message); }

@@ -2,6 +2,13 @@ const express = require('express');
 const { prisma } = require('../../services/core/database');
 
 const router = express.Router();
+const JOB_STATUSES = new Set(['saved', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'archived']);
+
+function normalizeJobStatus(status) {
+  if (status === undefined || status === null || status === '') return undefined;
+  const normalized = String(status).trim().toLowerCase();
+  return JOB_STATUSES.has(normalized) ? normalized : null;
+}
 
 // =============================================================================
 // JOB APPLICATIONS
@@ -56,6 +63,8 @@ router.post('/jobs', async (req, res) => {
     }
     const normalizedTags = normalizeJobTags(tags);
     if (normalizedTags === null) return res.status(400).json({ error: 'Validation Error', message: 'Tags must be an array of strings' });
+    const normalizedStatus = normalizeJobStatus(status);
+    if (normalizedStatus === null) return res.status(400).json({ error: 'Validation Error', message: 'Unsupported job status' });
 
     const job = await prisma.jobApplication.create({
       data: {
@@ -63,7 +72,7 @@ router.post('/jobs', async (req, res) => {
         company,
         position,
         url: url || null,
-        status: status || 'saved',
+        status: normalizedStatus || 'saved',
         notes: notes || null,
         category: typeof category === 'string' ? category.trim() || null : null,
         tags: normalizedTags || [],
@@ -101,7 +110,11 @@ router.put('/jobs/reorder', async (req, res) => {
     const results = await prisma.$transaction(
       items.map((item) => {
         const data = { sortOrder: item.sortOrder };
-        if (item.status) data.status = item.status;
+        if (item.status) {
+          const normalizedStatus = normalizeJobStatus(item.status);
+          if (!normalizedStatus) throw new Error(`INVALID_JOB_STATUS:${item.status}`);
+          data.status = normalizedStatus;
+        }
         return prisma.jobApplication.updateMany({
           where: { id: item.id, userId },
           data
@@ -111,6 +124,9 @@ router.put('/jobs/reorder', async (req, res) => {
 
     res.json({ success: true, updated: results.length });
   } catch (error) {
+    if (String(error.message || '').startsWith('INVALID_JOB_STATUS:')) {
+      return res.status(400).json({ error: 'Validation Error', message: 'Unsupported job status' });
+    }
     console.error('Bulk reorder error:', error);
     res.status(500).json({
       error: 'Reorder Failed',
@@ -139,12 +155,14 @@ router.put('/jobs/:id', async (req, res) => {
     }
     const normalizedTags = normalizeJobTags(tags);
     if (normalizedTags === null) return res.status(400).json({ error: 'Validation Error', message: 'Tags must be an array of strings' });
+    const normalizedStatus = normalizeJobStatus(status);
+    if (normalizedStatus === null) return res.status(400).json({ error: 'Validation Error', message: 'Unsupported job status' });
 
     const data = {};
     if (company !== undefined) data.company = company;
     if (position !== undefined) data.position = position;
     if (url !== undefined) data.url = url;
-    if (status !== undefined) data.status = status;
+    if (normalizedStatus !== undefined) data.status = normalizedStatus;
     if (notes !== undefined) data.notes = notes;
     if (category !== undefined) data.category = typeof category === 'string' ? category.trim() || null : null;
     if (normalizedTags !== undefined) data.tags = normalizedTags;

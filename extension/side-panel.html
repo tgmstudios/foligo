@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>GoApply AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="side-panel.css" />
+</head>
+<body>
+  <div id="sp-root">
+    <header class="sp-header">
+      <div>
+        <div class="sp-title">⚡ GoApply AI</div>
+        <div class="sp-subtitle" id="sp-tab-status">Open a job application to get started</div>
+      </div>
+      <button class="sp-rescan-btn" id="sp-rescan" type="button" title="Rescan this page with AI">✨ Rescan</button>
+      <button class="sp-stop-btn" id="sp-stop" type="button" title="Stop the AI" hidden>⏹ Stop</button>
+    </header>
+    <div class="sp-account-bar">
+      <span id="sp-account-status">Checking Foligo connection…</span>
+      <span class="sp-account-actions">
+        <button class="sp-link-btn" id="sp-connect-btn" type="button" hidden>Connect</button>
+        <button class="sp-link-btn" id="sp-signout-btn" type="button" hidden>Sign out</button>
+        <button class="sp-link-btn" id="sp-new-chat-btn" type="button">New chat</button>
+        <button class="sp-link-btn" id="sp-history-btn" type="button">History</button>
+        <button class="sp-link-btn" id="sp-board-btn" type="button">Board</button>
+        <button class="sp-link-btn" id="sp-settings-btn" type="button" title="Settings">⚙</button>
+      </span>
+    </div>
+    <div class="sp-device-code" id="sp-device-code" hidden>
+      <p>Enter this code on the Foligo tab that just opened:</p>
+      <div class="sp-device-code-value" id="sp-device-code-value"></div>
+      <button class="sp-link-btn" id="sp-cancel-device-btn" type="button">Cancel</button>
+    </div>
+    <div class="sp-context-controls" id="sp-context-controls">
+      <label class="sp-context-row">
+        <span class="sp-context-label">Résumé</span>
+        <select class="sp-context-select" id="sp-resume-select" aria-label="Résumé for this application">
+          <option value="">AI chooses the best résumé</option>
+        </select>
+        <button class="sp-context-refresh" id="sp-resume-refresh" type="button" title="Refresh Foligo résumés">↻</button>
+      </label>
+      <label class="sp-context-row">
+        <span class="sp-context-label">Job status</span>
+        <select class="sp-context-select" id="sp-job-status" aria-label="Foligo job status" disabled>
+          <option value="saved">Saved</option>
+          <option value="applied">Applied</option>
+          <option value="screening">Screening</option>
+          <option value="interview">Interview</option>
+          <option value="offer">Offer</option>
+          <option value="accepted">Accepted</option>
+          <option value="rejected">Rejected</option>
+          <option value="withdrawn">Withdrawn</option>
+          <option value="archived">Archived</option>
+        </select>
+        <button class="sp-context-save" id="sp-status-save" type="button" disabled>Track</button>
+      </label>
+      <div class="sp-context-note" id="sp-context-note">Choose a résumé yourself or let the AI match one to this job.</div>
+    </div>
+    <div class="sp-toolbar">
+      <button class="sp-tool-btn sp-tool-btn-primary" id="sp-autofill" type="button">⚡ Autofill</button>
+      <button class="sp-tool-btn" id="sp-track" type="button" disabled>📋 Track</button>
+      <button class="sp-tool-btn" id="sp-find-submit" type="button">🎯 Find Submit</button>
+    </div>
+    <div class="sp-fields-toggle" id="sp-fields-toggle">▸ Show detected fields</div>
+    <div class="sp-field-list" id="sp-field-list" hidden></div>
+    <main class="sp-messages" id="sp-messages" aria-live="polite">
+      <div class="sp-empty">Ask about this application, request help with a field, or run an AI rescan to fill what it can. GoApply never submits for you — you always click the final button.</div>
+    </main>
+    <div class="sp-history-view" id="sp-history-view" hidden>
+      <div class="sp-history-header">
+        <button class="sp-link-btn" id="sp-history-back">← Back to current chat</button>
+      </div>
+      <div class="sp-history-list" id="sp-history-list"></div>
+    </div>
+    <footer class="sp-compose">
+      <textarea id="sp-input" class="sp-input" rows="1" placeholder="Ask GoApply AI…" aria-label="Message"></textarea>
+      <button id="sp-send" class="sp-send" type="button">Send</button>
+    </footer>
+  </div>
+  <script src="core/api.js"></script>
+  <script src="side-panel.js"></script>
+</body>
+</html>

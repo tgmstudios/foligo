@@ -1,6 +1,12 @@
 /**
- * UI — Stripe-inspired overlay with full feature panel.
- * 
+ * UI — in-page feedback that has to live on the page itself: toasts, field
+ * highlighting, the submit-success modal. The control panel (Autofill/AI
+ * Rescan/Track/field list) used to live here as a floating bottom-right box;
+ * it's been replaced by the side panel (side-panel.html/side-panel.js),
+ * which doesn't fight host-page CSS and survives navigation natively. Only
+ * things that are inherently anchored to a specific point on the page stay
+ * here.
+ *
  * Stripe Color Palette:
  *   Primary:    #635BFF  (Cornflower Blue)
  *   Dark:       #0A2540  (Downriver Navy)
@@ -20,8 +26,6 @@ const UI = (() => {
     text: '#1A1F36', danger: '#DF1B41', warning: '#FF9500',
   };
 
-  let rootEl = null;
-
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -33,13 +37,6 @@ const UI = (() => {
     const style = document.createElement('style');
     style.id = 'goapply-styles';
     style.textContent = `
-      #goapply-root {
-        position: fixed; z-index: 2147483646;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 13px; line-height: 1.5; color: ${COLORS.text};
-        pointer-events: none;
-      }
-      #goapply-root * { box-sizing: border-box; pointer-events: auto; }
       .sr-btn {
         display: inline-flex; align-items: center; justify-content: center; gap: 6px;
         padding: 8px 16px; border: none; border-radius: 6px;
@@ -47,40 +44,6 @@ const UI = (() => {
         transition: all 0.15s; white-space: nowrap;
       }
       .sr-btn-primary { background: ${COLORS.primary}; color: #fff; box-shadow: 0 1px 3px rgba(99,91,255,0.2); }
-      .sr-btn-primary:hover { background: ${COLORS.primaryHover}; transform: translateY(-1px); }
-      .sr-btn-success { background: ${COLORS.success}; color: #fff; }
-      .sr-btn-secondary { background: ${COLORS.surface}; color: ${COLORS.dark}; border: 1px solid ${COLORS.border}; }
-      .sr-btn-secondary:hover { background: ${COLORS.background}; }
-      .sr-btn-sm { padding: 4px 10px; font-size: 11px; }
-      .sr-btn-block { display: flex; width: 100%; }
-      .sr-panel {
-        background: ${COLORS.surface}; border: 1px solid ${COLORS.border};
-        border-radius: 12px; padding: 16px; min-width: 280px; max-width: 340px;
-        box-shadow: 0 8px 32px rgba(10,37,64,0.12), 0 1px 4px rgba(10,37,64,0.04);
-      }
-      .sr-panel-header {
-        font-size: 15px; font-weight: 700; color: ${COLORS.dark}; margin-bottom: 2px;
-      }
-      .sr-panel-subtitle { font-size: 11px; color: ${COLORS.muted}; margin-bottom: 12px; }
-      .sr-badge {
-        display: inline-flex; align-items: center; gap: 3px;
-        padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
-      }
-      .sr-badge-success { background: ${COLORS.successLight}; color: ${COLORS.success}; }
-      .sr-badge-warning { background: #FFF8E7; color: ${COLORS.warning}; }
-      .sr-badge-flagged { background: #FFF0D6; color: #A85D00; border: 1px solid #FFD08A; }
-      .sr-badge-muted { background: ${COLORS.background}; color: ${COLORS.muted}; }
-      .sr-field-row {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 5px 0; border-bottom: 1px solid ${COLORS.border}; font-size: 12px;
-      }
-      .sr-field-row:last-child { border-bottom: none; }
-      .sr-ai-fill-btn {
-        background: transparent; border: 0; border-radius: 4px; cursor: pointer;
-        color: ${COLORS.primary}; font-size: 12px; padding: 2px 4px;
-      }
-      .sr-ai-fill-btn:hover { background: #F0EFFF; }
-      .sr-separator { height: 1px; background: ${COLORS.border}; margin: 10px 0; }
       .sr-fade-in { animation: srFadeIn 0.2s ease-out; }
       @keyframes srFadeIn {
         from { opacity: 0; transform: translateY(-4px); }
@@ -109,306 +72,59 @@ const UI = (() => {
       }
       .sr-success-content h2 { color: ${COLORS.success}; font-size: 20px; margin-bottom: 8px; }
       .sr-success-content p { color: ${COLORS.muted}; font-size: 13px; margin-bottom: 16px; }
-      .sr-stat-row {
-        display: flex; gap: 16px; margin: 12px 0;
-      }
-      .sr-stat {
-        flex: 1; text-align: center; padding: 8px;
-        background: ${COLORS.background}; border-radius: 8px;
-      }
-      .sr-stat-value { font-size: 18px; font-weight: 700; color: ${COLORS.dark}; }
-      .sr-stat-label { font-size: 10px; color: ${COLORS.muted}; text-transform: uppercase; }
       .sr-submit-highlight {
         outline: 3px solid ${COLORS.success} !important; outline-offset: 4px !important;
+      }
+      #goapply-agent-border {
+        position: fixed; inset: 0; z-index: 2147483647; pointer-events: none;
+        border: 3px solid ${COLORS.primary};
+        box-shadow: inset 0 0 22px rgba(99,91,255,.3);
+        animation: srAgentBorderPulse 2.4s ease-in-out infinite;
+      }
+      @keyframes srAgentBorderPulse {
+        0%, 100% { border-color: ${COLORS.primary}; box-shadow: inset 0 0 18px rgba(99,91,255,.26); }
+        50% { border-color: ${COLORS.success}; box-shadow: inset 0 0 26px rgba(0,168,107,.26); }
       }
     `;
     document.head.appendChild(style);
   }
 
-  // ─── Mount / unmount ─────────────────────────────────────────────
-
-  function mount() {
-    if (rootEl) return rootEl;
+  // A full-viewport border while the AI agent is actively working the page —
+  // the same "something is driving this tab" affordance Claude for Chrome
+  // shows. Appended to <html> rather than <body> so it isn't affected by
+  // whatever the agent's own DOM writes are doing to body content.
+  function showAgentBorder() {
     injectStyles();
-    rootEl = document.createElement('div');
-    rootEl.id = 'goapply-root';
-    document.body.appendChild(rootEl);
-    rootEl.style.right = '16px';
-    rootEl.style.bottom = '16px';
-    return rootEl;
+    if (document.getElementById('goapply-agent-border')) return;
+    const el = document.createElement('div');
+    el.id = 'goapply-agent-border';
+    document.documentElement.appendChild(el);
   }
 
-  function unmount() {
-    if (rootEl) { rootEl.remove(); rootEl = null; }
-  }
-
-  // ─── Full panel with all features ────────────────────────────────
-
-  function renderPanel(platform, foundFields, jobInfo, appCount, onAutofill, onClose, onSubmitFound, onPreview, agentActions = {}) {
-    const root = mount();
-    if (!root) return;
-
-    const filledCount = foundFields.length;
-    const totalFields = (platform.config.inputSelectors || []).length;
-    const percent = totalFields > 0 ? Math.round((filledCount / totalFields) * 100) : 0;
-
-    root.innerHTML = `
-      <div class="sr-panel sr-fade-in">
-        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
-          <div>
-            <div class="sr-panel-header">⚡ GoApply by Foligo</div>
-            <div class="sr-panel-subtitle">
-              <span class="sr-badge sr-badge-success">${platform.platform}</span>
-              ${jobInfo.company ? `<span style="color:${COLORS.dark};font-size:12px;"> · ${jobInfo.company}</span>` : ''}
-            </div>
-          </div>
-          <button class="sr-btn sr-btn-secondary sr-btn-sm" id="sr-close" style="padding:2px 6px;font-size:14px;">×</button>
-        </div>
-
-        <!-- Stats row -->
-        <div class="sr-stat-row">
-          <div class="sr-stat">
-            <div class="sr-stat-value">${filledCount}</div>
-            <div class="sr-stat-label">Fields Found</div>
-          </div>
-          <div class="sr-stat">
-            <div class="sr-stat-value">${percent}%</div>
-            <div class="sr-stat-label">Coverage</div>
-          </div>
-          <div class="sr-stat">
-            <div class="sr-stat-value">${appCount}</div>
-            <div class="sr-stat-label">Tracked</div>
-          </div>
-        </div>
-
-        <!-- Field list (collapsible) -->
-        <div id="sr-fields-toggle" style="font-size:11px;color:${COLORS.muted};cursor:pointer;margin:4px 0;">
-          ▸ Show ${filledCount} detected fields
-        </div>
-        <div id="sr-field-list" style="display:none;max-height:150px;overflow-y:auto;margin-bottom:8px;"></div>
-
-        <div class="sr-separator"></div>
-
-        <!-- Action buttons -->
-        <button class="sr-btn sr-btn-primary sr-btn-block" id="sr-autofill" style="margin-bottom:6px;" ${filledCount ? '' : 'disabled'}>
-          ⚡ Autofill ${filledCount} Fields
-        </button>
-
-        <div style="display:flex;gap:6px;margin-bottom:6px;">
-          <button class="sr-btn sr-btn-secondary" id="sr-agent-rescan" style="flex:1;font-size:12px;">
-            ✨ Force AI Rescan
-          </button>
-          <button class="sr-btn sr-btn-secondary" id="sr-agent-chat" style="flex:1;font-size:12px;">
-            💬 Ask AI
-          </button>
-        </div>
-
-        <div id="sr-agent-status" aria-live="polite" style="display:none;color:${COLORS.muted};font-size:11px;margin:0 2px 7px;"></div>
-
-        <div style="display:flex;gap:6px;">
-          <button class="sr-btn sr-btn-secondary" id="sr-track-btn" style="flex:1;font-size:12px;">
-            📋 Track Job
-          </button>
-          <button class="sr-btn sr-btn-secondary" id="sr-submit-btn" style="flex:1;font-size:12px;">
-            🎯 Find Submit
-          </button>
-        </div>
-      </div>
-    `;
-
-    // Populate field list
-    const listEl = root.querySelector('#sr-field-list');
-    const docRows = { resume: [], coverLetter: [] };
-    foundFields.slice(0, 20).forEach((field, index) => {
-      const row = document.createElement('div');
-      row.className = 'sr-field-row';
-      row.dataset.fieldRef = `f${index}`;
-      const name = field.fieldName.replace(/_/g, ' ');
-      const docKind = field.method === 'uploadResume' ? 'resume' : field.method === 'uploadCoverLetter' ? 'coverLetter' : null;
-      const badge = docKind === 'resume' ? '📎 resume' :
-                    docKind === 'coverLetter' ? '📎 cover letter' :
-                    field.method === 'writeCoverLetter' ? '✏️ text' : 'detected';
-      const badgeClass = docKind ? 'sr-badge-warning' : 'sr-badge-muted';
-      const previewBtn = docKind
-        ? `<button class="sr-preview-btn" data-kind="${docKind}" title="Preview" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;">👁</button>`
-        : '';
-      const aiFillBtn = docKind ? '' : `<button class="sr-ai-fill-btn" data-field-ref="f${index}" title="Fill this field with AI" aria-label="Fill ${escapeHtml(name)} with AI">✨</button>`;
-      row.innerHTML = `<span>${escapeHtml(name)}</span><span class="sr-doc-controls">${aiFillBtn}${previewBtn}<span class="sr-badge sr-field-badge ${badgeClass}">${badge}</span></span>`;
-      listEl.appendChild(row);
-      if (docKind) docRows[docKind].push(row);
-    });
-
-    // When more than one resume/cover letter exists, swap the static badge
-    // for a dropdown so the user picks which one gets attached — autofill
-    // never silently guesses between multiple documents.
-    for (const kind of ['resume', 'coverLetter']) {
-      const rows = docRows[kind];
-      if (!rows.length || typeof Filler === 'undefined') continue;
-      (async () => {
-        const [docs, selectedId] = await Promise.all([Filler.listDocuments(kind), Filler.getSelectedDocId(kind)]);
-        if (docs.length <= 1) return;
-        const defaultDoc = docs.find(d => d.isDefault) || docs[0];
-        const currentId = (selectedId && docs.some(d => d.id === selectedId)) ? selectedId : defaultDoc.id;
-        const nameKey = kind === 'resume' ? 'name' : 'title';
-        const optionsHtml = docs.map(d => {
-          const label = escapeHtml(d[nameKey] || 'Untitled') + (d.isDefault ? ' (default)' : '');
-          return `<option value="${escapeHtml(d.id)}"${d.id === currentId ? ' selected' : ''}>${label}</option>`;
-        }).join('');
-        for (const row of rows) {
-          const badge = row.querySelector('.sr-doc-controls .sr-badge');
-          if (!badge) continue;
-          const select = document.createElement('select');
-          select.className = 'sr-doc-select';
-          select.style.cssText = `font-size:11px;max-width:120px;padding:1px 2px;border-radius:4px;border:1px solid ${COLORS.border};background:${COLORS.surface};color:${COLORS.text};`;
-          select.innerHTML = optionsHtml;
-          select.addEventListener('click', (e) => e.stopPropagation());
-          select.addEventListener('change', () => { Filler.setSelectedDocId(kind, select.value); });
-          badge.replaceWith(select);
-        }
-      })();
-    }
-
-    // Preview a resume/cover letter without leaving the page
-    listEl.addEventListener('click', (e) => {
-      const aiBtn = e.target.closest('.sr-ai-fill-btn');
-      if (aiBtn) {
-        e.stopPropagation();
-        agentActions.onFieldFill?.(aiBtn.dataset.fieldRef);
-        return;
-      }
-      const btn = e.target.closest('.sr-preview-btn');
-      if (!btn) return;
-      e.stopPropagation();
-      if (onPreview) onPreview(btn.dataset.kind);
-    });
-
-    // Toggle field list
-    root.querySelector('#sr-fields-toggle').addEventListener('click', () => {
-      const list = root.querySelector('#sr-field-list');
-      const toggle = root.querySelector('#sr-fields-toggle');
-      if (list.style.display === 'none') {
-        list.style.display = 'block';
-        toggle.textContent = '▾ Hide fields';
-      } else {
-        list.style.display = 'none';
-        toggle.textContent = `▸ Show ${filledCount} detected fields`;
-      }
-    });
-
-    // Autofill
-    root.querySelector('#sr-autofill').addEventListener('click', () => {
-      if (!filledCount) return;
-      const btn = root.querySelector('#sr-autofill');
-      btn.disabled = true;
-      btn.textContent = 'Filling...';
-      onAutofill();
-    });
-
-    root.querySelector('#sr-agent-rescan').addEventListener('click', () => agentActions.onRescan?.());
-    root.querySelector('#sr-agent-chat').addEventListener('click', () => agentActions.onChat?.());
-
-    // Track job
-    root.querySelector('#sr-track-btn').addEventListener('click', async () => {
-      const btn = root.querySelector('#sr-track-btn');
-      btn.disabled = true;
-      btn.textContent = 'Tracking...';
-      try {
-        const result = await Tracker.trackApplication(jobInfo, 'saved');
-        btn.textContent = result.created ? '✓ Tracked' : '✓ On board';
-        btn.style.color = COLORS.success;
-        showToast(result.created ? 'Job added to your Foligo board' : 'Job is already on your Foligo board');
-      } catch (error) {
-        console.error('[GoApply] Track failed:', error.message);
-        btn.textContent = 'Track failed — retry';
-        btn.style.color = COLORS.danger;
-        btn.disabled = false;
-        showToast(`Track failed: ${error.message}`);
-      }
-    });
-
-    // Find submit button
-    root.querySelector('#sr-submit-btn').addEventListener('click', () => {
-      const submitBtn = Tracker.findSubmitButton(platform.config);
-      if (submitBtn) {
-        Tracker.highlightSubmitButton(submitBtn);
-        if (onSubmitFound) onSubmitFound(submitBtn);
-        showToast('🎯 Submit button highlighted');
-      } else {
-        showToast('⚠ No submit button found');
-      }
-    });
-
-    // Close
-    root.querySelector('#sr-close').addEventListener('click', () => {
-      unmount();
-      if (onClose) onClose();
-    });
-  }
-
-  function updateAutofillProgress(completed, total, customMsg) {
-    if (!rootEl) return;
-    const btn = rootEl.querySelector('#sr-autofill');
-    if (btn) {
-      if (customMsg) {
-        btn.textContent = customMsg;
-      } else {
-        btn.textContent = `Processing ${completed}/${total}`;
-      }
-    }
-  }
-
-  function updateAgentProgress(message = '') {
-    if (!rootEl) return;
-    const status = rootEl.querySelector('#sr-agent-status');
-    const button = rootEl.querySelector('#sr-agent-rescan');
-    if (status) {
-      status.textContent = message;
-      status.style.display = message ? 'block' : 'none';
-    }
-    if (button) button.disabled = Boolean(message) && !/complete|ready|failed/i.test(message);
-  }
-
-  function setFieldBadge(fieldRef, state, reason = '') {
-    if (!rootEl) return;
-    const row = rootEl.querySelector(`.sr-field-row[data-field-ref="${fieldRef}"]`);
-    const badge = row?.querySelector('.sr-field-badge');
-    if (!badge) return;
-    badge.className = 'sr-badge sr-field-badge';
-    if (state === 'flagged') {
-      badge.classList.add('sr-badge-flagged');
-      badge.textContent = '⚠ Review';
-      badge.title = reason || 'AI-filled value needs review';
-    } else if (state === 'filled') {
-      badge.classList.add('sr-badge-success');
-      badge.textContent = '✓ AI filled';
-      badge.title = '';
-      row.querySelector('.sr-ai-fill-btn')?.remove();
-    } else {
-      badge.classList.add('sr-badge-muted');
-      badge.textContent = state || 'detected';
-      badge.title = '';
-    }
+  function hideAgentBorder() {
+    document.getElementById('goapply-agent-border')?.remove();
   }
 
   function showSuccessModal(jobInfo, onClose) {
+    injectStyles();
     const modal = document.createElement('div');
     modal.className = 'sr-success-modal sr-fade-in';
     modal.innerHTML = `
       <div class="sr-success-content">
         <div style="font-size:48px;margin-bottom:8px;">🎉</div>
         <h2>Application Submitted!</h2>
-        <p>${jobInfo.company ? 'Your application to <strong>' + jobInfo.company + '</strong> has been tracked.' : 'Your application has been tracked.'}</p>
-        <p style="font-size:12px;color:${COLORS.muted};">${jobInfo.jobTitle || ''}</p>
+        <p>${jobInfo.company ? 'Your application to <strong>' + escapeHtml(jobInfo.company) + '</strong> has been tracked.' : 'Your application has been tracked.'}</p>
+        <p style="font-size:12px;color:${COLORS.muted};">${escapeHtml(jobInfo.jobTitle || '')}</p>
         <button class="sr-btn sr-btn-primary" id="sr-success-close" style="margin-top:8px;">View Tracked Jobs</button>
       </div>
     `;
     document.body.appendChild(modal);
-    
+
     modal.querySelector('#sr-success-close').addEventListener('click', () => {
       modal.remove();
       if (onClose) onClose();
     });
-    
+
     // Also close on background click
     modal.addEventListener('click', (e) => {
       if (e.target === modal) { modal.remove(); if (onClose) onClose(); }
@@ -416,6 +132,7 @@ const UI = (() => {
   }
 
   function showToast(message, duration = 3000) {
+    injectStyles();
     const toast = document.createElement('div');
     toast.className = 'sr-toast';
     toast.textContent = message;
@@ -439,8 +156,5 @@ const UI = (() => {
     }, 1500);
   }
 
-  return {
-    mount, unmount, renderPanel, updateAutofillProgress, updateAgentProgress, setFieldBadge,
-    showSuccessModal, showToast, highlightField, COLORS,
-  };
+  return { showSuccessModal, showToast, highlightField, showAgentBorder, hideAgentBorder, COLORS };
 })();

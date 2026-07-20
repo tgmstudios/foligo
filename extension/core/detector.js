@@ -347,12 +347,6 @@ const Detector = (() => {
           if (excluded) continue;
         }
         
-        // Check if we're on an embedded path (Greenhouse etc has both main site and embedded)
-        if (pconf.embeddedPaths && !matchesAny(pconf.embeddedPaths, url)) {
-          // Not on an embedded path — check if full URL match still works
-          // Some platforms require specific paths
-        }
-        
         return { platform, config: pconf };
       }
     }
