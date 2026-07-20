@@ -350,6 +350,68 @@ async function getResumeChatbotContext(userId) {
 
 const router = express.Router();
 
+const CURRENT_PAGE_LABELS = {
+  dashboard: 'the main dashboard',
+  blogs: 'the blog posts list',
+  'projects-content': 'the projects list',
+  experience: 'the experience list',
+  portfolios: 'the portfolios list',
+  'portfolio-detail': 'a portfolio detail page',
+  'create-content': 'the new-post form',
+  'create-content-portfolio': 'the new-post form',
+  'content-editor': 'the Content Editor',
+  'studio-content': 'the AI Markdown Studio',
+  'studio-resume': 'Resume Studio',
+  'studio-cover-letter': 'Cover Letter Studio',
+  'goapply-kanban': 'the GoApply job tracker (kanban board)',
+  'goapply-jobs': 'the GoApply job list',
+  'goapply-assistant': 'the GoApply Job Assistant chat',
+  'goapply-assistant-session': 'a GoApply Job Assistant session',
+  'goapply-resume': 'the GoApply resume gallery',
+  'goapply-answers': 'the GoApply saved answers list',
+  'goapply-letters': 'the GoApply cover letters list',
+  'goapply-profile': 'the GoApply profile settings',
+};
+
+/**
+ * Turn the dashboard route the user currently has open into a system-prompt
+ * blurb, resolving the focal entity (post/resume/cover letter) by id where
+ * possible so "add a role to this experience" / "update this resume" work
+ * without the user having to name or look anything up first.
+ */
+async function describeCurrentPage(currentPage, { projectId, userId }) {
+  const name = currentPage?.name;
+  if (!name) return '';
+  const params = currentPage.params || {};
+  const label = CURRENT_PAGE_LABELS[name] || `the "${name}" page`;
+
+  if ((name === 'content-editor' || name === 'studio-content') && params.id) {
+    const post = await prisma.content.findFirst({
+      where: { id: params.id, projectId },
+      select: { id: true, title: true, contentType: true },
+    });
+    if (post) {
+      return `The user currently has ${label} open, editing this post: "${post.title}" (${post.contentType}, id: ${post.id}). When they say "this post"/"this experience"/"this project"/"it" etc. without naming something else, they mean this one — act on it directly, no need to call list_posts first.`;
+    }
+  }
+
+  if (name === 'studio-resume' && params.id) {
+    const resume = await prisma.resumeDocument.findFirst({ where: { id: params.id, userId }, select: { id: true, name: true } });
+    if (resume) {
+      return `The user currently has ${label} open, editing this resume: "${resume.name}" (id: ${resume.id}). When they say "this resume"/"it", they mean this one.`;
+    }
+  }
+
+  if (name === 'studio-cover-letter' && params.id) {
+    const letter = await prisma.coverLetter.findFirst({ where: { id: params.id, userId }, select: { id: true, title: true } });
+    if (letter) {
+      return `The user currently has ${label} open, editing this cover letter: "${letter.title}" (id: ${letter.id}). When they say "this cover letter"/"it", they mean this one.`;
+    }
+  }
+
+  return `The user currently has ${label} open in the dashboard.`;
+}
+
 /**
  * @swagger
  * /api/ai/portfolio/chat:
@@ -363,6 +425,7 @@ router.post('/portfolio/chat', [
   body('projectId').isUUID().withMessage('Valid project ID is required'),
   body('provider').optional().isString(),
   body('history').optional().isArray(),
+  body('currentPage').optional().isObject(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -405,21 +468,35 @@ router.post('/portfolio/chat', [
     ? posts.map((p) => `- [${p.contentType}/${p.status}] "${p.title}" (id: ${p.id})`).join('\n')
     : '(no posts yet)';
 
-  const tools = createPortfolioAgentTools({ projectId });
+  const tools = createPortfolioAgentTools({ projectId, userId });
+  const currentPageContext = await describeCurrentPage(req.body.currentPage, { projectId, userId });
 
-  const systemInstruction = `You are the AI Content Creator, an agent with full read/write authority over every post (BLOG, PROJECT, and EXPERIENCE entries) in the portfolio project "${project.name}" — every field, every experience role, every linked skill and tag, on any post, plus the ability to create new posts and navigate the user around the dashboard.
+  const systemInstruction = `You are the AI Content Creator, an agent with full read/write authority over the user's entire Foligo account: every post (BLOG, PROJECT, and EXPERIENCE entries) in the portfolio project "${project.name}" — every field, every experience role, every linked skill and tag — PLUS everything in GoApply: resumes, cover letters, tracked job applications, saved answers, and their GoApply profile, across all of their projects. You can also navigate the user anywhere in the dashboard.
 
+${currentPageContext ? `CURRENT PAGE:\n${currentPageContext}\n` : ''}
 CURRENT POSTS IN THIS PROJECT:
 ${postList}
 
-CAPABILITIES:
+PORTFOLIO CAPABILITIES:
 - Use list_posts / get_post to find and inspect posts before acting on them — never guess a postId.
 - Use create_post, update_post_fields, update_post_content, add/update/delete_experience_role, and add/remove_skills_to_post / add/remove_tags_to_post freely — these are real, immediate writes (each snapshots a revision first where applicable).
-- Use navigate_to whenever the user asks to see, open, or go to a post or a list view. Also call it (target "studio-content") right after create_post succeeds, unless the user is clearly about to have you create more posts in this same conversation — landing them in the editor for what was just made is the expected default.
-- Use web_search / pull_page for research when useful.
+
+GOAPPLY CAPABILITIES (these span ALL of the user's projects, not just "${project.name}"):
+- Resumes: list_resumes, get_resume, save_resume (omit resumeId to create, include it to update).
+- Cover letters: list_cover_letters, get_cover_letter, save_cover_letter (same create/update pattern).
+- Job applications (the tracker/kanban): list_job_applications, save_job_application (same create/update pattern; status must be one of saved/applied/screening/interview/offer/accepted/rejected/withdrawn/archived).
+- Saved answers: get_saved_answers, save_answers (batch create/update).
+- Profile: get_goapply_profile, update_goapply_profile (only set fields the user explicitly gave you — never invent personal details).
+- save_skills attaches/creates Foligo skills on a writable project and can optionally link them to the GoApply profile.
+
+NAVIGATION:
+- Use navigate_to whenever the user asks to see, open, or go to something — portfolio posts/lists, or GoApply's kanban, job list, resume gallery, cover letters, saved answers, profile, job assistant, or a specific resume/cover-letter Studio.
+- Also call it (target "studio-content") right after create_post succeeds, unless the user is clearly about to have you create more posts in this same conversation — landing them in the editor for what was just made is the expected default.
+
+RESEARCH: use web_search / pull_page when useful.
 
 HARD RULES:
-- Deleting a post is the ONLY action that requires human confirmation. Call propose_delete_post, then STOP — it never deletes anything itself, it only surfaces a confirmation prompt in the UI. Never claim a post was deleted; the user must click Confirm themselves.
+- Deleting ANYTHING (a post, resume, cover letter, job application, or saved answer) always requires human confirmation. Call the matching propose_delete_* tool, then STOP — none of them delete anything themselves, they only surface a confirmation prompt in the UI. Never claim something was deleted; the user must click Confirm themselves.
 - You have NO tools for and must NEVER discuss, infer, or offer to change the user's account email, password, authentication, billing, or security settings — those are entirely out of scope and live elsewhere in the dashboard.
 - After making changes, briefly tell the user what you did in plain prose.`;
 

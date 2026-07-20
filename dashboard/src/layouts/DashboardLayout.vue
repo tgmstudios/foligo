@@ -798,6 +798,7 @@
     <AIContentCreatorModal
       ref="aiModalRef"
       :project-id="selectedProjectId"
+      :current-page="currentPage"
       @content-generated="handleContentGenerated"
       @content-created="handleContentCreated"
       @navigate="handleAgentNavigate"
@@ -825,6 +826,13 @@ const sidebarOpen = ref(false);
 const showUserMenu = ref(false);
 const selectedProjectId = ref("");
 const commandPaletteStore = useCommandPaletteStore();
+
+// Lets the AI Content Creator resolve "this post"/"this resume"/etc without
+// the user having to name it — see currentPage prop on AIContentCreatorModal.
+const currentPage = computed(() => ({
+  name: route.name as string | undefined,
+  params: { ...route.params } as Record<string, unknown>,
+}));
 
 const navigation = computed(() => {
   const items = [

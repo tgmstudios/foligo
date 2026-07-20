@@ -115,12 +115,12 @@
                   <div v-if="message.toolActivity?.length" class="mb-2 space-y-1.5">
                     <template v-for="(tool, index) in message.toolActivity" :key="`${tool.toolName}-${index}`">
                       <div
-                        v-if="tool.toolName === 'propose_delete_post' && tool.status === 'done'"
+                        v-if="tool.toolName?.startsWith('propose_delete_') && tool.status === 'done' && tool.output?.deleteEndpoint"
                         class="rounded-md border px-3 py-2 text-xs"
                         :class="tool.output?.resolved === 'deleted' ? 'bg-red-900/20 border-red-800 text-red-300' : tool.output?.resolved === 'cancelled' ? 'bg-gray-700/50 border-gray-600 text-gray-300' : tool.output?.resolved === 'error' ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-amber-900/20 border-amber-700 text-amber-200'"
                       >
-                        <template v-if="tool.output && !tool.output.resolved">
-                          <p class="mb-2">Delete "{{ tool.output.title }}"? This cannot be undone.</p>
+                        <template v-if="!tool.output.resolved">
+                          <p class="mb-2">Delete this {{ tool.output.description || 'item' }}, "{{ tool.output.label }}"? This cannot be undone.</p>
                           <div class="flex gap-2">
                             <button
                               @click="confirmDelete(tool)"
@@ -134,9 +134,9 @@
                             >Cancel</button>
                           </div>
                         </template>
-                        <p v-else-if="tool.output?.resolved === 'deleted'">Deleted "{{ tool.output.title }}".</p>
-                        <p v-else-if="tool.output?.resolved === 'cancelled'">Cancelled — "{{ tool.output.title }}" was not deleted.</p>
-                        <p v-else>{{ tool.output?.errorMessage || tool.output?.error || 'Something went wrong.' }}</p>
+                        <p v-else-if="tool.output.resolved === 'deleted'">Deleted "{{ tool.output.label }}".</p>
+                        <p v-else-if="tool.output.resolved === 'cancelled'">Cancelled — "{{ tool.output.label }}" was not deleted.</p>
+                        <p v-else>{{ tool.output.errorMessage || 'Something went wrong.' }}</p>
                       </div>
                       <div
                         v-else
@@ -236,7 +236,10 @@ import { useChatSessions } from '@/composables/useChatSessions'
 import { useAgenticChat, type ToolActivity } from '@/composables/useAgenticChat'
 import { renderMarkdown } from '@/lib/markdown'
 
-const props = defineProps<{ projectId?: string }>()
+const props = defineProps<{
+  projectId?: string
+  currentPage?: { name?: string; params?: Record<string, unknown> }
+}>()
 
 const emit = defineEmits<{
   close: []
@@ -258,7 +261,7 @@ const chat = useAgenticChat(
   () => `${API_URL}/ai/portfolio/chat`,
   { onTurnComplete: async (history) => { await chatSessions.save(history) } },
   () => undefined,
-  () => ({ projectId: props.projectId })
+  () => ({ projectId: props.projectId, currentPage: props.currentPage })
 )
 
 const canRespond = computed(() => !chat.streaming.value && modeSelected.value && selectedInteractionMode.value === 'text')
@@ -277,6 +280,20 @@ const TOOL_LABELS: Record<string, { done: string; error: string }> = {
   add_tags_to_post: { done: 'Tags added', error: 'Failed to add tags' },
   remove_tag_from_post: { done: 'Tag removed', error: 'Failed to remove tag' },
   navigate_to: { done: 'Navigating…', error: 'Navigation failed' },
+  // GoApply
+  list_resumes: { done: 'Searched your resumes', error: 'Search failed' },
+  get_resume: { done: 'Loaded resume', error: 'Failed to load resume' },
+  save_resume: { done: 'Resume saved', error: 'Failed to save resume' },
+  list_cover_letters: { done: 'Searched your cover letters', error: 'Search failed' },
+  get_cover_letter: { done: 'Loaded cover letter', error: 'Failed to load cover letter' },
+  save_cover_letter: { done: 'Cover letter saved', error: 'Failed to save cover letter' },
+  list_job_applications: { done: 'Searched your job applications', error: 'Search failed' },
+  save_job_application: { done: 'Job application saved', error: 'Failed to save job application' },
+  get_saved_answers: { done: 'Loaded saved answers', error: 'Failed to load saved answers' },
+  save_answers: { done: 'Saved answers updated', error: 'Failed to save answers' },
+  get_goapply_profile: { done: 'Loaded GoApply profile', error: 'Failed to load profile' },
+  update_goapply_profile: { done: 'Profile updated', error: 'Failed to update profile' },
+  save_skills: { done: 'Skills saved', error: 'Failed to save skills' },
 }
 
 const toolLabel = (toolName: string, status: 'running' | 'done' | 'error') => {
@@ -431,13 +448,13 @@ watch(() => chat.streaming.value, (streaming) => {
 })
 
 async function confirmDelete(activity: ToolActivity) {
-  const postId = activity.output?.postId
+  const endpoint = activity.output?.deleteEndpoint
   activity.busy = true
   try {
-    await api.delete(`/content/${postId}`)
+    await api.delete(endpoint)
     activity.output = { ...activity.output, resolved: 'deleted' }
   } catch (error: any) {
-    activity.output = { ...activity.output, resolved: 'error', errorMessage: error.response?.data?.message || 'Failed to delete the post.' }
+    activity.output = { ...activity.output, resolved: 'error', errorMessage: error.response?.data?.message || `Failed to delete this ${activity.output?.description || 'item'}.` }
   } finally {
     activity.busy = false
   }

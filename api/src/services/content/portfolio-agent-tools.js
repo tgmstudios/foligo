@@ -2,14 +2,18 @@
  * Tool set for the whole-portfolio AI Content Creator agent. Unlike
  * content-editor-tools.js (which batches edits into a single mutable `doc`
  * box scoped to one open post), this agent ranges across every post in a
- * project across a single conversation, so each write tool commits directly
- * to Prisma inside its own `execute` — there's no single document to diff
- * and persist at the end of the turn.
+ * project — and every GoApply resume, cover letter, job application, saved
+ * answer, and profile field belonging to the user — across a single
+ * conversation, so each write tool commits directly to Prisma inside its own
+ * `execute` — there's no single document to diff and persist at the end of
+ * the turn.
  *
- * `propose_delete_post` and `navigate_to` never touch the database — they
- * return a descriptor the frontend acts on (a confirm/cancel card, or a
+ * Every `propose_delete_*` tool and `navigate_to` never touch the database —
+ * they return a descriptor the frontend acts on (a confirm/cancel card, or a
  * router.push), so destructive/navigational actions always go through a
- * client-side gate rather than executing unilaterally.
+ * client-side gate rather than executing unilaterally. GoApply's read/write
+ * tools are largely reused as-is from job-assistant-tools.js (the existing,
+ * proven per-job assistant agent) rather than reimplemented here.
  */
 const { tool } = require('ai');
 const { z } = require('zod');
@@ -20,6 +24,7 @@ const { snapshotContentRevision, buildContentFieldUpdate } = require('../../rout
 const { matchOrCreateSkills, matchOrCreateTags } = require('./skill-tag-matcher');
 const { createWebSearchTool } = require('../goapply/web-search-tool');
 const { createPullPageTool } = require('../goapply/pull-page-tool');
+const { createJobAssistantTools } = require('../goapply/job-assistant-tools');
 
 const skillInput = z.object({ name: z.string(), category: z.string().optional() });
 const tagInput = z.object({ name: z.string(), category: z.string().optional() });
@@ -36,14 +41,34 @@ function portfolioTool(definition) {
   return tool({ ...definition, execute: async (...args) => toJsonCompatible(await execute(...args)) });
 }
 
-const NAV_TARGETS = ['content-editor', 'studio-content', 'create-content-portfolio', 'blogs', 'projects-content', 'experience', 'portfolios'];
+const NAV_TARGETS = [
+  'content-editor', 'studio-content', 'create-content-portfolio', 'blogs', 'projects-content', 'experience', 'portfolios',
+  'goapply-kanban', 'goapply-jobs', 'goapply-assistant', 'goapply-resume', 'goapply-answers', 'goapply-letters', 'goapply-profile',
+  'studio-resume', 'studio-cover-letter',
+];
+const JOB_STATUSES = new Set(['saved', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'archived']);
+
+function normalizeJobTags(tags) {
+  if (tags === undefined) return undefined;
+  if (!Array.isArray(tags)) return null;
+  return [...new Set(tags.filter((tag) => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean))].slice(0, 25);
+}
 
 /**
- * @param {{ projectId: string }} scope
+ * @param {{ projectId: string, userId: string }} scope - `projectId` scopes
+ *   portfolio-post tools; `userId` scopes GoApply tools, which range across
+ *   ALL of the user's projects/documents, not just this one.
  */
-function createPortfolioAgentTools({ projectId }) {
+function createPortfolioAgentTools({ projectId, userId }) {
   const webSearch = createWebSearchTool({ toolFn: tool, z });
   const pullPage = createPullPageTool({ toolFn: tool, z });
+
+  // GoApply tools already do everything a job-application assistant needs
+  // (get/save resume, cover letter, profile, saved answers, skills) —
+  // reuse them as-is. Drop web_search/pull_page (already have our own) and
+  // create_portfolio_items/get_portfolio_item (redundant with create_post/
+  // get_post/list_posts below, which are the canonical portfolio tools here).
+  const { web_search: _ws, pull_page: _pp, create_portfolio_items, get_portfolio_item, ...goApplyTools } = createJobAssistantTools(prisma, userId);
 
   return {
     web_search: webSearch,
@@ -370,18 +395,158 @@ function createPortfolioAgentTools({ projectId }) {
       execute: async ({ postId }) => {
         const post = await prisma.content.findFirst({ where: { id: postId, projectId }, select: { id: true, title: true, contentType: true } });
         if (!post) return { error: `No post with id ${postId} found in this project.` };
-        return { requiresConfirmation: true, postId: post.id, title: post.title, contentType: post.contentType };
+        return { requiresConfirmation: true, kind: 'post', id: post.id, label: post.title, description: `${post.contentType} post`, deleteEndpoint: `/content/${post.id}` };
+      },
+    }),
+
+    // ── GoApply: list + save_job_application + delete proposals ──
+    // (get/save resume, cover letter, profile, saved answers, and skills
+    // come from goApplyTools, merged in below.)
+
+    list_resumes: portfolioTool({
+      description: 'List the user\'s resumes (metadata only — id, name, linked job, template/default flags). Use get_resume for full LaTeX content.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const resumes = await prisma.resumeDocument.findMany({
+          where: { userId },
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true, name: true, jobDescription: true, linkedJobId: true,
+            linkedJob: { select: { id: true, company: true, position: true, category: true } },
+            isTemplate: true, isDefault: true, updatedAt: true,
+          },
+        });
+        return { resumes };
+      },
+    }),
+
+    list_cover_letters: portfolioTool({
+      description: 'List the user\'s cover letters (metadata only). Use get_cover_letter for full LaTeX content.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const letters = await prisma.coverLetter.findMany({
+          where: { userId },
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true, title: true, jobId: true, isTemplate: true, isDefault: true, updatedAt: true,
+            job: { select: { id: true, company: true, position: true, category: true } },
+          },
+        });
+        return { coverLetters: letters };
+      },
+    }),
+
+    list_job_applications: portfolioTool({
+      description: 'List the user\'s tracked job applications (the GoApply kanban/tracker), optionally filtered by status.',
+      inputSchema: z.object({
+        status: z.enum(['saved', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'archived']).optional(),
+      }),
+      execute: async ({ status }) => {
+        const jobs = await prisma.jobApplication.findMany({
+          where: { userId, ...(status ? { status } : {}) },
+          orderBy: [{ sortOrder: 'asc' }, { updatedAt: 'desc' }],
+        });
+        return { jobApplications: jobs };
+      },
+    }),
+
+    save_job_application: portfolioTool({
+      description: 'Create a new tracked job application, or update an existing owned one. Omit jobId to create; include it to update. Company and position are required when creating.',
+      inputSchema: z.object({
+        jobId: z.string().uuid().optional(),
+        company: z.string().min(1).optional(),
+        position: z.string().min(1).optional(),
+        url: z.string().optional(),
+        status: z.enum(['saved', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'archived']).optional(),
+        notes: z.string().optional(),
+        category: z.string().optional(),
+        tags: z.array(z.string()).max(25).optional(),
+        appliedAt: z.string().optional(),
+        referredBy: z.string().optional(),
+      }),
+      execute: async ({ jobId, company, position, url, status, notes, category, tags, appliedAt, referredBy }) => {
+        const normalizedTags = normalizeJobTags(tags);
+        if (normalizedTags === null) return { error: 'Tags must be an array of strings.' };
+
+        if (jobId) {
+          const existing = await prisma.jobApplication.findFirst({ where: { id: jobId, userId } });
+          if (!existing) return { error: `No job application with id ${jobId} found for this user.` };
+          const data = {};
+          if (company !== undefined) data.company = company;
+          if (position !== undefined) data.position = position;
+          if (url !== undefined) data.url = url;
+          if (status !== undefined) data.status = status;
+          if (notes !== undefined) data.notes = notes;
+          if (category !== undefined) data.category = category.trim() || null;
+          if (normalizedTags !== undefined) data.tags = normalizedTags;
+          if (appliedAt !== undefined) data.appliedAt = appliedAt ? new Date(appliedAt) : null;
+          if (referredBy !== undefined) data.referredBy = referredBy;
+          const job = await prisma.jobApplication.update({ where: { id: jobId }, data });
+          return { success: true, action: 'updated', jobApplication: job };
+        }
+
+        if (!company || !position) return { error: 'company and position are required to create a job application.' };
+        const job = await prisma.jobApplication.create({
+          data: {
+            userId, company, position, url: url || null, status: status || 'saved',
+            notes: notes || null, category: category?.trim() || null, tags: normalizedTags || [],
+            referredBy: referredBy || null, appliedAt: appliedAt ? new Date(appliedAt) : null,
+          },
+        });
+        return { success: true, action: 'created', jobApplication: job };
+      },
+    }),
+
+    propose_delete_resume: portfolioTool({
+      description: 'Propose deleting a resume. Never deletes itself — surfaces a Confirm/Cancel prompt; the user must confirm. After calling this, stop and wait.',
+      inputSchema: z.object({ resumeId: z.string() }),
+      execute: async ({ resumeId }) => {
+        const resume = await prisma.resumeDocument.findFirst({ where: { id: resumeId, userId }, select: { id: true, name: true } });
+        if (!resume) return { error: `No resume with id ${resumeId} found for this user.` };
+        return { requiresConfirmation: true, kind: 'resume', id: resume.id, label: resume.name, description: 'resume', deleteEndpoint: `/resume/documents/${resume.id}` };
+      },
+    }),
+
+    propose_delete_cover_letter: portfolioTool({
+      description: 'Propose deleting a cover letter. Never deletes itself — surfaces a Confirm/Cancel prompt; the user must confirm. After calling this, stop and wait.',
+      inputSchema: z.object({ coverLetterId: z.string() }),
+      execute: async ({ coverLetterId }) => {
+        const letter = await prisma.coverLetter.findFirst({ where: { id: coverLetterId, userId }, select: { id: true, title: true } });
+        if (!letter) return { error: `No cover letter with id ${coverLetterId} found for this user.` };
+        return { requiresConfirmation: true, kind: 'coverLetter', id: letter.id, label: letter.title, description: 'cover letter', deleteEndpoint: `/goapply/cover-letters/${letter.id}` };
+      },
+    }),
+
+    propose_delete_job_application: portfolioTool({
+      description: 'Propose deleting a tracked job application. Never deletes itself — surfaces a Confirm/Cancel prompt; the user must confirm. After calling this, stop and wait.',
+      inputSchema: z.object({ jobId: z.string().uuid() }),
+      execute: async ({ jobId }) => {
+        const job = await prisma.jobApplication.findFirst({ where: { id: jobId, userId }, select: { id: true, company: true, position: true } });
+        if (!job) return { error: `No job application with id ${jobId} found for this user.` };
+        return { requiresConfirmation: true, kind: 'jobApplication', id: job.id, label: `${job.position} at ${job.company}`, description: 'job application', deleteEndpoint: `/goapply/jobs/${job.id}` };
+      },
+    }),
+
+    propose_delete_saved_answer: portfolioTool({
+      description: 'Propose deleting a saved GoApply answer. Never deletes itself — surfaces a Confirm/Cancel prompt; the user must confirm. After calling this, stop and wait.',
+      inputSchema: z.object({ answerId: z.string() }),
+      execute: async ({ answerId }) => {
+        const answer = await prisma.savedAnswer.findFirst({ where: { id: answerId, userId }, select: { id: true, question: true } });
+        if (!answer) return { error: `No saved answer with id ${answerId} found for this user.` };
+        return { requiresConfirmation: true, kind: 'savedAnswer', id: answer.id, label: answer.question, description: 'saved answer', deleteEndpoint: `/goapply/answers/${answer.id}` };
       },
     }),
 
     navigate_to: portfolioTool({
-      description: 'Take the user to a page in the dashboard. Targets: "content-editor" (structured form editor for one post — needs postId), "studio-content" (AI Markdown Studio for one post — needs postId), "create-content-portfolio" (blank new-post form — needs contentType), or the list views "blogs", "projects-content", "experience", "portfolios". Use this whenever the user asks to see, open, or go to something.',
+      description: 'Take the user to a page in the dashboard. Portfolio targets: "content-editor"/"studio-content" (need postId), "create-content-portfolio" (needs contentType), or list views "blogs"/"projects-content"/"experience"/"portfolios". GoApply targets: "goapply-kanban"/"goapply-jobs" (job tracker), "goapply-resume" (resume gallery), "goapply-letters" (cover letters), "goapply-answers" (saved answers), "goapply-profile", "goapply-assistant" (job assistant chat), "studio-resume"/"studio-cover-letter" (need resumeId/coverLetterId respectively). Use this whenever the user asks to see, open, or go to something.',
       inputSchema: z.object({
         target: z.enum(NAV_TARGETS),
         postId: z.string().uuid().optional(),
         contentType: z.enum(['BLOG', 'PROJECT', 'EXPERIENCE']).optional(),
+        resumeId: z.string().optional(),
+        coverLetterId: z.string().optional(),
       }),
-      execute: async ({ target, postId, contentType }) => {
+      execute: async ({ target, postId, contentType, resumeId, coverLetterId }) => {
         if (target === 'content-editor' || target === 'studio-content') {
           if (!postId) return { error: `Target "${target}" requires a postId — use list_posts or get_post to find it first.` };
           return { action: 'navigate', routeName: target, params: { projectId, id: postId } };
@@ -390,9 +555,19 @@ function createPortfolioAgentTools({ projectId }) {
           if (!contentType) return { error: `Target "${target}" requires a contentType.` };
           return { action: 'navigate', routeName: target, params: { projectId, type: contentType } };
         }
+        if (target === 'studio-resume') {
+          if (!resumeId) return { error: `Target "${target}" requires a resumeId — use list_resumes to find it first.` };
+          return { action: 'navigate', routeName: target, params: { id: resumeId } };
+        }
+        if (target === 'studio-cover-letter') {
+          if (!coverLetterId) return { error: `Target "${target}" requires a coverLetterId — use list_cover_letters to find it first.` };
+          return { action: 'navigate', routeName: target, params: { id: coverLetterId } };
+        }
         return { action: 'navigate', routeName: target, params: {} };
       },
     }),
+
+    ...goApplyTools,
   };
 }
 
