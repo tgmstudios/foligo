@@ -28,6 +28,7 @@
       :empty-state-text="emptyStateText"
       :allow-attachments="allowAttachments"
       @send="(msg, files) => $emit('send', msg, files)"
+      @stop="$emit('stop')"
     />
   </div>
 </template>
@@ -53,6 +54,7 @@ defineProps<{
 
 defineEmits<{
   (e: 'send', message: string, files: File[]): void
+  (e: 'stop'): void
   (e: 'select-session', id: string): void
   (e: 'new-session'): void
 }>()

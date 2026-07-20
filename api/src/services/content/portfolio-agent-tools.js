@@ -203,7 +203,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     update_post_fields: portfolioTool({
-      description: 'Update scalar fields on an existing post: title, slug, excerpt, status (DRAFT/PUBLISHED/HIDDEN), and — for PROJECT/EXPERIENCE posts — dates, location, links, etc. Only the fields you pass are changed. Snapshots a revision first.',
+      description: 'Update an existing post\'s STRUCTURED fields — title, slug, excerpt, status (DRAFT/PUBLISHED/HIDDEN), and, for PROJECT/EXPERIENCE posts, dates/location/links/etc. Does NOT touch the Markdown body — use update_post_content for that. Requires `postId`; use list_posts/get_post first if you don\'t have it. Only the fields you pass in are changed; omitted fields are left as-is. Snapshots a revision first, so this is safe to call speculatively.',
       inputSchema: z.object({
         postId: z.string().uuid(),
         title: z.string().optional(),
@@ -232,13 +232,16 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     update_post_content: portfolioTool({
-      description: 'Edit the Markdown body of an existing post. Use mode "edit" for a small targeted change (search must match the current content exactly and uniquely); use mode "replace" for a full rewrite. Snapshots a revision first.',
+      description: 'Edit the Markdown BODY of an existing post — the only tool that changes post content itself (not title/status/dates; use update_post_fields for those). Requires `postId`; call get_post first if you don\'t already have the post\'s CURRENT content in context. Two modes, chosen by the `mode` field:\n' +
+        '  • mode: "edit" — TARGETED EDIT, PREFERRED for small changes (a sentence, a paragraph, a heading). Replaces exactly one occurrence of `search` with `replace`, leaving the rest of the body untouched. `search` must be copied verbatim (including whitespace) from the post\'s current content and must be unique — pass `markdown` as undefined/omitted in this mode.\n' +
+        '  • mode: "replace" — WHOLE-BODY REPLACE. Overwrites the entire Markdown body with `markdown` — anything not included is discarded. Use ONLY for a first draft or a large restructure touching most of the body — pass `search`/`replace` as undefined/omitted in this mode.\n' +
+        'Snapshots a revision first, so edits are always recoverable.',
       inputSchema: z.object({
-        postId: z.string().uuid(),
-        mode: z.enum(['replace', 'edit']),
-        markdown: z.string().optional().describe('Required when mode is "replace" — the complete new Markdown body.'),
-        search: z.string().optional().describe('Required when mode is "edit" — exact existing text to find, must be unique.'),
-        replace: z.string().optional().describe('Required when mode is "edit" — replacement text.'),
+        postId: z.string().uuid().describe('The id of the post to edit, from list_posts or get_post.'),
+        mode: z.enum(['replace', 'edit']).describe('"edit" for a targeted search/replace change, "replace" to overwrite the whole body.'),
+        markdown: z.string().optional().describe('ONLY for mode "replace": the complete new Markdown body, replacing the entire current body. Omit when mode is "edit".'),
+        search: z.string().optional().describe('ONLY for mode "edit": the exact existing text to find, copied verbatim (including whitespace) from the post\'s current body. Must appear exactly once. Omit when mode is "replace".'),
+        replace: z.string().optional().describe('ONLY for mode "edit": the new text that replaces `search` in place. Omit when mode is "replace".'),
       }),
       execute: async ({ postId, mode, markdown, search, replace }) => {
         const existing = await prisma.content.findFirst({ where: { id: postId, projectId } });
@@ -246,12 +249,12 @@ function createPortfolioAgentTools({ projectId, userId }) {
 
         let newContent;
         if (mode === 'replace') {
-          if (!markdown) return { error: 'markdown is required when mode is "replace".' };
+          if (!markdown) return { error: 'markdown is required when mode is "replace". If you meant to make a small targeted change instead, use mode "edit" with search/replace.' };
           newContent = markdown;
         } else {
-          if (!search || replace === undefined) return { error: 'search and replace are required when mode is "edit".' };
+          if (!search || replace === undefined) return { error: 'search and replace are required when mode is "edit". If you meant to overwrite the whole body, use mode "replace" with markdown.' };
           const occurrences = existing.content.split(search).length - 1;
-          if (occurrences === 0) return { error: 'The search text was not found verbatim in the post content. Re-check whitespace/formatting, or use mode "replace".' };
+          if (occurrences === 0) return { error: 'The search text was not found verbatim in the post content. Re-check whitespace/formatting against the post\'s current content (call get_post if unsure), or use mode "replace".' };
           if (occurrences > 1) return { error: `The search text matches ${occurrences} times — include more surrounding context so it uniquely identifies one location.` };
           newContent = existing.content.replace(search, replace);
         }
@@ -259,7 +262,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
         await snapshotContentRevision(existing);
         await prisma.content.update({ where: { id: postId }, data: { content: newContent } });
         await invalidateContentCache(cache, projectId, postId);
-        return { success: true, postId };
+        return { success: true, postId, mode, message: mode === 'replace' ? 'The entire post body was replaced.' : `Replaced the matched text with "${replace.length > 120 ? `${replace.slice(0, 120)}…` : replace}". The rest of the body is unchanged.` };
       },
     }),
 
@@ -296,9 +299,9 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     update_experience_role: portfolioTool({
-      description: "Update an existing experience role's title, description, dates, current-status, or skill list (skills, if passed, replaces the role's full skill list).",
+      description: "Update an EXISTING experience role's title, description, dates, current-status, or skill list (skills, if passed, replaces the role's full skill list). Requires `roleId` from an already-existing role (get_post includes each EXPERIENCE post's roles) — use add_experience_role instead if the role doesn't exist yet.",
       inputSchema: z.object({
-        roleId: z.string().uuid(),
+        roleId: z.string().uuid().describe('The id of the existing experience role to update, from get_post.'),
         title: z.string().optional(),
         description: z.string().optional(),
         startDate: z.string().optional(),
@@ -328,8 +331,8 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     delete_experience_role: portfolioTool({
-      description: 'Remove a role from an experience post. (This is a role within a post, not a whole post — it does not require confirmation the way propose_delete_post does.)',
-      inputSchema: z.object({ roleId: z.string().uuid() }),
+      description: 'Permanently remove a role from an experience post. (This is a role within a post, not a whole post — it does not require confirmation the way propose_delete_post does, since it can\'t be undone through this agent, confirm with the user before calling if removal wasn\'t explicitly requested.)',
+      inputSchema: z.object({ roleId: z.string().uuid().describe('The id of the existing experience role to delete, from get_post.') }),
       execute: async ({ roleId }) => {
         const role = await prisma.experienceRole.findFirst({ where: { id: roleId, content: { projectId } } });
         if (!role) return { error: `No experience role with id ${roleId} found in this project.` };
@@ -340,8 +343,8 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     add_skills_to_post: portfolioTool({
-      description: 'Attach one or more skills to a post (finds an existing matching skill by name/category or creates it).',
-      inputSchema: z.object({ postId: z.string().uuid(), skills: z.array(skillInput).min(1) }),
+      description: 'Attach one or more skills to a post\'s top-level skill list (finds an existing matching skill by name/category or creates a new one). This is separate from a role\'s own `skills` field on add_experience_role/update_experience_role — use this for the post overall, not for one specific role.',
+      inputSchema: z.object({ postId: z.string().uuid().describe('The id of the post to attach skills to.'), skills: z.array(skillInput).min(1).describe('Skills to attach, e.g. [{ name: "TypeScript" }].') }),
       execute: async ({ postId, skills }) => {
         const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
         if (!post) return { error: `No post with id ${postId} found in this project.` };
@@ -353,8 +356,8 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     remove_skill_from_post: portfolioTool({
-      description: 'Detach a skill from a post (the skill itself is not deleted, only unlinked from this post).',
-      inputSchema: z.object({ postId: z.string().uuid(), skillId: z.string().uuid() }),
+      description: 'Detach a skill from a post\'s top-level skill list (the skill itself is not deleted, only unlinked from this post). Requires the skill\'s id, not its name — get it from get_post.',
+      inputSchema: z.object({ postId: z.string().uuid().describe('The id of the post to detach the skill from.'), skillId: z.string().uuid().describe("The id of the skill to unlink, from get_post's linked-skills list.") }),
       execute: async ({ postId, skillId }) => {
         const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
         if (!post) return { error: `No post with id ${postId} found in this project.` };
@@ -365,8 +368,8 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     add_tags_to_post: portfolioTool({
-      description: 'Attach one or more tags to a post (finds an existing matching tag by name/category or creates it).',
-      inputSchema: z.object({ postId: z.string().uuid(), tags: z.array(tagInput).min(1) }),
+      description: 'Attach one or more tags to a post (finds an existing matching tag by name/category or creates a new one).',
+      inputSchema: z.object({ postId: z.string().uuid().describe('The id of the post to attach tags to.'), tags: z.array(tagInput).min(1).describe('Tags to attach, e.g. [{ name: "Open Source" }].') }),
       execute: async ({ postId, tags }) => {
         const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
         if (!post) return { error: `No post with id ${postId} found in this project.` };
@@ -378,8 +381,8 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     remove_tag_from_post: portfolioTool({
-      description: 'Detach a tag from a post (the tag itself is not deleted, only unlinked from this post).',
-      inputSchema: z.object({ postId: z.string().uuid(), tagId: z.string().uuid() }),
+      description: 'Detach a tag from a post (the tag itself is not deleted, only unlinked from this post). Requires the tag\'s id, not its name — get it from get_post.',
+      inputSchema: z.object({ postId: z.string().uuid().describe('The id of the post to detach the tag from.'), tagId: z.string().uuid().describe("The id of the tag to unlink, from get_post's tags list.") }),
       execute: async ({ postId, tagId }) => {
         const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
         if (!post) return { error: `No post with id ${postId} found in this project.` };
@@ -538,7 +541,9 @@ function createPortfolioAgentTools({ projectId, userId }) {
     }),
 
     navigate_to: portfolioTool({
-      description: 'Take the user to a page in the dashboard. Portfolio targets: "content-editor"/"studio-content" (need postId), "create-content-portfolio" (needs contentType), or list views "blogs"/"projects-content"/"experience"/"portfolios". GoApply targets: "goapply-kanban"/"goapply-jobs" (job tracker), "goapply-resume" (resume gallery), "goapply-letters" (cover letters), "goapply-answers" (saved answers), "goapply-profile", "goapply-assistant" (job assistant chat), "studio-resume"/"studio-cover-letter" (need resumeId/coverLetterId respectively). Use this whenever the user asks to see, open, or go to something.',
+      description: 'NAVIGATION ONLY: sends the user\'s browser to a page in the dashboard. It does not read, create, or modify any data — call this AFTER any get/list/create/update tool you need, once you have the ids it requires. Use it whenever the user asks to see, open, or go to something.\n' +
+        'Portfolio targets: "content-editor"/"studio-content" (require `postId` — get it from list_posts/get_post/create_post first), "create-content-portfolio" (requires `contentType`), or list views "blogs"/"projects-content"/"experience"/"portfolios" (no params).\n' +
+        'GoApply targets: "goapply-kanban"/"goapply-jobs" (job tracker), "goapply-resume" (resume gallery), "goapply-letters" (cover letters), "goapply-answers" (saved answers), "goapply-profile", "goapply-assistant" (job assistant chat) — none of these need params. "studio-resume" requires `resumeId` (from list_resumes) and "studio-cover-letter" requires `coverLetterId` (from list_cover_letters).',
       inputSchema: z.object({
         target: z.enum(NAV_TARGETS),
         postId: z.string().uuid().optional(),

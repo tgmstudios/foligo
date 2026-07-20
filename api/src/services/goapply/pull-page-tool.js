@@ -160,9 +160,10 @@ async function pullPage(input, {
 function createPullPageTool({ toolFn, z, maxBytes, timeoutMs }) {
   return toolFn({
     description:
-      'Fetch and read the contents of a specific public HTTP(S) URL, similar to curl. ' +
-      'Use this after web_search when a result page needs to be read, or whenever the user supplies a URL. ' +
-      'HTML is converted to readable text. Private network URLs, binary files, oversized responses, and unsafe redirects are rejected.',
+      'Fetch and read the FULL text content of one already-known, specific public HTTP(S) URL, similar to curl. ' +
+      'Use this after web_search — when one of its result URLs needs to be read in full — or whenever the user directly supplies a URL. ' +
+      'Do NOT use this to discover a URL; use web_search for that first. HTML is converted to readable plain text. ' +
+      'Private/internal network URLs, binary files, oversized responses, and unsafe redirects are rejected.',
     inputSchema: z.object({
       url: z.string().url().describe('The complete public HTTP or HTTPS URL to fetch.'),
     }),

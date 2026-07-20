@@ -80,9 +80,11 @@
           :sessions="chatSessions.sessions.value"
           :active-session-id="chatSessions.activeSessionId.value"
           :sessions-loading="chatSessions.loadingSessions.value"
+          allow-attachments
           placeholder="Ask the agent to edit your resume…"
           empty-state-text="Ask the agent to draft a section, tailor the resume to a job description, or tweak wording — it'll edit the document directly."
           @send="chat.sendMessage"
+          @stop="chat.stop"
           @select-session="selectChatSession"
           @new-session="newChatSession"
         />

@@ -60,6 +60,7 @@
         placeholder="Ask the agent to edit this content…"
         empty-state-text="Ask the agent to draft a section, restructure the post, or tweak wording — it'll edit the document directly."
         @send="chat.sendMessage"
+        @stop="chat.stop"
         @select-session="selectChatSession"
         @new-session="newChatSession"
       />

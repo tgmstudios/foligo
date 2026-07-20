@@ -105,6 +105,7 @@ function createProvider(type = 'gemini', overrides = {}) {
 
     case 'anthropic': {
       const anthropic = createAnthropic({ apiKey: config.apiKey, baseURL: config.baseUrl });
+      const reasoning = config.model.includes('opus') || config.model.includes('sonnet');
       return {
         name: 'anthropic',
         displayName: `Claude (${config.model})`,
@@ -114,8 +115,11 @@ function createProvider(type = 'gemini', overrides = {}) {
           tools: true,
           vision: true,
           json: false,
-          reasoning: config.model.includes('opus') || config.model.includes('sonnet'),
-          maxTokens: 4096,
+          reasoning,
+          // Reasoning-capable models spend part of this budget on internal
+          // thinking before ever producing text/tool-calls; a 4096 flat cap
+          // lets long reasoning alone hit finishReason "length" mid-thought.
+          maxTokens: reasoning ? 8192 : 4096,
         },
       };
     }
@@ -140,7 +144,13 @@ function createProvider(type = 'gemini', overrides = {}) {
           vision: type !== 'ollama', // Ollama vision varies by model
           json: true,
           reasoning: false,
-          maxTokens: 4096,
+          // These are arbitrary self-hosted/proxied models (opencode-go can
+          // route to reasoning models like DeepSeek), so there's no reliable
+          // model name to key a bump off like the gemini/anthropic branches
+          // do. A flat 4096 was letting long reasoning output alone exhaust
+          // the budget and get cut off mid-thought before any reply or tool
+          // call — same failure as the anthropic case, just provider-agnostic.
+          maxTokens: 8192,
         },
       };
     }

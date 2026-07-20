@@ -1,14 +1,21 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
 const { prisma } = require('../../services/core/database');
 const { cache } = require('../../services/core/redis');
 const ai = require('../../services/ai/manager');
 const { createContentEditorTools } = require('../../services/content/content-editor-tools');
 const { createGithubTools } = require('../../services/github/github-tools');
+const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../../utils/sse');
 const { snapshotContentRevision } = require('./content-crud');
 
 const router = express.Router();
+
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+});
 
 /**
  * @swagger
@@ -18,8 +25,18 @@ const router = express.Router();
  *     tags: [CMS Content]
  *     security: [{ bearerAuth: [] }]
  */
-router.post('/content/:id/chat', [
-  body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
+router.post('/content/:id/chat', chatUpload.array('attachments', 5), (req, res, next) => {
+  // Attachments arrive as multipart/form-data, where every field (including
+  // the JSON-encoded history array) is transmitted as a plain string.
+  if (typeof req.body.history === 'string') {
+    try { req.body.history = JSON.parse(req.body.history); } catch { req.body.history = []; }
+  }
+  next();
+}, [
+  body('message').trim().custom((value, { req }) => {
+    if (!value && !(req.files && req.files.length)) throw new Error('A message or attachment is required');
+    return true;
+  }),
   body('provider').optional().isString(),
   body('history').optional().isArray(),
 ], async (req, res) => {
@@ -43,15 +60,23 @@ router.post('/content/:id/chat', [
     return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this content' });
   }
 
+  let attachments;
+  try {
+    attachments = await prepareAttachments(req.files);
+  } catch (error) {
+    return res.status(400).json({ error: 'Attachment Error', message: error.message });
+  }
+
   const { send, aborted, cleanup } = setupSSE(req, res);
 
   const userMessage = req.body.message;
+  const modelMessage = buildModelMessage(userMessage, attachments);
   // Content has no chatHistory column (unlike ResumeDocument) — the client
   // resends prior turns each request instead of the server persisting them.
   const priorHistory = Array.isArray(req.body.history) ? req.body.history : [];
   const messages = [
-    ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage },
+    ...priorHistory.map((m) => ({ role: m.role, content: m.modelContent || m.content })),
+    { role: 'user', content: modelMessage },
   ];
 
   const doc = { content: existingContent.content };

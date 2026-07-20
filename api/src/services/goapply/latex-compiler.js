@@ -8,9 +8,29 @@ const fs = require('fs').promises;
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
+const { PDFDocument } = require('pdf-lib');
 
 const LUALATEX_BIN = process.env.LUALATEX_BIN || 'lualatex';
 const COMPILE_TIMEOUT_MS = 30000;
+const PDF_BRAND = 'Foligo';
+
+/**
+ * LuaLaTeX/hyperref stamp the PDF Info dictionary with values like
+ * "LuaTeX-1.17.0" (Producer) and "TeX" (Creator/Keywords). Overwrite those
+ * so downloaded PDFs don't disclose the LaTeX toolchain they were built with.
+ */
+async function sanitizeMetadata(pdfBytes) {
+  try {
+    const doc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
+    doc.setProducer(PDF_BRAND);
+    doc.setCreator(PDF_BRAND);
+    doc.setSubject('');
+    doc.setKeywords([]);
+    return Buffer.from(await doc.save());
+  } catch {
+    return pdfBytes;
+  }
+}
 
 /**
  * Check if a line looks like a lualatex "note:" / info line (not an error).
@@ -174,7 +194,7 @@ async function compile(source) {
       };
     }
 
-    const pdf = await fs.readFile(pdfPath);
+    const pdf = await sanitizeMetadata(await fs.readFile(pdfPath));
     return { pdf };
   } catch (error) {
     return {

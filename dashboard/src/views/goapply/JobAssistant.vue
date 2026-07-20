@@ -124,6 +124,7 @@
             empty-state-text="This workspace is grounded in your selected job and attachments. Ask for a fit analysis, resume feedback, a cover-letter plan, interview prep, or help with an application question."
             allow-attachments
             @send="sendMessage"
+            @stop="chat.stop"
           />
         </template>
       </main>

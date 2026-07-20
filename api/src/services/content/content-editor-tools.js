@@ -49,21 +49,21 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     web_search: webSearch,
     pull_page: pullPage,
     write_content: tool({
-      description: 'Replace the ENTIRE content body with new Markdown. Use this for a first draft or a large restructure where a targeted edit would be unwieldy.',
+      description: 'WHOLE-BODY REPLACE for this post\'s Markdown content. Overwrites the entire body at once — anything not included in `markdown` is discarded. Use ONLY for a first draft (no body exists yet) or a large restructure touching most of the body. For any small change (a sentence, a paragraph, a heading) use edit_content_section instead — it is safer and shows exactly what changed. This tool only touches the Markdown BODY — for title/slug/excerpt/status/dates use update_post_metadata, not this.',
       inputSchema: z.object({
-        markdown: z.string().describe('The complete new Markdown source for the content body.'),
+        markdown: z.string().describe('The complete new Markdown source for the content body. Not a partial snippet — it replaces the whole body.'),
       }),
       execute: async ({ markdown }) => {
         doc.content = markdown;
-        return 'Content replaced.';
+        return 'Content replaced. The entire post body now contains exactly the Markdown you just wrote.';
       },
     }),
 
     edit_content_section: tool({
-      description: 'Make a targeted edit by replacing one exact, unique occurrence of existing Markdown text with new text. Prefer this over write_content for small changes. `search` must match the current content exactly and appear exactly once — quote it verbatim, whitespace included.',
+      description: 'TARGETED EDIT for this post\'s Markdown body: finds one exact, unique occurrence of existing text and replaces it, leaving the rest untouched. PREFERRED over write_content for small changes. Before calling this, you must know the CURRENT exact text in the body (from earlier in this conversation or a prior tool result) — `search` is matched verbatim, including whitespace, against the body as it exists right now, not against what you assume it says. It fails loudly (with a reason) if the text isn\'t found or isn\'t unique, so you can retry with more context — it never silently does nothing.',
       inputSchema: z.object({
-        search: z.string().describe('The exact existing text to find (must be unique in the content).'),
-        replace: z.string().describe('The text to replace it with.'),
+        search: z.string().describe('The exact existing text to find, copied verbatim (including whitespace) from the current body. Must appear exactly once, so include enough surrounding context to make it unique.'),
+        replace: z.string().describe('The new text that will replace `search` in place.'),
       }),
       execute: async ({ search, replace }) => {
         const occurrences = doc.content.split(search).length - 1;
@@ -74,12 +74,12 @@ function createContentEditorTools(doc, { contentId, projectId }) {
           return `Edit failed: the search text matches ${occurrences} times. Include more surrounding context so it uniquely identifies one location.`;
         }
         doc.content = doc.content.replace(search, replace);
-        return 'Edit applied.';
+        return `Edit applied: replaced the matched text with "${replace.length > 120 ? `${replace.slice(0, 120)}…` : replace}". The rest of the body is unchanged.`;
       },
     }),
 
     update_post_metadata: jsonSafeTool({
-      description: 'Update this post\'s own fields: title, slug, excerpt, status (DRAFT/PUBLISHED/HIDDEN), and — for PROJECT/EXPERIENCE posts — dates, location, links, etc. Only the fields you pass are changed. Snapshots a revision first.',
+      description: 'Update this post\'s STRUCTURED fields — title, slug, excerpt, status (DRAFT/PUBLISHED/HIDDEN), and, for PROJECT/EXPERIENCE posts, dates/location/links/etc. Does NOT touch the Markdown body — use write_content/edit_content_section for that. Only the fields you pass in are changed; omitted fields are left as-is. Snapshots a revision first, so this is safe to call speculatively.',
       inputSchema: z.object({
         title: z.string().optional(),
         slug: z.string().regex(/^[a-z0-9-]+$/).optional(),
@@ -135,9 +135,9 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     }),
 
     update_experience_role: jsonSafeTool({
-      description: "Update one of this post's existing experience roles: title, description, dates, current-status, or skill list (skills, if passed, replaces the role's full skill list).",
+      description: "Update one of this post's EXISTING experience roles: title, description, dates, current-status, or skill list (skills, if passed, replaces the role's full skill list). Requires `roleId` from an already-existing role — use add_experience_role instead if the role doesn't exist yet.",
       inputSchema: z.object({
-        roleId: z.string().uuid(),
+        roleId: z.string().uuid().describe("The id of the existing experience role to update, from this post's current role list."),
         title: z.string().optional(),
         description: z.string().optional(),
         startDate: z.string().optional(),
@@ -167,8 +167,8 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     }),
 
     delete_experience_role: jsonSafeTool({
-      description: "Remove a role from this post.",
-      inputSchema: z.object({ roleId: z.string().uuid() }),
+      description: "Permanently remove an EXISTING experience role from this post. Cannot be undone by this tool — confirm with the user before calling if the removal wasn't explicitly requested.",
+      inputSchema: z.object({ roleId: z.string().uuid().describe("The id of the existing experience role to delete.") }),
       execute: async ({ roleId }) => {
         const role = await prisma.experienceRole.findFirst({ where: { id: roleId, contentId } });
         if (!role) return { error: `No role with id ${roleId} on this post.` };
@@ -179,8 +179,8 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     }),
 
     add_skills_to_post: jsonSafeTool({
-      description: 'Attach one or more skills to this post (finds an existing matching skill by name/category or creates it).',
-      inputSchema: z.object({ skills: z.array(skillInput).min(1) }),
+      description: 'Attach one or more skills to this post\'s top-level skill list (finds an existing matching skill by name/category or creates a new one). This is separate from a role\'s own `skills` field on add_experience_role/update_experience_role — use this for the post overall, not for one specific role.',
+      inputSchema: z.object({ skills: z.array(skillInput).min(1).describe('Skills to attach, e.g. [{ name: "TypeScript" }].') }),
       execute: async ({ skills }) => {
         const matched = await matchOrCreateSkills(prisma, skills, projectId);
         await prisma.content.update({ where: { id: contentId }, data: { linkedSkills: { connect: matched.map((s) => ({ id: s.id })) } } });
@@ -190,8 +190,8 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     }),
 
     remove_skill_from_post: jsonSafeTool({
-      description: 'Detach a skill from this post (the skill itself is not deleted, only unlinked from this post).',
-      inputSchema: z.object({ skillId: z.string().uuid() }),
+      description: 'Detach a skill from this post\'s top-level skill list (the skill itself is not deleted, only unlinked from this post). Requires the skill\'s id, not its name.',
+      inputSchema: z.object({ skillId: z.string().uuid().describe("The id of the skill to unlink, from this post's current skill list.") }),
       execute: async ({ skillId }) => {
         await prisma.content.update({ where: { id: contentId }, data: { linkedSkills: { disconnect: { id: skillId } } } });
         await invalidateContentCache(cache, projectId, contentId);
@@ -200,8 +200,8 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     }),
 
     add_tags_to_post: jsonSafeTool({
-      description: 'Attach one or more tags to this post (finds an existing matching tag by name/category or creates it).',
-      inputSchema: z.object({ tags: z.array(tagInput).min(1) }),
+      description: 'Attach one or more tags to this post (finds an existing matching tag by name/category or creates a new one).',
+      inputSchema: z.object({ tags: z.array(tagInput).min(1).describe('Tags to attach, e.g. [{ name: "Open Source" }].') }),
       execute: async ({ tags }) => {
         const matched = await matchOrCreateTags(prisma, tags, projectId);
         await prisma.content.update({ where: { id: contentId }, data: { tags: { connect: matched.map((t) => ({ id: t.id })) } } });
@@ -211,8 +211,8 @@ function createContentEditorTools(doc, { contentId, projectId }) {
     }),
 
     remove_tag_from_post: jsonSafeTool({
-      description: 'Detach a tag from this post (the tag itself is not deleted, only unlinked from this post).',
-      inputSchema: z.object({ tagId: z.string().uuid() }),
+      description: 'Detach a tag from this post (the tag itself is not deleted, only unlinked from this post). Requires the tag\'s id, not its name.',
+      inputSchema: z.object({ tagId: z.string().uuid().describe("The id of the tag to unlink, from this post's current tag list.") }),
       execute: async ({ tagId }) => {
         await prisma.content.update({ where: { id: contentId }, data: { tags: { disconnect: { id: tagId } } } });
         await invalidateContentCache(cache, projectId, contentId);

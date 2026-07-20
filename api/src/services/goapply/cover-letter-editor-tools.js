@@ -22,21 +22,21 @@ function createCoverLetterEditorTools(doc, fetchPost) {
     web_search: webSearch,
     pull_page: pullPage,
     write_cover_letter: tool({
-      description: 'Replace the ENTIRE cover letter document with new LaTeX source. Use this for the first draft, or for large restructures where a targeted edit would be unwieldy. Always produce a complete, valid, compilable .tex document (including \\documentclass and \\begin{document}...\\end{document}).',
+      description: 'WHOLE-DOCUMENT REPLACE for the cover letter. Overwrites the entire LaTeX source at once — anything not included in `latex` is discarded. Use ONLY for: (a) the first draft, when no document exists yet, or (b) a large restructure touching most of the document. For any small change (wording, one paragraph, a detail) use edit_cover_letter_section instead — it is safer and shows exactly what changed. `latex` must always be a complete, valid, compilable .tex document (including \\documentclass and \\begin{document}...\\end{document}), never a fragment.',
       inputSchema: z.object({
-        latex: z.string().describe('The complete new LaTeX source for the cover letter.'),
+        latex: z.string().describe('The complete new LaTeX source for the cover letter, from \\documentclass through \\end{document}. Not a partial snippet.'),
       }),
       execute: async ({ latex }) => {
         doc.content = latex;
-        return 'Document replaced.';
+        return 'Document replaced. The entire cover letter now contains exactly the LaTeX source you just wrote.';
       },
     }),
 
     edit_cover_letter_section: tool({
-      description: 'Make a targeted edit by replacing one exact, unique occurrence of existing LaTeX text with new text. Prefer this over write_cover_letter for small changes (wording, a paragraph, a detail). `search` must match the current document exactly and appear exactly once — quote it verbatim, whitespace included.',
+      description: 'TARGETED EDIT for the cover letter: finds one exact, unique occurrence of existing LaTeX text and replaces it, leaving the rest of the document untouched. This is the PREFERRED tool for small changes (wording, a paragraph, a detail) — use write_cover_letter only for a first draft or a large restructure. Before calling this, you must know the CURRENT exact text in the document (from earlier in this conversation or a prior tool result) — `search` is matched verbatim, including whitespace, against the document as it exists right now, not against what you assume it says. It fails loudly (with a reason) if the text isn\'t found or isn\'t unique, so you can retry with more context — it never silently does nothing.',
       inputSchema: z.object({
-        search: z.string().describe('The exact existing text to find (must be unique in the document).'),
-        replace: z.string().describe('The text to replace it with.'),
+        search: z.string().describe('The exact existing text to find, copied verbatim (including whitespace) from the current document. Must appear exactly once, so include enough surrounding context to make it unique.'),
+        replace: z.string().describe('The new text that will replace `search` in place.'),
       }),
       execute: async ({ search, replace }) => {
         const occurrences = doc.content.split(search).length - 1;
@@ -47,7 +47,7 @@ function createCoverLetterEditorTools(doc, fetchPost) {
           return `Edit failed: the search text matches ${occurrences} times. Include more surrounding context so it uniquely identifies one location.`;
         }
         doc.content = doc.content.replace(search, replace);
-        return 'Edit applied.';
+        return `Edit applied: replaced the matched text with "${replace.length > 120 ? `${replace.slice(0, 120)}…` : replace}". The rest of the document is unchanged.`;
       },
     }),
 

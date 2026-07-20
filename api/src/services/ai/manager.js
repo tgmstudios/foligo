@@ -258,8 +258,15 @@ class AIManager {
           // after start/start-step), not necessarily as thrown iterator
           // errors. Until user-visible output or a tool action is emitted it
           // is safe to discard bookkeeping parts and try the next provider.
-          if (!committed && (value?.type === 'error' || (value?.type === 'finish' && value.finishReason === 'error'))) {
-            lastError = value.error || new Error('Provider stream finished with an error before producing output.');
+          // A "length" finish here means the model burned its whole token
+          // budget (e.g. on reasoning) before ever producing output — same
+          // as an outright failure from the caller's perspective.
+          if (!committed && (value?.type === 'error' || (value?.type === 'finish' && (value.finishReason === 'error' || value.finishReason === 'length')))) {
+            lastError = value.error || new Error(
+              value?.finishReason === 'length'
+                ? 'Provider ran out of output tokens before producing any response.'
+                : 'Provider stream finished with an error before producing output.'
+            );
             this.logger.warn(`Provider "${type}" stream failed before output, trying next: ${lastError?.message || lastError}`);
             this._providers.delete(providerKey);
             retryProvider = true;
@@ -275,6 +282,13 @@ class AIManager {
             }
           } else {
             yield value;
+            // Once output has started, a mid-stream "length" cutoff can no
+            // longer fall back to another provider — the partial response is
+            // already visible. Surface it explicitly instead of letting the
+            // turn end silently (callers already handle `error` parts).
+            if (value?.type === 'finish' && value.finishReason === 'length') {
+              yield { type: 'error', error: new Error('Response was cut off before finishing — it ran out of output space (often mid-reasoning). Try again, or ask for a smaller, more targeted change.') };
+            }
           }
         }
       } catch (e) {

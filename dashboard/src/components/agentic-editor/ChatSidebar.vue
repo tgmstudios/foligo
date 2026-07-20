@@ -102,8 +102,19 @@
           class="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[40px] max-h-[160px] text-sm leading-relaxed"
         ></textarea>
         <button
+          v-if="streaming"
+          @click="$emit('stop')"
+          title="Stop generating"
+          class="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 h-[40px] flex-shrink-0"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="1.5" />
+          </svg>
+        </button>
+        <button
+          v-else
           @click="send"
-          :disabled="streaming || (!draft.trim() && !pendingFiles.length)"
+          :disabled="!draft.trim() && !pendingFiles.length"
           class="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed h-[40px] flex-shrink-0"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,6 +144,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'send', message: string, files: File[]): void
+  (e: 'stop'): void
 }>()
 
 const draft = ref('')
@@ -215,6 +227,16 @@ function toolChipClass(status: string) {
   if (status === 'error') return 'bg-red-900/30 border-red-700 text-red-300'
   return 'bg-green-900/20 border-green-800 text-green-300'
 }
+
+function autoResize() {
+  if (!textarea.value) return
+  textarea.value.style.height = 'auto'
+  textarea.value.style.height = `${textarea.value.scrollHeight}px`
+}
+
+watch(draft, () => {
+  nextTick(autoResize)
+})
 
 function send() {
   if ((!draft.value.trim() && !pendingFiles.value.length) || props.streaming) return

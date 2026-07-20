@@ -48,6 +48,7 @@ export function useAgenticChat(
 ) {
   const messages = ref<AgenticChatMessage[]>([])
   const streaming = ref(false)
+  let abortController: AbortController | null = null
 
   function handleEvent(event: any, assistantMsg: AgenticChatMessage) {
     switch (event.type) {
@@ -128,6 +129,7 @@ export function useAgenticChat(
     // (the whole response would only appear once `streaming` flips at the end).
     const reactiveMsg = messages.value[messages.value.length - 1]
     streaming.value = true
+    abortController = new AbortController()
 
     try {
       const token = localStorage.getItem('auth_token')
@@ -151,6 +153,7 @@ export function useAgenticChat(
         method: 'POST',
         headers,
         body,
+        signal: abortController.signal,
       })
 
       if (!response.ok || !response.body) {
@@ -186,10 +189,13 @@ export function useAgenticChat(
         }
       }
     } catch (error: any) {
-      if (!reactiveMsg.content) {
+      if (error.name === 'AbortError') {
+        if (!reactiveMsg.content && !reactiveMsg.reasoning) reactiveMsg.content = '_Stopped._'
+      } else if (!reactiveMsg.content) {
         reactiveMsg.content = `Sorry, something went wrong: ${error.message || 'connection lost'}`
       }
     } finally {
+      abortController = null
       reactiveMsg.streaming = false
       streaming.value = false
       const savedHistory = messages.value.filter(m => m.content).map(m => ({ role: m.role, content: m.content }))
@@ -199,6 +205,10 @@ export function useAgenticChat(
         console.error('Failed to save chat history:', error)
       }
     }
+  }
+
+  function stop() {
+    abortController?.abort()
   }
 
   function reset() {
@@ -214,7 +224,7 @@ export function useAgenticChat(
     }))
   }
 
-  return { messages, streaming, sendMessage, reset, loadHistory }
+  return { messages, streaming, sendMessage, stop, reset, loadHistory }
 }
 
 export { API_URL }

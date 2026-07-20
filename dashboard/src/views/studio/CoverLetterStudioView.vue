@@ -53,6 +53,7 @@
         placeholder="Ask the agent to edit your cover letter…"
         empty-state-text="Ask the agent to draft a paragraph, tailor the letter to the linked job, or tweak wording — it'll edit the document directly."
         @send="chat.sendMessage"
+        @stop="chat.stop"
         @select-session="selectChatSession"
         @new-session="newChatSession"
       />

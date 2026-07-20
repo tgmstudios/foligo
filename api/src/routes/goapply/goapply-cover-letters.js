@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 const fs = require('fs').promises;
 const path = require('path');
 const { prisma } = require('../../services/core/database');
@@ -8,9 +9,15 @@ const { createCoverLetterEditorTools } = require('../../services/goapply/cover-l
 const { createGithubTools } = require('../../services/github/github-tools');
 const githubService = require('../../services/github/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../../services/goapply/portfolio-context');
+const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../../utils/sse');
 
 const router = express.Router();
+
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+});
 
 const COVER_LETTER_PDF_DIR = path.join(__dirname, '../../generated/cover-letters');
 const COVER_LETTER_STARTER_PATH = path.join(__dirname, '../assets/starter-cover-letter.tex');
@@ -271,11 +278,16 @@ router.get('/cover-letters/:id/pdf', async (req, res) => {
 });
 
 // POST /api/goapply/cover-letters/:id/chat — send a message to the cover letter editing agent (SSE stream)
-router.post('/cover-letters/:id/chat', async (req, res) => {
+router.post('/cover-letters/:id/chat', chatUpload.array('attachments', 5), async (req, res) => {
   const userId = req.user.id;
   const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
-  if (!message) {
-    return res.status(400).json({ error: 'Validation Error', message: 'Message is required' });
+  if (!message && !req.files?.length) {
+    return res.status(400).json({ error: 'Validation Error', message: 'A message or attachment is required' });
+  }
+  // Attachments arrive as multipart/form-data, where every field (including
+  // the JSON-encoded history array) is transmitted as a plain string.
+  if (typeof req.body.history === 'string') {
+    try { req.body.history = JSON.parse(req.body.history); } catch { req.body.history = []; }
   }
 
   const letter = await prisma.coverLetter.findFirst({
@@ -286,16 +298,24 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
     return res.status(404).json({ error: 'Not Found', message: 'Cover letter does not exist' });
   }
 
+  let attachments;
+  try {
+    attachments = await prepareAttachments(req.files);
+  } catch (error) {
+    return res.status(400).json({ error: 'Attachment Error', message: error.message });
+  }
+
   const { send, aborted, cleanup } = setupSSE(req, res);
 
+  const modelMessage = buildModelMessage(message, attachments);
   // Prefer the client-selected session history when supplied. Falling back to
   // the document column keeps older clients and existing conversations working.
   const priorHistory = Array.isArray(req.body.history)
     ? req.body.history
     : (Array.isArray(letter.chatHistory) ? letter.chatHistory : []);
   const messages = [
-    ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: message },
+    ...priorHistory.map((m) => ({ role: m.role, content: m.modelContent || m.content })),
+    { role: 'user', content: modelMessage },
   ];
 
   const doc = { content: letter.content };
@@ -342,7 +362,12 @@ router.post('/cover-letters/:id/chat', async (req, res) => {
 
     const finalChatHistory = [
       ...priorHistory,
-      { role: 'user', content: message },
+      {
+        role: 'user',
+        content: message || 'Please review the attached file(s).',
+        modelContent: modelMessage,
+        attachments: attachments.map(({ name, type, size }) => ({ name, type, size })),
+      },
       { role: 'assistant', content: assistantText },
     ];
 

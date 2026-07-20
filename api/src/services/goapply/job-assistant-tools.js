@@ -66,8 +66,8 @@ function createJobAssistantTools(prisma, userId) {
     web_search: webSearch,
     pull_page: pullPage,
     get_resume: jobAssistantTool({
-      description: 'Load the full LaTeX content and job description of one of the user’s resumes. Use an ID from the available resume catalog.',
-      inputSchema: z.object({ resumeId: z.string() }),
+      description: 'Load the full LaTeX content and job description of ONE of the user\'s resumes, by id. Use this when you need to read or edit an existing resume\'s content — not to create one (use save_resume for that).',
+      inputSchema: z.object({ resumeId: z.string().describe('The id of the resume to load, from the available resume catalog.') }),
       execute: async ({ resumeId }) => {
         const resume = await prisma.resumeDocument.findFirst({
           where: { id: resumeId, userId },
@@ -77,8 +77,8 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     get_cover_letter: jobAssistantTool({
-      description: 'Load the full LaTeX source of one of the user’s cover letters. Use an ID from the available cover letter catalog.',
-      inputSchema: z.object({ coverLetterId: z.string() }),
+      description: 'Load the full LaTeX source of ONE of the user\'s cover letters, by id. Use this when you need to read or edit an existing cover letter\'s content — not to create one (use save_cover_letter for that).',
+      inputSchema: z.object({ coverLetterId: z.string().describe('The id of the cover letter to load, from the available cover letter catalog.') }),
       execute: async ({ coverLetterId }) => {
         const letter = await prisma.coverLetter.findFirst({
           where: { id: coverLetterId, userId },
@@ -88,7 +88,7 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     get_goapply_profile: jobAssistantTool({
-      description: 'Load the user’s GoApply profile, linked experience, education, and skills when application details or background are needed.',
+      description: 'Load the user\'s GoApply profile fields (name, contact info, work authorization, demographics, etc.) plus linked experience/education posts and skills. Use this when you need background/application details for filling out a job application or writing about the user — not for resume/cover-letter content (use get_resume/get_cover_letter for those).',
       inputSchema: z.object({}),
       execute: async () => {
         const profile = await prisma.userProfile.findUnique({
@@ -103,8 +103,11 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     get_saved_answers: jobAssistantTool({
-      description: 'Load the user’s reusable job-application answers, including their attached jobs. Filter by job ID when answers for one application are needed.',
-      inputSchema: z.object({ query: z.string().optional(), jobId: z.string().optional() }),
+      description: 'Search the user\'s reusable job-application answers (e.g. "Why do you want to work here?" style Q&A), including which jobs each is attached to. Use this to reuse a past answer instead of writing one from scratch. Both params are optional — omit both to load all saved answers.',
+      inputSchema: z.object({
+        query: z.string().optional().describe('Case-insensitive substring to match against the question, answer, or category text.'),
+        jobId: z.string().optional().describe('Restrict to answers attached to this specific tracked job application.'),
+      }),
       execute: async ({ query, jobId }) => {
         if (jobId) await assertOwnedJob(prisma, userId, jobId);
         const answers = await prisma.savedAnswer.findMany({
@@ -124,8 +127,8 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     get_portfolio_item: jobAssistantTool({
-      description: 'Load a portfolio project or experience item by ID when more evidence or detail is needed.',
-      inputSchema: z.object({ contentId: z.string() }),
+      description: 'Load the full content of ONE portfolio project or experience post, by id, when you need more detail/evidence than an excerpt already in context provides (e.g. to write an accurate resume bullet or cover letter paragraph).',
+      inputSchema: z.object({ contentId: z.string().describe('The id of the portfolio content item to load.') }),
       execute: async ({ contentId }) => {
         const item = await prisma.content.findFirst({
           where: { id: contentId, project: { OR: [{ ownerId: userId }, { members: { some: { userId } } }] } },
@@ -135,13 +138,13 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     save_resume: jobAssistantTool({
-      description: 'Create a resume or update an existing owned resume. Use this when the user asks to save resume content. Omit resumeId to create a new resume; include it to update that resume.',
+      description: 'Persist a resume: creates a brand-new resume, or fully overwrites an existing one if `resumeId` is included. `content` must always be the COMPLETE LaTeX source — this is a whole-document save, not a targeted edit, so include everything you want kept, not just what changed. Use get_resume first if you need to read/modify existing content before re-saving it. Omit `resumeId` to create; include it to update that resume (its prior content is snapshotted as a revision first).',
       inputSchema: z.object({
-        resumeId: z.string().optional(),
-        name: z.string().min(1).max(255),
-        content: z.string().min(1).describe('Complete LaTeX resume source.'),
+        resumeId: z.string().optional().describe('Omit to create a new resume. Include the id of an existing owned resume to overwrite it.'),
+        name: z.string().min(1).max(255).describe('Display name for the resume.'),
+        content: z.string().min(1).describe('The complete LaTeX resume source, from \\documentclass through \\end{document}. Not a partial snippet.'),
         jobDescription: optionalText,
-        linkedJobId: optionalText,
+        linkedJobId: optionalText.describe('Optional id of a tracked job application this resume is tailored for.'),
       }),
       execute: async ({ resumeId, name, content, jobDescription, linkedJobId }) => {
         await assertOwnedJob(prisma, userId, linkedJobId);
@@ -163,10 +166,12 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     save_cover_letter: jobAssistantTool({
-      description: 'Create a cover letter or update an existing owned cover letter. Use this when the user asks to save cover-letter content. Omit coverLetterId to create; include it to update.',
+      description: 'Persist a cover letter: creates a brand-new one, or fully overwrites an existing one if `coverLetterId` is included. `content` must always be the COMPLETE LaTeX source — this is a whole-document save, not a targeted edit, so include everything you want kept, not just what changed. Use get_cover_letter first if you need to read/modify existing content before re-saving it. Omit `coverLetterId` to create; include it to update (its prior content is snapshotted as a revision first).',
       inputSchema: z.object({
-        coverLetterId: z.string().optional(), title: z.string().min(1).max(255),
-        content: z.string().min(1).describe('Complete LaTeX cover letter source.'), jobId: optionalText,
+        coverLetterId: z.string().optional().describe('Omit to create a new cover letter. Include the id of an existing owned cover letter to overwrite it.'),
+        title: z.string().min(1).max(255).describe('Display title for the cover letter.'),
+        content: z.string().min(1).describe('The complete LaTeX cover letter source, from \\documentclass through \\end{document}. Not a partial snippet.'),
+        jobId: optionalText.describe('Optional id of a tracked job application this cover letter is tailored for.'),
       }),
       execute: async ({ coverLetterId, title, content, jobId }) => {
         await assertOwnedJob(prisma, userId, jobId);
@@ -188,11 +193,14 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     save_answers: jobAssistantTool({
-      description: 'Create or update reusable GoApply saved answers. Use answerId to update an existing owned answer; omit it to create a new one. Save multiple answers together when appropriate.',
+      description: 'Create and/or update one or more reusable GoApply saved answers (Q&A pairs like "Why do you want to work here?") in a single call — pass multiple entries in `answers` at once rather than calling this repeatedly. Within each entry: omit `answerId` to create a new answer, include it to overwrite an existing owned one.',
       inputSchema: z.object({ answers: z.array(z.object({
-        answerId: z.string().optional(), question: z.string().min(1), answer: z.string().min(1), category: optionalText,
-        jobIds: z.array(z.string()).max(50).optional(),
-      })).min(1).max(25) }),
+        answerId: z.string().optional().describe('Omit to create a new saved answer. Include the id of an existing owned answer to overwrite it.'),
+        question: z.string().min(1).describe('The application question this answer responds to.'),
+        answer: z.string().min(1).describe('The full answer text.'),
+        category: optionalText.describe('Optional grouping label, e.g. "behavioral" or "technical".'),
+        jobIds: z.array(z.string()).max(50).optional().describe('Optional ids of tracked job applications this answer should be attached to.'),
+      })).min(1).max(25).describe('One or more answers to save in this single call.') }),
       execute: async ({ answers }) => {
         const updateIds = answers.map((answer) => answer.answerId).filter(Boolean);
         if (updateIds.length) {
@@ -214,7 +222,7 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     update_goapply_profile: jobAssistantTool({
-      description: 'Update the user’s scalar GoApply profile fields with facts explicitly provided or confirmed by the user. Never infer sensitive or personal values.',
+      description: 'Update the user\'s GoApply profile fields (contact info, work authorization, demographics, links, etc.) with facts EXPLICITLY provided or confirmed by the user — never infer or guess sensitive/personal values. Only pass the fields that are changing; omitted fields are left as-is. Not for experience/education/skills content — those are portfolio posts, not profile fields.',
       inputSchema: profileSchema,
       execute: async (fields) => {
         if (!Object.keys(fields).length) throw new Error('At least one profile field is required.');
@@ -225,11 +233,11 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     save_skills: jobAssistantTool({
-      description: 'Create or reuse Foligo skills, attach them to one writable Foligo project, and optionally link them to the GoApply profile. Use this for explicit requests to create or save skills.',
+      description: 'Create or reuse Foligo skills by name, attach them to one writable Foligo project, and optionally also link them to the GoApply profile (via `linkToGoApplyProfile`). Use this for explicit requests to add/save skills at the project or profile level — NOT to attach skills to one specific portfolio post or experience role (that\'s add_skills_to_post / add_experience_role, defined elsewhere).',
       inputSchema: z.object({
-        projectId: z.string(),
-        skills: z.array(z.object({ name: z.string().min(1).max(100), category: optionalText })).min(1).max(30),
-        linkToGoApplyProfile: z.boolean().optional().default(false),
+        projectId: z.string().describe('The id of the Foligo project to attach these skills to. Requires write access.'),
+        skills: z.array(z.object({ name: z.string().min(1).max(100).describe('Skill name, e.g. "TypeScript".'), category: optionalText.describe('Optional grouping label, e.g. "Languages".') })).min(1).max(30),
+        linkToGoApplyProfile: z.boolean().optional().default(false).describe('If true, also link these skills to the user\'s GoApply profile, not just the project.'),
       }),
       execute: async ({ projectId, skills, linkToGoApplyProfile }) => {
         const project = await assertWritableProject(prisma, userId, projectId);
@@ -253,16 +261,18 @@ function createJobAssistantTools(prisma, userId) {
       },
     }),
     create_portfolio_items: jobAssistantTool({
-      description: 'Create draft Foligo portfolio items in a writable project. Use this for explicit requests to create portfolio objects, projects, blog posts, or experience/education records.',
+      description: 'Create one or more brand-new Foligo portfolio posts (PROJECT, BLOG, or EXPERIENCE) as DRAFTS in a writable project, in a single call. Use for explicit requests to add portfolio content, projects, blog posts, or experience/education/certification records. Not for editing an existing post — there is no update tool in this set for that.',
       inputSchema: z.object({
-        projectId: z.string(),
+        projectId: z.string().describe('The id of the Foligo project to create these posts in. Requires write access.'),
         items: z.array(z.object({
-          contentType: z.enum(['PROJECT', 'BLOG', 'EXPERIENCE']),
-          title: z.string().min(1).max(255), excerpt: optionalText,
-          content: z.string().min(1).describe('Markdown body.'),
-          experienceCategory: z.enum(['JOB', 'EDUCATION', 'CERTIFICATION']).nullable().optional(),
-          location: optionalText, locationType: z.enum(['REMOTE', 'HYBRID', 'ONSITE']).nullable().optional(),
-        })).min(1).max(10),
+          contentType: z.enum(['PROJECT', 'BLOG', 'EXPERIENCE']).describe('The kind of post to create.'),
+          title: z.string().min(1).max(255),
+          excerpt: optionalText,
+          content: z.string().min(1).describe('The full Markdown body of the post.'),
+          experienceCategory: z.enum(['JOB', 'EDUCATION', 'CERTIFICATION']).nullable().optional().describe('EXPERIENCE posts only — the kind of experience this represents.'),
+          location: optionalText.describe('EXPERIENCE posts only.'),
+          locationType: z.enum(['REMOTE', 'HYBRID', 'ONSITE']).nullable().optional().describe('EXPERIENCE posts only.'),
+        })).min(1).max(10).describe('One or more posts to create in this single call.'),
       }),
       execute: async ({ projectId, items }) => {
         const project = await assertWritableProject(prisma, userId, projectId);

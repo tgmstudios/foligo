@@ -1,5 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
 const fs = require('fs').promises;
 const path = require('path');
 const { prisma } = require('../services/core/database');
@@ -9,9 +10,15 @@ const { createResumeEditorTools } = require('../services/goapply/resume-editor-t
 const { createGithubTools } = require('../services/github/github-tools');
 const githubService = require('../services/github/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../services/goapply/portfolio-context');
+const { prepareAttachments, buildModelMessage } = require('../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../utils/sse');
 
 const router = express.Router();
+
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+});
 
 const PDF_STORAGE_DIR = path.join(__dirname, '../../generated/resumes');
 const STARTER_TEMPLATE_PATH = path.join(__dirname, '../assets/starter-resume.tex');
@@ -354,8 +361,18 @@ router.get('/documents/:id/pdf', async (req, res) => {
  *     tags: [Resume]
  *     security: [{ bearerAuth: [] }]
  */
-router.post('/documents/:id/chat', [
-  body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
+router.post('/documents/:id/chat', chatUpload.array('attachments', 5), (req, res, next) => {
+  // Attachments arrive as multipart/form-data, where every field (including
+  // the JSON-encoded history array) is transmitted as a plain string.
+  if (typeof req.body.history === 'string') {
+    try { req.body.history = JSON.parse(req.body.history); } catch { req.body.history = []; }
+  }
+  next();
+}, [
+  body('message').trim().custom((value, { req }) => {
+    if (!value && !(req.files && req.files.length)) throw new Error('A message or attachment is required');
+    return true;
+  }),
   body('provider').optional().isString(),
   body('history').optional().isArray(),
 ], async (req, res) => {
@@ -370,17 +387,25 @@ router.post('/documents/:id/chat', [
     return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
   }
 
+  let attachments;
+  try {
+    attachments = await prepareAttachments(req.files);
+  } catch (error) {
+    return res.status(400).json({ error: 'Attachment Error', message: error.message });
+  }
+
   const { send, aborted, cleanup } = setupSSE(req, res);
 
   const userMessage = req.body.message;
+  const modelMessage = buildModelMessage(userMessage, attachments);
   // Prefer the client-selected session history when supplied. Falling back to
   // the document column keeps older clients and existing conversations working.
   const priorHistory = Array.isArray(req.body.history)
     ? req.body.history
     : (Array.isArray(document.chatHistory) ? document.chatHistory : []);
   const messages = [
-    ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage },
+    ...priorHistory.map((m) => ({ role: m.role, content: m.modelContent || m.content })),
+    { role: 'user', content: modelMessage },
   ];
 
   const doc = { content: document.content };
@@ -428,7 +453,12 @@ router.post('/documents/:id/chat', [
     // Persist the (possibly tool-edited) content + updated chat history.
     const finalChatHistory = [
       ...priorHistory,
-      { role: 'user', content: userMessage },
+      {
+        role: 'user',
+        content: userMessage || 'Please review the attached file(s).',
+        modelContent: modelMessage,
+        attachments: attachments.map(({ name, type, size }) => ({ name, type, size })),
+      },
       { role: 'assistant', content: assistantText },
     ];
 
