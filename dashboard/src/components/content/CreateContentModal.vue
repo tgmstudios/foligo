@@ -265,8 +265,8 @@
     </div>
   </div>
 
-  <!-- Gemini AI Chatbot -->
-  <GeminiChatbot
+  <!-- AI content-generation chatbot -->
+  <ContentGenerationChatbot
     v-if="showAIChatbot && (contentType === 'BLOG' || contentType === 'PROJECT' || contentType === 'EXPERIENCE')"
     :is-open="showAIChatbot"
     :content-type="contentType as 'BLOG' | 'PROJECT' | 'EXPERIENCE'"
@@ -281,7 +281,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import type { Project } from '@/stores/projects'
-import GeminiChatbot from './GeminiChatbot.vue'
+import ContentGenerationChatbot from './ContentGenerationChatbot.vue'
 import FeaturedImageSelector from './FeaturedImageSelector.vue'
 
 interface Props {

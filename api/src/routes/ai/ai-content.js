@@ -24,6 +24,8 @@ const geminiService = require('../../services/ai-session');
 const { findSimilarPostPairs } = require('../../services/content/post-similarity');
 const { matchOrCreateSkills, matchOrCreateTags } = require('../../services/content/skill-tag-matcher');
 const { setupSSE } = require('../../utils/sse');
+const ai = require('../../services/ai/manager');
+const { createPortfolioAgentTools } = require('../../services/content/portfolio-agent-tools');
 
 // Configure multer for resume uploads
 const upload = multer({
@@ -183,143 +185,6 @@ async function saveChatSession(userId, sessionId, chatHistory, resumeText, resum
     // Don't throw - allow chat to continue even if save fails
     return null;
   }
-}
-
-// Helper function to get context for AI (user, project, existing content)
-async function getAIContext(userId, projectId) {
-  const context = {
-    user: null,
-    project: null,
-    existingContent: [],
-    postsByType: {
-      BLOG: [],
-      PROJECT: [],
-      EXPERIENCE: []
-    },
-    skills: [],
-    categories: []
-  };
-
-  try {
-    // Get user info
-    if (userId) {
-      context.user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          name: true,
-          email: true
-        }
-      });
-    }
-
-    // Get project info
-    if (projectId) {
-      context.project = await prisma.project.findUnique({
-        where: { id: projectId },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          subdomain: true,
-          isPublished: true,
-          siteConfig: {
-            select: {
-              profileName: true,
-              profileBio: true,
-              siteName: true,
-              siteDescription: true
-            }
-          }
-        }
-      });
-
-      if (context.project) {
-        // Get existing content (titles and excerpts, excluding revisions)
-        context.existingContent = await prisma.content.findMany({
-          where: {
-            projectId: projectId,
-            status: { not: 'REVISION' },
-            revisionOf: null
-          },
-          select: {
-            id: true,
-            type: true,
-            contentType: true,
-            title: true,
-            excerpt: true,
-            status: true
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 50 // Limit to recent 50 posts
-        });
-
-        // Get last 10 posts per type (BLOG, PROJECT, EXPERIENCE)
-        const postTypes = ['BLOG', 'PROJECT', 'EXPERIENCE'];
-        for (const postType of postTypes) {
-          context.postsByType[postType] = await prisma.content.findMany({
-            where: {
-              projectId: projectId,
-              contentType: postType,
-              status: { not: 'REVISION' },
-              revisionOf: null
-            },
-            select: {
-              id: true,
-              title: true,
-              excerpt: true,
-              contentType: true,
-              createdAt: true
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 10
-          });
-        }
-
-        // Get all skills for the project
-        context.skills = await prisma.skill.findMany({
-          where: {
-            projects: {
-              some: {
-                id: projectId
-              }
-            }
-          },
-          select: {
-            id: true,
-            name: true,
-            category: true
-          },
-          orderBy: [
-            { category: 'asc' },
-            { name: 'asc' }
-          ]
-        });
-
-        // Get all unique categories from skills and content tags
-        const skillCategories = [...new Set(context.skills.map(s => s.category).filter(Boolean))];
-        const contentTags = await prisma.contentTag.findMany({
-          where: {
-            projects: {
-              some: {
-                id: projectId
-              }
-            }
-          },
-          select: {
-            category: true
-          },
-          distinct: ['category']
-        });
-        const tagCategories = contentTags.map(t => t.category).filter(Boolean);
-        context.categories = [...new Set([...skillCategories, ...tagCategories])];
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching AI context:', error);
-  }
-
-  return context;
 }
 
 /**
@@ -487,880 +352,109 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/ai/session:
+ * /api/ai/portfolio/chat:
  *   post:
- *     summary: Handle multi-step AI session (clarifying questions)
+ *     summary: Send a message to the whole-portfolio AI Content Creator agent (SSE stream of thinking/text/tool-call events)
  *     tags: [AI Content Generation]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - mode
- *               - contentType
- *               - chatHistory
- *             properties:
- *               mode:
- *                 type: string
- *                 enum: [create, edit]
- *               contentType:
- *                 type: string
- *                 enum: [BLOG, PROJECT, EXPERIENCE]
- *               initialInfo:
- *                 type: object
- *               chatHistory:
- *                 type: array
- *     responses:
- *       200:
- *         description: Session response
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 done:
- *                   type: boolean
- *                 summary:
- *                   type: string
- *                 changes:
- *                   type: string
- *       400:
- *         description: Validation error
- *       500:
- *         description: Session failed
+ *     security: [{ bearerAuth: [] }]
  */
-router.post('/session', [
-  body('mode').isIn(['create', 'edit']),
-  body('contentType').optional().isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
-  body('initialInfo').optional().isObject(),
-  body('chatHistory').isArray(),
-  body('projectId').optional().isUUID()
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
-    let { mode, contentType, initialInfo = {}, chatHistory, projectId } = req.body;
-    
-    // Get context (user, project, existing content)
-    const userId = req.user?.id;
-    const context = await getAIContext(userId, projectId);
-    const sessionKey = `ai-session:${userId || 'anon'}:${projectId || 'noproject'}`;
-    
-    // Callback so fetchExistingPost can resolve full post bodies inline
-    const fetchPost = async (postId) => {
-      return prisma.content.findUnique({
-        where: { id: postId },
-        select: { id: true, title: true, contentType: true, content: true, excerpt: true, metadata: true }
-      });
-    };
-
-    // If contentType is not provided, try to infer it from the conversation
-    if (!contentType && chatHistory.length > 0) {
-      contentType = await geminiService.inferContentType(chatHistory, initialInfo);
-    }
-
-    const result = await geminiService.handleAISession(mode, contentType, initialInfo, chatHistory, context, { userId, sessionKey, fetchPost });
-
-    // Handle toolcall (post fetch)
-    if (result.toolcall === 'fetch_post' && result.postId) {
-      try {
-        // Fetch the full post content
-        const post = await prisma.content.findUnique({
-          where: { id: result.postId },
-          select: {
-            id: true,
-            title: true,
-            contentType: true,
-            content: true,
-            excerpt: true,
-            metadata: true
-          }
-        });
-
-        if (post) {
-          // Add the fetched post to chat history and continue conversation automatically
-          // The user will see "Fetching {post title}..." message, then the continued conversation
-          const updatedChatHistory = [
-            ...chatHistory,
-            { role: 'assistant', content: result.message || `Fetching "${post.title}"...` },
-            { role: 'user', content: `Here is the full content of the post "${post.title}":\n\n${post.content}` }
-          ];
-
-          // Continue the session with the fetched post included
-          const continuedResult = await geminiService.handleAISession(
-            mode, 
-            contentType, 
-            initialInfo, 
-            updatedChatHistory, 
-            context,
-            { userId, sessionKey, fetchPost }
-          );
-
-          // Use the contentType from result if it was corrected
-          const finalContentType = continuedResult.contentType || contentType;
-          
-          // Return the continued result, but include info about the fetched post
-          return res.json({
-            ...continuedResult,
-            contentType: finalContentType,
-            reasoning: continuedResult.reasoning || result.reasoning,
-            toolActivity: [
-              ...(result.toolActivity || []),
-              ...(continuedResult.toolActivity || [])
-            ],
-            fetchedPost: {
-              id: post.id,
-              title: post.title
-            }
-          });
-        } else {
-          return res.json({
-            message: result.message || 'Post not found',
-            done: false,
-            error: 'Post not found'
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching post:', error);
-        return res.json({
-          message: result.message || 'Error fetching post',
-          done: false,
-          error: 'Failed to fetch post'
-        });
-      }
-    }
-
-    // Use the contentType from result if it was corrected, otherwise use the original
-    const finalContentType = result.contentType || contentType;
-    
-    res.json({
-      ...result,
-      contentType: finalContentType
-    });
-  } catch (error) {
-    console.error('AI session error:', error);
-    res.status(500).json({
-      error: 'Session Failed',
-      message: error.message || 'Unable to process session'
-    });
-  }
-});
-
-/** Stream a multi-step AI content-creator session over SSE. */
-router.post('/session/stream', [
-  body('mode').isIn(['create', 'edit']),
-  body('contentType').optional().isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
-  body('initialInfo').optional().isObject(),
-  body('chatHistory').isArray(),
-  body('projectId').optional().isUUID()
+router.post('/portfolio/chat', [
+  body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
+  body('projectId').isUUID().withMessage('Valid project ID is required'),
+  body('provider').optional().isString(),
+  body('history').optional().isArray(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ error: 'Validation Error', message: 'Invalid input data', details: errors.array() });
   }
 
-  let { mode, contentType, initialInfo = {}, chatHistory, projectId } = req.body;
-  const userId = req.user?.id;
-  const context = await getAIContext(userId, projectId);
-  const sessionKey = `ai-session:${userId || 'anon'}:${projectId || 'noproject'}`;
+  const userId = req.user.id;
+  const { projectId } = req.body;
 
-  const fetchPost = async (postId) => {
-    return prisma.content.findUnique({
-      where: { id: postId },
-      select: { id: true, title: true, contentType: true, content: true, excerpt: true, metadata: true }
-    });
-  };
-
-  if (!contentType && chatHistory.length > 0) {
-    contentType = await geminiService.inferContentType(chatHistory, initialInfo);
-  }
-
-  const sse = setupSSE(req, res);
-  const send = sse.send;
-
-  try {
-    // Track completion signals from the stream
-    let sessionResult = null;
-    let lastToolCall = null;
-    let lastToolResult = null;
-
-    // Same multi-step agentic loop the editor/resume chats use.
-    // fetchExistingPost resolves full post bodies inline via the callback.
-    // GitHub tools execute natively.  signalContentReadyForGeneration
-    // returns a marker the AI sees and finishes with a final message.
-    for await (const part of geminiService.streamAISession(mode, contentType, initialInfo, chatHistory, context, { userId, sessionKey, fetchPost })) {
-      if (part.type === 'text-delta') {
-        send({ type: 'text-delta', text: part.text });
-      } else if (part.type === 'reasoning-delta') {
-        send({ type: 'reasoning-delta', text: part.text });
-      } else if (part.type === 'tool-call') {
-        lastToolCall = { name: part.toolName, args: part.input, toolCallId: part.toolCallId };
-        send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
-      } else if (part.type === 'tool-result') {
-        lastToolResult = part.output;
-        send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
-      } else if (part.type === 'tool-error') {
-        send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
-      } else if (part.type === 'error') {
-        send({ type: 'error', message: part.error?.message || String(part.error) });
-      }
-    }
-
-    // Determine session result from the final tool call
-    if (lastToolCall) {
-      const name = lastToolCall.name;
-      const args = lastToolCall.args || {};
-      const output = lastToolResult;
-
-      if (name === 'signalContentReadyForGeneration') {
-        const data = (output && output._action === 'contentReady') ? output : { _action: 'contentReady', ...args };
-        sessionResult = { done: true, summary: data.summary, contentType: data.contentType || contentType };
-      } else if (name === 'signalEditReadyForGeneration') {
-        const data = (output && output._action === 'editReady') ? output : { _action: 'editReady', ...args };
-        sessionResult = { done: true, summary: data.summary, changes: data.changes, contentType };
-      } else {
-        // Tool was executed (GitHub, fetchExistingPost, etc.) — AI already saw the result
-        sessionResult = { done: false, contentType };
-      }
-    } else {
-      sessionResult = { done: false, contentType };
-    }
-
-    send({ type: 'session-done', ...sessionResult, contentType: sessionResult.contentType || contentType });
-  } catch (error) {
-    console.error('Streaming AI session error:', error);
-    send({ type: 'error', message: error.message || 'Unable to process session' });
-  } finally {
-    sse.cleanup();
-    res.end();
-  }
-});
-
-/**
- * @swagger
- * /api/ai/generate:
- *   post:
- *     summary: Generate final content using pro model
- *     tags: [AI Content Generation]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - mode
- *               - contentType
- *               - chatHistory
- *             properties:
- *               mode:
- *                 type: string
- *                 enum: [create, edit]
- *               contentType:
- *                 type: string
- *                 enum: [BLOG, PROJECT, EXPERIENCE]
- *               chatHistory:
- *                 type: array
- *               currentContent:
- *                 type: string
- *               changes:
- *                 type: string
- *     responses:
- *       200:
- *         description: Content generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 content:
- *                   type: string
- *       400:
- *         description: Validation error
- *       500:
- *         description: Generation failed
- */
-router.post('/generate', [
-  body('mode').isIn(['create', 'edit']),
-  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
-  body('chatHistory').isArray(),
-  body('currentContent').optional().isString(),
-  body('changes').optional().isString(),
-  body('projectId').optional().isUUID()
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
-    const { mode, contentType, chatHistory, currentContent = '', changes = '', projectId } = req.body;
-
-    // Get context (user, project, existing content)
-    const userId = req.user?.id;
-    const context = await getAIContext(userId, projectId);
-
-    const result = await geminiService.generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context);
-
-    console.log('[ai-content] Generation result from service:', {
-      hasContent: !!result.content,
-      contentLength: result.content?.length,
-      title: result.title,
-      hasStructuredData: !!result.structuredData,
-      structuredDataKeys: result.structuredData ? Object.keys(result.structuredData) : [],
-      skillsCount: result.skills?.length || 0,
-      tagsCount: result.tags?.length || 0
-    });
-
-    // Use excerpt from structured data or generate from content
-    const excerpt = result.excerpt || result.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...';
-
-    // Build response with structured data fields mapped for database
-    const response = {
-      content: result.content,
-      title: result.title,
-      excerpt: excerpt,
-      skills: result.skills || [],
-      tags: result.tags || []
-    };
-    
-    // Add database-ready fields from structured data
-    if (result.structuredData) {
-      const { structuredData } = result;
-      
-      console.log('[ai-content] Processing structured data:', {
-        contentType,
-        hasProjectLinks: !!structuredData.projectLinks,
-        projectLinks: structuredData.projectLinks,
-        hasSkills: !!structuredData.skills,
-        skillsCount: structuredData.skills?.length || 0,
-        hasTags: !!structuredData.tags,
-        tagsCount: structuredData.tags?.length || 0
-      });
-      
-      // PROJECT fields
-      if (contentType === 'PROJECT') {
-        if (structuredData.startDate) response.startDate = structuredData.startDate;
-        if (structuredData.endDate) response.endDate = structuredData.endDate;
-        if (structuredData.isOngoing !== undefined) response.isOngoing = structuredData.isOngoing;
-        if (structuredData.featuredImage) response.featuredImage = structuredData.featuredImage;
-        if (structuredData.projectLinks) response.projectLinks = structuredData.projectLinks;
-        if (structuredData.contributors) response.contributors = structuredData.contributors;
-        
-        console.log('[ai-content] PROJECT fields added to response:', {
-          startDate: response.startDate,
-          endDate: response.endDate,
-          isOngoing: response.isOngoing,
-          projectLinks: response.projectLinks,
-          contributors: response.contributors
-        });
-      }
-      
-      // EXPERIENCE fields
-      if (contentType === 'EXPERIENCE') {
-        if (structuredData.experienceCategory) response.experienceCategory = structuredData.experienceCategory;
-        if (structuredData.location) response.location = structuredData.location;
-        if (structuredData.locationType) response.locationType = structuredData.locationType;
-        if (structuredData.startDate) response.startDate = structuredData.startDate;
-        if (structuredData.endDate) response.endDate = structuredData.endDate;
-        if (structuredData.isOngoing !== undefined) response.isOngoing = structuredData.isOngoing;
-        if (structuredData.roles) response.roles = structuredData.roles;
-      }
-    } else {
-      console.log('[ai-content] WARNING: No structured data in result');
-    }
-    
-    // Add generation metadata
-    response.metadata = {
-      ...result.metadata,
-      mode,
-      contentType,
-      generatedAt: new Date().toISOString(),
-      wordCount: result.content.split(' ').length
-    };
-
-    console.log('[ai-content] Final response being sent to frontend:', {
-      title: response.title,
-      excerpt: response.excerpt?.substring(0, 100),
-      projectLinks: response.projectLinks,
-      skillsCount: response.skills?.length || 0,
-      tagsCount: response.tags?.length || 0,
-      hasContent: !!response.content,
-      contentLength: response.content?.length
-    });
-
-    res.json(response);
-  } catch (error) {
-    console.error('AI content generation error:', error);
-    res.status(500).json({
-      error: 'Generation Failed',
-      message: error.message || 'Unable to generate content'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/ai/create:
- *   post:
- *     summary: Generate content and create it in one step
- *     tags: [AI Content Generation]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - mode
- *               - contentType
- *               - chatHistory
- *               - projectId
- *             properties:
- *               mode:
- *                 type: string
- *                 enum: [create, edit]
- *               contentType:
- *                 type: string
- *                 enum: [BLOG, PROJECT, EXPERIENCE]
- *               chatHistory:
- *                 type: array
- *               currentContent:
- *                 type: string
- *               changes:
- *                 type: string
- *               projectId:
- *                 type: string
- *                 format: uuid
- *     responses:
- *       201:
- *         description: Content created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 content:
- *                   type: object
- *       400:
- *         description: Validation error
- *       500:
- *         description: Creation failed
- */
-router.post('/create', [
-  body('mode').isIn(['create', 'edit']),
-  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
-  body('chatHistory').isArray(),
-  body('currentContent').optional().isString(),
-  body('changes').optional().isString(),
-  body('projectId').isUUID()
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Invalid input data',
-        details: errors.array()
-      });
-    }
-
-    const { mode, contentType, chatHistory, currentContent = '', changes = '', projectId } = req.body;
-    const userId = req.user?.id;
-
-    // Verify user has access to project
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { ownerId: userId },
-          { members: { some: { userId } } }
-        ]
-      }
-    });
-
-    if (!project) {
-      return res.status(403).json({
-        error: 'Access Denied',
-        message: 'You do not have access to this project'
-      });
-    }
-
-    // Get context (user, project, existing content)
-    const context = await getAIContext(userId, projectId);
-
-    // Generate content using AI
-    const generatedData = await geminiService.generateFinalContent(
-      mode, 
-      contentType, 
-      chatHistory, 
-      currentContent, 
-      changes, 
-      context
-    );
-
-    console.log('[ai-content/create] Generated data:', {
-      hasContent: !!generatedData.content,
-      title: generatedData.title,
-      skillsCount: generatedData.skills?.length || 0,
-      tagsCount: generatedData.tags?.length || 0
-    });
-
-    // Match or create skills
-    const matchedSkills = await matchOrCreateSkills(prisma, generatedData.skills || [], projectId);
-
-    // Match or create tags
-    const matchedTags = await matchOrCreateTags(prisma, generatedData.tags || [], projectId);
-
-    console.log('[ai-content/create] Matched/created:', {
-      skillsCount: matchedSkills.length,
-      tagsCount: matchedTags.length
-    });
-
-    // Generate slug from title
-    let slug = generatedData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim('-');
-
-    // Ensure slug is unique
-    const existingContent = await prisma.content.findFirst({
-      where: { slug }
-    });
-    if (existingContent) {
-      slug = `${slug}-${Date.now()}`;
-    }
-
-    // Set order to 0 (latest post should be first) and increment all other posts
-    const order = 0;
-    
-    // Increment all existing posts' orders (excluding revisions)
-    await prisma.$transaction(async (tx) => {
-      // Update Content table order field
-      await tx.content.updateMany({
-        where: {
-          projectId,
-          status: { not: 'REVISION' },
-          revisionOf: null
-        },
-        data: {
-          order: { increment: 1 }
-        }
-      });
-      
-      // Update PostOrder table if entries exist
-      await tx.postOrder.updateMany({
-        where: { projectId },
-        data: {
-          order: { increment: 1 }
-        }
-      });
-    });
-
-    // Use excerpt from structured data or generate from content
-    const excerpt = generatedData.excerpt || generatedData.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...';
-
-    // Prepare content data
-    const contentData = {
-      projectId,
-      type: contentType,
-      contentType,
-      title: generatedData.title,
-      slug,
-      excerpt,
-      content: generatedData.content,
-      metadata: generatedData.metadata || {},
-      order,
-      status: 'DRAFT'
-    };
-
-    // Add type-specific fields from structured data
-    if (generatedData.structuredData) {
-      const { structuredData } = generatedData;
-      
-      if (contentType === 'PROJECT') {
-        if (structuredData.startDate) contentData.startDate = new Date(structuredData.startDate);
-        if (structuredData.endDate) contentData.endDate = new Date(structuredData.endDate);
-        if (structuredData.isOngoing !== undefined) contentData.isOngoing = structuredData.isOngoing;
-        if (structuredData.featuredImage) contentData.featuredImage = structuredData.featuredImage;
-        if (structuredData.projectLinks) contentData.projectLinks = structuredData.projectLinks;
-        if (structuredData.contributors) contentData.contributors = structuredData.contributors;
-      }
-      
-      if (contentType === 'EXPERIENCE') {
-        if (structuredData.experienceCategory) contentData.experienceCategory = structuredData.experienceCategory;
-        if (structuredData.location) contentData.location = structuredData.location;
-        if (structuredData.locationType) contentData.locationType = structuredData.locationType;
-        if (structuredData.startDate) contentData.startDate = new Date(structuredData.startDate);
-        if (structuredData.endDate) contentData.endDate = new Date(structuredData.endDate);
-        if (structuredData.isOngoing !== undefined) contentData.isOngoing = structuredData.isOngoing;
-      }
-    }
-
-    // Create content
-    const newContent = await prisma.content.create({
-      data: contentData,
-      include: {
-        tags: true,
-        meta: true,
-        blocks: {
-          orderBy: { order: 'asc' }
-        },
-        roles: {
-          include: {
-            skills: true
-          },
-          orderBy: { startDate: 'desc' }
-        },
-        linkedSkills: true
-      }
-    });
-
-    console.log('[ai-content/create] Content created:', newContent.id);
-
-    // Create PostOrder entry for the new content
-    await prisma.postOrder.create({
-      data: {
-        projectId,
-        contentId: newContent.id,
-        order: order
-      }
-    });
-
-    // Link skills to content
-    if (matchedSkills.length > 0) {
-      await prisma.content.update({
-        where: { id: newContent.id },
-        data: {
-          linkedSkills: {
-            connect: matchedSkills.map(s => ({ id: s.id }))
-          }
-        }
-      });
-      console.log(`[ai-content/create] Linked ${matchedSkills.length} skills`);
-    }
-
-    // Link tags to content
-    if (matchedTags.length > 0) {
-      await prisma.content.update({
-        where: { id: newContent.id },
-        data: {
-          tags: {
-            connect: matchedTags.map(t => ({ id: t.id }))
-          }
-        }
-      });
-      console.log(`[ai-content/create] Linked ${matchedTags.length} tags`);
-    }
-
-    // Create roles for EXPERIENCE content
-    if (contentType === 'EXPERIENCE' && generatedData.structuredData?.roles) {
-      const rolesData = generatedData.structuredData.roles;
-      console.log(`[ai-content/create] Creating ${rolesData.length} roles for experience`);
-      
-      for (const roleData of rolesData) {
-        // Match or create skills for this role
-        const roleSkills = await matchOrCreateSkills(prisma, roleData.skills || [], projectId);
-        
-        // Create the role
-        await prisma.experienceRole.create({
-          data: {
-            contentId: newContent.id,
-            title: roleData.title,
-            description: roleData.description || null,
-            startDate: new Date(roleData.startDate),
-            endDate: roleData.endDate ? new Date(roleData.endDate) : null,
-            isCurrent: roleData.isCurrent || false,
-            skills: {
-              connect: roleSkills.map(s => ({ id: s.id }))
-            }
-          }
-        });
-        
-        console.log(`[ai-content/create] Created role: ${roleData.title} with ${roleSkills.length} skills`);
-      }
-    }
-
-    // Clear project content cache so new content appears immediately
-    await cache.del(`project:${projectId}`);
-    await cache.del(`project:${projectId}:content`);
-    console.log(`[ai-content/create] Cleared cache for project ${projectId}`);
-
-    res.status(201).json({ id: newContent.id });
-  } catch (error) {
-    console.error('AI content creation error:', error);
-    res.status(500).json({
-      error: 'Creation Failed',
-      message: error.message || 'Unable to create content'
-    });
-  }
-});
-
-/**
- * Stream content generation + creation over SSE.
- * Keeps the connection alive during AI generation so nginx/load balancer
- * timeouts are never hit. The client sees the markdown streaming in real-time.
- */
-router.post('/create/stream', [
-  body('mode').isIn(['create', 'edit']),
-  body('contentType').isIn(['BLOG', 'PROJECT', 'EXPERIENCE']),
-  body('chatHistory').isArray(),
-  body('currentContent').optional().isString(),
-  body('changes').optional().isString(),
-  body('projectId').isUUID()
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ error: 'Validation Error', details: errors.array() });
-  }
-
-  const { mode, contentType, chatHistory, currentContent = '', changes = '', projectId } = req.body;
-  const userId = req.user?.id;
-
-  // Verify project access
-  const project = await prisma.project.findFirst({
-    where: {
-      id: projectId,
-      OR: [{ ownerId: userId }, { members: { some: { userId } } }]
-    }
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { owner: true, members: { where: { userId } } },
   });
   if (!project) {
-    return res.status(403).json({ error: 'Access Denied', message: 'You do not have access to this project' });
+    return res.status(404).json({ error: 'Not Found', message: 'Project does not exist' });
+  }
+  const isOwner = project.ownerId === userId;
+  const memberAccess = project.members[0];
+  const canEdit = isOwner || (memberAccess && ['ADMIN', 'EDITOR'].includes(memberAccess.role));
+  if (!canEdit) {
+    return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this project' });
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-  const send = event => res.write(`data: ${JSON.stringify(event)}\n\n`);
+  const { send, aborted, cleanup } = setupSSE(req, res);
+
+  const userMessage = req.body.message;
+  const priorHistory = Array.isArray(req.body.history) ? req.body.history : [];
+  const messages = [
+    ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: userMessage },
+  ];
+
+  const posts = await prisma.content.findMany({
+    where: { projectId, revisionOf: null },
+    select: { id: true, title: true, contentType: true, status: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 200,
+  });
+  const postList = posts.length
+    ? posts.map((p) => `- [${p.contentType}/${p.status}] "${p.title}" (id: ${p.id})`).join('\n')
+    : '(no posts yet)';
+
+  const tools = createPortfolioAgentTools({ projectId });
+
+  const systemInstruction = `You are the AI Content Creator, an agent with full read/write authority over every post (BLOG, PROJECT, and EXPERIENCE entries) in the portfolio project "${project.name}" — every field, every experience role, every linked skill and tag, on any post, plus the ability to create new posts and navigate the user around the dashboard.
+
+CURRENT POSTS IN THIS PROJECT:
+${postList}
+
+CAPABILITIES:
+- Use list_posts / get_post to find and inspect posts before acting on them — never guess a postId.
+- Use create_post, update_post_fields, update_post_content, add/update/delete_experience_role, and add/remove_skills_to_post / add/remove_tags_to_post freely — these are real, immediate writes (each snapshots a revision first where applicable).
+- Use navigate_to whenever the user asks to see, open, or go to a post or a list view. Also call it (target "studio-content") right after create_post succeeds, unless the user is clearly about to have you create more posts in this same conversation — landing them in the editor for what was just made is the expected default.
+- Use web_search / pull_page for research when useful.
+
+HARD RULES:
+- Deleting a post is the ONLY action that requires human confirmation. Call propose_delete_post, then STOP — it never deletes anything itself, it only surfaces a confirmation prompt in the UI. Never claim a post was deleted; the user must click Confirm themselves.
+- You have NO tools for and must NEVER discuss, infer, or offer to change the user's account email, password, authentication, billing, or security settings — those are entirely out of scope and live elsewhere in the dashboard.
+- After making changes, briefly tell the user what you did in plain prose.`;
 
   try {
-    const context = await getAIContext(userId, projectId);
-
-    // Phase 1: stream the AI generation, capture the final result
-    let generatedResult = null;
-    for await (const part of geminiService.streamGenerateFinalContent(
-      mode, contentType, chatHistory, currentContent, changes, context
-    )) {
-      if (part.type === 'error') {
-        send({ type: 'error', message: part.message });
-        return res.end();
-      }
-      if (part.type === 'result') {
-        generatedResult = part;  // don't send raw result to client
-        break;
-      }
-      send(part);  // stream text-delta and status events
-    }
-
-    if (!generatedResult) {
-      send({ type: 'error', message: 'No content generated' });
-      return res.end();
-    }
-
-    // Phase 2: save to database (same logic as /create endpoint)
-    send({ type: 'status', phase: 'matching', message: 'Matching skills and tags to your project…' });
-
-    const generatedData = generatedResult;
-    const matchedSkills = await matchOrCreateSkills(prisma, generatedData.skills || [], projectId);
-    const matchedTags = await matchOrCreateTags(prisma, generatedData.tags || [], projectId);
-
-    let slug = (generatedData.title || 'untitled')
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim('-');
-
-    const existingContent = await prisma.content.findFirst({ where: { slug } });
-    if (existingContent) slug = `${slug}-${Date.now()}`;
-
-    const order = 0;
-    await prisma.$transaction(async (tx) => {
-      await tx.content.updateMany({
-        where: { projectId, status: { not: 'REVISION' }, revisionOf: null },
-        data: { order: { increment: 1 } }
-      });
-      await tx.postOrder.updateMany({
-        where: { projectId },
-        data: { order: { increment: 1 } }
-      });
-    });
-
-    const contentData = {
-      projectId, type: contentType, contentType,
-      title: generatedData.title, slug,
-      excerpt: generatedData.excerpt || generatedData.content.substring(0, 200).replace(/\n/g, ' ').trim() + '...',
-      content: generatedData.content,
-      metadata: generatedData.metadata || {},
-      order, status: 'DRAFT'
-    };
-
-    if (generatedData.structuredData) {
-      const sd = generatedData.structuredData;
-      if (contentType === 'PROJECT') {
-        if (sd.startDate) contentData.startDate = new Date(sd.startDate);
-        if (sd.endDate) contentData.endDate = new Date(sd.endDate);
-        if (sd.isOngoing !== undefined) contentData.isOngoing = sd.isOngoing;
-        if (sd.featuredImage) contentData.featuredImage = sd.featuredImage;
-        if (sd.projectLinks) contentData.projectLinks = sd.projectLinks;
-        if (sd.contributors) contentData.contributors = sd.contributors;
-      }
-      if (contentType === 'EXPERIENCE') {
-        if (sd.experienceCategory) contentData.experienceCategory = sd.experienceCategory;
-        if (sd.location) contentData.location = sd.location;
-        if (sd.locationType) contentData.locationType = sd.locationType;
-        if (sd.startDate) contentData.startDate = new Date(sd.startDate);
-        if (sd.endDate) contentData.endDate = new Date(sd.endDate);
-        if (sd.isOngoing !== undefined) contentData.isOngoing = sd.isOngoing;
+    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
+      switch (part.type) {
+        case 'text-delta':
+          send({ type: 'text-delta', text: part.text });
+          break;
+        case 'reasoning-delta':
+          send({ type: 'reasoning-delta', text: part.text });
+          break;
+        case 'tool-call':
+          send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });
+          break;
+        case 'tool-result':
+          send({ type: 'tool-result', toolCallId: part.toolCallId, toolName: part.toolName, output: part.output });
+          break;
+        case 'tool-error':
+          send({ type: 'tool-error', toolCallId: part.toolCallId, toolName: part.toolName, error: part.error?.message || String(part.error) });
+          break;
+        case 'error':
+          send({ type: 'error', message: part.error?.message || String(part.error) });
+          break;
+        default:
+          break;
       }
     }
 
-    send({ type: 'status', phase: 'saving', message: 'Saving the cleaned draft to Editor Studio…' });
-    const newContent = await prisma.content.create({ data: contentData });
-    await prisma.postOrder.create({ data: { projectId, contentId: newContent.id, order } });
-
-    if (matchedSkills.length > 0) {
-      await prisma.content.update({ where: { id: newContent.id }, data: { linkedSkills: { connect: matchedSkills.map(s => ({ id: s.id })) } } });
-    }
-    if (matchedTags.length > 0) {
-      await prisma.content.update({ where: { id: newContent.id }, data: { tags: { connect: matchedTags.map(t => ({ id: t.id })) } } });
-    }
-
-    await cache.del(`project:${projectId}`);
-    await cache.del(`project:${projectId}:content`);
-
-    send({ type: 'content-created', id: newContent.id, content: generatedData.content });
+    send({ type: 'done' });
   } catch (error) {
-    console.error('Streaming create error:', error);
-    send({ type: 'error', message: error.message || 'Creation failed' });
+    console.error('Portfolio chat error:', error);
+    if (!aborted) send({ type: 'error', message: error.message || 'Agent request failed' });
   } finally {
+    cleanup();
     res.end();
   }
 });

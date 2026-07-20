@@ -9,6 +9,8 @@ export interface ToolActivity {
   output?: any
   status: 'running' | 'done' | 'error'
   error?: string
+  /** Set by consumers rendering a confirm/cancel UI for a tool result (e.g. a delete gate) while an action driven by it is in flight. */
+  busy?: boolean
 }
 
 export interface AgenticChatMessage {
@@ -41,7 +43,8 @@ function uid() {
 export function useAgenticChat(
   getChatUrl: () => string,
   callbacks: AgenticChatCallbacks = {},
-  getProvider: () => string | undefined = () => undefined
+  getProvider: () => string | undefined = () => undefined,
+  getExtraBody: () => Record<string, unknown> = () => ({})
 ) {
   const messages = ref<AgenticChatMessage[]>([])
   const streaming = ref(false)
@@ -129,6 +132,7 @@ export function useAgenticChat(
     try {
       const token = localStorage.getItem('auth_token')
       const provider = getProvider()
+      const extraBody = getExtraBody()
       let body: BodyInit
       const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
       if (attachments.length) {
@@ -137,10 +141,11 @@ export function useAgenticChat(
         if (provider) form.append('provider', provider)
         form.append('history', JSON.stringify(history))
         attachments.forEach(file => form.append('attachments', file))
+        Object.entries(extraBody).forEach(([key, value]) => form.append(key, String(value)))
         body = form
       } else {
         headers['Content-Type'] = 'application/json'
-        body = JSON.stringify({ message: userText, provider, history })
+        body = JSON.stringify({ message: userText, provider, history, ...extraBody })
       }
       const response = await fetch(getChatUrl(), {
         method: 'POST',

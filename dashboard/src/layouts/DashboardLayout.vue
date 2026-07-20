@@ -797,10 +797,10 @@
     <!-- AI Content Creator Modal -->
     <AIContentCreatorModal
       ref="aiModalRef"
-      mode="create"
       :project-id="selectedProjectId"
       @content-generated="handleContentGenerated"
       @content-created="handleContentCreated"
+      @navigate="handleAgentNavigate"
       :key="`ai-modal-${selectedProjectId}`"
     />
   </div>
@@ -943,8 +943,9 @@ const handleCreateContent = () => {
   }
 };
 
-// Handler for new /ai/create endpoint - content is already created
-const handleContentCreated = async (data: { id: string; content: any }) => {
+// Fired when the AI Content Creator's create_post + navigate_to("studio-content")
+// tools finish — the post already exists server-side, this just opens it.
+const handleContentCreated = async (data: { id: string }) => {
   console.log("[DashboardLayout] Content created by AI:", data.id);
 
   if (!selectedProjectId.value) {
@@ -964,6 +965,16 @@ const handleContentCreated = async (data: { id: string; content: any }) => {
     console.log("[DashboardLayout] Navigation complete");
   } catch (error) {
     console.error("[DashboardLayout] Failed to navigate to content:", error);
+  }
+};
+
+// Fired by the AI Content Creator's navigate_to tool for any target other
+// than a fresh Studio hand-off (opening an existing post, a list view, etc).
+const handleAgentNavigate = async (data: { routeName: string; params: Record<string, unknown> }) => {
+  try {
+    await router.push({ name: data.routeName, params: data.params as any });
+  } catch (error) {
+    console.error("[DashboardLayout] Failed to navigate from agent request:", error);
   }
 };
 

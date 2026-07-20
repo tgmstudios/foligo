@@ -135,36 +135,6 @@ Guidelines:
 
 Return ONLY the title text, no quotes, no formatting, no explanations.`,
 
-  // Infer content type
-  inferContentType: (conversationText, infoText) => `Analyze this conversation and determine what type of portfolio content the user wants to create. Return ONLY one word: PROJECT, BLOG, or EXPERIENCE.
-
-Conversation:
-${conversationText}
-${infoText ? `\nInitial Info: ${infoText}` : ''}
-
-CRITICAL CLASSIFICATION RULES:
-- EXPERIENCE: Job roles, responsibilities, work at a company, internship, employment, education, degree, certification, university, school
-  * Key indicators: "worked at", "role at", "position", "responsibilities", "job", "employed", "intern", "studied at", "degree from"
-  * User describes THEIR work/role at an organization
-  
-- PROJECT: Building/creating something technical, software, app, website, hackathon project, side project
-  * Key indicators: "built", "created", "developed", "project", "app", "website", "GitHub", "features", "deployed"
-  * User describes something they MADE/BUILT
-  
-- BLOG: Writing an article, tutorial, story, or sharing insights/experiences in written form
-  * Key indicators: "write about", "article", "blog post", "tutorial", "share my experience with", "want to write"
-  * User wants to WRITE ABOUT something, not describe their role
-
-DISAMBIGUATION:
-- "My experience at [Company]" with role descriptions → EXPERIENCE (not BLOG)
-- "I want to write about my time at [Company]" → Could be BLOG if focused on storytelling
-- "Software Developer at [Company]" with responsibilities → EXPERIENCE
-- "Built an app that..." → PROJECT
-
-Note: Skills are automatically extracted from projects, experiences, and blogs. Users don't create skills directly.
-
-Return ONLY the word (PROJECT, BLOG, or EXPERIENCE), nothing else.`,
-
   // Extract metadata prompts
   extractMetadata: {
     'PROJECT': (conversationText) => `Extract structured metadata from the following conversation about a PROJECT. Return ONLY a valid JSON object with these fields (use null for missing values):

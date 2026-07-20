@@ -56,9 +56,19 @@ router.post('/content/:id/chat', [
 
   const doc = { content: existingContent.content };
   const tools = {
-    ...createContentEditorTools(doc),
+    ...createContentEditorTools(doc, { contentId: existingContent.id, projectId: existingContent.projectId }),
     ...createGithubTools({ userId, sessionKey: `content:${existingContent.id}` }),
   };
+
+  const otherPosts = await prisma.content.findMany({
+    where: { projectId: existingContent.projectId, revisionOf: null, id: { not: existingContent.id } },
+    select: { id: true, title: true, contentType: true, status: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 100,
+  });
+  const otherPostsList = otherPosts.length
+    ? otherPosts.map((p) => `- [${p.contentType}/${p.status}] "${p.title}" (id: ${p.id})`).join('\n')
+    : '(no other posts in this project)';
 
   const systemInstruction = `You are an expert content editor and writer, working inside an agentic Markdown editor for a "${existingContent.contentType || existingContent.type}" post titled "${existingContent.title}".
 
@@ -69,11 +79,19 @@ ${doc.content}
 
 ${existingContent.excerpt ? `EXCERPT: ${existingContent.excerpt}\n` : ''}
 
-RULES:
-- Use the edit_content_section tool for small, targeted changes. The "search" text must match the current content verbatim and uniquely.
-- Use the write_content tool only for the first draft or large restructures — it replaces the whole body, so always output complete, valid Markdown.
-- After making edits, briefly tell the user what you changed and why, in plain prose.
-- Preserve existing Markdown formatting conventions already used in the document (headers, code fences, image links, mermaid/drawio blocks) unless asked to change them.`;
+OTHER POSTS IN THIS PROJECT (for context/cross-referencing only — you can look them up with list_other_posts, but you may NEVER modify them):
+${otherPostsList}
+
+CAPABILITIES:
+- Use edit_content_section for small, targeted changes to the Markdown body. The "search" text must match the current content verbatim and uniquely.
+- Use write_content only for the first draft or large restructures — it replaces the whole body, so always output complete, valid Markdown.
+- Use update_post_metadata to change this post's own title/slug/excerpt/status/dates/location/links/etc — you have full authority over every field of THIS post.
+- Use add_experience_role / update_experience_role / delete_experience_role to manage this post's roles (EXPERIENCE posts only).
+- Use add_skills_to_post / remove_skill_from_post and add_tags_to_post / remove_tag_from_post to manage this post's skills and tags.
+
+HARD RULE: you may only ever modify the post named above — never call a write tool with data intended for a different post. If the user asks you to change something on a different post, tell them to open that post in Studio (or use the AI Content Creator) instead.
+
+After making edits, briefly tell the user what you changed and why, in plain prose. Preserve existing Markdown formatting conventions already used in the document (headers, code fences, image links, mermaid/drawio blocks) unless asked to change them.`;
 
   let assistantText = '';
 

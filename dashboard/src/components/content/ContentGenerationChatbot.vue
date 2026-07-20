@@ -119,7 +119,11 @@
                       : 'bg-gray-100 text-gray-900'
                   ]"
                 >
-                  <p class="text-sm">{{ message.content }}</p>
+                  <div
+                    class="text-sm markdown-content markdown-content-light"
+                    :class="{ 'markdown-content-user': message.role === 'user' }"
+                    v-html="renderMarkdown(message.content)"
+                  ></div>
                 </div>
               </div>
               
@@ -230,6 +234,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { marked } from 'marked'
 import api from '@/services/api'
+import { renderMarkdown } from '@/lib/markdown'
 
 interface Props {
   isOpen: boolean
@@ -437,7 +442,7 @@ const publishContent = async () => {
 
 // Watch for modal opening
 watch(() => props.isOpen, (isOpen) => {
-  console.log('GeminiChatbot: isOpen changed to', isOpen)
+  console.log('ContentGenerationChatbot: isOpen changed to', isOpen)
   if (isOpen) {
     phase.value = 'questions'
     questions.value = []
@@ -449,3 +454,20 @@ watch(() => props.isOpen, (isOpen) => {
   }
 })
 </script>
+
+<style scoped>
+/* This modal is light-themed, unlike the other AI chat surfaces the shared
+   .markdown-content rules (assets/css/main.css) were tuned for — override
+   just the colors that would otherwise read as dark-on-light. */
+.markdown-content-light :deep(h1),
+.markdown-content-light :deep(h2),
+.markdown-content-light :deep(h3),
+.markdown-content-light :deep(h4),
+.markdown-content-light :deep(strong) { color: inherit; }
+.markdown-content-light :deep(:not(pre) > code) { background-color: rgb(0 0 0 / 0.08); color: inherit; }
+.markdown-content-light :deep(a) { color: #2563eb; }
+.markdown-content-light :deep(a:hover) { color: #1d4ed8; }
+.markdown-content-light :deep(pre) { background-color: rgb(0 0 0 / 0.05); border-color: rgb(0 0 0 / 0.1); }
+.markdown-content-light :deep(pre code) { color: inherit; }
+.markdown-content-light :deep(li::marker) { color: currentColor; }
+</style>

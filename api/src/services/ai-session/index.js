@@ -88,23 +88,6 @@ class GeminiService {
   }
 
   /**
-   * Handle AI session - main conversation handler
-   * Now uses Function Calling for structured, reliable responses
-   */
-  async handleAISession(mode, contentType, initialInfo, chatHistory, context = {}, extra = {}) {
-    return sessionFlow.handleAISession(mode, contentType, initialInfo, chatHistory, context, { ...this._deps, ...extra });
-  }
-
-  /**
-   * Stream a content-creator conversation turn. Raw reasoning, text, and tool
-   * events are yielded immediately; the final session state is returned as a
-   * synthetic session-result event so the route can execute server-side tools.
-   */
-  streamAISession(mode, contentType, initialInfo, chatHistory, context = {}, extra = {}) {
-    return sessionFlow.streamAISession(mode, contentType, initialInfo, chatHistory, context, { ...this._deps, ...extra });
-  }
-
-  /**
    * Private: Handle function call from AI
    * This replaces the old regex-based JSON parsing
    */
@@ -125,13 +108,6 @@ class GeminiService {
    */
   async generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}) {
     return sessionFlow.generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context, this._deps);
-  }
-
-  /**
-   * Stream final content generation over SSE.
-   */
-  streamGenerateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}) {
-    return sessionFlow.streamGenerateFinalContent(mode, contentType, chatHistory, currentContent, changes, context, this._deps);
   }
 
   /**
@@ -162,20 +138,6 @@ class GeminiService {
    */
   _getFallbackTitle(contentType) {
     return metadata.getFallbackTitle(contentType);
-  }
-
-  /**
-   * Infer content type from conversation
-   */
-  async inferContentType(chatHistory, initialInfo) {
-    return metadata.inferContentType(chatHistory, initialInfo, this._deps);
-  }
-
-  /**
-   * Private: Infer content type from keywords (fallback)
-   */
-  _inferContentTypeFromKeywords(conversationText, infoText) {
-    return metadata.inferContentTypeFromKeywords(conversationText, infoText);
   }
 
   /**

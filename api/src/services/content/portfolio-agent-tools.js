@@ -1,0 +1,399 @@
+/**
+ * Tool set for the whole-portfolio AI Content Creator agent. Unlike
+ * content-editor-tools.js (which batches edits into a single mutable `doc`
+ * box scoped to one open post), this agent ranges across every post in a
+ * project across a single conversation, so each write tool commits directly
+ * to Prisma inside its own `execute` — there's no single document to diff
+ * and persist at the end of the turn.
+ *
+ * `propose_delete_post` and `navigate_to` never touch the database — they
+ * return a descriptor the frontend acts on (a confirm/cancel card, or a
+ * router.push), so destructive/navigational actions always go through a
+ * client-side gate rather than executing unilaterally.
+ */
+const { tool } = require('ai');
+const { z } = require('zod');
+const { prisma } = require('../core/database');
+const { cache } = require('../core/redis');
+const { CONTENT_INCLUDE, invalidateContentCache } = require('../../utils/content-access');
+const { snapshotContentRevision, buildContentFieldUpdate } = require('../../routes/content/content-crud');
+const { matchOrCreateSkills, matchOrCreateTags } = require('./skill-tag-matcher');
+const { createWebSearchTool } = require('../goapply/web-search-tool');
+const { createPullPageTool } = require('../goapply/pull-page-tool');
+
+const skillInput = z.object({ name: z.string(), category: z.string().optional() });
+const tagInput = z.object({ name: z.string(), category: z.string().optional() });
+
+// Tool results are replayed as ModelMessage content on the next agent step,
+// which the AI SDK validates as JSON — Prisma rows carry Date instances
+// (startDate/endDate/createdAt/updatedAt) that aren't JSON-safe on their own.
+function toJsonCompatible(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function portfolioTool(definition) {
+  const execute = definition.execute;
+  return tool({ ...definition, execute: async (...args) => toJsonCompatible(await execute(...args)) });
+}
+
+const NAV_TARGETS = ['content-editor', 'studio-content', 'create-content-portfolio', 'blogs', 'projects-content', 'experience', 'portfolios'];
+
+/**
+ * @param {{ projectId: string }} scope
+ */
+function createPortfolioAgentTools({ projectId }) {
+  const webSearch = createWebSearchTool({ toolFn: tool, z });
+  const pullPage = createPullPageTool({ toolFn: tool, z });
+
+  return {
+    web_search: webSearch,
+    pull_page: pullPage,
+
+    list_posts: portfolioTool({
+      description: 'Search or list posts (BLOG, PROJECT, or EXPERIENCE) in this portfolio project. Returns a compact summary of each match — use get_post to fetch full details for one before editing it.',
+      inputSchema: z.object({
+        query: z.string().optional().describe('Case-insensitive substring to match against title or excerpt. Omit to list everything.'),
+        contentType: z.enum(['BLOG', 'PROJECT', 'EXPERIENCE']).optional(),
+        status: z.enum(['DRAFT', 'PUBLISHED', 'HIDDEN']).optional(),
+      }),
+      execute: async ({ query, contentType, status }) => {
+        const posts = await prisma.content.findMany({
+          where: {
+            projectId,
+            revisionOf: null,
+            ...(contentType ? { contentType } : {}),
+            ...(status ? { status } : {}),
+            ...(query ? { OR: [
+              { title: { contains: query, mode: 'insensitive' } },
+              { excerpt: { contains: query, mode: 'insensitive' } },
+            ] } : {}),
+          },
+          select: { id: true, title: true, contentType: true, status: true, excerpt: true, updatedAt: true },
+          orderBy: { updatedAt: 'desc' },
+          take: 100,
+        });
+        return { posts };
+      },
+    }),
+
+    get_post: portfolioTool({
+      description: 'Fetch full details of one post: all fields, experience roles (with their skills), linked skills, tags, and custom meta.',
+      inputSchema: z.object({ postId: z.string().uuid() }),
+      execute: async ({ postId }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId }, include: CONTENT_INCLUDE });
+        if (!post) return { error: `No post with id ${postId} found in this project.` };
+        return { post };
+      },
+    }),
+
+    create_post: portfolioTool({
+      description: 'Create a brand-new post in this portfolio project, saved as a draft. Returns the new post id.',
+      inputSchema: z.object({
+        contentType: z.enum(['BLOG', 'PROJECT', 'EXPERIENCE']),
+        title: z.string().min(1),
+        content: z.string().min(1).describe('The full Markdown body.'),
+        excerpt: z.string().optional(),
+        skills: z.array(skillInput).optional(),
+        tags: z.array(tagInput).optional(),
+        startDate: z.string().optional().describe('ISO date. PROJECT/EXPERIENCE only.'),
+        endDate: z.string().optional().describe('ISO date. PROJECT/EXPERIENCE only.'),
+        isOngoing: z.boolean().optional(),
+        featuredImage: z.string().optional().describe('PROJECT only.'),
+        projectLinks: z.object({ github: z.string().optional(), devpost: z.string().optional(), other: z.array(z.string()).optional() }).optional().describe('PROJECT only.'),
+        contributors: z.array(z.string()).optional().describe('PROJECT only.'),
+        experienceCategory: z.enum(['JOB', 'EDUCATION', 'CERTIFICATION']).optional().describe('EXPERIENCE only.'),
+        location: z.string().optional().describe('EXPERIENCE only.'),
+        locationType: z.enum(['REMOTE', 'HYBRID', 'ONSITE']).optional().describe('EXPERIENCE only.'),
+        roles: z.array(z.object({
+          title: z.string(),
+          description: z.string().optional(),
+          startDate: z.string(),
+          endDate: z.string().optional(),
+          isCurrent: z.boolean().optional(),
+          skills: z.array(skillInput).optional(),
+        })).optional().describe('EXPERIENCE only — individual roles held during this experience.'),
+      }),
+      execute: async (input) => {
+        const { contentType, title, content, excerpt, skills, tags, roles, ...typeFields } = input;
+
+        let slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+        if (await prisma.content.findFirst({ where: { slug } })) slug = `${slug}-${Date.now()}`;
+
+        await prisma.$transaction(async (tx) => {
+          await tx.content.updateMany({ where: { projectId, status: { not: 'REVISION' }, revisionOf: null }, data: { order: { increment: 1 } } });
+          await tx.postOrder.updateMany({ where: { projectId }, data: { order: { increment: 1 } } });
+        });
+
+        const contentData = {
+          projectId, type: contentType, contentType, title, slug,
+          excerpt: excerpt || content.substring(0, 200).replace(/\n/g, ' ').trim() + '...',
+          content, order: 0, status: 'DRAFT',
+        };
+        if (typeFields.startDate) contentData.startDate = new Date(typeFields.startDate);
+        if (typeFields.endDate) contentData.endDate = new Date(typeFields.endDate);
+        if (typeFields.isOngoing !== undefined) contentData.isOngoing = typeFields.isOngoing;
+        if (contentType === 'PROJECT') {
+          if (typeFields.featuredImage) contentData.featuredImage = typeFields.featuredImage;
+          if (typeFields.projectLinks) contentData.projectLinks = typeFields.projectLinks;
+          if (typeFields.contributors) contentData.contributors = typeFields.contributors;
+        }
+        if (contentType === 'EXPERIENCE') {
+          if (typeFields.experienceCategory) contentData.experienceCategory = typeFields.experienceCategory;
+          if (typeFields.location) contentData.location = typeFields.location;
+          if (typeFields.locationType) contentData.locationType = typeFields.locationType;
+        }
+
+        const newPost = await prisma.content.create({ data: contentData });
+        await prisma.postOrder.create({ data: { projectId, contentId: newPost.id, order: 0 } });
+
+        const matchedSkills = await matchOrCreateSkills(prisma, skills || [], projectId);
+        if (matchedSkills.length) {
+          await prisma.content.update({ where: { id: newPost.id }, data: { linkedSkills: { connect: matchedSkills.map((s) => ({ id: s.id })) } } });
+        }
+        const matchedTags = await matchOrCreateTags(prisma, tags || [], projectId);
+        if (matchedTags.length) {
+          await prisma.content.update({ where: { id: newPost.id }, data: { tags: { connect: matchedTags.map((t) => ({ id: t.id })) } } });
+        }
+
+        if (contentType === 'EXPERIENCE' && roles?.length) {
+          for (const roleData of roles) {
+            const roleSkills = await matchOrCreateSkills(prisma, roleData.skills || [], projectId);
+            await prisma.experienceRole.create({
+              data: {
+                contentId: newPost.id,
+                title: roleData.title,
+                description: roleData.description || null,
+                startDate: new Date(roleData.startDate),
+                endDate: roleData.endDate ? new Date(roleData.endDate) : null,
+                isCurrent: roleData.isCurrent || false,
+                skills: { connect: roleSkills.map((s) => ({ id: s.id })) },
+              },
+            });
+          }
+        }
+
+        await invalidateContentCache(cache, projectId, newPost.id);
+        return { success: true, postId: newPost.id, title: newPost.title };
+      },
+    }),
+
+    update_post_fields: portfolioTool({
+      description: 'Update scalar fields on an existing post: title, slug, excerpt, status (DRAFT/PUBLISHED/HIDDEN), and — for PROJECT/EXPERIENCE posts — dates, location, links, etc. Only the fields you pass are changed. Snapshots a revision first.',
+      inputSchema: z.object({
+        postId: z.string().uuid(),
+        title: z.string().optional(),
+        slug: z.string().regex(/^[a-z0-9-]+$/).optional(),
+        excerpt: z.string().optional(),
+        status: z.enum(['DRAFT', 'PUBLISHED', 'HIDDEN']).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().nullable().optional(),
+        isOngoing: z.boolean().optional(),
+        featuredImage: z.string().optional(),
+        projectLinks: z.object({ github: z.string().optional(), devpost: z.string().optional(), other: z.array(z.string()).optional() }).optional(),
+        contributors: z.array(z.string()).optional(),
+        experienceCategory: z.enum(['JOB', 'EDUCATION', 'CERTIFICATION']).optional(),
+        location: z.string().optional(),
+        locationType: z.enum(['REMOTE', 'HYBRID', 'ONSITE']).optional(),
+      }),
+      execute: async ({ postId, ...fields }) => {
+        const existing = await prisma.content.findFirst({ where: { id: postId, projectId } });
+        if (!existing) return { error: `No post with id ${postId} found in this project.` };
+        await snapshotContentRevision(existing);
+        const updateData = buildContentFieldUpdate(fields);
+        await prisma.content.update({ where: { id: postId }, data: updateData });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true, postId, updatedFields: Object.keys(updateData) };
+      },
+    }),
+
+    update_post_content: portfolioTool({
+      description: 'Edit the Markdown body of an existing post. Use mode "edit" for a small targeted change (search must match the current content exactly and uniquely); use mode "replace" for a full rewrite. Snapshots a revision first.',
+      inputSchema: z.object({
+        postId: z.string().uuid(),
+        mode: z.enum(['replace', 'edit']),
+        markdown: z.string().optional().describe('Required when mode is "replace" — the complete new Markdown body.'),
+        search: z.string().optional().describe('Required when mode is "edit" — exact existing text to find, must be unique.'),
+        replace: z.string().optional().describe('Required when mode is "edit" — replacement text.'),
+      }),
+      execute: async ({ postId, mode, markdown, search, replace }) => {
+        const existing = await prisma.content.findFirst({ where: { id: postId, projectId } });
+        if (!existing) return { error: `No post with id ${postId} found in this project.` };
+
+        let newContent;
+        if (mode === 'replace') {
+          if (!markdown) return { error: 'markdown is required when mode is "replace".' };
+          newContent = markdown;
+        } else {
+          if (!search || replace === undefined) return { error: 'search and replace are required when mode is "edit".' };
+          const occurrences = existing.content.split(search).length - 1;
+          if (occurrences === 0) return { error: 'The search text was not found verbatim in the post content. Re-check whitespace/formatting, or use mode "replace".' };
+          if (occurrences > 1) return { error: `The search text matches ${occurrences} times — include more surrounding context so it uniquely identifies one location.` };
+          newContent = existing.content.replace(search, replace);
+        }
+
+        await snapshotContentRevision(existing);
+        await prisma.content.update({ where: { id: postId }, data: { content: newContent } });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true, postId };
+      },
+    }),
+
+    add_experience_role: portfolioTool({
+      description: 'Add a new role to an EXPERIENCE post (e.g. a promotion or a distinct position held during the same job/education entry).',
+      inputSchema: z.object({
+        postId: z.string().uuid(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        startDate: z.string(),
+        endDate: z.string().optional(),
+        isCurrent: z.boolean().optional(),
+        skills: z.array(skillInput).optional(),
+      }),
+      execute: async ({ postId, title, description, startDate, endDate, isCurrent, skills }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId, contentType: 'EXPERIENCE' } });
+        if (!post) return { error: `No EXPERIENCE post with id ${postId} found in this project.` };
+        const matchedSkills = await matchOrCreateSkills(prisma, skills || [], projectId);
+        const role = await prisma.experienceRole.create({
+          data: {
+            contentId: postId,
+            title,
+            description: description || null,
+            startDate: new Date(startDate),
+            endDate: endDate ? new Date(endDate) : null,
+            isCurrent: isCurrent || false,
+            skills: { connect: matchedSkills.map((s) => ({ id: s.id })) },
+          },
+          include: { skills: true },
+        });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true, role };
+      },
+    }),
+
+    update_experience_role: portfolioTool({
+      description: "Update an existing experience role's title, description, dates, current-status, or skill list (skills, if passed, replaces the role's full skill list).",
+      inputSchema: z.object({
+        roleId: z.string().uuid(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().nullable().optional(),
+        isCurrent: z.boolean().optional(),
+        skills: z.array(skillInput).optional(),
+      }),
+      execute: async ({ roleId, title, description, startDate, endDate, isCurrent, skills }) => {
+        const role = await prisma.experienceRole.findFirst({ where: { id: roleId, content: { projectId } } });
+        if (!role) return { error: `No experience role with id ${roleId} found in this project.` };
+
+        const updateData = {};
+        if (title !== undefined) updateData.title = title;
+        if (description !== undefined) updateData.description = description;
+        if (startDate !== undefined) updateData.startDate = new Date(startDate);
+        if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+        if (isCurrent !== undefined) updateData.isCurrent = isCurrent;
+        if (skills !== undefined) {
+          const matchedSkills = await matchOrCreateSkills(prisma, skills, projectId);
+          updateData.skills = { set: matchedSkills.map((s) => ({ id: s.id })) };
+        }
+
+        const updated = await prisma.experienceRole.update({ where: { id: roleId }, data: updateData, include: { skills: true } });
+        await invalidateContentCache(cache, projectId, role.contentId);
+        return { success: true, role: updated };
+      },
+    }),
+
+    delete_experience_role: portfolioTool({
+      description: 'Remove a role from an experience post. (This is a role within a post, not a whole post — it does not require confirmation the way propose_delete_post does.)',
+      inputSchema: z.object({ roleId: z.string().uuid() }),
+      execute: async ({ roleId }) => {
+        const role = await prisma.experienceRole.findFirst({ where: { id: roleId, content: { projectId } } });
+        if (!role) return { error: `No experience role with id ${roleId} found in this project.` };
+        await prisma.experienceRole.delete({ where: { id: roleId } });
+        await invalidateContentCache(cache, projectId, role.contentId);
+        return { success: true };
+      },
+    }),
+
+    add_skills_to_post: portfolioTool({
+      description: 'Attach one or more skills to a post (finds an existing matching skill by name/category or creates it).',
+      inputSchema: z.object({ postId: z.string().uuid(), skills: z.array(skillInput).min(1) }),
+      execute: async ({ postId, skills }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
+        if (!post) return { error: `No post with id ${postId} found in this project.` };
+        const matched = await matchOrCreateSkills(prisma, skills, projectId);
+        await prisma.content.update({ where: { id: postId }, data: { linkedSkills: { connect: matched.map((s) => ({ id: s.id })) } } });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true, skills: matched };
+      },
+    }),
+
+    remove_skill_from_post: portfolioTool({
+      description: 'Detach a skill from a post (the skill itself is not deleted, only unlinked from this post).',
+      inputSchema: z.object({ postId: z.string().uuid(), skillId: z.string().uuid() }),
+      execute: async ({ postId, skillId }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
+        if (!post) return { error: `No post with id ${postId} found in this project.` };
+        await prisma.content.update({ where: { id: postId }, data: { linkedSkills: { disconnect: { id: skillId } } } });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true };
+      },
+    }),
+
+    add_tags_to_post: portfolioTool({
+      description: 'Attach one or more tags to a post (finds an existing matching tag by name/category or creates it).',
+      inputSchema: z.object({ postId: z.string().uuid(), tags: z.array(tagInput).min(1) }),
+      execute: async ({ postId, tags }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
+        if (!post) return { error: `No post with id ${postId} found in this project.` };
+        const matched = await matchOrCreateTags(prisma, tags, projectId);
+        await prisma.content.update({ where: { id: postId }, data: { tags: { connect: matched.map((t) => ({ id: t.id })) } } });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true, tags: matched };
+      },
+    }),
+
+    remove_tag_from_post: portfolioTool({
+      description: 'Detach a tag from a post (the tag itself is not deleted, only unlinked from this post).',
+      inputSchema: z.object({ postId: z.string().uuid(), tagId: z.string().uuid() }),
+      execute: async ({ postId, tagId }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId } });
+        if (!post) return { error: `No post with id ${postId} found in this project.` };
+        await prisma.content.update({ where: { id: postId }, data: { tags: { disconnect: { id: tagId } } } });
+        await invalidateContentCache(cache, projectId, postId);
+        return { success: true };
+      },
+    }),
+
+    propose_delete_post: portfolioTool({
+      description: 'Propose deleting a post. This NEVER deletes anything itself — it only surfaces the post\'s details so the dashboard can show the user a Confirm/Cancel prompt; the user must click Confirm themselves before anything is removed. After calling this, stop and wait — do not tell the user the post was deleted, and do not call this tool again for the same post unless they explicitly ask again.',
+      inputSchema: z.object({ postId: z.string().uuid() }),
+      execute: async ({ postId }) => {
+        const post = await prisma.content.findFirst({ where: { id: postId, projectId }, select: { id: true, title: true, contentType: true } });
+        if (!post) return { error: `No post with id ${postId} found in this project.` };
+        return { requiresConfirmation: true, postId: post.id, title: post.title, contentType: post.contentType };
+      },
+    }),
+
+    navigate_to: portfolioTool({
+      description: 'Take the user to a page in the dashboard. Targets: "content-editor" (structured form editor for one post — needs postId), "studio-content" (AI Markdown Studio for one post — needs postId), "create-content-portfolio" (blank new-post form — needs contentType), or the list views "blogs", "projects-content", "experience", "portfolios". Use this whenever the user asks to see, open, or go to something.',
+      inputSchema: z.object({
+        target: z.enum(NAV_TARGETS),
+        postId: z.string().uuid().optional(),
+        contentType: z.enum(['BLOG', 'PROJECT', 'EXPERIENCE']).optional(),
+      }),
+      execute: async ({ target, postId, contentType }) => {
+        if (target === 'content-editor' || target === 'studio-content') {
+          if (!postId) return { error: `Target "${target}" requires a postId — use list_posts or get_post to find it first.` };
+          return { action: 'navigate', routeName: target, params: { projectId, id: postId } };
+        }
+        if (target === 'create-content-portfolio') {
+          if (!contentType) return { error: `Target "${target}" requires a contentType.` };
+          return { action: 'navigate', routeName: target, params: { projectId, type: contentType } };
+        }
+        return { action: 'navigate', routeName: target, params: {} };
+      },
+    }),
+  };
+}
+
+module.exports = { createPortfolioAgentTools };

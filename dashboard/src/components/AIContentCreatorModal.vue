@@ -1,23 +1,9 @@
 <template>
-  <div v-if="isOpen" class="creator-overlay fixed inset-0 z-50 overflow-y-auto" :class="{ 'creator-overlay--complete': creationComplete }">
+  <div v-if="isOpen" class="creator-overlay fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
       <div class="creator-backdrop fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
-      
-      <div class="creator-card inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full" :class="{ 'creator-card--complete': creationComplete }">
-        <div v-if="creationComplete" class="creation-success" role="status" aria-live="polite">
-          <div class="generation-orbit" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="status-line mt-7">
-            <Transition name="status-drift" mode="out-in">
-              <p :key="loadingMessage" class="text-sm font-medium text-purple-100">{{ loadingMessage }}</p>
-            </Transition>
-          </div>
-          <div class="studio-portal mt-7" aria-hidden="true"><span></span></div>
-        </div>
-        <div v-else>
+
+      <div class="creator-card inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
         <!-- Header -->
         <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 pt-6 pb-4">
           <div class="flex items-center justify-between">
@@ -28,12 +14,8 @@
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg leading-6 font-medium text-white">
-                  {{ mode === 'edit' ? 'AI Content Editor' : 'AI Content Creator' }}
-                </h3>
-                <p class="text-sm text-purple-100">
-                  {{ mode === 'edit' ? 'Edit your content with AI assistance' : 'Let\'s create amazing content together' }}
-                </p>
+                <h3 class="text-lg leading-6 font-medium text-white">AI Content Creator</h3>
+                <p class="text-sm text-purple-100">Full control over your portfolio — find, edit, create, organize, or remove any post</p>
               </div>
             </div>
             <button
@@ -55,7 +37,7 @@
               :sessions="chatSessions.sessions.value"
               :active-session-id="chatSessions.activeSessionId.value"
               :loading="chatSessions.loadingSessions.value"
-              :disabled="isTyping || isLoading"
+              :disabled="chat.streaming.value"
               @select="openSavedChat"
               @new="newChat"
             />
@@ -65,7 +47,7 @@
             <div class="text-center py-6">
               <h4 class="text-lg font-medium text-white mb-4">Choose your interaction mode</h4>
               <p class="text-sm text-gray-400 mb-6">How would you like to interact with the AI assistant?</p>
-              
+
               <div class="grid grid-cols-2 gap-4">
                 <button
                   @click="selectMode('text')"
@@ -77,7 +59,7 @@
                   <h5 class="font-medium text-white">Text Mode</h5>
                   <p class="text-sm text-gray-400 mt-1">Type your questions and responses</p>
                 </button>
-                
+
                 <button
                   @click="selectMode('voice')"
                   class="p-6 border-2 border-gray-600 rounded-lg hover:border-purple-500 hover:bg-purple-500/10 transition-all"
@@ -92,26 +74,10 @@
             </div>
           </div>
 
-          <!-- Loading / Streaming generation -->
-          <div v-else-if="isLoading" class="py-4">
-            <div class="generation-progress" role="status" aria-live="polite">
-              <div class="generation-orbit" aria-hidden="true">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              <div class="status-line">
-                <Transition name="status-drift" mode="out-in">
-                  <p :key="loadingMessage" class="text-sm text-gray-300">{{ loadingMessage }}</p>
-                </Transition>
-              </div>
-            </div>
-          </div>
-
           <!-- Chat Messages -->
           <div v-else-if="modeSelected" class="space-y-4 max-h-[600px] overflow-y-auto mb-4">
             <div
-              v-for="message in messages"
+              v-for="message in chat.messages.value"
               :key="message.id"
               :class="[
                 'flex items-start space-x-3',
@@ -131,12 +97,12 @@
               </div>
               <div :class="[
                 'rounded-lg px-4 py-2 max-w-xs sm:max-w-md',
-                message.role === 'user' 
-                  ? 'bg-purple-600 text-white' 
+                message.role === 'user'
+                  ? 'bg-purple-600 text-white'
                   : 'bg-gray-700 text-white'
               ]">
                 <template v-if="message.role === 'assistant'">
-                  <details v-if="message.reasoning" class="mb-2 group" :open="isTyping && messages[messages.length - 1]?.id === message.id && !message.content">
+                  <details v-if="message.reasoning" class="mb-2 group" :open="chat.streaming.value && chat.messages.value[chat.messages.value.length - 1]?.id === message.id && !message.content">
                     <summary class="cursor-pointer text-xs text-gray-400 hover:text-gray-300 select-none flex items-center space-x-1">
                       <svg class="w-3 h-3 transform transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -146,27 +112,57 @@
                     <p class="mt-1 text-xs text-gray-400 whitespace-pre-wrap leading-relaxed border-l-2 border-gray-600 pl-2">{{ message.reasoning }}</p>
                   </details>
 
-                  <div v-if="message.toolActivity?.length" class="mb-2 space-y-1">
-                    <div
-                      v-for="(tool, index) in message.toolActivity"
-                      :key="`${tool.toolName}-${index}`"
-                      class="flex items-center space-x-1.5 text-xs px-2 py-1 rounded-md border"
-                      :class="tool.status === 'running' ? 'bg-gray-700/50 border-gray-600 text-gray-300' : tool.status === 'error' ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-green-900/20 border-green-800 text-green-300'"
-                    >
-                      <svg v-if="tool.status === 'running'" class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path v-if="tool.status === 'error'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>{{ toolLabel(tool.toolName, tool.status) }}</span>
-                    </div>
+                  <div v-if="message.toolActivity?.length" class="mb-2 space-y-1.5">
+                    <template v-for="(tool, index) in message.toolActivity" :key="`${tool.toolName}-${index}`">
+                      <div
+                        v-if="tool.toolName === 'propose_delete_post' && tool.status === 'done'"
+                        class="rounded-md border px-3 py-2 text-xs"
+                        :class="tool.output?.resolved === 'deleted' ? 'bg-red-900/20 border-red-800 text-red-300' : tool.output?.resolved === 'cancelled' ? 'bg-gray-700/50 border-gray-600 text-gray-300' : tool.output?.resolved === 'error' ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-amber-900/20 border-amber-700 text-amber-200'"
+                      >
+                        <template v-if="tool.output && !tool.output.resolved">
+                          <p class="mb-2">Delete "{{ tool.output.title }}"? This cannot be undone.</p>
+                          <div class="flex gap-2">
+                            <button
+                              @click="confirmDelete(tool)"
+                              :disabled="tool.busy"
+                              class="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 transition-colors"
+                            >{{ tool.busy ? 'Deleting…' : 'Confirm delete' }}</button>
+                            <button
+                              @click="cancelDelete(tool)"
+                              :disabled="tool.busy"
+                              class="px-2.5 py-1 rounded border border-gray-500 hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                            >Cancel</button>
+                          </div>
+                        </template>
+                        <p v-else-if="tool.output?.resolved === 'deleted'">Deleted "{{ tool.output.title }}".</p>
+                        <p v-else-if="tool.output?.resolved === 'cancelled'">Cancelled — "{{ tool.output.title }}" was not deleted.</p>
+                        <p v-else>{{ tool.output?.errorMessage || tool.output?.error || 'Something went wrong.' }}</p>
+                      </div>
+                      <div
+                        v-else
+                        class="flex items-center space-x-1.5 text-xs px-2 py-1 rounded-md border"
+                        :class="tool.status === 'running' ? 'bg-gray-700/50 border-gray-600 text-gray-300' : tool.status === 'error' ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-green-900/20 border-green-800 text-green-300'"
+                      >
+                        <svg v-if="tool.status === 'running'" class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path v-if="tool.status === 'error'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{{ toolLabel(tool.toolName, tool.status) }}</span>
+                      </div>
+                    </template>
                   </div>
                 </template>
-                <p v-if="message.content" class="text-sm whitespace-pre-wrap">{{ message.content }}</p>
-                <div v-else-if="message.role === 'assistant' && isTyping && messages[messages.length - 1]?.id === message.id && !message.reasoning && !message.toolActivity?.length" class="flex space-x-1.5 py-1">
+                <div
+                  v-if="message.content"
+                  class="text-sm leading-relaxed markdown-content"
+                  :class="{ 'markdown-content-user': message.role === 'user' }"
+                  v-html="renderMarkdown(message.content)"
+                ></div>
+                <div v-else-if="message.role === 'assistant' && chat.streaming.value && chat.messages.value[chat.messages.value.length - 1]?.id === message.id && !message.reasoning && !message.toolActivity?.length" class="flex space-x-1.5 py-1">
                   <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
                   <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                   <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
@@ -176,7 +172,7 @@
           </div>
 
           <!-- Voice Mode ConvAI Widget -->
-          <div v-if="selectedInteractionMode === 'voice' && modeSelected && !sessionDone && voiceAgentId" class="mb-4">
+          <div v-if="selectedInteractionMode === 'voice' && modeSelected && voiceAgentId" class="mb-4">
             <div class="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-2 border-purple-500/30 rounded-lg p-4">
               <div class="flex items-center space-x-3 mb-3">
                 <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,7 +181,7 @@
                 <h4 class="text-lg font-semibold text-white">Voice Assistant</h4>
               </div>
               <p class="text-sm text-gray-300 mb-4">Speak with our AI assistant to create your content:</p>
-              
+
               <!-- ElevenLabs ConvAI Widget -->
               <elevenlabs-convai
                 :agent-id="voiceAgentId"
@@ -224,9 +220,8 @@
             @click="close"
             class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-colors"
           >
-            Cancel
+            Close
           </button>
-        </div>
         </div>
       </div>
     </div>
@@ -234,61 +229,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import api, { API_URL } from '@/services/api'
 import ChatSessionPicker from '@/components/chat/ChatSessionPicker.vue'
 import { useChatSessions } from '@/composables/useChatSessions'
+import { useAgenticChat, type ToolActivity } from '@/composables/useAgenticChat'
+import { renderMarkdown } from '@/lib/markdown'
 
-const props = defineProps<{
-  mode: 'create' | 'edit'
-  contentType?: 'BLOG' | 'PROJECT' | 'EXPERIENCE' | 'SKILL'
-  initialInfo?: any
-  currentContent?: string
-  projectId?: string
+const props = defineProps<{ projectId?: string }>()
+
+const emit = defineEmits<{
+  close: []
+  navigate: [{ routeName: string; params: Record<string, unknown> }]
+  'content-created': [{ id: string }]
+  'content-generated': [any]
 }>()
 
-const inferredContentType = ref<'BLOG' | 'PROJECT' | 'EXPERIENCE' | 'SKILL' | undefined>(props.contentType)
-
-const emit = defineEmits(['close', 'content-generated', 'content-created'])
-
 const isOpen = ref(false)
-const isLoading = ref(false)
-const isTyping = ref(false)
-const loadingMessage = ref('')
-type ToolActivity = {
-  toolCallId?: string
-  toolName: string
-  status: 'running' | 'done' | 'error'
-  input?: unknown
-}
-
-type ChatMessage = {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  reasoning?: string
-  toolActivity?: ToolActivity[]
-}
-
-const messages = ref<ChatMessage[]>([])
-const currentMessage = ref('')
-const chatHistory = ref<Array<{ role: string; content: string }>>([])
-const chatSessions = useChatSessions('content-creator', () => props.projectId)
-const messageTextarea = ref<HTMLTextAreaElement | null>(null)
-const sessionDone = ref(false)
 const modeSelected = ref(false)
 const selectedInteractionMode = ref<'text' | 'voice'>('text')
 const voiceAgentId = ref('')
-const creationComplete = ref(false)
-const isPreviewing = ref(false)
-let previewRun = 0
+const currentMessage = ref('')
+const messageTextarea = ref<HTMLTextAreaElement | null>(null)
 
-const canRespond = computed(() => !isTyping.value && !sessionDone.value && modeSelected.value && selectedInteractionMode.value === 'text')
+const chatSessions = useChatSessions('content-creator', () => props.projectId)
+
+const chat = useAgenticChat(
+  () => `${API_URL}/ai/portfolio/chat`,
+  { onTurnComplete: async (history) => { await chatSessions.save(history) } },
+  () => undefined,
+  () => ({ projectId: props.projectId })
+)
+
+const canRespond = computed(() => !chat.streaming.value && modeSelected.value && selectedInteractionMode.value === 'text')
 
 const TOOL_LABELS: Record<string, { done: string; error: string }> = {
-  signalContentReadyForGeneration: { done: 'Content brief completed', error: 'Content brief failed' },
-  signalEditReadyForGeneration: { done: 'Edit brief completed', error: 'Edit brief failed' },
-  fetchExistingPost: { done: 'Existing post fetched', error: 'Post fetch failed' },
+  list_posts: { done: 'Searched your posts', error: 'Search failed' },
+  get_post: { done: 'Loaded post details', error: 'Failed to load post' },
+  create_post: { done: 'Post created', error: 'Failed to create post' },
+  update_post_fields: { done: 'Post updated', error: 'Update failed' },
+  update_post_content: { done: 'Post content updated', error: 'Update failed' },
+  add_experience_role: { done: 'Role added', error: 'Failed to add role' },
+  update_experience_role: { done: 'Role updated', error: 'Failed to update role' },
+  delete_experience_role: { done: 'Role removed', error: 'Failed to remove role' },
+  add_skills_to_post: { done: 'Skills added', error: 'Failed to add skills' },
+  remove_skill_from_post: { done: 'Skill removed', error: 'Failed to remove skill' },
+  add_tags_to_post: { done: 'Tags added', error: 'Failed to add tags' },
+  remove_tag_from_post: { done: 'Tag removed', error: 'Failed to remove tag' },
+  navigate_to: { done: 'Navigating…', error: 'Navigation failed' },
 }
 
 const toolLabel = (toolName: string, status: 'running' | 'done' | 'error') => {
@@ -299,63 +287,7 @@ const toolLabel = (toolName: string, status: 'running' | 'done' | 'error') => {
   return status === 'error' ? `${readableName} failed` : `${readableName} completed`
 }
 
-const streamSession = async (payload: Record<string, unknown>) => {
-  const assistantMessage: ChatMessage = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    role: 'assistant',
-    content: '',
-    reasoning: '',
-    toolActivity: []
-  }
-  messages.value.push(assistantMessage)
-  const message = messages.value[messages.value.length - 1]
-  const token = localStorage.getItem('auth_token')
-  const response = await fetch(`${API_URL}/ai/session/stream`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload)
-  })
-  if (!response.ok || !response.body) throw new Error(`Request failed (${response.status})`)
-
-  let sessionResult: any = null
-  let buffer = ''
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  while (true) {
-    const { value, done } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const frames = buffer.split('\n\n')
-    buffer = frames.pop() || ''
-    for (const frame of frames) {
-      const line = frame.split('\n').find(item => item.startsWith('data: '))
-      if (!line) continue
-      const event = JSON.parse(line.slice(6))
-      if (event.type === 'text-delta') message.content += event.text || ''
-      else if (event.type === 'reasoning-delta') message.reasoning = (message.reasoning || '') + (event.text || '')
-      else if (event.type === 'tool-call') {
-        message.toolActivity!.push({ toolCallId: event.toolCallId, toolName: event.toolName, input: event.input, status: 'running' })
-      } else if (event.type === 'tool-result' || event.type === 'tool-error') {
-        const tool = message.toolActivity!.find(item => item.toolCallId === event.toolCallId)
-        if (tool) tool.status = event.type === 'tool-error' ? 'error' : 'done'
-      } else if (event.type === 'session-done') sessionResult = event
-      else if (event.type === 'error') throw new Error(event.message || 'AI stream failed')
-    }
-  }
-  return sessionResult || { done: false }
-}
-
-const voiceVariables = computed(() => {
-  const projectId = (window as any).selectedProjectId || ''
-  const contentType = props.contentType || 'BLOG'
-  return JSON.stringify({
-    user_project_id: projectId,
-    content_type: contentType
-  })
-})
+const voiceVariables = computed(() => JSON.stringify({ user_project_id: props.projectId || '' }))
 
 async function loadVoiceConfig() {
   try {
@@ -372,139 +304,46 @@ const open = async () => {
   isOpen.value = true
   await chatSessions.refresh()
   await newChat()
-  // Reset textarea height
   nextTick(() => {
-    if (messageTextarea.value) {
-      messageTextarea.value.style.height = 'auto'
-    }
+    if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
   })
 }
 
 const newChat = async () => {
-  await chatSessions.create({ mode: props.mode, contentType: props.contentType })
+  await chatSessions.create()
   modeSelected.value = false
   selectedInteractionMode.value = 'text'
-  messages.value = []
+  chat.reset()
   currentMessage.value = ''
-  chatHistory.value = []
-  sessionDone.value = false
-  creationComplete.value = false
 }
 
 const openSavedChat = async (id: string) => {
   const session = await chatSessions.open(id)
-  chatHistory.value = Array.isArray(session.chatHistory) ? session.chatHistory : []
-  messages.value = chatHistory.value.map((message) => ({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    role: message.role as 'user' | 'assistant',
-    content: message.content,
-  }))
-  inferredContentType.value = session.metadata?.contentType || props.contentType
+  chat.loadHistory(session.chatHistory || [])
   selectedInteractionMode.value = 'text'
   modeSelected.value = true
-  sessionDone.value = false
-  creationComplete.value = false
-}
-
-const snapshotChatHistory = () => {
-  return messages.value
-    .filter(message => message.content)
-    .map(message => ({ role: message.role, content: message.content }))
-}
-
-const persistChat = async () => {
-  const completeHistory = snapshotChatHistory()
-  chatHistory.value = completeHistory
-  try {
-    await chatSessions.save(completeHistory, { mode: props.mode, contentType: inferredContentType.value || props.contentType })
-  } catch (error) {
-    console.error('Failed to save chat history:', error)
-  }
-  return completeHistory
 }
 
 const close = () => {
-  previewRun += 1
   isOpen.value = false
   modeSelected.value = false
-  messages.value = []
+  chat.reset()
   currentMessage.value = ''
-  chatHistory.value = []
-  sessionDone.value = false
-  creationComplete.value = false
-  isPreviewing.value = false
-  // Reset textarea height
-  if (messageTextarea.value) {
-    messageTextarea.value.style.height = 'auto'
-  }
+  if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
+}
+
+const GREETING = "Hi! I'm your Foligo AI Content Creator — I have full control over this portfolio. I can find, edit, or create any post, manage skills, tags, and experience roles, take you anywhere in the dashboard, or delete a post (I'll always confirm with you first). What would you like to do?"
+
+function showGreeting() {
+  if (chat.messages.value.length > 0) return
+  chat.messages.value.push({ id: `greeting-${Date.now()}`, role: 'assistant', content: GREETING })
 }
 
 const selectMode = async (mode: 'text' | 'voice') => {
   selectedInteractionMode.value = mode
   modeSelected.value = true
-  
-  if (mode === 'voice') {
-    await startVoiceSession()
-  } else {
-    initializeSession()
-  }
-}
-
-const initializeSession = async () => {
-  if (props.mode === 'edit') {
-    // For edit mode, start with existing content info
-    isTyping.value = true
-    
-    try {
-      const result = await streamSession({
-        mode: 'edit',
-        contentType: props.contentType || 'BLOG',
-        initialInfo: props.initialInfo,
-        chatHistory: [],
-        projectId: props.projectId
-      })
-      
-      const completeHistory = await persistChat()
-      if (result.done) {
-        sessionDone.value = true
-        await generateFinalContent(completeHistory)
-      }
-    } catch (error) {
-      console.error('Failed to initialize session:', error)
-    } finally {
-      await persistChat()
-      isTyping.value = false
-    }
-  } else {
-    // For create mode, start with first question
-    isTyping.value = true
-    
-    try {
-      const result = await streamSession({
-        mode: 'create',
-        contentType: props.contentType,
-        initialInfo: {},
-        chatHistory: [],
-        projectId: props.projectId
-      })
-      
-      // Update inferred content type if it was determined
-      if (result.contentType) {
-        inferredContentType.value = result.contentType
-      }
-
-      const completeHistory = await persistChat()
-      if (result.done) {
-        sessionDone.value = true
-        await generateFinalContent(completeHistory)
-      }
-    } catch (error) {
-      console.error('Failed to initialize session:', error)
-    } finally {
-      await persistChat()
-      isTyping.value = false
-    }
-  }
+  if (mode === 'voice') await startVoiceSession()
+  else showGreeting()
 }
 
 const adjustTextareaHeight = () => {
@@ -512,217 +351,101 @@ const adjustTextareaHeight = () => {
     if (messageTextarea.value) {
       messageTextarea.value.style.height = 'auto'
       const scrollHeight = messageTextarea.value.scrollHeight
-      const maxHeight = 200 // max-h-[200px]
-      messageTextarea.value.style.height = `${Math.min(scrollHeight, maxHeight)}px`
+      messageTextarea.value.style.height = `${Math.min(scrollHeight, 200)}px`
     }
   })
 }
 
-const handleShiftEnter = () => {
-  // Allow default behavior (new line) when Shift+Enter is pressed
-  adjustTextareaHeight()
-}
+const handleShiftEnter = () => adjustTextareaHeight()
 
 const sendMessage = async () => {
-  if (!currentMessage.value.trim() || isTyping.value) return
-  
-  const userMessage = {
-    id: Date.now().toString(),
-    role: 'user' as const,
-    content: currentMessage.value.trim()
-  }
-  
-  messages.value.push(userMessage)
-  chatHistory.value.push({ role: 'user', content: userMessage.content })
-  
+  if (!currentMessage.value.trim() || chat.streaming.value) return
+  const text = currentMessage.value.trim()
   currentMessage.value = ''
-  
-  // Reset textarea height
-  if (messageTextarea.value) {
-    messageTextarea.value.style.height = 'auto'
-  }
-  
-  isTyping.value = true
-  
-  try {
-    const result = await streamSession({
-      mode: props.mode,
-      contentType: inferredContentType.value || props.contentType,
-      initialInfo: props.initialInfo || {},
-      chatHistory: chatHistory.value,
-      projectId: props.projectId
-    })
-    
-    // Update inferred content type if it was determined
-    if (result.contentType) {
-      inferredContentType.value = result.contentType
-    }
-
-    const completeHistory = await persistChat()
-    if (result.done) {
-      sessionDone.value = true
-      await generateFinalContent(completeHistory)
-    }
-  } catch (error) {
-    console.error('Failed to send message:', error)
-  } finally {
-    await persistChat()
-    isTyping.value = false
-  }
+  if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
+  await chat.sendMessage(text)
 }
 
 const startVoiceSession = async () => {
-  // Get the project ID from the global store
-  const projectId = (window as any).selectedProjectId
-  
+  const projectId = props.projectId
   if (!projectId) {
     alert('Please select a project first')
     close()
     return
   }
-  
+
   // Store the session info so we can pick up the webhook response
   ;(window as any).activeVoiceSession = {
     projectId,
-    contentType: props.contentType || 'BLOG',
     callback: (data: any) => {
       emit('content-generated', data)
       close()
     }
   }
-  
+
   // The voice mode UI will show the phone number - don't close the modal
   // User can close it themselves after calling
 }
 
-const generatingText = ref('')
+// ── Navigation and delete-confirmation, driven by tool activity from the
+// agent's SSE stream. navigate_to and propose_delete_post never mutate
+// anything server-side themselves (see portfolio-agent-tools.js) — this is
+// the client-side gate that turns their descriptors into real actions.
+const handledToolCallIds = new Set<string>()
+const pendingNavigation = ref<{ routeName: string; params: Record<string, unknown>; handoffContent?: string } | null>(null)
 
-const generateFinalContent = async (completeHistory = snapshotChatHistory()) => {
-  isLoading.value = false
-  loadingMessage.value = 'Preparing the model with your conversation…'
-  generatingText.value = ''
-  creationComplete.value = true
-  const studioTransitionStartedAt = Date.now()
-  const liveGenerationId = `ai-live-${crypto.randomUUID()}`
-  sessionStorage.setItem(`ai-content-live:${liveGenerationId}`, JSON.stringify({ content: '', status: loadingMessage.value }))
+watch(() => chat.messages.value, (msgs) => {
+  const last = msgs[msgs.length - 1]
+  if (!last?.toolActivity) return
+  for (const activity of last.toolActivity) {
+    if (activity.status !== 'done' || handledToolCallIds.has(activity.toolCallId)) continue
+    if (activity.toolName === 'navigate_to' && activity.output?.action === 'navigate') {
+      handledToolCallIds.add(activity.toolCallId)
+      const { routeName, params } = activity.output
+      let handoffContent: string | undefined
+      if (routeName === 'studio-content') {
+        const createActivity = last.toolActivity.find((t) => t.toolName === 'create_post' && t.output?.postId === params?.id)
+        handoffContent = createActivity?.input?.content
+      }
+      pendingNavigation.value = { routeName, params, handoffContent }
+    } else if (activity.toolName === 'propose_delete_post') {
+      handledToolCallIds.add(activity.toolCallId)
+    }
+  }
+}, { deep: true })
 
+// Wait for the turn to finish streaming before actually navigating away, so
+// we don't abort the SSE reader mid-message or unmount while the agent is
+// still writing its wrap-up sentence.
+watch(() => chat.streaming.value, (streaming) => {
+  if (streaming || !pendingNavigation.value) return
+  const nav = pendingNavigation.value
+  pendingNavigation.value = null
+  if (nav.routeName === 'studio-content' && nav.handoffContent !== undefined && nav.params?.id) {
+    sessionStorage.setItem(`ai-content-handoff:${nav.params.id}`, JSON.stringify({ content: nav.handoffContent, animate: true, createdAt: Date.now() }))
+    emit('content-created', { id: nav.params.id as string })
+  } else {
+    emit('navigate', { routeName: nav.routeName, params: nav.params })
+  }
+  close()
+})
+
+async function confirmDelete(activity: ToolActivity) {
+  const postId = activity.output?.postId
+  activity.busy = true
   try {
-    const finalContentType = inferredContentType.value || props.contentType || 'BLOG'
-    const token = localStorage.getItem('auth_token')
-
-    const response = await fetch(`${API_URL}/ai/create/stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({
-        mode: props.mode,
-        contentType: finalContentType,
-        chatHistory: completeHistory,
-        currentContent: props.currentContent || '',
-        changes: '',
-        projectId: props.projectId
-      })
-    })
-
-    if (!response.ok || !response.body) throw new Error(`Request failed (${response.status})`)
-
-    // Enter Studio while the API stream is still active. This component's
-    // reader continues after the dashboard layout unmounts and bridges updates
-    // through a window event plus sessionStorage for race-free startup.
-    const initialTransition = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 500
-    const elapsedTransition = Date.now() - studioTransitionStartedAt
-    if (elapsedTransition < initialTransition) {
-      await new Promise((resolve) => window.setTimeout(resolve, initialTransition - elapsedTransition))
-    }
-    emit('content-created', { id: liveGenerationId, content: undefined, live: true })
-
-    let contentId: string | null = null
-    let cleanedContent = ''
-    let reasoningBuffer = ''
-    let lastReasoningPaint = 0
-    let visibleMarkdown = ''
-    let buffer = ''
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const frames = buffer.split('\n\n')
-      buffer = frames.pop() || ''
-      for (const frame of frames) {
-        const line = frame.split('\n').find(l => l.startsWith('data: '))
-        if (!line) continue
-        const event = JSON.parse(line.slice(6))
-        if (event.type === 'text-delta') {
-          generatingText.value += event.text || ''
-          visibleMarkdown = generatingText.value.split(/<structured_data>/i)[0]
-          const liveDetail = { generationId: liveGenerationId, type: 'content', content: visibleMarkdown }
-          sessionStorage.setItem(`ai-content-live:${liveGenerationId}`, JSON.stringify({ content: visibleMarkdown, status: loadingMessage.value }))
-          window.dispatchEvent(new CustomEvent('ai-content-live', { detail: liveDetail }))
-        } else if (event.type === 'reasoning-delta') {
-          reasoningBuffer += event.text || ''
-          const now = Date.now()
-          if (now - lastReasoningPaint > 600) {
-            const normalizedThought = reasoningBuffer.replace(/\s+/g, ' ').trim()
-            const sentences = normalizedThought.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || []
-            const conciseThought = sentences.slice(-2).join(' ').trim().slice(-280)
-            if (conciseThought) {
-              loadingMessage.value = `Thinking · ${conciseThought}`
-              window.dispatchEvent(new CustomEvent('ai-content-live', {
-                detail: { generationId: liveGenerationId, type: 'status', status: loadingMessage.value }
-              }))
-            }
-            lastReasoningPaint = now
-          }
-        } else if (event.type === 'status') {
-          loadingMessage.value = event.message
-          window.dispatchEvent(new CustomEvent('ai-content-live', {
-            detail: { generationId: liveGenerationId, type: 'status', status: event.message }
-          }))
-        } else if (event.type === 'content-created') {
-          contentId = event.id
-          cleanedContent = event.content || ''
-          loadingMessage.value = 'Opening your finished draft…'
-        } else if (event.type === 'error') {
-          throw new Error(event.message || 'Stream failed')
-        }
-      }
-    }
-
-    if (contentId) {
-      isLoading.value = false
-      sessionStorage.removeItem(`ai-content-live:${liveGenerationId}`)
-      window.dispatchEvent(new CustomEvent('ai-content-live', {
-        detail: { generationId: liveGenerationId, type: 'complete', id: contentId, content: cleanedContent }
-      }))
-    } else {
-      throw new Error('No content ID received from stream')
-    }
-  } catch (error) {
-    console.error('Failed to create content:', error)
-    creationComplete.value = false
-    isLoading.value = false
-    loadingMessage.value = 'Failed to create content. Please try again.'
-    sessionStorage.removeItem(`ai-content-live:${liveGenerationId}`)
-    window.dispatchEvent(new CustomEvent('ai-content-live', {
-      detail: {
-        generationId: liveGenerationId,
-        type: 'error',
-        message: error instanceof Error ? error.message : loadingMessage.value
-      }
-    }))
+    await api.delete(`/content/${postId}`)
+    activity.output = { ...activity.output, resolved: 'deleted' }
+  } catch (error: any) {
+    activity.output = { ...activity.output, resolved: 'error', errorMessage: error.response?.data?.message || 'Failed to delete the post.' }
   } finally {
-    if (!creationComplete.value) {
-      isLoading.value = false
-      generatingText.value = ''
-    }
+    activity.busy = false
   }
 }
 
+function cancelDelete(activity: ToolActivity) {
+  activity.output = { ...activity.output, resolved: 'cancelled' }
+}
 
 // Expose open and close methods
 defineExpose({ open, close })
@@ -731,36 +454,4 @@ defineExpose({ open, close })
 <style scoped>
 .creator-card { transform-origin: center; }
 .creator-backdrop { transition: background-color 700ms ease, backdrop-filter 700ms ease; }
-.creator-overlay--complete .creator-backdrop { background-color: rgb(3 7 18 / 0.92); backdrop-filter: blur(12px); }
-.creator-card--complete { width: min(30rem, calc(100vw - 2rem)); border-radius: 1.75rem; background: radial-gradient(circle at 50% 15%, rgb(124 58 237 / 0.25), transparent 45%), #111827; animation: card-morph 700ms cubic-bezier(.2,.9,.2,1) both; }
-.creation-success { min-height: 28rem; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center; }
-.generation-progress { min-height: 18rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.75rem; text-align: center; }
-.generation-orbit { position: relative; width: 5rem; height: 5rem; border: 1px solid rgb(139 92 246 / .35); border-radius: 9999px; animation: generation-breathe 1.8s ease-in-out infinite; }
-.generation-orbit::before { content: ''; position: absolute; inset: .65rem; border-radius: 9999px; background: radial-gradient(circle, rgb(168 85 247 / .55), rgb(59 130 246 / .08) 65%, transparent 70%); filter: blur(2px); }
-.generation-orbit span { position: absolute; top: 50%; left: 50%; width: .45rem; height: .45rem; margin: -.225rem; border-radius: 9999px; background: #d8b4fe; box-shadow: 0 0 12px #a855f7; animation: generation-orbit 1.65s linear infinite; }
-.generation-orbit span:nth-child(2) { animation-delay: -.55s; }
-.generation-orbit span:nth-child(3) { animation-delay: -1.1s; }
-.status-line { min-height: 3.5rem; width: min(36rem, 92%); overflow: hidden; display: flex; align-items: center; justify-content: center; line-height: 1.45; }
-.status-drift-enter-active, .status-drift-leave-active { transition: opacity 280ms ease, transform 280ms ease; }
-.status-drift-enter-from { opacity: 0; transform: translateY(.8rem); }
-.status-drift-leave-to { opacity: 0; transform: translateY(-.8rem); }
-.success-orbit { position: relative; width: 7rem; height: 7rem; display: grid; place-items: center; }
-.success-orbit::before { content: ''; position: absolute; inset: -.65rem; border: 1px solid rgb(168 85 247 / .3); border-radius: 9999px; animation: orbit-pulse 1.4s ease-out infinite; }
-.success-check { width: 6rem; height: 6rem; filter: drop-shadow(0 0 20px rgb(139 92 246 / .5)); }
-.success-check__circle { stroke: #8b5cf6; stroke-width: 2; stroke-dasharray: 145; stroke-dashoffset: 145; animation: draw-line 550ms 180ms ease-out forwards; }
-.success-check__tick { stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 42; stroke-dashoffset: 42; animation: draw-line 380ms 620ms ease-out forwards; }
-.success-spark { position: absolute; width: .45rem; height: .45rem; border-radius: 9999px; background: #c084fc; box-shadow: 0 0 12px #a855f7; animation: spark 850ms ease-out both; }
-.success-spark--one { --x: -4.6rem; --y: -3rem; }
-.success-spark--two { --x: 4.8rem; --y: -1.7rem; animation-delay: 100ms; }
-.success-spark--three { --x: 3.2rem; --y: 4rem; animation-delay: 180ms; }
-.studio-portal { width: 11rem; height: .3rem; overflow: hidden; border-radius: 9999px; background: rgb(55 65 81); }
-.studio-portal span { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, #7c3aed, #60a5fa, #fff); animation: portal-fill 1.25s 150ms cubic-bezier(.2,.8,.2,1) both; }
-@keyframes card-morph { from { opacity: .7; transform: scale(.96); border-radius: .5rem; } to { opacity: 1; transform: scale(1); border-radius: 1.75rem; } }
-@keyframes draw-line { to { stroke-dashoffset: 0; } }
-@keyframes orbit-pulse { 0% { opacity: 0; transform: scale(.75); } 45% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
-@keyframes spark { from { opacity: 0; transform: translate(0, 0) scale(.2); } 45% { opacity: 1; } to { opacity: 0; transform: translate(var(--x), var(--y)) scale(1); } }
-@keyframes portal-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes generation-orbit { from { transform: rotate(0deg) translateX(2.5rem) rotate(0deg); } to { transform: rotate(360deg) translateX(2.5rem) rotate(-360deg); } }
-@keyframes generation-breathe { 0%, 100% { transform: scale(.94); opacity: .7; } 50% { transform: scale(1.04); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .creator-card--complete, .success-orbit::before, .success-check__circle, .success-check__tick, .success-spark, .studio-portal span, .generation-orbit, .generation-orbit span { animation-duration: 1ms; animation-delay: 0ms; } .status-drift-enter-active, .status-drift-leave-active { transition-duration: 1ms; } }
 </style>

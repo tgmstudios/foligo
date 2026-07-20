@@ -230,76 +230,6 @@ async function extractTitleFromConversation(contentType, chatHistory, generatedC
 }
 
 /**
- * Private: Infer content type from keywords (fallback)
- */
-function inferContentTypeFromKeywords(conversationText, infoText) {
-  const fullText = (conversationText + '\n' + infoText).toLowerCase();
-
-  // Priority 1: Check for clear EXPERIENCE indicators
-  const experienceIndicators = /(?:role|position|responsibilities|worked at|employed|job at|intern at|developer at|engineer at|studied at|degree)/i;
-  const companyIndicators = /(?:company|organization|corporation|inc\.|llc|university|college|school)/i;
-
-  if (experienceIndicators.test(fullText) && companyIndicators.test(fullText)) {
-    return 'EXPERIENCE';
-  }
-
-  // Priority 2: Check for PROJECT indicators
-  if (/(?:built|created|developed|deployed|launched|implemented).*?(?:project|app|website|application|system|tool)/i.test(fullText) ||
-      /(?:project|app|website|application|system).*?(?:built|created|developed|deployed|launched)/i.test(fullText)) {
-    return 'PROJECT';
-  }
-
-  // Priority 3: Check for generic EXPERIENCE keywords
-  if (/(?:job|work|employment|internship|education|degree|university|college|certification)/i.test(fullText)) {
-    return 'EXPERIENCE';
-  }
-
-  // Priority 4: Check for PROJECT keywords
-  if (/(?:github|repo|repository|hackathon|devpost)/i.test(fullText)) {
-    return 'PROJECT';
-  }
-
-  return 'BLOG';
-}
-
-/**
- * Infer content type from conversation
- */
-async function inferContentType(chatHistory, initialInfo, { aiText, logger }) {
-  logger.info('Inferring content type');
-
-  try {
-    const conversationText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
-    const infoText = initialInfo ? JSON.stringify(initialInfo) : '';
-
-    const prompt = utilityPrompts.inferContentType(conversationText, infoText);
-
-    const result = await aiText(prompt, {
-      temperature: GENERATION_CONFIG.VERY_PRECISE.temperature,
-      maxTokens: GENERATION_CONFIG.VERY_PRECISE.maxOutputTokens,
-      context: 'Infer content type',
-    });
-
-    const inferredType = result.trim().toUpperCase();
-
-    logger.info('Content type inferred', { inferredType });
-
-    if (['PROJECT', 'BLOG', 'EXPERIENCE'].includes(inferredType)) {
-      return inferredType;
-    }
-
-    // Fallback to keyword matching
-    const fallbackType = inferContentTypeFromKeywords(conversationText, infoText);
-    logger.info('Using fallback content type', { fallbackType });
-    return fallbackType;
-
-  } catch (error) {
-    logger.error('Content type inference error', { error: error.message });
-    return 'BLOG'; // Default fallback
-  }
-}
-
-/**
  * Basic fallback metadata extraction using regex
  */
 function extractMetadataBasic(contentType, chatHistory, generatedContent, { logger }) {
@@ -407,8 +337,6 @@ module.exports = {
   buildMetadataFromStructuredData,
   extractTitleFromConversation,
   getFallbackTitle,
-  inferContentType,
-  inferContentTypeFromKeywords,
   extractMetadataFromConversation,
   extractMetadataBasic
 };

@@ -75,6 +75,42 @@ async function snapshotContentRevision(existingContent) {
 }
 
 /**
+ * Build a Prisma `data` patch object from a partial content-fields payload.
+ * Shared by the manual PUT /content/:id/fields route and the AI portfolio
+ * agent tools so both write paths accept/ignore the exact same field set.
+ */
+function buildContentFieldUpdate(fields) {
+  const {
+    title, slug, excerpt, content, metadata, status,
+    startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
+    experienceCategory, location, locationType
+  } = fields;
+
+  const updateData = {};
+  if (title !== undefined) updateData.title = title;
+  if (slug !== undefined) updateData.slug = slug;
+  if (excerpt !== undefined) updateData.excerpt = excerpt;
+  if (content !== undefined) updateData.content = content;
+  if (metadata !== undefined) updateData.metadata = metadata;
+  if (status !== undefined) updateData.status = status;
+
+  // Project-specific fields
+  if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+  if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+  if (isOngoing !== undefined) updateData.isOngoing = isOngoing;
+  if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
+  if (projectLinks !== undefined) updateData.projectLinks = projectLinks;
+  if (contributors !== undefined) updateData.contributors = contributors;
+
+  // Experience-specific fields
+  if (experienceCategory !== undefined) updateData.experienceCategory = experienceCategory;
+  if (location !== undefined) updateData.location = location;
+  if (locationType !== undefined) updateData.locationType = locationType;
+
+  return updateData;
+}
+
+/**
  * @swagger
  * /api/projects/{projectId}/content:
  *   post:
@@ -536,11 +572,6 @@ router.put('/content/:id/fields', [
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const {
-      title, slug, excerpt, content, metadata, status,
-      startDate, endDate, isOngoing, featuredImage, projectLinks, contributors,
-      experienceCategory, location, locationType
-    } = req.body;
 
     const access = await getContentWithAccess(prisma, id, userId);
 
@@ -563,27 +594,7 @@ router.put('/content/:id/fields', [
     // Always create revision before updating (unless this is already a revision)
     await snapshotContentRevision(existingContent);
 
-    // Prepare update data
-    const updateData = {};
-    if (title !== undefined) updateData.title = title;
-    if (slug !== undefined) updateData.slug = slug;
-    if (excerpt !== undefined) updateData.excerpt = excerpt;
-    if (content !== undefined) updateData.content = content;
-    if (metadata !== undefined) updateData.metadata = metadata;
-    if (status !== undefined) updateData.status = status;
-
-    // Add project-specific fields
-    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
-    if (isOngoing !== undefined) updateData.isOngoing = isOngoing;
-    if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
-    if (projectLinks !== undefined) updateData.projectLinks = projectLinks;
-    if (contributors !== undefined) updateData.contributors = contributors;
-
-    // Add experience-specific fields
-    if (experienceCategory !== undefined) updateData.experienceCategory = experienceCategory;
-    if (location !== undefined) updateData.location = location;
-    if (locationType !== undefined) updateData.locationType = locationType;
+    const updateData = buildContentFieldUpdate(req.body);
 
     // Update content
     const updatedContent = await prisma.content.update({
@@ -691,3 +702,4 @@ router.delete('/content/:id', async (req, res) => {
 
 module.exports = router;
 module.exports.snapshotContentRevision = snapshotContentRevision;
+module.exports.buildContentFieldUpdate = buildContentFieldUpdate;
