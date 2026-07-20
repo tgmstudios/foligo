@@ -457,7 +457,13 @@ watch(() => chat.messages.value, (msgs) => {
       handledToolCallIds.add(activity.toolCallId)
     } else if (WRITE_TOOL_KIND[activity.toolName]) {
       handledToolCallIds.add(activity.toolCallId)
-      dispatchDataChanged(WRITE_TOOL_KIND[activity.toolName], { postId: activity.output?.postId, projectId: props.projectId })
+      const kind = WRITE_TOOL_KIND[activity.toolName]
+      // Portfolio write tools can complete normally with an application-level
+      // { error } result. Only announce a post refresh when a mutation was
+      // actually applied and the backend identifies the affected post.
+      if (kind !== 'post' || (activity.output?.success === true && activity.output?.postId)) {
+        dispatchDataChanged(kind, { postId: activity.output?.postId, projectId: props.projectId })
+      }
     }
   }
 }, { deep: true })

@@ -56,8 +56,8 @@
     "hash": "6975a4b69538bdd3885f845c9ef12ee3"
   },
   "dashboard/src/components/AIContentCreatorModal.vue": {
-    "mtime": 1784519055064.9526,
-    "hash": "bb0db1fabce8f15c910d2d791c5968a7"
+    "mtime": 1784521834951.1519,
+    "hash": "939d761e8814823090ca6b423d30cb7b"
   },
   "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
     "mtime": 1784304796524.8682,
@@ -84,8 +84,8 @@
     "hash": "6a3a933c6270969de2a274b1842149c0"
   },
   "dashboard/src/components/content/ExperienceRolesEditor.vue": {
-    "mtime": 1784306586916.7632,
-    "hash": "dd047895010debd1784312b5bcfd8d79"
+    "mtime": 1784522033581.661,
+    "hash": "73b85dee7a816941c4a472d0b25a66dd"
   },
   "dashboard/src/components/content/FeaturedImageSelector.vue": {
     "mtime": 1764180734475.349,
@@ -196,8 +196,8 @@
     "hash": "fefc7ea90105c4c8d44a72f243fbfa72"
   },
   "dashboard/src/layouts/DashboardLayout.vue": {
-    "mtime": 1784519128521.8875,
-    "hash": "f06c7f2a13f5287d7cadab6abf34c832"
+    "mtime": 1784521834954.99,
+    "hash": "2566c4d5f28c38e5e1c670744af13a2a"
   },
   "dashboard/src/lib/monaco.ts": {
     "mtime": 1783746272269.3135,
@@ -236,8 +236,8 @@
     "hash": "d3162aaaaefd86a7ca8ad94ae67a0858"
   },
   "dashboard/src/stores/projects.ts": {
-    "mtime": 1783925470503.1218,
-    "hash": "fb7d5a9eb263449ae53addeb6545145f"
+    "mtime": 1784521834954.99,
+    "hash": "737ddcf2dd10344223f2922b777f941b"
   },
   "dashboard/src/studio/adapters/index.ts": {
     "mtime": 1783894144283.3997,
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784501724907.7136,
-    "hash": "59c8b7ce3da06c98c6e306fed07b4eef"
+    "mtime": 1784521874953.4028,
+    "hash": "50a90fd1b305b47065da5f999ae4647c"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,

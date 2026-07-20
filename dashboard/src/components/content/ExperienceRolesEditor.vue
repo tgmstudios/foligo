@@ -170,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import api from '@/services/api'
 import SkillsManager from './SkillsManager.vue'
@@ -278,8 +278,19 @@ const renderedDescription = (description: string) => {
   return marked(description || '')
 }
 
+function handleDataChanged(event: Event) {
+  const detail = (event as CustomEvent).detail as { kind?: string; postId?: string } | undefined
+  if (detail?.kind !== 'post' || detail.postId !== props.contentId) return
+  void fetchRoles()
+}
+
 onMounted(() => {
   fetchRoles()
+  window.addEventListener('foligo-data-changed', handleDataChanged)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('foligo-data-changed', handleDataChanged)
 })
 </script>
 

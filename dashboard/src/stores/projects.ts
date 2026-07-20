@@ -125,6 +125,37 @@ export const useProjectStore = defineStore('projects', () => {
     }, 'Failed to fetch project')
   }
 
+  /**
+   * Silently refresh one post in every reactive project cache that contains
+   * it. Used for background updates while the AI Content Creator stays open.
+   */
+  async function refreshContent(contentId: string) {
+    try {
+      const response = await api.get(`/content/${contentId}`)
+      const refreshed = response.data as Content
+
+      const applyToProject = (project: Project) => {
+        if (project.id !== refreshed.projectId) return
+        if (!project.content) {
+          project.content = [refreshed]
+          return
+        }
+        const index = project.content.findIndex(content => content.id === contentId)
+        if (index === -1) project.content.unshift(refreshed)
+        else project.content.splice(index, 1, refreshed)
+      }
+
+      projects.value.forEach(applyToProject)
+      if (currentProject.value) applyToProject(currentProject.value)
+      return refreshed
+    } catch (error) {
+      // This is a background synchronization path; keep the creator open and
+      // avoid interrupting the user with a toast if the refresh itself fails.
+      console.warn(`Failed to refresh content ${contentId} in the background:`, error)
+      return null
+    }
+  }
+
   async function createProject(data: CreateProjectData) {
     return withErrorToast(async () => {
       isCreating.value = true
@@ -337,6 +368,7 @@ export const useProjectStore = defineStore('projects', () => {
     // Actions
     fetchProjects,
     fetchProject,
+    refreshContent,
     createProject,
     updateProject,
     deleteProject,

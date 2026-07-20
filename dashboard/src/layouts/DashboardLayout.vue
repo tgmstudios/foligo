@@ -1187,11 +1187,20 @@ onMounted(() => {
 // (ResumeGallery.vue / CoverLetters.vue), which hold that data locally
 // rather than in a shared store.
 function handleAiDataChanged(event: Event) {
-  const kind = (event as CustomEvent).detail?.kind as string | undefined;
+  const detail = (event as CustomEvent).detail as {
+    kind?: string;
+    postId?: string;
+    projectId?: string;
+  } | undefined;
+  const kind = detail?.kind;
   if (!kind) return;
-  if (kind === "post" || kind === "skill") {
-    void projectStore.fetchProjects();
-    if (selectedProjectId.value) void projectStore.fetchProject(selectedProjectId.value);
+  if (kind === "post") {
+    if (detail?.postId) void projectStore.refreshContent(detail.postId);
+    else if (detail?.projectId) void projectStore.fetchProject(detail.projectId);
+  }
+  if (kind === "skill") {
+    if (detail?.projectId) void projectStore.fetchProject(detail.projectId);
+    else void projectStore.fetchProjects();
   }
   if (kind === "jobApplication") void goApplyStore.fetchJobs();
   if (kind === "savedAnswer") void goApplyStore.fetchAnswers();
