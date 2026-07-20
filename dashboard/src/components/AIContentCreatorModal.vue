@@ -404,10 +404,38 @@ const startVoiceSession = async () => {
   // User can close it themselves after calling
 }
 
-// ── Navigation and delete-confirmation, driven by tool activity from the
-// agent's SSE stream. navigate_to and propose_delete_post never mutate
-// anything server-side themselves (see portfolio-agent-tools.js) — this is
-// the client-side gate that turns their descriptors into real actions.
+// ── Navigation, delete-confirmation, and data-refresh, driven by tool
+// activity from the agent's SSE stream. navigate_to and propose_delete_*
+// never mutate anything server-side themselves (see portfolio-agent-tools.js)
+// — this is the client-side gate that turns their descriptors into real
+// actions. Every other write tool dispatches a global 'foligo-data-changed'
+// event so open views (list pages, Content Editor, Studio, GoApply pages)
+// can refetch instead of showing stale data.
+type DataChangeKind = 'post' | 'resume' | 'coverLetter' | 'jobApplication' | 'savedAnswer' | 'profile' | 'skill'
+
+const WRITE_TOOL_KIND: Record<string, DataChangeKind> = {
+  create_post: 'post',
+  update_post_fields: 'post',
+  update_post_content: 'post',
+  add_experience_role: 'post',
+  update_experience_role: 'post',
+  delete_experience_role: 'post',
+  add_skills_to_post: 'post',
+  remove_skill_from_post: 'post',
+  add_tags_to_post: 'post',
+  remove_tag_from_post: 'post',
+  save_resume: 'resume',
+  save_cover_letter: 'coverLetter',
+  save_job_application: 'jobApplication',
+  save_answers: 'savedAnswer',
+  update_goapply_profile: 'profile',
+  save_skills: 'skill',
+}
+
+function dispatchDataChanged(kind: DataChangeKind, detail: Record<string, unknown> = {}) {
+  window.dispatchEvent(new CustomEvent('foligo-data-changed', { detail: { kind, ...detail } }))
+}
+
 const handledToolCallIds = new Set<string>()
 const pendingNavigation = ref<{ routeName: string; params: Record<string, unknown>; handoffContent?: string } | null>(null)
 
@@ -425,8 +453,11 @@ watch(() => chat.messages.value, (msgs) => {
         handoffContent = createActivity?.input?.content
       }
       pendingNavigation.value = { routeName, params, handoffContent }
-    } else if (activity.toolName === 'propose_delete_post') {
+    } else if (activity.toolName?.startsWith('propose_delete_')) {
       handledToolCallIds.add(activity.toolCallId)
+    } else if (WRITE_TOOL_KIND[activity.toolName]) {
+      handledToolCallIds.add(activity.toolCallId)
+      dispatchDataChanged(WRITE_TOOL_KIND[activity.toolName], { postId: activity.output?.postId, projectId: props.projectId })
     }
   }
 }, { deep: true })
@@ -447,12 +478,20 @@ watch(() => chat.streaming.value, (streaming) => {
   close()
 })
 
+const DELETE_KIND_TO_DATA_CHANGE_KIND: Record<string, DataChangeKind> = {
+  post: 'post', resume: 'resume', coverLetter: 'coverLetter', jobApplication: 'jobApplication', savedAnswer: 'savedAnswer',
+}
+
 async function confirmDelete(activity: ToolActivity) {
   const endpoint = activity.output?.deleteEndpoint
+  const kind = activity.output?.kind
+  const id = activity.output?.id
   activity.busy = true
   try {
     await api.delete(endpoint)
     activity.output = { ...activity.output, resolved: 'deleted' }
+    const dataChangeKind = DELETE_KIND_TO_DATA_CHANGE_KIND[kind]
+    if (dataChangeKind) dispatchDataChanged(dataChangeKind, { id, postId: id, projectId: props.projectId })
   } catch (error: any) {
     activity.output = { ...activity.output, resolved: 'error', errorMessage: error.response?.data?.message || `Failed to delete this ${activity.output?.description || 'item'}.` }
   } finally {

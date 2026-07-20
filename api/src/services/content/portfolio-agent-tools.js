@@ -291,7 +291,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
           include: { skills: true },
         });
         await invalidateContentCache(cache, projectId, postId);
-        return { success: true, role };
+        return { success: true, postId, role };
       },
     }),
 
@@ -323,7 +323,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
 
         const updated = await prisma.experienceRole.update({ where: { id: roleId }, data: updateData, include: { skills: true } });
         await invalidateContentCache(cache, projectId, role.contentId);
-        return { success: true, role: updated };
+        return { success: true, postId: role.contentId, role: updated };
       },
     }),
 
@@ -335,7 +335,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
         if (!role) return { error: `No experience role with id ${roleId} found in this project.` };
         await prisma.experienceRole.delete({ where: { id: roleId } });
         await invalidateContentCache(cache, projectId, role.contentId);
-        return { success: true };
+        return { success: true, postId: role.contentId };
       },
     }),
 
@@ -348,7 +348,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
         const matched = await matchOrCreateSkills(prisma, skills, projectId);
         await prisma.content.update({ where: { id: postId }, data: { linkedSkills: { connect: matched.map((s) => ({ id: s.id })) } } });
         await invalidateContentCache(cache, projectId, postId);
-        return { success: true, skills: matched };
+        return { success: true, postId, skills: matched };
       },
     }),
 
@@ -360,7 +360,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
         if (!post) return { error: `No post with id ${postId} found in this project.` };
         await prisma.content.update({ where: { id: postId }, data: { linkedSkills: { disconnect: { id: skillId } } } });
         await invalidateContentCache(cache, projectId, postId);
-        return { success: true };
+        return { success: true, postId };
       },
     }),
 
@@ -373,7 +373,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
         const matched = await matchOrCreateTags(prisma, tags, projectId);
         await prisma.content.update({ where: { id: postId }, data: { tags: { connect: matched.map((t) => ({ id: t.id })) } } });
         await invalidateContentCache(cache, projectId, postId);
-        return { success: true, tags: matched };
+        return { success: true, postId, tags: matched };
       },
     }),
 
@@ -385,7 +385,7 @@ function createPortfolioAgentTools({ projectId, userId }) {
         if (!post) return { error: `No post with id ${postId} found in this project.` };
         await prisma.content.update({ where: { id: postId }, data: { tags: { disconnect: { id: tagId } } } });
         await invalidateContentCache(cache, projectId, postId);
-        return { success: true };
+        return { success: true, postId };
       },
     }),
 

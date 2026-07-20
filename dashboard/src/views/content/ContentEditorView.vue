@@ -633,8 +633,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
 import MarkdownCodeEditor from '@/components/editor/MarkdownCodeEditor.vue'
 import MarkdownPreview from '@/components/studio/MarkdownPreview.vue'
@@ -661,6 +661,12 @@ const isSaving = ref(false)
 const isDeleting = ref(false)
 const showRevisionTimeline = ref(false)
 const contentView = ref<'edit' | 'preview'>('preview')
+
+// Unsaved-changes tracking, so leaving the page (including to Editor Studio)
+// prompts a confirmation instead of silently discarding edits — same pattern
+// as ContentStudioView.vue's dirty/confirmDiscardChanges guard.
+const dirty = ref(false)
+const isPopulatingForm = ref(false)
 
 // Social Post Generator State
 const isGeneratingSocialPosts = ref(false)
@@ -696,6 +702,10 @@ const editForm = reactive({
   // Legacy metadata (deprecated - kept for backward compatibility)
   metadata: {}
 })
+
+watch(editForm, () => {
+  if (!isPopulatingForm.value) dirty.value = true
+}, { deep: true, flush: 'sync' })
 
 // Computed properties
 const wordCount = computed(() => {
@@ -840,16 +850,17 @@ const closeSocialPostsModal = () => {
 
 const loadContent = async () => {
   try {
+    isPopulatingForm.value = true
     const contentId = route.params.id as string
     const projectId = route.params.projectId as string
-    
+
     // Load project first
     project.value = await projectStore.fetchProject(projectId)
-    
+
     // Fetch full content with all relationships
     const response = await api.get(`/content/${contentId}`)
     content.value = response.data
-    
+
     if (content.value) {
       // Populate form
       editForm.title = content.value.title
@@ -887,6 +898,9 @@ const loadContent = async () => {
   } catch (error) {
     console.error('Failed to load content:', error)
     router.push('/portfolios')
+  } finally {
+    isPopulatingForm.value = false
+    dirty.value = false
   }
 }
 
@@ -985,8 +999,43 @@ const saveContent = async () => {
 
 // Status is now managed through the status dropdown in the header
 
+function confirmDiscardChanges(): boolean {
+  if (!dirty.value) return true
+  return window.confirm('You have unsaved changes. Leave without saving?')
+}
+
+// Covers every way of leaving this page — Back, the sidebar, opening Editor
+// Studio via openEditorStudio(), etc. — since they're all just route changes.
+onBeforeRouteLeave(() => confirmDiscardChanges())
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (!dirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+// Refetch if this exact post was changed elsewhere (e.g. by the AI Content
+// Creator) — but don't clobber in-progress local edits; just let the user
+// know instead.
+function handleDataChanged(event: Event) {
+  const detail = (event as CustomEvent).detail as { kind?: string; postId?: string } | undefined
+  if (detail?.kind !== 'post' || detail.postId !== content.value?.id) return
+  if (dirty.value) {
+    toast.info('This post was updated elsewhere. Save or discard your changes, then reload to see the latest version.')
+    return
+  }
+  loadContent()
+}
+
 onMounted(() => {
   loadContent()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('foligo-data-changed', handleDataChanged)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('foligo-data-changed', handleDataChanged)
 })
 </script>
 

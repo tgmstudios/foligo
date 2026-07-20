@@ -15,6 +15,7 @@ Foligo transforms how professionals create portfolio content through cutting-edg
 - **Manage multiple projects with an intuitive dashboard**
 - **Publish sites with custom subdomains**
 - **Access content on iOS devices**
+- **Track and auto-fill job applications with the GoApply browser extension**
 
 ## 🏗️ Architecture
 
@@ -26,6 +27,7 @@ foligo/
 ├── dashboard/        # Vue.js dashboard (admin interface)
 ├── sites/           # Nuxt.js static site generator (public sites)
 ├── app/             # Swift/SwiftUI iOS application
+├── extension/       # GoApply browser extension (Manifest V3)
 └── api/ai/          # AI integration documentation
 ```
 
@@ -88,6 +90,18 @@ foligo/
 
 **Tech Stack**: Swift, SwiftUI, iOS SDK
 
+### 5. **Browser Extension** (`/extension`)
+
+**GoApply by Foligo** - Chrome Manifest V3 extension for one-click job applications
+
+- **Session-Scoped Side Panel**: Browser agent runs in an isolated tab-group session, not tied to a single page
+- **Page Automation**: Accessibility-tree page reads, semantic form fill, trusted CDP mouse/keyboard input, and batched sequential actions
+- **One-Click Applications**: Auto-fills job application forms using portfolio and GoApply profile data
+- **AI Cover Letters**: Generates tailored cover letters during the application flow
+- **Kanban Tracking**: Syncs applied jobs back to the GoApply kanban board in the dashboard
+
+**Tech Stack**: Manifest V3, Chrome Debugger/Scripting/Side Panel APIs
+
 ## 🤖 AI Features
 
 ### Gemini AI Integration
@@ -99,6 +113,8 @@ Foligo integrates with Google's Gemini AI for intelligent content generation:
 - **Clarifying Questions**: AI generates contextual questions based on content type
 - **Content Analysis**: Automatic tagging, summarization, and SEO optimization
 - **Multi-type Support**: Blog posts, project descriptions, and work experiences
+- **Full Portfolio Control**: The AI Content Creator can search, create, edit, tag, and (with confirmation) delete posts, resumes, cover letters, and GoApply job applications, and navigate the dashboard on the user's behalf
+- **Current-Page Awareness**: The assistant knows what page/content the user is currently viewing and can act on it directly
 
 ### Voice Integration
 
@@ -121,6 +137,16 @@ AI-powered resume creation and job application support:
 - **Content Extraction**: Parse existing resumes (PDF, DOC, DOCX) for analysis
 - **Portfolio Integration**: Automatically pull relevant projects and experiences
 - **Resume History**: Save and manage multiple resume drafts
+
+### GoApply
+
+Job search tracking and application automation, in the dashboard and via the browser extension:
+
+- **Kanban Board**: Track applications through customizable status columns
+- **Job Tracker & List**: Log job postings with linked resumes/cover letters
+- **Saved Answers**: Reuse answers to common application questions
+- **Cover Letter Studio**: Generate and edit AI cover letters per job
+- **One-Click Apply**: The browser extension auto-fills application forms on job sites and syncs results back to the kanban board
 
 ## 🚦 Quick Start
 
@@ -218,6 +244,18 @@ open foligo.xcodeproj
 # Build and run in Xcode
 # Select target device/simulator
 # Press Cmd+R to build and run
+```
+
+### Browser Extension Setup
+
+```bash
+cd extension
+
+# Load unpacked in Chrome:
+# 1. Open chrome://extensions
+# 2. Enable "Developer mode"
+# 3. Click "Load unpacked" and select the extension/ directory
+# 4. Open the extension's options page and point it at your API URL
 ```
 
 ## 🐳 Docker Support
@@ -438,9 +476,13 @@ foligo/
 │   ├── components/         # Layout components
 │   ├── utils/              # Utilities
 │   └── nuxt.config.ts
-└── app/
-    ├── foligo/             # Swift source files
-    └── foligo.xcodeproj    # Xcode project
+├── app/
+│   ├── foligo/             # Swift source files
+│   └── foligo.xcodeproj    # Xcode project
+└── extension/
+    ├── core/               # Agent controller, CDP, tracker, filler, API client
+    ├── background.js       # Service worker
+    └── side-panel.js       # Side panel UI logic
 ```
 
 ### Available Scripts

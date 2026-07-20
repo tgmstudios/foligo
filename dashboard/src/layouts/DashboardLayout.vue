@@ -809,10 +809,11 @@
 
 <script setup lang="ts">
 import squiggleLogo from "@/assets/logos/squiggle.svg";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectStore } from "@/stores/projects";
+import { useGoApplyStore } from "@/stores/goapply";
 import { useCommandPaletteStore } from "@/stores/commandPalette";
 import AIContentCreatorModal from "@/components/AIContentCreatorModal.vue";
 import api from "@/services/api";
@@ -821,6 +822,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const projectStore = useProjectStore();
+const goApplyStore = useGoApplyStore();
 
 const sidebarOpen = ref(false);
 const showUserMenu = ref(false);
@@ -1176,5 +1178,31 @@ onMounted(() => {
       onProjectChange();
     }
   });
+});
+
+// Refresh the relevant Pinia store(s) after the AI Content Creator writes
+// something, so pages that read reactively off those stores (content lists,
+// project detail, GoApply kanban/jobs/answers/profile) update without a
+// manual reload. Resumes/cover letters are refreshed by their own views
+// (ResumeGallery.vue / CoverLetters.vue), which hold that data locally
+// rather than in a shared store.
+function handleAiDataChanged(event: Event) {
+  const kind = (event as CustomEvent).detail?.kind as string | undefined;
+  if (!kind) return;
+  if (kind === "post" || kind === "skill") {
+    void projectStore.fetchProjects();
+    if (selectedProjectId.value) void projectStore.fetchProject(selectedProjectId.value);
+  }
+  if (kind === "jobApplication") void goApplyStore.fetchJobs();
+  if (kind === "savedAnswer") void goApplyStore.fetchAnswers();
+  if (kind === "profile" || kind === "skill") void goApplyStore.fetchProfile();
+}
+
+onMounted(() => {
+  window.addEventListener("foligo-data-changed", handleAiDataChanged);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("foligo-data-changed", handleAiDataChanged);
 });
 </script>

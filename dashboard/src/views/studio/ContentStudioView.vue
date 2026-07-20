@@ -350,17 +350,32 @@ function handleBeforeUnload(event: BeforeUnloadEvent) {
   event.returnValue = ''
 }
 
+// Refetch if this exact post was changed elsewhere (e.g. the AI Content
+// Creator, a different chat entirely) — but don't clobber in-progress local
+// edits; just let the user know instead.
+function handleDataChanged(event: Event) {
+  const detail = (event as CustomEvent).detail as { kind?: string; postId?: string } | undefined
+  if (detail?.kind !== 'post' || detail.postId !== documentId.value) return
+  if (dirty.value) {
+    toast.info('This post was updated elsewhere. Save or discard your changes, then reload to see the latest version.')
+    return
+  }
+  openDocument(documentId.value)
+}
+
 onMounted(() => {
   window.addEventListener('ai-content-live', handleLiveGeneration)
   if (documentId.value.startsWith('ai-live-')) openLiveDocument(documentId.value)
   else openDocument(documentId.value)
   window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('foligo-data-changed', handleDataChanged)
 })
 
 onBeforeUnmount(() => {
   arrivalRun += 1
   window.removeEventListener('ai-content-live', handleLiveGeneration)
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('foligo-data-changed', handleDataChanged)
 })
 </script>
 

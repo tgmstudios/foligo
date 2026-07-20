@@ -264,13 +264,20 @@ function handleWindowClick() {
   openMenuId.value = null
 }
 
+function handleDataChanged(event: Event) {
+  if ((event as CustomEvent).detail?.kind !== 'resume') return
+  fetchDocuments()
+}
+
 onMounted(() => {
   fetchDocuments()
   if (goApplyStore.jobs.length === 0) goApplyStore.fetchJobs()
   window.addEventListener('click', handleWindowClick)
+  window.addEventListener('foligo-data-changed', handleDataChanged)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', handleWindowClick)
+  window.removeEventListener('foligo-data-changed', handleDataChanged)
 })
 </script>

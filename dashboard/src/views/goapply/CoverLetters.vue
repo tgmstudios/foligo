@@ -152,10 +152,18 @@ async function makeDefault(id: string) { openMenuId.value = null; await updateDo
 async function clearDefault(id: string) { openMenuId.value = null; await updateDocument(id, { isDefault: false }); await fetchDocuments() }
 async function handleDelete(id: string) { openMenuId.value = null; if (confirm('Delete this cover letter? This cannot be undone.')) await deleteDocument(id) }
 const closeMenu = () => { openMenuId.value = null }
+function handleDataChanged(event: Event) {
+  if ((event as CustomEvent).detail?.kind !== 'coverLetter') return
+  fetchDocuments()
+}
 onMounted(() => {
   fetchDocuments()
   if (goApplyStore.jobs.length === 0) goApplyStore.fetchJobs()
   window.addEventListener('click', closeMenu)
+  window.addEventListener('foligo-data-changed', handleDataChanged)
 })
-onUnmounted(() => window.removeEventListener('click', closeMenu))
+onUnmounted(() => {
+  window.removeEventListener('click', closeMenu)
+  window.removeEventListener('foligo-data-changed', handleDataChanged)
+})
 </script>
