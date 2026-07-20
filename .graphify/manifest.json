@@ -36,12 +36,12 @@
     "hash": "973e64e56446a9914fb039a17aaa5d03"
   },
   "api/src/services/ai/manager.js": {
-    "mtime": 1784258682878.1675,
-    "hash": "24684db95f2e501afd20a87b33e49a9d"
+    "mtime": 1784567224740.5732,
+    "hash": "b0f04ab9eff6f12728a34f097f868150"
   },
   "api/src/services/ai/providers/index.js": {
-    "mtime": 1784044422106.3225,
-    "hash": "1342ef208a632d03f2d732dee78bdb08"
+    "mtime": 1784567625523.4927,
+    "hash": "f67dcee8620964ab5b822c4d491cc37a"
   },
   "api/src/utils/encryption.js": {
     "mtime": 1763329672010.5503,
@@ -60,8 +60,8 @@
     "hash": "939d761e8814823090ca6b423d30cb7b"
   },
   "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
-    "mtime": 1784566400864.152,
-    "hash": "9cf66be3b9d73c7923e06fb2e5ce4020"
+    "mtime": 1784569701849.1965,
+    "hash": "7d1d25516375d0ab62b417d6f0281492"
   },
   "dashboard/src/components/agentic-editor/DocumentEditor.vue": {
     "mtime": 1784044422110.3235,
@@ -332,8 +332,8 @@
     "hash": "dc1df23b880c536f997847124d6c4fe1"
   },
   "dashboard/src/views/goapply/JobForm.vue": {
-    "mtime": 1783904181801.2068,
-    "hash": "fdbc6215664902d4e9cb07201a718d12"
+    "mtime": 1784570502406.2393,
+    "hash": "c8ccf4336cca7dc2964448aca35c44c9"
   },
   "dashboard/src/views/goapply/JobList.vue": {
     "mtime": 1783904653824.1611,
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784565674381.282,
-    "hash": "3ad7d8c51bf27590380b3f484f930644"
+    "mtime": 1784569709085.3972,
+    "hash": "7090cb7679e38eaf55d810b45d37b56a"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,

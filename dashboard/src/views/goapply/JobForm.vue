@@ -1,7 +1,7 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black/60" @click="$emit('close')"></div>
+    <div class="absolute inset-0 bg-black/60"></div>
 
     <!-- Modal -->
     <div class="relative bg-gray-800 rounded-lg border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 shadow-xl">

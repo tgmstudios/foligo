@@ -99,7 +99,7 @@
           :disabled="streaming"
           :placeholder="placeholder"
           rows="1"
-          class="flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[40px] max-h-[160px] text-sm leading-relaxed"
+          class="chat-textarea flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[40px] max-h-[160px] text-sm leading-relaxed"
         ></textarea>
         <button
           v-if="streaming"
@@ -426,4 +426,13 @@ watch(() => props.messages, () => {
 .markdown-content-user :deep(a) { color: #fff; text-decoration-color: rgb(255 255 255 / 0.65); }
 .markdown-content-user :deep(blockquote) { border-left-color: rgb(255 255 255 / 0.7); background-color: rgb(17 24 39 / 0.2); color: #fff; }
 .markdown-content :deep(strong) { color: #fff; font-weight: 600; }
+
+.chat-textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 transparent;
+}
+.chat-textarea::-webkit-scrollbar { width: 0.4rem; }
+.chat-textarea::-webkit-scrollbar-track { background: transparent; }
+.chat-textarea::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 9999px; }
+.chat-textarea::-webkit-scrollbar-thumb:hover { background-color: #6b7280; }
 </style>
