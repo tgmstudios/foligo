@@ -56,8 +56,8 @@
     "hash": "6975a4b69538bdd3885f845c9ef12ee3"
   },
   "dashboard/src/components/AIContentCreatorModal.vue": {
-    "mtime": 1784307328972.178,
-    "hash": "65a16f1f3bd5200a2ffb0ccfc617dd57"
+    "mtime": 1784519055064.9526,
+    "hash": "bb0db1fabce8f15c910d2d791c5968a7"
   },
   "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
     "mtime": 1784304796524.8682,
@@ -80,8 +80,8 @@
     "hash": "df2e297c95438eccad6fa696a79b41cb"
   },
   "dashboard/src/components/content/CreateContentModal.vue": {
-    "mtime": 1764180422404.4219,
-    "hash": "068cc52aea993af5fc8338354f7388f2"
+    "mtime": 1784509972973.2869,
+    "hash": "6a3a933c6270969de2a274b1842149c0"
   },
   "dashboard/src/components/content/ExperienceRolesEditor.vue": {
     "mtime": 1784306586916.7632,
@@ -90,10 +90,6 @@
   "dashboard/src/components/content/FeaturedImageSelector.vue": {
     "mtime": 1764180734475.349,
     "hash": "8e6f27e605fc11543e718c934ef6ac8a"
-  },
-  "dashboard/src/components/content/GeminiChatbot.vue": {
-    "mtime": 1761764390512.8013,
-    "hash": "ee62b112c0e81c3382b49b17585364cc"
   },
   "dashboard/src/components/content/RevisionTimeline.vue": {
     "mtime": 1783886544514.9802,
@@ -180,8 +176,8 @@
     "hash": "f48884f89071201480703b9d72892cb5"
   },
   "dashboard/src/composables/useAgenticChat.ts": {
-    "mtime": 1784258682882.4346,
-    "hash": "43770027d6511c69722abbe0dec1f6d2"
+    "mtime": 1784508756780.977,
+    "hash": "d5c4891e9d4c133227ba556fb4f90f55"
   },
   "dashboard/src/composables/useAutosave.ts": {
     "mtime": 1783877903208.9373,
@@ -200,8 +196,8 @@
     "hash": "fefc7ea90105c4c8d44a72f243fbfa72"
   },
   "dashboard/src/layouts/DashboardLayout.vue": {
-    "mtime": 1784258682882.4346,
-    "hash": "161fbdd7c947cfa1129940336589ae09"
+    "mtime": 1784519128521.8875,
+    "hash": "f06c7f2a13f5287d7cadab6abf34c832"
   },
   "dashboard/src/lib/monaco.ts": {
     "mtime": 1783746272269.3135,
@@ -308,8 +304,8 @@
     "hash": "e370e6c8d64362f785a823fc2271152b"
   },
   "dashboard/src/views/content/ContentEditorView.vue": {
-    "mtime": 1783886649353.6177,
-    "hash": "7a2c29491ff7ef75ab6061663c7d9c5c"
+    "mtime": 1784520298217.0774,
+    "hash": "a7865e237239c6dde57ed7d0f66ace92"
   },
   "dashboard/src/views/content/ContentListView.vue": {
     "mtime": 1783893723586.4832,
@@ -328,8 +324,8 @@
     "hash": "fc17e3f94156c544cff9b53ec2f4f9e0"
   },
   "dashboard/src/views/goapply/CoverLetters.vue": {
-    "mtime": 1784048319256.6238,
-    "hash": "2f18e644e74b611a9fecc8603ea04b7a"
+    "mtime": 1784519407746.4573,
+    "hash": "0b57ad797aa1c53b79654aa65f01b747"
   },
   "dashboard/src/views/goapply/JobAssistant.vue": {
     "mtime": 1784258682882.4346,
@@ -356,8 +352,8 @@
     "hash": "cb13b3afdb98e72255c1a9b1b57fa2ee"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
-    "mtime": 1784048294303.8638,
-    "hash": "be53dc4e68f41ac322d7be759f07f474"
+    "mtime": 1784519391260.3713,
+    "hash": "d080a451eadbfedc2ade8f1db98da20b"
   },
   "dashboard/src/views/goapply/SavedAnswers.vue": {
     "mtime": 1784044898235.342,
@@ -420,8 +416,8 @@
     "hash": "9412b6dd071fee4c756b0be4bf893cfa"
   },
   "extension/core/api.js": {
-    "mtime": 1783918960034.7505,
-    "hash": "0a2f6184f38923aca5b7832902c1bb14"
+    "mtime": 1784501569444.6707,
+    "hash": "77771aa6d3194ddb6a533da4f48601f5"
   },
   "extension/core/banners.js": {
     "mtime": 1783896198965.162,
@@ -436,40 +432,36 @@
     "hash": "10f1e027ed773525cd0f07e3b5c26d07"
   },
   "extension/core/detector.js": {
-    "mtime": 1783658179962.8308,
-    "hash": "da241b6e5600f1a3b491cbaa1295ec6f"
+    "mtime": 1784352285665.7388,
+    "hash": "4ee399a5bc742331b2fd88158a157ccd"
   },
   "extension/core/filler.js": {
-    "mtime": 1783923539242.1992,
-    "hash": "909f0152d4349f2775d652fc2bc96e9f"
+    "mtime": 1784497518194.116,
+    "hash": "5bc937904b6f21f3a1a0480f63e33412"
   },
   "extension/core/finder.js": {
     "mtime": 1783922499234.2756,
     "hash": "c02129e0010416b8e1d71002ca53afc8"
   },
   "extension/core/main.js": {
-    "mtime": 1783922799638.056,
-    "hash": "1ddac1fc527511210c321e83de663698"
+    "mtime": 1784500055598.7444,
+    "hash": "c18c9161a6947e2e358bc69e048dfbfe"
   },
   "extension/core/tracker.js": {
-    "mtime": 1783920008869.9731,
-    "hash": "5d03f3c79c7ebf631b62e7c8cf125f4e"
+    "mtime": 1784500627609.7085,
+    "hash": "7230f83db1907389737685c0981ebd33"
   },
   "extension/core/tutorial.js": {
     "mtime": 1783659092618.6519,
     "hash": "047243d330f1f1a8f47ea68dd0db56ba"
   },
   "extension/core/ui.js": {
-    "mtime": 1783922799642.0452,
-    "hash": "dc9befafa5e1949e0126880a295e5ccd"
+    "mtime": 1784387776735.2676,
+    "hash": "37f296c5c9c48f0ef4c1bfd59b6c8711"
   },
   "extension/options.js": {
-    "mtime": 1783744313236.6292,
-    "hash": "e3b4b9200b1f10cf08a2e692648f0281"
-  },
-  "extension/popup.js": {
-    "mtime": 1783922799646.0347,
-    "hash": "cafcfd1114bf08fd18b8173a94a92c66"
+    "mtime": 1784501710962.4675,
+    "hash": "6e8bd1350e51afb8fdf551667b3d0ec1"
   },
   "ios_app/foligo/Auth/AuthView.swift": {
     "mtime": 1761764389976.4014,
@@ -784,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784306985504.0544,
-    "hash": "667ac8aa4e15bbad97698fc03904f22b"
+    "mtime": 1784501724907.7136,
+    "hash": "59c8b7ce3da06c98c6e306fed07b4eef"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -804,8 +796,8 @@
     "hash": "1992740c904e1dff538818b3c9fedf66"
   },
   "README.md": {
-    "mtime": 1776035328117.4082,
-    "hash": "940b190f37c53359d63dfbdbb5b40cc3"
+    "mtime": 1784517178251.0417,
+    "hash": "6f1cf1b27eb30b08da247ec57bc23076"
   },
   "api/MIGRATIONS.md": {
     "mtime": 1764180422404.4219,
@@ -862,10 +854,6 @@
   "extension/options.html": {
     "mtime": 1783744322797.4917,
     "hash": "245292416e6ee9288514c23c071744cc"
-  },
-  "extension/popup.html": {
-    "mtime": 1783922799642.0452,
-    "hash": "01b24831803c6846d58fdfe85575f11e"
   },
   "extension/test-page.html": {
     "mtime": 1783658179962.8308,
@@ -976,8 +964,8 @@
     "hash": "507ebb8d5261c846ea32fca2ae102a9f"
   },
   "dashboard/src/views/studio/ContentStudioView.vue": {
-    "mtime": 1784258682882.4346,
-    "hash": "612f11c55fd9b0e2ca9bef1a9e044d19"
+    "mtime": 1784519340439.124,
+    "hash": "6c5f2c8f0bdecef835bf9dad456bfc83"
   },
   ".github/workflows/build-and-deploy.yml": {
     "mtime": 1783920244415.4407,
@@ -1028,8 +1016,8 @@
     "hash": "8f8161042f60eab912765cd0260b90a5"
   },
   "extension/background.js": {
-    "mtime": 1783923678976.9783,
-    "hash": "d6a17a52be3666231ba77466d43bd921"
+    "mtime": 1784496126651.0369,
+    "hash": "e3c4449eafad61f9646b66ab211245f6"
   },
   ".claude/CLAUDE.md": {
     "mtime": 1783905422347.266,
@@ -1148,12 +1136,8 @@
     "hash": "9fc376e6359d17066dd88d0b0644c898"
   },
   "extension/core/agent-controller.js": {
-    "mtime": 1784050038550.721,
-    "hash": "8019506b0eb15a4e13218a95a09802ca"
-  },
-  "extension/core/chat-panel.js": {
-    "mtime": 1783923678980.9438,
-    "hash": "5a36316a7f6e4165cab95b8e3e45aa74"
+    "mtime": 1784500709069.9133,
+    "hash": "36a01530fb7d95f76590997dd7fc36b9"
   },
   "sites/public/env.js": {
     "mtime": 1763328662182.9304,
@@ -1276,16 +1260,16 @@
     "hash": "546dfe3a841f5e5cc5d770a86284f4d2"
   },
   "api/src/routes/ai/ai-content.js": {
-    "mtime": 1784258682873.9004,
-    "hash": "1ee5593da2c81a03fdb834f955853d9b"
+    "mtime": 1784516914858.6643,
+    "hash": "b3e81f0d7d68cc185757cdebf8f67b52"
   },
   "api/src/routes/ai/ai-providers.js": {
     "mtime": 1783927170084.0022,
     "hash": "513fe6b671fdb3be8dc6828157bf12b0"
   },
   "api/src/routes/ai/extension-agent.js": {
-    "mtime": 1784048064129.3347,
-    "hash": "5541c46926a4ad623ff29b585b3ef98a"
+    "mtime": 1784501569444.6707,
+    "hash": "50c34c7f0afa5c7514f37944a3e95857"
   },
   "api/src/routes/ai/voice-webhook.js": {
     "mtime": 1784044422102.3215,
@@ -1308,12 +1292,12 @@
     "hash": "0b316c7489be0ad37e507b18e360ae59"
   },
   "api/src/routes/content/content-chat.js": {
-    "mtime": 1784048078630.097,
-    "hash": "e8542197f958ee400c6934a16ea231c2"
+    "mtime": 1784508472831.432,
+    "hash": "94e4ffd1d55079665935294beeb03a12"
   },
   "api/src/routes/content/content-crud.js": {
-    "mtime": 1783927170084.0022,
-    "hash": "a502b3d975977aacf0b187bac1ae582e"
+    "mtime": 1784504259343.384,
+    "hash": "ec3acab5b870bb1ccdbda90886352bdb"
   },
   "api/src/routes/content/content-links.js": {
     "mtime": 1783927170084.0022,
@@ -1348,8 +1332,8 @@
     "hash": "1fb2a2fd966ff46f3e2d2edb0e60eaa2"
   },
   "api/src/routes/goapply/goapply-job-applications.js": {
-    "mtime": 1783927170084.0022,
-    "hash": "9c8ee9e6ae5da9f7a6a335f04ad37d3e"
+    "mtime": 1784497271433.5564,
+    "hash": "38c0991d8de50bc4aa93bf4cc90e9cb6"
   },
   "api/src/routes/goapply/goapply-job-assistant.js": {
     "mtime": 1784048092278.9932,
@@ -1396,20 +1380,20 @@
     "hash": "0123e6cddab35cff23b5180370138cb2"
   },
   "api/src/services/ai-session/ai-session.js": {
-    "mtime": 1784258682878.1675,
-    "hash": "27f4b6418de2c51a42015a43e90b5966"
+    "mtime": 1784508255715.038,
+    "hash": "b031d5aa116f2c8f1715d6cf4c320f58"
   },
   "api/src/services/ai-session/config.js": {
     "mtime": 1784044422106.3225,
     "hash": "84bb44bb111d165768fa84533bedcc56"
   },
   "api/src/services/ai-session/index.js": {
-    "mtime": 1784044422106.3225,
-    "hash": "d35d9b8961fa2fdcf4d3d4d91d4b1170"
+    "mtime": 1784508284292.8804,
+    "hash": "85092be35e7c2650cac29a7a0e79f00f"
   },
   "api/src/services/ai-session/metadata.js": {
-    "mtime": 1784258682878.1675,
-    "hash": "1bba68d6da1b8dc8217de909a43e1d8e"
+    "mtime": 1784508300539.1045,
+    "hash": "00c9f82849cb6ad060c936b2b9c1d93a"
   },
   "api/src/services/ai-session/multi-post.js": {
     "mtime": 1784044422106.3225,
@@ -1444,8 +1428,8 @@
     "hash": "6640bc7b70a29e78c207b270d5aeb070"
   },
   "api/src/services/ai/tools.js": {
-    "mtime": 1784263873646.9666,
-    "hash": "882f1545e2de20141ed0bd4e378d1d24"
+    "mtime": 1784508356145.478,
+    "hash": "7a3813472a5da840145e75d4403e0333"
   },
   "api/src/services/analytics/analytics.js": {
     "mtime": 1784258682878.1675,
@@ -1456,16 +1440,12 @@
     "hash": "cc4025a584ee9fb8363b41d2999ab0a8"
   },
   "api/src/services/content/content-editor-tools.js": {
-    "mtime": 1784258682878.1675,
-    "hash": "d331a30b668e4d112e17a19b0ad5eda2"
+    "mtime": 1784508451544.7256,
+    "hash": "0d25616c9aee03773b097407d1e4bd0c"
   },
   "api/src/services/content/content-generation-prompts.js": {
     "mtime": 1783927170091.8508,
     "hash": "968febae35bbd2363c8acda2701aaa94"
-  },
-  "api/src/services/content/conversation-prompts.js": {
-    "mtime": 1784263873646.9666,
-    "hash": "4c1296a2efad3470599325ca450490ec"
   },
   "api/src/services/content/post-similarity.js": {
     "mtime": 1783927170091.8508,
@@ -1476,8 +1456,8 @@
     "hash": "fd2ddfd49751e68ab5d86ae3ac353b24"
   },
   "api/src/services/content/prompt-utils.js": {
-    "mtime": 1783927170091.8508,
-    "hash": "07894d4bd7b176686d892304407d5246"
+    "mtime": 1784508311324.4026,
+    "hash": "b34a11085c2d2dc7c5c0294d0b1d7c6a"
   },
   "api/src/services/content/resume-chatbot-prompts.js": {
     "mtime": 1783927170091.8508,
@@ -1512,8 +1492,8 @@
     "hash": "be408f626b028080c576abea70671f2f"
   },
   "api/src/services/extension/extension-agent-tools.js": {
-    "mtime": 1784258682878.1675,
-    "hash": "cb5554502d0b47a4d09874d91c765ab2"
+    "mtime": 1784501569444.6707,
+    "hash": "3e78f6464ee63323aa2bfdbba8f15447"
   },
   "api/src/services/github/github-service.js": {
     "mtime": 1783927170091.8508,
@@ -1642,5 +1622,97 @@
   "api/src/routes/resume-scoring.test.js": {
     "mtime": 1784306568085.4854,
     "hash": "b178eca47112397c850090c98ef2c576"
+  },
+  "api/prisma/migrations/20260717170000_add_resume_score_results/migration.sql": {
+    "mtime": 1784306725965.2605,
+    "hash": "a297c676b3c3ef2fecd3b27fc740bbba"
+  },
+  ".graphify/memory/query_20260719_200936_how_is_the_browser_extension_structured__where_is.md": {
+    "mtime": 1784491776417.2754,
+    "hash": "b94dd6c9018dfc8ec27c821798ff4060"
+  },
+  ".graphify/memory/query_20260719_205942_how_should_the_extension_browser_agent_be_rearchit.md": {
+    "mtime": 1784494782052.9128,
+    "hash": "385261df41779c86df4113b23e1f2e85"
+  },
+  ".graphify/memory/query_20260719_212313_which_extension_and_api_files_own_browser_agent_to.md": {
+    "mtime": 1784496193761.6729,
+    "hash": "90e2db20fdc38c1060da3f15b9dd9257"
+  },
+  ".graphify/memory/query_20260719_214412_where_should_a_side_panel_resume_selector__ai_job.md": {
+    "mtime": 1784497452423.1438,
+    "hash": "886f5dc849cd7cdb6a566f67c025bb90"
+  },
+  ".graphify/memory/query_20260719_215025_why_does_the_goapply_side_panel_repeatedly_show__a.md": {
+    "mtime": 1784497825560.9417,
+    "hash": "996fbd0b58a8f694f0a499eff7566e2e"
+  },
+  ".graphify/memory/query_20260719_220827_how_can_the_side_panel_track_action_fall_back_to_t.md": {
+    "mtime": 1784498907326.3606,
+    "hash": "6ec00a1344263eb584921614d6b6b8d8"
+  },
+  ".graphify/memory/query_20260719_222506_why_can_the_extension_chat_agent_mention_track_cur.md": {
+    "mtime": 1784499906234.9478,
+    "hash": "ab3ba855d102a07d9ca8771d019e1801"
+  },
+  ".graphify/memory/query_20260719_222837_how_does_goapply_currently_identify_a_job_across_t.md": {
+    "mtime": 1784500117565.2913,
+    "hash": "cc681aa6c48d9b2dfad75e7cfe714961"
+  },
+  ".graphify/memory/query_20260719_223155_why_would_the_exact_greenhouse_url_testcanonical12.md": {
+    "mtime": 1784500315329.1047,
+    "hash": "ec8dae1ba97bb549008120d64b6f052c"
+  },
+  ".graphify/memory/query_20260719_223844_where_can_goapply_collapse_multiple_roles_at_the_s.md": {
+    "mtime": 1784500724541.5557,
+    "hash": "482eea52432e686120556965eba92f2b"
+  },
+  ".graphify/memory/query_20260719_225332_how_does_the_goapply_extension_choose_api_web_endp.md": {
+    "mtime": 1784501612028.9497,
+    "hash": "b2411369d2e6b8db1a2964f68b747bc3"
+  },
+  "api/src/routes/goapply/goapply-job-applications.test.js": {
+    "mtime": 1784497316749.7478,
+    "hash": "530b6a9e401822c6562089f82a0e39f2"
+  },
+  "api/src/services/content/portfolio-agent-tools.js": {
+    "mtime": 1784518983955.8313,
+    "hash": "86a4f08bbba826fd0adb3414d2357f95"
+  },
+  "api/src/services/extension/extension-agent-tools.test.js": {
+    "mtime": 1784501569452.4421,
+    "hash": "9f378b1cce39663bd7dd34815b8095f3"
+  },
+  "api/src/services/extension/extension-api-client.test.js": {
+    "mtime": 1784501674818.9956,
+    "hash": "483264702f8f52a424f591308cb53ad3"
+  },
+  "api/src/services/extension/tracker-context.test.js": {
+    "mtime": 1784500678254.978,
+    "hash": "4a8a11627e920bcead02053b788543e9"
+  },
+  "dashboard/src/components/content/ContentGenerationChatbot.vue": {
+    "mtime": 1784509989764.7866,
+    "hash": "eeaaf09593c42a1ac9ee98fca77d2d52"
+  },
+  "dashboard/src/lib/markdown.ts": {
+    "mtime": 1784509758242.2932,
+    "hash": "7a198aa23d3aadd26302c1917e930bf3"
+  },
+  "extension/core/cdp.js": {
+    "mtime": 1784496126651.0369,
+    "hash": "498a82145c847b79bf512657380d8095"
+  },
+  "extension/side-panel.js": {
+    "mtime": 1784500060266.6877,
+    "hash": "27b1fba03bec7678af4a34359e06f3ac"
+  },
+  "extension/CLAUDE_BROWSER_PARITY.md": {
+    "mtime": 1784497382749.5234,
+    "hash": "70ba8681957ae792b15fd79255fbdfa6"
+  },
+  "extension/side-panel.html": {
+    "mtime": 1784497764901.5642,
+    "hash": "adb8ab9fc0431f9e943d239ea2272b6a"
   }
 }
