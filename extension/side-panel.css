@@ -169,6 +169,8 @@ body {
 .sp-job-select-row[hidden] { display: none; }
 .sp-track-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 8px; }
 .sp-track-btn { white-space: nowrap; }
+.sp-track-new { display: inline-block; margin-top: 8px; }
+.sp-track-new[hidden] { display: none; }
 
 /* ─── Collapsible sections (documents, Q&A) ─────────────────────── */
 .sp-section { border-bottom: 1px solid #E0E6ED; background: #fff; }

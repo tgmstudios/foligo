@@ -520,9 +520,15 @@ const Tracker = (() => {
    * history. URL is the stable identity so tracking and later submission update
    * one card instead of creating duplicates.
    */
+  // An empty value resolves to an empty identity, never to the current page.
+  // Callers that legitimately mean "this page" pass window.location.href
+  // explicitly. Defaulting here instead would make every tracked job that has
+  // no stored URL adopt whatever page is open, so the matcher would treat it as
+  // the job being viewed and silently overwrite it.
   function normalizeJobUrl(value) {
+    if (!value) return '';
     try {
-      const url = new URL(value || window.location.href);
+      const url = new URL(value);
       url.hash = '';
       for (const key of [...url.searchParams.keys()]) {
         if (/^(?:utm_.+|source|src|ref|referrer|tracking|trk|gh_src|lever-source|iis|iisn)$/i.test(key)) {
@@ -534,7 +540,7 @@ const Tracker = (() => {
       url.searchParams.sort();
       return url.toString().replace(/\/$/, '');
     } catch (error) {
-      return String(value || window.location.href).replace(/#.*$/, '').replace(/\/$/, '');
+      return String(value).replace(/#.*$/, '').replace(/\/$/, '');
     }
   }
 
@@ -617,6 +623,9 @@ const Tracker = (() => {
         score: identityMatchScore(candidate, jobInfo, targetIdentity),
       }))
       .filter(({ candidate, identity }) => {
+        // A card with no stored URL has no page identity at all — it must never
+        // be claimed by whatever page happens to be open.
+        if (!identity.canonicalUrl) return false;
         const canonicalMatches = identity.canonicalUrl === targetIdentity.canonicalUrl;
         const strongIdentityMatches = targetIdentity.strength === 'strong'
           && identity.strength === 'strong'
@@ -647,7 +656,7 @@ const Tracker = (() => {
       // Persist the canonical form even when normalization proves the raw URL
       // points to the same job; this removes stale campaign/query parameters
       // so later application steps resolve the same card consistently.
-      const urlChanged = cleanJobText(job.url) !== canonicalUrl;
+      const urlChanged = Boolean(canonicalUrl) && cleanJobText(job.url) !== canonicalUrl;
       if (companyChanged || positionChanged || urlChanged) {
         job = await GoApplyAPI.updateJob(job.id, {
           ...(companyChanged ? { company: cleanJobText(jobInfo.company) } : {}),
@@ -665,8 +674,13 @@ const Tracker = (() => {
     const normalizedStatus = String(status || 'saved').toLowerCase();
     if (!JOB_STATUSES.includes(normalizedStatus)) throw new Error(`Unsupported job status: ${status}`);
     const url = normalizeJobUrl(jobInfo.canonicalUrl || jobInfo.url || window.location.href);
-    const jobs = await GoApplyAPI.getJobs();
-    let job = findBestTrackedApplication(jobs, { ...jobInfo, url });
+    // forceNew skips matching entirely, so the same posting can be tracked as a
+    // separate card (e.g. re-applying in a different hiring season).
+    let job = null;
+    if (options.forceNew !== true) {
+      const jobs = await GoApplyAPI.getJobs();
+      job = findBestTrackedApplication(jobs, { ...jobInfo, url });
+    }
     let created = false;
     let changed = false;
 

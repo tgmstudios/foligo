@@ -21,6 +21,7 @@
   const resumeRefreshBtn = document.getElementById('sp-resume-refresh');
   const jobStatusSelect = document.getElementById('sp-job-status');
   const statusSaveBtn = document.getElementById('sp-status-save');
+  const trackNewBtn = document.getElementById('sp-track-new');
   const contextNoteEl = document.getElementById('sp-context-note');
   const uploadNoteEl = document.getElementById('sp-upload-note');
   const findSubmitBtn = document.getElementById('sp-find-submit');
@@ -92,6 +93,7 @@
     jobStatusSelect.disabled = disabled;
     jobCategorySelect.disabled = disabled;
     statusSaveBtn.disabled = disabled;
+    trackNewBtn.disabled = disabled;
   }
 
   function resumeOptionLabel(document) {
@@ -151,6 +153,7 @@
       currentPageJobInfo = null;
       jobStatusSelect.value = 'saved';
       statusSaveBtn.textContent = '📋 Track';
+      trackNewBtn.hidden = true;
       syncTrackingControlState();
       renderJobWorkspace();
       return;
@@ -167,6 +170,9 @@
     );
     jobStatusSelect.value = currentTrackedJob?.status || 'saved';
     statusSaveBtn.textContent = currentTrackedJob ? '📋 Update' : '📋 Track';
+    // Offered whenever this page is trackable — the usual reason to reach for it
+    // is that the page matched a card the user does not want to touch.
+    trackNewBtn.hidden = !currentPageTrackable;
     if (currentTrackedJob?.category) selectCategoryValue(currentTrackedJob.category);
     syncTrackingControlState();
     const unavailableTitle = 'Page metadata is incomplete; Track will ask AI to identify the job.';
@@ -992,7 +998,8 @@
     if (fieldListOpen) refreshFieldList();
   }
 
-  async function runTrack() {
+  async function runTrack(options = {}) {
+    const forceNew = options?.forceNew === true;
     if (trackingActionPromise) return trackingActionPromise;
     if (!trackingControlsAvailable) {
       const chip = addStatusChip('Open a normal web page before tracking a job.', 'job-tracking');
@@ -1003,9 +1010,14 @@
     const status = jobStatusSelect.value || 'saved';
     const category = jobCategorySelect.value && jobCategorySelect.value !== '__add__' ? jobCategorySelect.value : '';
     const statusLabel = jobStatusSelect.options[jobStatusSelect.selectedIndex]?.textContent || status;
-    const chip = addStatusChip(`${currentTrackedJob ? 'Updating' : 'Tracking'} job as ${status}…`, 'job-tracking');
+    const chip = addStatusChip(
+      forceNew
+        ? `Creating a new tracked job as ${status}…`
+        : `${currentTrackedJob ? 'Updating' : 'Tracking'} job as ${status}…`,
+      'job-tracking',
+    );
     trackingActionPromise = (async () => {
-      const result = await sendToContentScript('sp-track', { status, category, allowStatusChange: true });
+      const result = await sendToContentScript('sp-track', { status, category, forceNew, allowStatusChange: true });
       if (result.unavailable) {
         chip.dataset.status = 'running';
         chip.textContent = 'AI is identifying the company and job title…';
@@ -1029,12 +1041,15 @@
       chip.dataset.status = result.success ? 'done' : 'error';
       chip.textContent = result.success
         ? (result.created
-            ? `✓ Added to your Foligo board as ${result.job?.status || status}`
+            ? `✓ Added ${forceNew ? 'a new job' : 'to your Foligo board'} as ${result.job?.status || status}`
             : result.changed
               ? `✓ Job status changed to ${result.job?.status || status}`
               : `✓ Job is tracked as ${result.job?.status || status}`)
         : `⚠ ${result.message || 'Track failed'}`;
       if (result.success) {
+        // Point the documents/Q&A sections at the card just created, so a
+        // deliberate new job doesn't hand focus back to whatever the page matches.
+        if (forceNew && result.job) activeJobOverride = result.job;
         await refreshJobTracking();
         refreshJobSelector().catch(() => {});
       }
@@ -1084,7 +1099,8 @@
 
   rescanBtn.addEventListener('click', runRescan);
   autofillBtn.addEventListener('click', runAutofill);
-  statusSaveBtn.addEventListener('click', runTrack);
+  statusSaveBtn.addEventListener('click', () => runTrack());
+  trackNewBtn.addEventListener('click', () => runTrack({ forceNew: true }));
   findSubmitBtn.addEventListener('click', runFindSubmit);
   sendBtn.addEventListener('click', sendCurrentMessage);
 

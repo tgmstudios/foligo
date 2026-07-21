@@ -444,12 +444,12 @@
     "hash": "c02129e0010416b8e1d71002ca53afc8"
   },
   "extension/core/main.js": {
-    "mtime": 1784613511784.1626,
-    "hash": "0340be465e1994c9d7ef3c55e039e325"
+    "mtime": 1784614890540.584,
+    "hash": "080e7c5b63d96edfe2a97c3bb4db8503"
   },
   "extension/core/tracker.js": {
-    "mtime": 1784613490414.373,
-    "hash": "e9ccbb5f059fc0dd2bf07b8c1d73ad9f"
+    "mtime": 1784614871716.7205,
+    "hash": "2e422743aa2ca8ae5d153b754bba640e"
   },
   "extension/core/tutorial.js": {
     "mtime": 1783659092618.6519,
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784613172691.0483,
-    "hash": "48f795dc09d740c245361af5ef8c2c07"
+    "mtime": 1784614324359.3838,
+    "hash": "10846e44930e7cb6f61b2f38fe4a6874"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -1136,8 +1136,8 @@
     "hash": "9fc376e6359d17066dd88d0b0644c898"
   },
   "extension/core/agent-controller.js": {
-    "mtime": 1784612895608.0662,
-    "hash": "30715f0e956ab072805684d92114b87f"
+    "mtime": 1784615164830.7886,
+    "hash": "ebae125b024048de2fb59a90e581a386"
   },
   "sites/public/env.js": {
     "mtime": 1763328662182.9304,
@@ -1704,15 +1704,31 @@
     "hash": "498a82145c847b79bf512657380d8095"
   },
   "extension/side-panel.js": {
-    "mtime": 1784614291576.272,
-    "hash": "1919751b70007489925b7413f4913b78"
+    "mtime": 1784614959970.321,
+    "hash": "69944a930cbdeb56454e780b785fc88c"
   },
   "extension/CLAUDE_BROWSER_PARITY.md": {
     "mtime": 1784612981163.3352,
     "hash": "0879e535fe9245b1c8347916ae7508bc"
   },
   "extension/side-panel.html": {
-    "mtime": 1784613602341.4949,
-    "hash": "af8958ab0c3c50466df500f397071e02"
+    "mtime": 1784614897621.5874,
+    "hash": "0a5988164668e593911cfb7815a0b4a6"
+  },
+  "api/prisma/migrations/20260721055554_goapply_description_and_categories/migration.sql": {
+    "mtime": 1784613354755.231,
+    "hash": "edc7db1b888248d6b9cfc6c031fd136d"
+  },
+  "api/src/routes/goapply/goapply-profile.test.js": {
+    "mtime": 1784614257521.121,
+    "hash": "d63ec15c91686b258a3318698239b635"
+  },
+  "extension/offscreen.js": {
+    "mtime": 1784612801131.4595,
+    "hash": "e0fa031ec23c7154d1c674f02f0ae5ff"
+  },
+  "extension/offscreen.html": {
+    "mtime": 1784612763367.5862,
+    "hash": "4cadce1aed6f6f5edf6d382f44870866"
   }
 }

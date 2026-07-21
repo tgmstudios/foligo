@@ -1137,9 +1137,16 @@ const AgentController = (() => {
   // still have that context. A model struggling with structured tool-calling
   // will sometimes copy that exact format back as its own new text instead
   // of actually invoking the tool — the field never gets touched even though
-  // the transcript reads as if it did. Matched verbatim against our own
-  // flattening format, so this is reliable rather than a heuristic guess.
-  const FAKE_TOOL_CALL_LINE_RE = /^\[Requested tool ([a-zA-Z0-9_]+):\s*(\{.*\})\]$/;
+  // the transcript reads as if it did.
+  //
+  // The trailing "]" is optional and anything after the opening brace is
+  // accepted: models routinely drop the closing bracket when imitating this
+  // format, and stringify() itself emits "… [truncated]" for oversized inputs,
+  // so requiring a literal "}]" ending missed both cases and let the narration
+  // through. The distinctive "[Requested tool <name>: {" prefix is what makes
+  // this reliable — ordinary prose never opens a line that way. Group 2 is only
+  // logged and surfaced in the corrective nudge, never parsed as JSON.
+  const FAKE_TOOL_CALL_LINE_RE = /^\[Requested tool ([a-zA-Z0-9_]+):\s*(\{.*?)\s*\]?$/;
 
   async function sendPortRequestOnce(turnBody, onEvent) {
     const request = await GoApplyAPI.buildAgentRequest(turnBody);

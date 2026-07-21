@@ -263,21 +263,36 @@
     const company = String(currentJobInfo?.company || '').trim();
     const position = String(currentJobInfo?.jobTitle || currentJobInfo?.position || '').trim();
     const category = typeof extra.category === 'string' ? extra.category : undefined;
+    const forceNew = extra.forceNew === true;
     try {
-      // A board card already matched by URL needs no second company/title
-      // identification pass. This is especially important inside embedded
-      // application steps whose header metadata has disappeared.
-      const existing = await Tracker.getTrackedApplication(currentJobInfo);
-      if (!existing && (!Tracker.isTrackableJobInfo(currentJobInfo) || !company || !position)) {
-        return {
-          success: false,
-          unavailable: true,
-          message: 'The page needs AI identification before it can be tracked.',
-          jobInfo: currentJobInfo,
-        };
+      if (forceNew) {
+        // Creating a deliberate second card still needs a real company/title —
+        // there is no existing card to fall back on.
+        if (!company || !position) {
+          return {
+            success: false,
+            unavailable: true,
+            message: 'The page needs AI identification before it can be tracked.',
+            jobInfo: currentJobInfo,
+          };
+        }
+      } else {
+        // A board card already matched by URL needs no second company/title
+        // identification pass. This is especially important inside embedded
+        // application steps whose header metadata has disappeared.
+        const existing = await Tracker.getTrackedApplication(currentJobInfo);
+        if (!existing && (!Tracker.isTrackableJobInfo(currentJobInfo) || !company || !position)) {
+          return {
+            success: false,
+            unavailable: true,
+            message: 'The page needs AI identification before it can be tracked.',
+            jobInfo: currentJobInfo,
+          };
+        }
       }
       const result = await Tracker.trackApplication(currentJobInfo, status, {
         allowStatusChange,
+        forceNew,
         ...(company ? { company } : {}),
         ...(position ? { position } : {}),
         ...(category !== undefined ? { category } : {}),
@@ -385,7 +400,10 @@
     if (msg.action === 'sp-new-chat') { sendResponse({ success: AgentController.resetSession() }); return false; }
     if (msg.action === 'sp-autofill') { fullAutofill().then(sendResponse); return true; }
     if (msg.action === 'sp-track') {
-      trackCurrentJob(msg.status || 'saved', msg.allowStatusChange === true, { category: msg.category }).then(sendResponse);
+      trackCurrentJob(msg.status || 'saved', msg.allowStatusChange === true, {
+        category: msg.category,
+        forceNew: msg.forceNew === true,
+      }).then(sendResponse);
       return true;
     }
     if (msg.action === 'sp-get-job-tracking') { getCurrentJobTracking().then(sendResponse); return true; }
