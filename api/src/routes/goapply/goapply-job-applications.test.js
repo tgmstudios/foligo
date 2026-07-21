@@ -65,4 +65,35 @@ describe('GoApply job status validation', () => {
     expect(response.status).toBe(400);
     expect(prisma.jobApplication.update).not.toHaveBeenCalled();
   });
+
+  test('persists the full role description on create', async () => {
+    prisma.jobApplication.create.mockImplementation(async ({ data }) => ({ id: 'job-1', ...data }));
+
+    const response = await request(app()).post('/jobs').send({
+      company: 'Example',
+      position: 'Engineer',
+      description: 'Build delightful things.\nRequirements: coffee.',
+      category: 'Summer 2026 Internships',
+    });
+
+    expect(response.status).toBe(201);
+    expect(prisma.jobApplication.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        description: 'Build delightful things.\nRequirements: coffee.',
+        category: 'Summer 2026 Internships',
+      }),
+    }));
+  });
+
+  test('updates the role description', async () => {
+    prisma.jobApplication.findFirst.mockResolvedValue({ id: 'job-1', userId: 'user-1', status: 'saved' });
+    prisma.jobApplication.update.mockImplementation(async ({ data }) => ({ id: 'job-1', ...data }));
+
+    const response = await request(app()).put('/jobs/job-1').send({ description: 'Updated role text.' });
+
+    expect(response.status).toBe(200);
+    expect(prisma.jobApplication.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ description: 'Updated role text.' }),
+    }));
+  });
 });

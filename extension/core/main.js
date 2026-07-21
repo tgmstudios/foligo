@@ -255,13 +255,14 @@
     return Boolean(btn);
   }
 
-  async function trackCurrentJob(status = 'saved', allowStatusChange = false) {
+  async function trackCurrentJob(status = 'saved', allowStatusChange = false, extra = {}) {
     // The extension may not have activated when the panel first opened, and
     // SPA job pages can replace their metadata without a full reload. Always
     // read the live page at the moment the user asks to track it.
     currentJobInfo = Tracker.extractJobInfo();
     const company = String(currentJobInfo?.company || '').trim();
     const position = String(currentJobInfo?.jobTitle || currentJobInfo?.position || '').trim();
+    const category = typeof extra.category === 'string' ? extra.category : undefined;
     try {
       // A board card already matched by URL needs no second company/title
       // identification pass. This is especially important inside embedded
@@ -279,6 +280,8 @@
         allowStatusChange,
         ...(company ? { company } : {}),
         ...(position ? { position } : {}),
+        ...(category !== undefined ? { category } : {}),
+        ...(currentJobInfo?.description ? { description: currentJobInfo.description } : {}),
       });
       return { success: true, created: result.created, changed: result.changed, job: result.job };
     } catch (error) {
@@ -382,7 +385,7 @@
     if (msg.action === 'sp-new-chat') { sendResponse({ success: AgentController.resetSession() }); return false; }
     if (msg.action === 'sp-autofill') { fullAutofill().then(sendResponse); return true; }
     if (msg.action === 'sp-track') {
-      trackCurrentJob(msg.status || 'saved', msg.allowStatusChange === true).then(sendResponse);
+      trackCurrentJob(msg.status || 'saved', msg.allowStatusChange === true, { category: msg.category }).then(sendResponse);
       return true;
     }
     if (msg.action === 'sp-get-job-tracking') { getCurrentJobTracking().then(sendResponse); return true; }

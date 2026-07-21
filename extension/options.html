@@ -27,6 +27,12 @@ h1{font-size:24px;font-weight:700;color:#0A2540;margin-bottom:4px}
 .custom-fields{display:none;margin-top:4px;padding-left:24px}
 .custom-fields.show{display:block}
 .save-msg{font-size:11px;margin-top:8px;display:none}
+.cat-list{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.cat-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #E0E6ED;border-radius:20px;font-size:12px;background:#F6F9FC;color:#0A2540}
+.cat-chip button{border:none;background:none;color:#DF1B41;cursor:pointer;font-size:14px;line-height:1;padding:0}
+.cat-add{display:flex;gap:8px}
+.cat-add input{flex:1;padding:8px;border:1px solid #E0E6ED;border-radius:6px;font-size:12px;font-family:inherit}
+.cat-empty{font-size:12px;color:#6B7C93}
 </style></head><body>
 <div class="logo">⚡</div>
 <h1>GoApply by Foligo</h1>
@@ -64,6 +70,17 @@ h1{font-size:24px;font-weight:700;color:#0A2540;margin-bottom:4px}
   </div>
   <button class="btn btn-primary" id="saveEnvBtn" style="width:100%">Save Server Settings</button>
   <p class="save-msg" id="saveMsg"></p>
+</div>
+
+<div class="card" id="categoriesCard" style="display:none">
+  <div class="card-title">🗂️ Categories (hiring seasons)</div>
+  <p style="margin-bottom:10px">Group your applications by hiring season (e.g. “Summer 2026 Internships”). These appear as the category dropdown when you track a job from the side panel, and sync with your Foligo dashboard.</p>
+  <div class="cat-list" id="catList"></div>
+  <div class="cat-add">
+    <input type="text" id="catInput" placeholder="New category name" maxlength="60">
+    <button class="btn btn-primary btn-sm" id="catAddBtn" type="button">Add</button>
+  </div>
+  <p class="save-msg" id="catMsg"></p>
 </div>
 
 <div class="card">

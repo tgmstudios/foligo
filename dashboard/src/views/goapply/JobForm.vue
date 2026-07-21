@@ -138,6 +138,18 @@
           />
         </div>
 
+        <!-- Role Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Role Description</label>
+          <textarea
+            v-model="form.description"
+            rows="5"
+            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Full job/role description (captured automatically when tracked from the extension)..."
+          ></textarea>
+          <p class="mt-1 text-xs text-gray-500">Used by AI when tailoring résumés, cover letters, and answers for this role.</p>
+        </div>
+
         <!-- Notes -->
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Notes (Markdown supported)</label>
@@ -194,7 +206,10 @@ const showPreview = ref(false)
 const selectedTags = ref([...(props.job?.tags || [])])
 const tagInput = ref('')
 const showTagSuggestions = ref(false)
-const categorySuggestions = computed(() => [...new Set(store.jobs.map(job => job.category).filter((value): value is string => Boolean(value)))].sort())
+const categorySuggestions = computed(() => [...new Set([
+  ...(store.profile?.jobCategories || []),
+  ...store.jobs.map(job => job.category).filter((value): value is string => Boolean(value)),
+])].sort())
 const tagSuggestions = computed(() => [...new Set(store.jobs.flatMap(job => job.tags))].sort((a, b) => a.localeCompare(b)))
 const filteredTagSuggestions = computed(() => {
   const query = tagInput.value.trim().toLowerCase()
@@ -210,6 +225,7 @@ const form = reactive<JobFormData>({
   url: props.job?.url || '',
   notes: props.job?.notes || '',
   category: props.job?.category || '',
+  description: props.job?.description || '',
   tags: props.job?.tags || [],
   status: props.job?.status || 'saved',
   referredBy: props.job?.referredBy || '',

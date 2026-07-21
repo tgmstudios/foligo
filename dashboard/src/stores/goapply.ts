@@ -24,6 +24,9 @@ export interface GoApplyProfile {
   linkedEducation: Content[]
   linkedSkills: Skill[]
 
+  // User-managed job-application categories (hiring seasons)
+  jobCategories?: string[]
+
   // Personal Information
   firstName?: string
   lastName?: string
@@ -94,6 +97,7 @@ export interface GoApplyJob {
   position: string
   url: string
   notes: string
+  description: string | null
   category: string | null
   tags: string[]
   status: JobStatus
@@ -141,6 +145,7 @@ export interface JobFormData {
   position: string
   url: string
   notes: string
+  description?: string
   category: string
   tags: string[]
   status: JobStatus

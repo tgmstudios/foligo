@@ -32,16 +32,24 @@
       <div class="sp-device-code-value" id="sp-device-code-value"></div>
       <button class="sp-link-btn" id="sp-cancel-device-btn" type="button">Cancel</button>
     </div>
-    <div class="sp-context-controls" id="sp-context-controls">
-      <label class="sp-context-row">
-        <span class="sp-context-label">Résumé</span>
-        <select class="sp-context-select" id="sp-resume-select" aria-label="Résumé for this application">
-          <option value="">AI chooses the best résumé</option>
+
+    <!-- ─── Job workspace ─────────────────────────────────────────── -->
+    <section class="sp-job">
+      <div class="sp-job-head">
+        <div class="sp-job-name" id="sp-job-name">No job detected on this page</div>
+        <span class="sp-job-badge" id="sp-job-badge" hidden></span>
+      </div>
+      <button class="sp-link-btn sp-job-select-toggle" id="sp-job-select-toggle" type="button">Not this job? Pick a tracked job ▾</button>
+      <div class="sp-job-select-row" id="sp-job-select-row" hidden>
+        <select class="sp-context-select" id="sp-job-select" aria-label="Choose a tracked job">
+          <option value="">Use the detected page</option>
         </select>
-        <button class="sp-context-refresh" id="sp-resume-refresh" type="button" title="Refresh Foligo résumés">↻</button>
-      </label>
-      <label class="sp-context-row">
-        <span class="sp-context-label">Job status</span>
+        <button class="sp-context-refresh" id="sp-job-select-refresh" type="button" title="Refresh tracked jobs">↻</button>
+      </div>
+      <div class="sp-track-row">
+        <select class="sp-context-select" id="sp-job-category" aria-label="Category / hiring season" title="Category (hiring season)">
+          <option value="">No category</option>
+        </select>
         <select class="sp-context-select" id="sp-job-status" aria-label="Foligo job status" disabled>
           <option value="saved">Saved</option>
           <option value="applied">Applied</option>
@@ -53,13 +61,51 @@
           <option value="withdrawn">Withdrawn</option>
           <option value="archived">Archived</option>
         </select>
-        <button class="sp-context-save" id="sp-status-save" type="button" disabled>Track</button>
-      </label>
-      <div class="sp-context-note" id="sp-context-note">Choose a résumé yourself or let the AI match one to this job.</div>
-    </div>
+        <button class="sp-context-save sp-track-btn" id="sp-status-save" type="button" disabled>📋 Track</button>
+      </div>
+      <div class="sp-context-note" id="sp-context-note">Track this role to attach résumés, cover letters, and answers to it.</div>
+    </section>
+
+    <!-- ─── Documents for this job ────────────────────────────────── -->
+    <details class="sp-section" id="sp-docs-section">
+      <summary class="sp-section-summary">📄 Résumé &amp; cover letter</summary>
+      <div class="sp-section-body">
+        <div class="sp-docs-actions">
+          <button class="sp-tool-btn" id="sp-create-resume" type="button">＋ Résumé for this role</button>
+          <button class="sp-tool-btn" id="sp-create-cover" type="button">＋ Cover letter</button>
+        </div>
+        <div class="sp-docs-list" id="sp-docs-list">
+          <div class="sp-docs-empty">Track a job first, then create a tailored résumé or cover letter from your base template.</div>
+        </div>
+        <label class="sp-context-row sp-upload-resume-row">
+          <span class="sp-context-label">Upload</span>
+          <select class="sp-context-select" id="sp-resume-select" aria-label="Résumé for upload fields">
+            <option value="">AI chooses the best résumé</option>
+          </select>
+          <button class="sp-context-refresh" id="sp-resume-refresh" type="button" title="Refresh Foligo résumés">↻</button>
+        </label>
+        <div class="sp-context-note sp-upload-note" id="sp-upload-note">This résumé is attached to file-upload fields during Autofill.</div>
+      </div>
+    </details>
+
+    <!-- ─── Question → saved answer ──────────────────────────────── -->
+    <details class="sp-section" id="sp-qa-section">
+      <summary class="sp-section-summary">💬 Save an application answer</summary>
+      <div class="sp-section-body">
+        <textarea class="sp-qa-input" id="sp-qa-question" rows="2" placeholder="Paste an application question, e.g. “Why do you want to work here?”"></textarea>
+        <div class="sp-qa-actions">
+          <button class="sp-tool-btn" id="sp-qa-draft" type="button">✨ Draft with AI</button>
+        </div>
+        <textarea class="sp-qa-input" id="sp-qa-answer" rows="4" placeholder="Your answer (edit the AI draft or write your own)"></textarea>
+        <div class="sp-qa-actions">
+          <button class="sp-tool-btn sp-tool-btn-primary" id="sp-qa-save" type="button">Save answer</button>
+        </div>
+        <div class="sp-context-note" id="sp-qa-status">Saved answers are stored in Foligo and linked to the current job.</div>
+      </div>
+    </details>
+
     <div class="sp-toolbar">
       <button class="sp-tool-btn sp-tool-btn-primary" id="sp-autofill" type="button">⚡ Autofill</button>
-      <button class="sp-tool-btn" id="sp-track" type="button" disabled>📋 Track</button>
       <button class="sp-tool-btn" id="sp-find-submit" type="button">🎯 Find Submit</button>
     </div>
     <div class="sp-fields-toggle" id="sp-fields-toggle">▸ Show detected fields</div>

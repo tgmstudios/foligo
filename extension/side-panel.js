@@ -17,13 +17,28 @@
   const rescanBtn = document.getElementById('sp-rescan');
   const stopBtn = document.getElementById('sp-stop');
   const autofillBtn = document.getElementById('sp-autofill');
-  const trackBtn = document.getElementById('sp-track');
   const resumeSelect = document.getElementById('sp-resume-select');
   const resumeRefreshBtn = document.getElementById('sp-resume-refresh');
   const jobStatusSelect = document.getElementById('sp-job-status');
   const statusSaveBtn = document.getElementById('sp-status-save');
   const contextNoteEl = document.getElementById('sp-context-note');
+  const uploadNoteEl = document.getElementById('sp-upload-note');
   const findSubmitBtn = document.getElementById('sp-find-submit');
+  const jobCategorySelect = document.getElementById('sp-job-category');
+  const jobNameEl = document.getElementById('sp-job-name');
+  const jobBadgeEl = document.getElementById('sp-job-badge');
+  const jobSelectToggle = document.getElementById('sp-job-select-toggle');
+  const jobSelectRow = document.getElementById('sp-job-select-row');
+  const jobSelect = document.getElementById('sp-job-select');
+  const jobSelectRefresh = document.getElementById('sp-job-select-refresh');
+  const docsListEl = document.getElementById('sp-docs-list');
+  const createResumeBtn = document.getElementById('sp-create-resume');
+  const createCoverBtn = document.getElementById('sp-create-cover');
+  const qaQuestionEl = document.getElementById('sp-qa-question');
+  const qaAnswerEl = document.getElementById('sp-qa-answer');
+  const qaDraftBtn = document.getElementById('sp-qa-draft');
+  const qaSaveBtn = document.getElementById('sp-qa-save');
+  const qaStatusEl = document.getElementById('sp-qa-status');
   const fieldsToggle = document.getElementById('sp-fields-toggle');
   const fieldListEl = document.getElementById('sp-field-list');
   const accountStatusEl = document.getElementById('sp-account-status');
@@ -59,11 +74,23 @@
   let trackingControlsAvailable = false;
   let trackingActionPromise = null;
   let pendingAiTrack = null;
+  // A tracked job the user picked by hand when the extension lost the page —
+  // when set it overrides page detection for the documents/Q&A sections.
+  let activeJobOverride = null;
+  let currentPageJobInfo = null;
+  let cachedProfile = null;
+  let docsActionBusy = false;
+
+  // The job the documents + Q&A sections operate on: an explicit manual pick
+  // wins, otherwise the tracked card matched to the current page.
+  function effectiveJob() {
+    return activeJobOverride || currentTrackedJob || null;
+  }
 
   function syncTrackingControlState() {
     const disabled = !trackingControlsAvailable || Boolean(trackingActionPromise) || Boolean(pendingAiTrack) || agentBusy;
     jobStatusSelect.disabled = disabled;
-    trackBtn.disabled = disabled;
+    jobCategorySelect.disabled = disabled;
     statusSaveBtn.disabled = disabled;
   }
 
@@ -93,12 +120,12 @@
         resumeSelect.innerHTML = '';
         resumeSelect.appendChild(new Option('No Foligo résumés found', ''));
         resumeSelect.disabled = true;
-        contextNoteEl.textContent = 'Create a résumé in Foligo Resume Studio before attaching one.';
+        uploadNoteEl.textContent = 'Create a résumé in Foligo Resume Studio before attaching one.';
       } else {
         resumeSelect.disabled = false;
         const lastSelected = resumes.find((document) => document.id === stored.selectedResumeId);
-        contextNoteEl.textContent = explicitUserSelection
-          ? 'Your selected résumé will be used for upload fields.'
+        uploadNoteEl.textContent = explicitUserSelection
+          ? 'Your selected résumé will be attached to file-upload fields.'
           : lastSelected && stored.selectedResumeIdSource === 'model'
             ? `AI last chose ${lastSelected.name || 'a résumé'} and will re-evaluate for the current job.`
             : 'AI mode compares your Foligo résumés with the current job before attaching one.';
@@ -107,7 +134,7 @@
       resumeSelect.innerHTML = '';
       resumeSelect.appendChild(new Option('Could not load résumés', ''));
       resumeSelect.disabled = true;
-      contextNoteEl.textContent = error.message || 'Could not load Foligo résumés.';
+      uploadNoteEl.textContent = error.message || 'Could not load Foligo résumés.';
     } finally {
       resumeRefreshBtn.disabled = false;
     }
@@ -121,15 +148,17 @@
       currentTrackedJob = null;
       currentPageTrackable = false;
       trackingControlsAvailable = false;
+      currentPageJobInfo = null;
       jobStatusSelect.value = 'saved';
-      trackBtn.textContent = '📋 Track';
-      statusSaveBtn.textContent = 'Track';
+      statusSaveBtn.textContent = '📋 Track';
       syncTrackingControlState();
+      renderJobWorkspace();
       return;
     }
     trackingControlsAvailable = true;
     currentTrackedJob = result?.job || null;
     const jobInfo = result?.jobInfo || {};
+    currentPageJobInfo = jobInfo;
     const detectedCompany = String(jobInfo.company || currentTrackedJob?.company || '').trim();
     const detectedPosition = String(jobInfo.jobTitle || jobInfo.position || currentTrackedJob?.position || '').trim();
     currentPageTrackable = Boolean(
@@ -137,11 +166,10 @@
       || (jobInfo.isLikelyJobPage && detectedCompany && detectedPosition),
     );
     jobStatusSelect.value = currentTrackedJob?.status || 'saved';
-    trackBtn.textContent = currentTrackedJob ? '📋 Update' : '📋 Track';
-    statusSaveBtn.textContent = currentTrackedJob ? 'Update' : 'Track';
+    statusSaveBtn.textContent = currentTrackedJob ? '📋 Update' : '📋 Track';
+    if (currentTrackedJob?.category) selectCategoryValue(currentTrackedJob.category);
     syncTrackingControlState();
     const unavailableTitle = 'Page metadata is incomplete; Track will ask AI to identify the job.';
-    trackBtn.title = currentPageTrackable ? '' : unavailableTitle;
     statusSaveBtn.title = currentPageTrackable ? '' : unavailableTitle;
     const jobName = detectedCompany && detectedPosition
       ? `${detectedCompany} — ${detectedPosition}`
@@ -152,7 +180,264 @@
         ? currentTrackedJob.identityReconciled
           ? `Corrected the tracked card to ${jobName}; status is ${currentTrackedJob.status}.`
           : `${jobName} is tracked as ${currentTrackedJob.status}.`
-        : `${jobName} is not tracked yet. AI application work will track it automatically.`;
+        : `${jobName} is not tracked yet. Pick a status and hit Track.`;
+    }
+    renderJobWorkspace();
+  }
+
+  // ─── Job workspace (job card, selector, categories, docs, Q&A) ──────
+  // The documents and Q&A sections act on effectiveJob() — the tracked card for
+  // the current page, or a job the user picked by hand when detection got lost.
+
+  let trackedJobsCache = [];
+
+  async function ensureProfile(force = false) {
+    if (cachedProfile && !force) return cachedProfile;
+    try { cachedProfile = await GoApplyAPI.getGoApplyProfile(); }
+    catch (error) { if (force) cachedProfile = null; }
+    return cachedProfile;
+  }
+
+  function categoriesFromProfile() {
+    const list = cachedProfile?.jobCategories;
+    return Array.isArray(list) ? list.filter(Boolean) : [];
+  }
+
+  function refreshCategorySelect() {
+    const current = jobCategorySelect.value && jobCategorySelect.value !== '__add__' ? jobCategorySelect.value : '';
+    const categories = categoriesFromProfile();
+    jobCategorySelect.innerHTML = '';
+    jobCategorySelect.appendChild(new Option('No category', ''));
+    for (const category of categories) jobCategorySelect.appendChild(new Option(category, category));
+    jobCategorySelect.appendChild(new Option('＋ Add category…', '__add__'));
+    jobCategorySelect.value = current && categories.includes(current) ? current : '';
+  }
+
+  function selectCategoryValue(value) {
+    if (!value) { jobCategorySelect.value = ''; return; }
+    const exists = [...jobCategorySelect.options].some((option) => option.value === value);
+    if (!exists) {
+      const addOption = [...jobCategorySelect.options].find((option) => option.value === '__add__');
+      const option = new Option(value, value);
+      if (addOption) jobCategorySelect.insertBefore(option, addOption);
+      else jobCategorySelect.appendChild(option);
+    }
+    jobCategorySelect.value = value;
+  }
+
+  function setJobBadge(kind, extra) {
+    if (!kind) { jobBadgeEl.hidden = true; return; }
+    jobBadgeEl.hidden = false;
+    jobBadgeEl.dataset.kind = kind;
+    jobBadgeEl.textContent = kind === 'tracked'
+      ? `Tracked · ${extra}`
+      : kind === 'selected' ? 'Selected job' : 'Not tracked';
+  }
+
+  function renderJobWorkspace() {
+    const pageName = currentPageJobInfo?.company && (currentPageJobInfo.jobTitle || currentPageJobInfo.position)
+      ? `${currentPageJobInfo.company} — ${currentPageJobInfo.jobTitle || currentPageJobInfo.position}`
+      : '';
+    if (activeJobOverride) {
+      jobNameEl.textContent = `${activeJobOverride.company} — ${activeJobOverride.position}`;
+      setJobBadge('selected');
+    } else if (currentTrackedJob) {
+      jobNameEl.textContent = `${currentTrackedJob.company} — ${currentTrackedJob.position}`;
+      setJobBadge('tracked', currentTrackedJob.status);
+    } else if (pageName) {
+      jobNameEl.textContent = pageName;
+      setJobBadge('untracked');
+    } else {
+      jobNameEl.textContent = 'No job detected on this page';
+      setJobBadge(null);
+    }
+    refreshDocsSection();
+  }
+
+  async function refreshJobSelector() {
+    jobSelectRefresh.disabled = true;
+    try {
+      trackedJobsCache = (await GoApplyAPI.getJobs()) || [];
+      jobSelect.innerHTML = '';
+      jobSelect.appendChild(new Option('Use the detected page', ''));
+      for (const job of trackedJobsCache) {
+        jobSelect.appendChild(new Option(
+          `${job.company} — ${job.position}${job.category ? ` · ${job.category}` : ''}`,
+          job.id,
+        ));
+      }
+      jobSelect.value = activeJobOverride?.id || '';
+    } catch (error) {
+      jobSelect.innerHTML = '';
+      jobSelect.appendChild(new Option('Could not load tracked jobs', ''));
+    } finally {
+      jobSelectRefresh.disabled = false;
+    }
+  }
+
+  function docRowHtml(kind, doc) {
+    const name = escapeHtml(doc.name || doc.title || (kind === 'resume' ? 'Résumé' : 'Cover letter'));
+    const icon = kind === 'resume' ? '📄' : '✉️';
+    const download = kind === 'resume'
+      ? `<button class="sp-doc-btn" data-download="${doc.id}" title="Download PDF">⬇︎ PDF</button>`
+      : '';
+    return `<div class="sp-doc-row"><span class="sp-doc-name">${icon} ${name}</span>`
+      + `<span class="sp-doc-actions"><button class="sp-doc-btn" data-edit="${kind}:${doc.id}" title="Open in Editor Studio">✎ Studio</button>${download}</span></div>`;
+  }
+
+  async function refreshDocsSection() {
+    const job = effectiveJob();
+    createResumeBtn.disabled = !job || docsActionBusy;
+    createCoverBtn.disabled = !job || docsActionBusy;
+    if (!job) {
+      docsListEl.innerHTML = '<div class="sp-docs-empty">Track a job first, then create a tailored résumé or cover letter from your base template.</div>';
+      return;
+    }
+    docsListEl.innerHTML = '<div class="sp-docs-empty">Loading documents…</div>';
+    try {
+      const [resumes, letters] = await Promise.all([
+        GoApplyAPI.getResumes().catch(() => []),
+        GoApplyAPI.getCoverLetters().catch(() => []),
+      ]);
+      const jobResumes = (resumes || []).filter((r) => r.linkedJobId === job.id || r.linkedJob?.id === job.id);
+      const jobLetters = (letters || []).filter((l) => l.jobId === job.id || l.job?.id === job.id);
+      const rows = [
+        ...jobResumes.map((r) => docRowHtml('resume', r)),
+        ...jobLetters.map((l) => docRowHtml('cover-letter', l)),
+      ];
+      docsListEl.innerHTML = rows.length
+        ? rows.join('')
+        : '<div class="sp-docs-empty">No résumé or cover letter for this job yet — create one above.</div>';
+    } catch (error) {
+      docsListEl.innerHTML = `<div class="sp-docs-empty">Could not load documents: ${escapeHtml(error.message || '')}</div>`;
+    }
+  }
+
+  async function openStudio(kind, id) {
+    const { web } = await GoApplyAPI.getEndpoints();
+    const path = kind === 'resume' ? `studio/resume/${id}` : `studio/cover-letter/${id}`;
+    chrome.tabs.create({ url: `${web}/${path}` });
+  }
+
+  async function createResumeForCurrentJob() {
+    const job = effectiveJob();
+    if (!job || docsActionBusy) return;
+    docsActionBusy = true;
+    createResumeBtn.disabled = true;
+    const chip = addStatusChip('Creating a résumé from your base template…');
+    try {
+      const jobDescription = job.description || currentPageJobInfo?.description || '';
+      const doc = await GoApplyAPI.createResumeForJob({
+        name: `${job.company} — ${job.position} Résumé`,
+        jobId: job.id,
+        jobDescription,
+      });
+      chip.dataset.status = 'done';
+      chip.textContent = '✓ Résumé created & attached — opening Studio';
+      await openStudio('resume', doc.id);
+      await refreshDocsSection();
+    } catch (error) {
+      chip.dataset.status = 'error';
+      chip.textContent = `⚠ ${error.message || 'Could not create résumé'}`;
+    } finally {
+      docsActionBusy = false;
+      createResumeBtn.disabled = !effectiveJob();
+    }
+  }
+
+  async function createCoverLetterForCurrentJob() {
+    const job = effectiveJob();
+    if (!job || docsActionBusy) return;
+    docsActionBusy = true;
+    createCoverBtn.disabled = true;
+    const chip = addStatusChip('Creating a cover letter from your base template…');
+    try {
+      const doc = await GoApplyAPI.createCoverLetterForJob({
+        jobId: job.id,
+        title: `${job.company} — ${job.position} Cover Letter`,
+      });
+      chip.dataset.status = 'done';
+      chip.textContent = '✓ Cover letter created & attached — opening Studio';
+      await openStudio('cover-letter', doc.id);
+      await refreshDocsSection();
+    } catch (error) {
+      chip.dataset.status = 'error';
+      chip.textContent = `⚠ ${error.message || 'Could not create cover letter'}`;
+    } finally {
+      docsActionBusy = false;
+      createCoverBtn.disabled = !effectiveJob();
+    }
+  }
+
+  async function downloadResume(id) {
+    const chip = addStatusChip('Preparing résumé PDF…');
+    try {
+      // Compile for a fresh PDF; fall back to the last compiled one if the
+      // compile route is unavailable (e.g. no LaTeX toolchain on the server).
+      let blob = null;
+      try { blob = await GoApplyAPI.compileResumePdf(id); }
+      catch (error) { blob = await GoApplyAPI.getResumePdf(id); }
+      if (!blob) throw new Error('No PDF was produced');
+      const profile = await ensureProfile();
+      const fullName = [profile?.firstName, profile?.lastName].map((v) => String(v || '').trim()).filter(Boolean).join(' ')
+        || String(profile?.name || '').trim();
+      const filename = `${fullName ? `${fullName} Resume` : 'Resume'}.pdf`
+        .replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      chip.dataset.status = 'done';
+      chip.textContent = `✓ Downloaded ${filename}`;
+    } catch (error) {
+      chip.dataset.status = 'error';
+      chip.textContent = `⚠ ${error.message || 'Download failed'}`;
+    }
+  }
+
+  async function draftAnswer() {
+    const question = qaQuestionEl.value.trim();
+    if (!question) { qaStatusEl.textContent = 'Paste an application question first.'; return; }
+    qaDraftBtn.disabled = true;
+    qaStatusEl.textContent = 'Drafting an answer with AI…';
+    try {
+      const job = effectiveJob();
+      const jobDescription = job?.description || currentPageJobInfo?.description || '';
+      const result = await GoApplyAPI.generateCustomAnswer(question, jobDescription);
+      const answer = typeof result === 'string'
+        ? result
+        : (result?.answer || result?.text || result?.content || '');
+      qaAnswerEl.value = answer || '';
+      qaStatusEl.textContent = answer ? 'Draft ready — edit it, then Save answer.' : 'No draft was returned; write your own answer.';
+    } catch (error) {
+      qaStatusEl.textContent = `Could not draft: ${error.message || 'error'}`;
+    } finally {
+      qaDraftBtn.disabled = false;
+    }
+  }
+
+  async function saveApplicationAnswer() {
+    const question = qaQuestionEl.value.trim();
+    const answer = qaAnswerEl.value.trim();
+    if (!question || !answer) { qaStatusEl.textContent = 'Both a question and an answer are required.'; return; }
+    qaSaveBtn.disabled = true;
+    qaStatusEl.textContent = 'Saving…';
+    try {
+      const job = effectiveJob();
+      await GoApplyAPI.saveAnswer({ question, answer, ...(job ? { jobIds: [job.id] } : {}) });
+      qaStatusEl.textContent = job
+        ? `Saved and linked to ${job.company} — ${job.position}.`
+        : 'Saved to your Foligo answers.';
+      qaQuestionEl.value = '';
+      qaAnswerEl.value = '';
+    } catch (error) {
+      qaStatusEl.textContent = `Could not save: ${error.message || 'error'}`;
+    } finally {
+      qaSaveBtn.disabled = false;
     }
   }
 
@@ -714,13 +999,13 @@
       chip.dataset.status = 'error';
       return null;
     }
-    trackBtn.disabled = true;
     statusSaveBtn.disabled = true;
     const status = jobStatusSelect.value || 'saved';
+    const category = jobCategorySelect.value && jobCategorySelect.value !== '__add__' ? jobCategorySelect.value : '';
     const statusLabel = jobStatusSelect.options[jobStatusSelect.selectedIndex]?.textContent || status;
     const chip = addStatusChip(`${currentTrackedJob ? 'Updating' : 'Tracking'} job as ${status}…`, 'job-tracking');
     trackingActionPromise = (async () => {
-      const result = await sendToContentScript('sp-track', { status, allowStatusChange: true });
+      const result = await sendToContentScript('sp-track', { status, category, allowStatusChange: true });
       if (result.unavailable) {
         chip.dataset.status = 'running';
         chip.textContent = 'AI is identifying the company and job title…';
@@ -749,7 +1034,10 @@
               ? `✓ Job status changed to ${result.job?.status || status}`
               : `✓ Job is tracked as ${result.job?.status || status}`)
         : `⚠ ${result.message || 'Track failed'}`;
-      if (result.success) await refreshJobTracking();
+      if (result.success) {
+        await refreshJobTracking();
+        refreshJobSelector().catch(() => {});
+      }
       return result;
     })();
     try {
@@ -796,10 +1084,54 @@
 
   rescanBtn.addEventListener('click', runRescan);
   autofillBtn.addEventListener('click', runAutofill);
-  trackBtn.addEventListener('click', runTrack);
   statusSaveBtn.addEventListener('click', runTrack);
   findSubmitBtn.addEventListener('click', runFindSubmit);
   sendBtn.addEventListener('click', sendCurrentMessage);
+
+  // ─── Job workspace listeners ────────────────────────────────────────
+  createResumeBtn.addEventListener('click', createResumeForCurrentJob);
+  createCoverBtn.addEventListener('click', createCoverLetterForCurrentJob);
+  qaDraftBtn.addEventListener('click', draftAnswer);
+  qaSaveBtn.addEventListener('click', saveApplicationAnswer);
+
+  docsListEl.addEventListener('click', (event) => {
+    const editTarget = event.target.closest('[data-edit]');
+    if (editTarget) {
+      const [kind, id] = editTarget.dataset.edit.split(':');
+      openStudio(kind, id);
+      return;
+    }
+    const downloadTarget = event.target.closest('[data-download]');
+    if (downloadTarget) downloadResume(downloadTarget.dataset.download);
+  });
+
+  jobSelectToggle.addEventListener('click', () => {
+    const opening = jobSelectRow.hidden;
+    jobSelectRow.hidden = !opening;
+    jobSelectToggle.textContent = opening ? 'Not this job? Pick a tracked job ▴' : 'Not this job? Pick a tracked job ▾';
+    if (opening) refreshJobSelector();
+  });
+  jobSelectRefresh.addEventListener('click', refreshJobSelector);
+  jobSelect.addEventListener('change', () => {
+    const id = jobSelect.value;
+    activeJobOverride = id ? (trackedJobsCache.find((job) => job.id === id) || null) : null;
+    renderJobWorkspace();
+  });
+
+  jobCategorySelect.addEventListener('change', async () => {
+    if (jobCategorySelect.value !== '__add__') return;
+    const name = (window.prompt('New category (e.g. “Summer 2026 Internships”)') || '').trim();
+    if (!name) { jobCategorySelect.value = ''; return; }
+    const categories = [...new Set([...categoriesFromProfile(), name])];
+    try {
+      cachedProfile = await GoApplyAPI.saveJobCategories(categories);
+      refreshCategorySelect();
+      selectCategoryValue(name);
+    } catch (error) {
+      jobCategorySelect.value = '';
+      contextNoteEl.textContent = `Could not add category: ${error.message || 'error'}`;
+    }
+  });
   inputEl.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -868,6 +1200,7 @@
         accountStatusEl.textContent = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.email || 'Connected';
       } catch (e) { accountStatusEl.textContent = 'Connected'; }
       refreshResumeSelector();
+      ensureProfile(true).then(() => refreshCategorySelect()).catch(() => {});
     } else if (pending) {
       connectBtn.hidden = false;
       signOutBtn.hidden = true;
@@ -882,6 +1215,10 @@
       resumeSelect.innerHTML = '';
       resumeSelect.appendChild(new Option('Connect Foligo to choose a résumé', ''));
       resumeSelect.disabled = true;
+      cachedProfile = null;
+      activeJobOverride = null;
+      refreshCategorySelect();
+      renderJobWorkspace();
     }
   }
 
@@ -917,10 +1254,10 @@
         selectedResumeIdSource: 'user',
       });
       const selectedText = resumeSelect.options[resumeSelect.selectedIndex]?.textContent || 'Selected résumé';
-      contextNoteEl.textContent = `${selectedText} will be used for résumé upload fields.`;
+      uploadNoteEl.textContent = `${selectedText} will be attached to file-upload fields.`;
     } else {
       await chrome.storage.local.remove(['selectedResumeId', 'selectedResumeIdSource']);
-      contextNoteEl.textContent = 'AI mode compares your Foligo résumés with the current job before attaching one.';
+      uploadNoteEl.textContent = 'AI mode compares your Foligo résumés with the current job before attaching one.';
     }
   });
 

@@ -479,7 +479,7 @@ ${postList}
 
 PORTFOLIO CAPABILITIES:
 - Use list_posts / get_post to find and inspect posts before acting on them — never guess a postId.
-- Use create_post, update_post_fields, update_post_content, add/update/delete_experience_role, and add/remove_skills_to_post / add/remove_tags_to_post freely — these are real, immediate writes (each snapshots a revision first where applicable).
+- Use create_post, update_post_fields, update_post_content, add_experience_role / update_experience_role / delete_experience_role, add_skills_to_post / remove_skill_from_post, and add_tags_to_post / remove_tag_from_post freely — these are real, immediate writes (each snapshots a revision first where applicable).
 
 GOAPPLY CAPABILITIES (these span ALL of the user's projects, not just "${project.name}"):
 - Resumes: list_resumes, get_resume, save_resume (omit resumeId to create, include it to update).
@@ -987,6 +987,41 @@ router.post('/resume-chatbot/session',
             error: 'Failed to fetch post'
           });
         }
+      }
+
+      // Handle GitHub tool calls: feed each tool's output back into the
+      // conversation and let the model continue, up to a bounded number of
+      // rounds (github_list_repos → github_read_file chains are normal).
+      // Without this branch the output was silently dropped — the model never
+      // saw the result of its own call and the client got an empty message.
+      if (result.toolcall && result.toolcall.startsWith('github_')) {
+        let workingHistory = chatHistory;
+        let currentResult = result;
+        for (let round = 0; round < 5 && currentResult.toolcall && currentResult.toolcall.startsWith('github_'); round++) {
+          workingHistory = [
+            ...workingHistory,
+            { role: 'assistant', content: `[Requested tool ${currentResult.toolcall}: ${JSON.stringify(currentResult.toolInput || {})}]` },
+            { role: 'user', content: `[Tool ${currentResult.toolcall} result: ${JSON.stringify(currentResult.toolOutput ?? null)}]` }
+          ];
+          currentResult = await geminiService.handleResumeChatbotSession(
+            resumeText,
+            jobPosting,
+            workingHistory,
+            userId,
+            context,
+            { sessionKey: resumeSessionKey }
+          );
+        }
+
+        const githubFinalHistory = [
+          ...workingHistory,
+          { role: 'assistant', content: currentResult.message || '' }
+        ];
+        const savedGithubSession = await saveChatSession(userId, sessionId, githubFinalHistory, resumeText, req.file?.originalname, jobPosting);
+        return res.json({
+          ...currentResult,
+          sessionId: savedGithubSession?.id || sessionId || null
+        });
       }
 
       // Save chat history after getting response

@@ -599,6 +599,7 @@ model JobApplication {
   url          String?
   status       String           @default("saved") // saved, applied, screening, interview, offer, accepted, rejected, withdrawn, archived
   notes        String?
+  description  String?          @db.Text // Full scraped role description captured at track time
   category     String?
   tags         String[]         @default([])
   referredBy   String?
@@ -625,6 +626,10 @@ model UserProfile {
   github    String?
   portfolio String?
   resumeUrl String?
+
+  // GoApply job-application categories (hiring seasons), managed by the user and
+  // offered as the category dropdown when tracking a job from the extension.
+  jobCategories String[] @default([])
 
   // Personal Information
   firstName     String?

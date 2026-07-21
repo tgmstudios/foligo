@@ -14,6 +14,169 @@ async function cacheCapturedImage(dataUrl) {
   return imageId;
 }
 
+/**
+ * gif_creator frame recorder. Frames are held in service-worker memory,
+ * scoped per tab group like every other workspace resource (same tradeoff
+ * as the Claude extension: a suspended worker drops unexported frames, but
+ * the agent-port heartbeat keeps the worker alive during agent turns).
+ * Recording state itself survives suspension via storage.session.
+ */
+const GIF_MAX_FRAMES = 50;
+const GIF_MIN_CAPTURE_INTERVAL_MS = 350;
+const gifFrameStore = new Map(); // groupId -> { frames: [{ dataUrl, meta }], lastCaptureAt }
+const gifRecordingGroups = new Set();
+let gifRecordingRestored = null;
+
+async function restoreGifRecordingGroups() {
+  gifRecordingRestored ??= (async () => {
+    try {
+      const stored = await chrome.storage.session.get('goapplyGifRecordingGroups');
+      for (const groupId of stored?.goapplyGifRecordingGroups || []) gifRecordingGroups.add(groupId);
+    } catch (error) {}
+  })();
+  return gifRecordingRestored;
+}
+
+async function setGifRecording(groupId, recording) {
+  await restoreGifRecordingGroups();
+  if (recording) gifRecordingGroups.add(groupId);
+  else gifRecordingGroups.delete(groupId);
+  try {
+    await chrome.storage.session.set({ goapplyGifRecordingGroups: [...gifRecordingGroups] });
+  } catch (error) {}
+}
+
+function addGifFrame(groupId, dataUrl, meta) {
+  const entry = gifFrameStore.get(groupId) || { frames: [], lastCaptureAt: 0 };
+  entry.frames.push({ dataUrl, meta });
+  if (entry.frames.length > GIF_MAX_FRAMES) entry.frames.shift();
+  entry.lastCaptureAt = Date.now();
+  gifFrameStore.set(groupId, entry);
+}
+
+async function recordGifFrame(tabId, meta = {}, existingDataUrl = null) {
+  try {
+    await restoreGifRecordingGroups();
+    const tab = await chrome.tabs.get(tabId);
+    const groupId = tab.groupId;
+    if (groupId == null || groupId === chrome.tabGroups.TAB_GROUP_ID_NONE) return;
+    if (!gifRecordingGroups.has(groupId)) return;
+    const entry = gifFrameStore.get(groupId);
+    // Screenshots are deliberate first/last-frame captures; throttle only the
+    // automatic per-action captures (captureVisibleTab is also rate-limited).
+    if (!existingDataUrl && meta.type !== 'screenshot'
+        && entry && Date.now() - entry.lastCaptureAt < GIF_MIN_CAPTURE_INTERVAL_MS) return;
+    const frameMeta = { ...meta, viewportWidth: tab.width, viewportHeight: tab.height };
+    const dataUrl = existingDataUrl
+      || await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
+    addGifFrame(groupId, dataUrl, frameMeta);
+  } catch (error) {
+    // Frame capture must never break the action that triggered it.
+  }
+}
+
+function recordGifFrameSoon(tabId, meta, delayMs = 150) {
+  setTimeout(() => { recordGifFrame(tabId, meta); }, delayMs);
+}
+
+async function ensureOffscreenDocument() {
+  if (await chrome.offscreen.hasDocument()) return;
+  await chrome.offscreen.createDocument({
+    url: 'offscreen.html',
+    reasons: [chrome.offscreen.Reason.BLOBS],
+    justification: 'Encode recorded browser-session frames into an animated GIF',
+  });
+}
+
+async function handleGifCreator(message, resolveScopedTab) {
+  const gifAction = message.browserAction;
+  const tab = await resolveScopedTab(message.tabId);
+  let groupId = tab.groupId;
+  if (groupId == null || groupId === chrome.tabGroups.TAB_GROUP_ID_NONE) {
+    groupId = await ensureAgentTabGroup(tab);
+  }
+  if (groupId === chrome.tabGroups.TAB_GROUP_ID_NONE) {
+    throw new Error('This tab could not be placed in a GoApply workspace group.');
+  }
+  await restoreGifRecordingGroups();
+  const frameCount = gifFrameStore.get(groupId)?.frames.length ?? 0;
+
+  if (gifAction === 'start_recording') {
+    await setGifRecording(groupId, true);
+    return {
+      ok: true, recording: true, frameCount,
+      output: 'GIF recording started for this workspace. Take a screenshot now to capture the initial state as the first frame; browser actions will be captured automatically.',
+    };
+  }
+  if (gifAction === 'stop_recording') {
+    await setGifRecording(groupId, false);
+    return {
+      ok: true, recording: false, frameCount,
+      output: `GIF recording stopped. ${frameCount} frame${frameCount === 1 ? '' : 's'} kept — use export to generate the GIF, or clear to discard.`,
+    };
+  }
+  if (gifAction === 'clear') {
+    gifFrameStore.delete(groupId);
+    await setGifRecording(groupId, false);
+    return {
+      ok: true, recording: false, frameCount: 0,
+      output: frameCount ? `Cleared ${frameCount} recorded frame${frameCount === 1 ? '' : 's'}. Recording stopped.` : 'No frames to clear for this workspace.',
+    };
+  }
+  if (gifAction !== 'export') {
+    throw new Error(`Unknown gif_creator action: ${gifAction}. Must be one of: start_recording, stop_recording, export, clear.`);
+  }
+
+  const frames = gifFrameStore.get(groupId)?.frames || [];
+  if (!frames.length) {
+    throw new Error('No frames have been recorded for this workspace. Call start_recording first, perform some browser actions, then export.');
+  }
+  if (!message.download && !Array.isArray(message.coordinate)) {
+    throw new Error('Export needs either download: true or a coordinate [x, y] to drag-drop the GIF onto the page.');
+  }
+  await ensureOffscreenDocument();
+  const encoded = await chrome.runtime.sendMessage({
+    target: 'goapply-offscreen',
+    action: 'encode-gif',
+    frames,
+    options: message.options || {},
+  });
+  if (!encoded?.ok) throw new Error(encoded?.error || 'GIF encoding failed.');
+  const filename = (message.filename || `recording-${Date.now()}.gif`).replace(/^\/*/, '');
+  const summary = {
+    ok: true,
+    frameCount: encoded.frameCount,
+    width: encoded.width,
+    height: encoded.height,
+    sizeKB: Math.round(encoded.sizeBytes / 1024),
+  };
+
+  if (message.download) {
+    const downloadId = await chrome.downloads.download({ url: encoded.dataUrl, filename, saveAs: false });
+    return { ...summary, exported: 'download', downloadId, filename };
+  }
+
+  const imageId = await cacheCapturedImage(encoded.dataUrl);
+  let uploadResult = null;
+  let lastError = null;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      uploadResult = await chrome.tabs.sendMessage(tab.id, {
+        action: 'agent-execute-tool',
+        toolName: 'upload_image',
+        input: { imageId, coordinate: message.coordinate },
+      });
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  if (lastError) throw new Error(`The page was not ready to receive the GIF drop: ${lastError.message}`);
+  return { ...summary, exported: 'upload', imageId, upload: uploadResult };
+}
+
 async function ensureAgentTabGroup(tab) {
   if (!tab?.id || tab.incognito) return tab?.groupId ?? chrome.tabGroups.TAB_GROUP_ID_NONE;
   if (tab.groupId != null && tab.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
@@ -153,6 +316,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+  // Fire-and-forget hint from a content script that a page-mutating DOM tool
+  // (click_page_element, form_input, set_field_value, …) just ran, so an
+  // active gif_creator recording captures the resulting page state. The
+  // trusted-input and navigation paths are hooked directly in this worker.
+  if (message?.action === 'gif-frame') {
+    const tabId = sender.tab?.id;
+    if (tabId) recordGifFrameSoon(tabId, { type: message.frameType || 'action', text: String(message.label || '').slice(0, 80) });
+    sendResponse({ ok: true });
+    return false;
+  }
   if (message?.action === 'cdp-click') {
     const tabId = sender.tab?.id;
     if (!tabId) { sendResponse({ ok: false, error: 'No source tab for CDP click' }); return false; }
@@ -195,9 +368,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const tab = await chrome.tabs.get(tabId);
           const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
           const imageId = await cacheCapturedImage(dataUrl);
+          recordGifFrame(tabId, { type: 'screenshot' }, dataUrl);
           sendResponse({ ok: true, imageId, dataUrl });
           return;
         } else await CDP.mouseAction(tabId, message.computerAction, message);
+        recordGifFrameSoon(tabId, {
+          type: message.computerAction,
+          x: message.x, y: message.y, endX: message.endX, endY: message.endY,
+          text: String(message.text || message.key || '').slice(0, 80),
+        });
         sendResponse({ ok: true, action: message.computerAction });
       } catch (error) {
         sendResponse({ ok: false, error: error.message });
@@ -290,11 +469,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           else if (message.browserAction === 'forward') await chrome.tabs.goForward(targetTabId);
           else if (message.browserAction === 'back') await chrome.tabs.goBack(targetTabId);
           else throw new Error('Unknown navigation action.');
+          recordGifFrameSoon(targetTabId, {
+            type: 'navigate',
+            text: message.browserAction === 'url' ? String(message.url || '').slice(0, 80) : message.browserAction,
+          }, 800);
           sendResponse({ ok: true, action: message.browserAction });
         } else if (action === 'screenshot') {
           const tab = await resolveScopedTab(message.tabId);
           const dataUrl = await chrome.tabs.captureVisibleTab(tab?.windowId, { format: 'png' });
           const imageId = await cacheCapturedImage(dataUrl);
+          recordGifFrame(tab.id, { type: 'screenshot' }, dataUrl);
           sendResponse({ ok: true, imageId, dataUrl });
         } else if (action === 'captured-image') {
           if (!message.imageId) throw new Error('imageId is required.');
@@ -394,6 +578,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await chrome.alarms.clear(key);
           await chrome.storage.local.remove(key);
           sendResponse({ ok: true, taskId: message.taskId });
+        } else if (action === 'gif') {
+          sendResponse(await handleGifCreator(message, resolveScopedTab));
         } else {
           throw new Error(`Unknown browser action: ${action}`);
         }

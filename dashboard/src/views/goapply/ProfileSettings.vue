@@ -46,6 +46,25 @@
         </div>
         </section>
 
+        <!-- Job categories (hiring seasons) — shared with the browser extension's
+             track dropdown via the profile's jobCategories field. -->
+        <section class="card p-6 profile-card">
+          <h4 class="section-title">Job Categories (hiring seasons)</h4>
+          <p class="text-xs text-gray-500 mb-3">Group applications by hiring season. These become the category options when tracking a job from the extension.</p>
+          <div class="flex flex-wrap gap-2 mb-3">
+            <span v-for="cat in (form.jobCategories || [])" :key="cat" class="inline-flex items-center gap-1 rounded-full bg-primary-900/60 px-2 py-1 text-xs text-primary-200">
+              {{ cat }}
+              <button type="button" class="text-primary-400 hover:text-white" :aria-label="`Remove ${cat}`" @click="removeCategory(cat)">×</button>
+            </span>
+            <span v-if="!(form.jobCategories || []).length" class="text-xs text-gray-500">No categories yet.</span>
+          </div>
+          <div class="flex gap-2">
+            <input v-model="categoryInput" type="text" class="input" placeholder="e.g. Summer 2026 Internships" @keydown.enter.prevent="addCategory" />
+            <button type="button" class="px-3 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 whitespace-nowrap" @click="addCategory">Add</button>
+          </div>
+          <p class="mt-2 text-xs text-gray-500">Remember to Save to apply category changes.</p>
+        </section>
+
         <!-- Education — fully driven by linking (or quick-creating) existing portfolio
              entries; highestDegree/school/discipline/etc. are derived from these, not
              retyped here. -->
@@ -151,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, watch } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
 import { useGoApplyStore, type GoApplyProfile } from '@/stores/goapply'
 import ExperienceLinker from '@/components/goapply/ExperienceLinker.vue'
 import SkillsPicker from '@/components/goapply/SkillsPicker.vue'
@@ -191,7 +210,22 @@ const form = reactive<GoApplyProfile>({
   linkedJobs: [],
   linkedEducation: [],
   linkedSkills: [],
+  jobCategories: [],
 })
+
+const categoryInput = ref('')
+function addCategory() {
+  const name = categoryInput.value.trim()
+  if (!name) return
+  const existing = form.jobCategories || []
+  if (!existing.some(c => c.toLowerCase() === name.toLowerCase())) {
+    form.jobCategories = [...existing, name]
+  }
+  categoryInput.value = ''
+}
+function removeCategory(name: string) {
+  form.jobCategories = (form.jobCategories || []).filter(c => c !== name)
+}
 
 // Field groups mirror the extension's autofill field taxonomy (Personal Info,
 // Location, Education, Experience, Work Authorization, Social & Links, Other)

@@ -105,7 +105,7 @@ function createWebSearchTool({ toolFn, z, baseUrl, limit = 10 }) {
       'or when you need to verify technical details, look up APIs, or find real-world examples. ' +
       'Returns a list of result snippets with title, URL, source engine, and relevance score — it does NOT fetch a full page. ' +
       'To read the full content of one of the returned URLs (or any URL the user gives you), call pull_page next with that URL. ' +
-      'Not for searching code inside a specific GitHub repository — use github_search_code for that.',
+      'Only searches the public web — never use it to search a document you are editing, the user\'s own data, or code inside a repository.',
     inputSchema: z.object({
       query: z.string().min(1).max(500).describe('The search query — be specific and include relevant keywords.'),
     }),

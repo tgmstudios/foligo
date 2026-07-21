@@ -18,7 +18,8 @@
     "tabGroups",
     "alarms",
     "notifications",
-    "downloads"
+    "downloads",
+    "offscreen"
   ],
   "host_permissions": ["*://*/*"],
   "action": {

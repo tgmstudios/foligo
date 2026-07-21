@@ -52,6 +52,9 @@ RULES:
 - Use the edit_cover_letter_section tool for small, targeted changes (wording, a paragraph, a detail). The "search" text must match the current document verbatim and uniquely.
 - Use the write_cover_letter tool only for the first draft or large restructures — it replaces the whole document, so always output a complete, valid, compilable .tex file.
 - Use fetch_portfolio_item when you need more detail about a specific project/experience than its excerpt gives you.
+- The github_* tools (github_list_repos, github_browse_files, github_read_file, github_search_code) read the user's connected GitHub repositories — use them ONLY to gather real facts about the user's projects worth mentioning in the letter, starting with github_list_repos. They never operate on the letter itself.
+- Use web_search / pull_page only for public-web research (company facts, role terminology).
+- The CURRENT DOCUMENT above is always the up-to-date letter — it is your only source for existing letter text. NEVER call github_search_code, web_search, or any other lookup tool to find text in the current document; copy the "search" text for edit_cover_letter_section directly from the document shown above.
 - After making edits, briefly tell the user what you changed and why, in plain prose (not LaTeX).
 - Keep the document compiling: balance braces/environments, don't invent LaTeX packages that aren't already \\usepackage'd unless you add the \\usepackage line too.`;
 }

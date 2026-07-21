@@ -20,8 +20,8 @@
     "hash": "afea0039e0b96e7276a7feaa31349935"
   },
   "api/src/routes/resume.js": {
-    "mtime": 1784564997895.2864,
-    "hash": "11e1d257c27a506c675032fd87dd5408"
+    "mtime": 1784613422212.7285,
+    "hash": "c900938ad772d37bd69070fdf0fb45a7"
   },
   "api/src/routes/users.js": {
     "mtime": 1783927170087.9265,
@@ -232,8 +232,8 @@
     "hash": "2b5d0bcab2631e914daced83814354b9"
   },
   "dashboard/src/stores/goapply.ts": {
-    "mtime": 1783925470503.1218,
-    "hash": "d3162aaaaefd86a7ca8ad94ae67a0858"
+    "mtime": 1784614088847.2268,
+    "hash": "4e124c8e0b39bdf3a402678eaa12fd9b"
   },
   "dashboard/src/stores/projects.ts": {
     "mtime": 1784521834954.99,
@@ -332,8 +332,8 @@
     "hash": "dc1df23b880c536f997847124d6c4fe1"
   },
   "dashboard/src/views/goapply/JobForm.vue": {
-    "mtime": 1784570502406.2393,
-    "hash": "c8ccf4336cca7dc2964448aca35c44c9"
+    "mtime": 1784614115711.3115,
+    "hash": "bd28bf37e05091f25d131fbbe28cb7e7"
   },
   "dashboard/src/views/goapply/JobList.vue": {
     "mtime": 1783904653824.1611,
@@ -348,8 +348,8 @@
     "hash": "21f695218e1d55b00fa15d7fd3bb1b8d"
   },
   "dashboard/src/views/goapply/ProfileSettings.vue": {
-    "mtime": 1783893999706.5862,
-    "hash": "cb13b3afdb98e72255c1a9b1b57fa2ee"
+    "mtime": 1784614172426.0793,
+    "hash": "edfb1904b16f0fc8a6a6db77c09d0f2f"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
     "mtime": 1784519391260.3713,
@@ -416,8 +416,8 @@
     "hash": "9412b6dd071fee4c756b0be4bf893cfa"
   },
   "extension/core/api.js": {
-    "mtime": 1784501569444.6707,
-    "hash": "77771aa6d3194ddb6a533da4f48601f5"
+    "mtime": 1784613453809.6348,
+    "hash": "3e31dc2aa2e605f6720ddd8d4e9b5c9c"
   },
   "extension/core/banners.js": {
     "mtime": 1783896198965.162,
@@ -444,12 +444,12 @@
     "hash": "c02129e0010416b8e1d71002ca53afc8"
   },
   "extension/core/main.js": {
-    "mtime": 1784500055598.7444,
-    "hash": "c18c9161a6947e2e358bc69e048dfbfe"
+    "mtime": 1784613511784.1626,
+    "hash": "0340be465e1994c9d7ef3c55e039e325"
   },
   "extension/core/tracker.js": {
-    "mtime": 1784500627609.7085,
-    "hash": "7230f83db1907389737685c0981ebd33"
+    "mtime": 1784613490414.373,
+    "hash": "e9ccbb5f059fc0dd2bf07b8c1d73ad9f"
   },
   "extension/core/tutorial.js": {
     "mtime": 1783659092618.6519,
@@ -460,8 +460,8 @@
     "hash": "37f296c5c9c48f0ef4c1bfd59b6c8711"
   },
   "extension/options.js": {
-    "mtime": 1784501710962.4675,
-    "hash": "6e8bd1350e51afb8fdf551667b3d0ec1"
+    "mtime": 1784614037743.9524,
+    "hash": "a7bd16e39ff1cefeae24d88486e914c5"
   },
   "ios_app/foligo/Auth/AuthView.swift": {
     "mtime": 1761764389976.4014,
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1784569709085.3972,
-    "hash": "7090cb7679e38eaf55d810b45d37b56a"
+    "mtime": 1784613172691.0483,
+    "hash": "48f795dc09d740c245361af5ef8c2c07"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049786.848,
@@ -852,8 +852,8 @@
     "hash": "3fc82f040c38b6ffc7e024d60e8697b2"
   },
   "extension/options.html": {
-    "mtime": 1783744322797.4917,
-    "hash": "245292416e6ee9288514c23c071744cc"
+    "mtime": 1784614019733.9075,
+    "hash": "2852c150ac52f2dce1dde3fa92f8a827"
   },
   "extension/test-page.html": {
     "mtime": 1783658179962.8308,
@@ -1016,8 +1016,8 @@
     "hash": "06643979f55fbbf06c52faddb81c3d4a"
   },
   "extension/background.js": {
-    "mtime": 1784496126651.0369,
-    "hash": "e3c4449eafad61f9646b66ab211245f6"
+    "mtime": 1784612866981.718,
+    "hash": "5a8eee8b88fb08b8c631c19bb0af9410"
   },
   ".claude/CLAUDE.md": {
     "mtime": 1783905422347.266,
@@ -1136,8 +1136,8 @@
     "hash": "9fc376e6359d17066dd88d0b0644c898"
   },
   "extension/core/agent-controller.js": {
-    "mtime": 1784500709069.9133,
-    "hash": "36a01530fb7d95f76590997dd7fc36b9"
+    "mtime": 1784612895608.0662,
+    "hash": "30715f0e956ab072805684d92114b87f"
   },
   "sites/public/env.js": {
     "mtime": 1763328662182.9304,
@@ -1260,16 +1260,16 @@
     "hash": "546dfe3a841f5e5cc5d770a86284f4d2"
   },
   "api/src/routes/ai/ai-content.js": {
-    "mtime": 1784516914858.6643,
-    "hash": "b3e81f0d7d68cc185757cdebf8f67b52"
+    "mtime": 1784612983105.2368,
+    "hash": "3e7c668d27ac48e1fd463a993352fb26"
   },
   "api/src/routes/ai/ai-providers.js": {
     "mtime": 1783927170084.0022,
     "hash": "513fe6b671fdb3be8dc6828157bf12b0"
   },
   "api/src/routes/ai/extension-agent.js": {
-    "mtime": 1784501569444.6707,
-    "hash": "50c34c7f0afa5c7514f37944a3e95857"
+    "mtime": 1784613147438.2053,
+    "hash": "8243702095bf844394670d30551bb456"
   },
   "api/src/routes/ai/voice-webhook.js": {
     "mtime": 1784044422102.3215,
@@ -1292,8 +1292,8 @@
     "hash": "0b316c7489be0ad37e507b18e360ae59"
   },
   "api/src/routes/content/content-chat.js": {
-    "mtime": 1784565022520.8306,
-    "hash": "b5de4ae1e688ab910e8bfe3f9eae4e36"
+    "mtime": 1784612637711.6672,
+    "hash": "2206bc736e6dbc70f703e979fffcd214"
   },
   "api/src/routes/content/content-crud.js": {
     "mtime": 1784504259343.384,
@@ -1328,20 +1328,20 @@
     "hash": "77a08a96b2f7bca2dbba13d92ead5f5d"
   },
   "api/src/routes/goapply/goapply-cover-letters.js": {
-    "mtime": 1784565052522.5525,
-    "hash": "6f36d0ba9c5206a1571273ce00d7b89e"
+    "mtime": 1784612631098.8062,
+    "hash": "59ecae21170c1b2e03aff39806b3c1bb"
   },
   "api/src/routes/goapply/goapply-job-applications.js": {
-    "mtime": 1784497271433.5564,
-    "hash": "38c0991d8de50bc4aa93bf4cc90e9cb6"
+    "mtime": 1784613389988.71,
+    "hash": "953b22a11bbb6b9bfc0e8a106b99b72c"
   },
   "api/src/routes/goapply/goapply-job-assistant.js": {
-    "mtime": 1784048092278.9932,
-    "hash": "03777bf43349ac311086e73b981ad6d1"
+    "mtime": 1784612646113.2302,
+    "hash": "8477d0a5429f9092abac428fe6ec0b6b"
   },
   "api/src/routes/goapply/goapply-profile.js": {
-    "mtime": 1783927170084.0022,
-    "hash": "582d25682b4124ff15627b506323da5a"
+    "mtime": 1784613407238.984,
+    "hash": "1513567f53083f424cb548c3facb0113"
   },
   "api/src/routes/goapply/goapply-saved-answers.js": {
     "mtime": 1783927170084.0022,
@@ -1400,8 +1400,8 @@
     "hash": "ce8a30e8324dfc5468b84b2ade1c9f92"
   },
   "api/src/services/ai-session/resume-chatbot.js": {
-    "mtime": 1784044422106.3225,
-    "hash": "8f029934a1d63cafb6205690c04405a8"
+    "mtime": 1784612660209.2278,
+    "hash": "76fcbc54c1491f98d3b65f071c26024d"
   },
   "api/src/services/ai-session/social-post.js": {
     "mtime": 1784044422106.3225,
@@ -1460,8 +1460,8 @@
     "hash": "b34a11085c2d2dc7c5c0294d0b1d7c6a"
   },
   "api/src/services/content/resume-chatbot-prompts.js": {
-    "mtime": 1783927170091.8508,
-    "hash": "eae0b00adbdcf0ba56ee48b29ea00547"
+    "mtime": 1784612711341.329,
+    "hash": "dc36da73b3ecefda5123dab036da2037"
   },
   "api/src/services/content/skill-tag-matcher.js": {
     "mtime": 1784044422106.3225,
@@ -1492,8 +1492,8 @@
     "hash": "be408f626b028080c576abea70671f2f"
   },
   "api/src/services/extension/extension-agent-tools.js": {
-    "mtime": 1784565632277.5989,
-    "hash": "58087a595f3657d13d371f6fe56a02cd"
+    "mtime": 1784612951329.1353,
+    "hash": "6d4acd11bea75b25d15346118e47b0b9"
   },
   "api/src/services/github/github-service.js": {
     "mtime": 1783927170091.8508,
@@ -1532,8 +1532,8 @@
     "hash": "bc9d1f8001b06d492ce08739f0bb4336"
   },
   "api/src/services/goapply/web-search-tool.js": {
-    "mtime": 1784564864919.4365,
-    "hash": "5992edbe2d50b754ae86d1e1df89c893"
+    "mtime": 1784612610271.5952,
+    "hash": "55f6d98706c7d1a17143aee2ee4e9f31"
   },
   "api/src/utils/content-access.js": {
     "mtime": 1783925997106.169,
@@ -1672,8 +1672,8 @@
     "hash": "b2411369d2e6b8db1a2964f68b747bc3"
   },
   "api/src/routes/goapply/goapply-job-applications.test.js": {
-    "mtime": 1784497316749.7478,
-    "hash": "530b6a9e401822c6562089f82a0e39f2"
+    "mtime": 1784614238715.6382,
+    "hash": "e093332b9c53ddef661e7708d96bc44f"
   },
   "api/src/services/content/portfolio-agent-tools.js": {
     "mtime": 1784565087679.1973,
@@ -1704,15 +1704,15 @@
     "hash": "498a82145c847b79bf512657380d8095"
   },
   "extension/side-panel.js": {
-    "mtime": 1784500060266.6877,
-    "hash": "27b1fba03bec7678af4a34359e06f3ac"
+    "mtime": 1784614291576.272,
+    "hash": "1919751b70007489925b7413f4913b78"
   },
   "extension/CLAUDE_BROWSER_PARITY.md": {
-    "mtime": 1784497382749.5234,
-    "hash": "70ba8681957ae792b15fd79255fbdfa6"
+    "mtime": 1784612981163.3352,
+    "hash": "0879e535fe9245b1c8347916ae7508bc"
   },
   "extension/side-panel.html": {
-    "mtime": 1784497764901.5642,
-    "hash": "adb8ab9fc0431f9e943d239ea2272b6a"
+    "mtime": 1784613602341.4949,
+    "hash": "af8958ab0c3c50466df500f397071e02"
   }
 }

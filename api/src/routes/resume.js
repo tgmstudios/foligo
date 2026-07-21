@@ -53,6 +53,9 @@ RULES:
 - Use the edit_resume_section tool for small, targeted changes (wording, a bullet, a date, a section tweak). The "search" text must match the current document verbatim and uniquely.
 - Use the write_resume tool only for the first draft or large restructures — it replaces the whole document, so always output a complete, valid, compilable .tex file.
 - Use fetch_portfolio_item when you need more detail about a specific project/experience than its excerpt gives you.
+- The github_* tools (github_list_repos, github_browse_files, github_read_file, github_search_code) read the user's connected GitHub repositories — use them ONLY to gather real facts about the user's projects for resume bullets, starting with github_list_repos. They never operate on the resume itself.
+- Use web_search / pull_page only for public-web research (company facts, terminology, LaTeX package docs).
+- The CURRENT DOCUMENT above is always the up-to-date resume — it is your only source for existing resume text. NEVER call github_search_code, web_search, or any other lookup tool to find text in the current document; copy the "search" text for edit_resume_section directly from the document shown above.
 - After making edits, briefly tell the user what you changed and why, in plain prose (not LaTeX).
 - Keep the document compiling: balance braces/environments, don't invent LaTeX packages that aren't already \\usepackage'd unless you add the \\usepackage line too.`;
 }
@@ -118,11 +121,21 @@ router.post('/documents', [
   body('name').optional().trim().isLength({ min: 1, max: 255 }),
   body('content').optional().isString(),
   body('jobDescription').optional().isString(),
+  body('linkedJobId').optional({ nullable: true }).isString(),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ error: 'Validation Error', message: 'Invalid input data', details: errors.array() });
+    }
+
+    // Same ownership gate as PATCH /documents/:id — a résumé created for a job
+    // (e.g. straight from the browser extension) can be linked in one call.
+    if (req.body.linkedJobId) {
+      const job = await prisma.jobApplication.findFirst({ where: { id: req.body.linkedJobId, userId: req.user.id } });
+      if (!job) {
+        return res.status(400).json({ error: 'Validation Error', message: 'linkedJobId does not refer to one of your tracked jobs' });
+      }
     }
 
     const defaultDocument = req.body.content === undefined
@@ -135,6 +148,7 @@ router.post('/documents', [
         name: req.body.name || 'Untitled Resume',
         content,
         jobDescription: req.body.jobDescription || null,
+        linkedJobId: req.body.linkedJobId || null,
         chatHistory: [],
       },
     });

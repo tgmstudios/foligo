@@ -31,6 +31,21 @@ const PROFILE_URL_FIELDS = new Set([
   'twitter', 'behance', 'dribbble', 'website'
 ]);
 
+const MAX_JOB_CATEGORIES = 50;
+
+// The user-managed hiring-season categories are a String[] column, so they need
+// explicit array validation rather than the scalar PROFILE_PASSTHROUGH_FIELDS path.
+// Returns a cleaned array, or undefined when the caller didn't send the field, or
+// null when the value is present but not an array of strings (a validation error).
+function normalizeJobCategories(value) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) return null;
+  return [...new Set(value
+    .filter((item) => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean))].slice(0, MAX_JOB_CATEGORIES);
+}
+
 function isHttpUrl(value) {
   if (value === null || value === undefined || value === '') return true;
   if (typeof value !== 'string') return false;
@@ -358,10 +373,19 @@ router.put('/profile', async (req, res) => {
       });
     }
 
+    const jobCategories = normalizeJobCategories(req.body.jobCategories);
+    if (jobCategories === null) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'jobCategories must be an array of strings'
+      });
+    }
+
     const passthrough = {};
     for (const field of PROFILE_PASSTHROUGH_FIELDS) {
       if (req.body[field] !== undefined) passthrough[field] = req.body[field];
     }
+    if (jobCategories !== undefined) passthrough.jobCategories = jobCategories;
 
     const profile = await prisma.userProfile.upsert({
       where: { userId },

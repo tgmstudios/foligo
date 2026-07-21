@@ -41,10 +41,16 @@ async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, u
       messages.push({ role: 'user', content: initialMsg });
     }
 
-    // Merge resume-specific tools with GitHub tools (same library as every other chat)
+    // Merge resume-specific tools with GitHub tools (same library as every
+    // other chat). This non-streaming path dispatches tool calls itself via
+    // handleFunctionCall, so hand the SDK schema-only GitHub tools (execute
+    // stripped) — otherwise generateText would execute each call a first
+    // time internally, discard the result, and handleFunctionCall would then
+    // execute it again.
+    const githubTools = userId && sessionKey ? createGithubTools({ userId, sessionKey }) : {};
     const tools = {
       ...AI_RESUME_CHATBOT_TOOLS,
-      ...(userId && sessionKey ? createGithubTools({ userId, sessionKey }) : {}),
+      ...Object.fromEntries(Object.entries(githubTools).map(([name, def]) => [name, { ...def, execute: undefined }])),
     };
 
     logger.info('Calling AI for resume chatbot', { msgCount: messages.length });
@@ -63,7 +69,7 @@ async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, u
       logger.info('Resume chatbot - function call detected', {
         functionName: functionCalls[0].name
       });
-      return await handleFunctionCall({ name: functionCalls[0].name, args: functionCalls[0].args }, 'BLOG', { logger });
+      return await handleFunctionCall({ name: functionCalls[0].name, args: functionCalls[0].args }, 'BLOG', { logger, userId, sessionKey });
     }
 
     if (!responseText || responseText.trim().length === 0) {

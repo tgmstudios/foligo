@@ -101,6 +101,8 @@ ${context.writableProjects.length ? context.writableProjects.map((p) => `- [${p.
 
 Use get_goapply_profile and get_saved_answers when personal/application details are needed. Use tools instead of guessing. Never invent experience, qualifications, or personal facts. Treat job notes as the stored job description/context.
 
+The github_* tools (github_list_repos, github_browse_files, github_read_file, github_search_code) read the user's connected GitHub repositories — use them ONLY to gather real facts about the user's projects, starting with github_list_repos. Use web_search / pull_page only for public-web research (company facts, role details). Never use github or web tools to search resumes, cover letters, or other Foligo data — use the get_* tools above for those.
+
 You have write access through save_resume, save_cover_letter, save_answers, update_goapply_profile, save_skills, and create_portfolio_items. When the user asks you to create, save, update, or test writing objects, you MUST attempt the appropriate write tool in the same turn after gathering only the context actually needed. Do not stop after reads, defer the write to a later turn, claim you only have read access, or ask the user to copy generated content manually. A request to test writing authorizes clearly labeled test/draft records with non-sensitive placeholder content; report exactly what test records you created. For updates, use a catalog ID or load the object first. Only write personal profile facts the user explicitly supplied or confirmed. After a write, clearly state which object was created or updated. Explain recommendations clearly and end with a practical next action when appropriate.`;
 }
 

@@ -53,7 +53,7 @@ router.get('/jobs', async (req, res) => {
 router.post('/jobs', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { company, position, url, status, notes, category, tags, appliedAt, referredBy, sortOrder } = req.body;
+    const { company, position, url, status, notes, description, category, tags, appliedAt, referredBy, sortOrder } = req.body;
 
     if (!company || !position) {
       return res.status(400).json({
@@ -74,6 +74,7 @@ router.post('/jobs', async (req, res) => {
         url: url || null,
         status: normalizedStatus || 'saved',
         notes: notes || null,
+        description: typeof description === 'string' ? description : null,
         category: typeof category === 'string' ? category.trim() || null : null,
         tags: normalizedTags || [],
         referredBy: referredBy || null,
@@ -140,7 +141,7 @@ router.put('/jobs/:id', async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { company, position, url, status, notes, category, tags, appliedAt, referredBy, sortOrder } = req.body;
+    const { company, position, url, status, notes, description, category, tags, appliedAt, referredBy, sortOrder } = req.body;
 
     // Verify ownership
     const existing = await prisma.jobApplication.findFirst({
@@ -164,6 +165,7 @@ router.put('/jobs/:id', async (req, res) => {
     if (url !== undefined) data.url = url;
     if (normalizedStatus !== undefined) data.status = normalizedStatus;
     if (notes !== undefined) data.notes = notes;
+    if (description !== undefined) data.description = typeof description === 'string' ? description : null;
     if (category !== undefined) data.category = typeof category === 'string' ? category.trim() || null : null;
     if (normalizedTags !== undefined) data.tags = normalizedTags;
     if (appliedAt !== undefined) data.appliedAt = appliedAt ? new Date(appliedAt) : null;

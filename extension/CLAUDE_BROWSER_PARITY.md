@@ -35,7 +35,7 @@ The dump's browser tool surface includes:
 - `browser_batch`
 - `navigate`
 - `resize_window`
-- `gif_creator`
+- `gif_creator` (session recording → animated GIF, now implemented in GoApply)
 - `upload_image`
 - `get_page_text`
 - `tabs_context_mcp`
@@ -58,6 +58,12 @@ GoApply now follows the same ownership model for active work:
   JavaScript, trusted CDP mouse/keyboard input, sequential batches, window
   resize, screenshots, captured-image upload, console reads, and network reads
   are available to Foligo's AI tool loop.
+- Session GIF recording matches Claude's `gif_creator`: a group-scoped frame
+  store in the background worker captures each trusted action, navigation, and
+  screenshot; an offscreen document encodes the frames with gif.js and draws
+  the same overlays (click indicators, drag paths, action labels, progress
+  bar, watermark). Export either downloads the GIF or drag-drops it onto a page
+  target via the existing captured-image upload path.
 - Screenshot results are sent to the model as image parts rather than data-URL
   text.
 - Page navigation snapshots and group session storage preserve native
@@ -95,7 +101,9 @@ Chrome-owned pages (`chrome://`, the Web Store, and the native new-tab surface)
 cannot host extension content scripts; GoApply initializes an empty/protected
 tab onto an HTTP start page before replaying the requested command.
 
-Claude's native-host bridge, Claude-account cloud synchronization, managed
-enterprise policy, and branded GIF/workflow recording UI are product services,
-not browser-control primitives. They are not copied into Foligo; Foligo's own
-AI API, auth, history, scheduling, and document systems remain the authority.
+Claude's native-host bridge, Claude-account cloud synchronization, and managed
+enterprise policy are product services, not browser-control primitives. They
+are not copied into Foligo; Foligo's own AI API, auth, history, scheduling, and
+document systems remain the authority. The GIF recording *primitive*, however,
+is a browser-control capability and is now implemented (`gif_creator`); only
+Claude's branded workflow-recording UI chrome is omitted.

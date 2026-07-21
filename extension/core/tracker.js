@@ -37,6 +37,56 @@ const Tracker = (() => {
     return String(value || '').replace(/\s+/g, ' ').trim();
   }
 
+  const MAX_DESCRIPTION_CHARS = 8000;
+
+  // Turn HTML (JSON-LD JobPosting.description is often an HTML fragment) into
+  // readable plain text: drop tags, decode the handful of common entities, and
+  // collapse whitespace. Kept intentionally small — no DOM parsing of untrusted
+  // markup, just a text extraction for storage/AI context.
+  function htmlToPlainText(value) {
+    return String(value || '')
+      .replace(/<\s*(?:br|\/p|\/div|\/li|\/h[1-6])\s*>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&(?:quot|#34);/gi, '"')
+      .replace(/&(?:#39|apos|rsquo|lsquo);/gi, "'")
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .trim();
+  }
+
+  // Best-effort full role description. Prefer the structured JobPosting.description
+  // (most accurate, board-agnostic); otherwise fall back to the largest visible
+  // description/job-content block on the page. Capped so a huge page can't bloat
+  // the tracked record or the AI context window.
+  function extractJobDescription(posting) {
+    let text = '';
+    if (posting && typeof posting.description === 'string') {
+      text = htmlToPlainText(posting.description);
+    }
+    if (text.length < 200) {
+      const selectors = [
+        '[class*="job-description" i]', '[class*="jobDescription" i]',
+        '[data-testid*="description" i]', '[class*="description" i]',
+        '[id*="job-description" i]', 'article', 'main',
+      ];
+      for (const selector of selectors) {
+        let best = '';
+        for (const node of document.querySelectorAll(selector)) {
+          const candidate = cleanJobText(node.innerText || node.textContent);
+          if (candidate.length > best.length) best = candidate;
+        }
+        if (best.length > text.length) text = best;
+        if (text.length >= 400) break;
+      }
+    }
+    return text.slice(0, MAX_DESCRIPTION_CHARS);
+  }
+
   const GENERIC_BOARD_COMPANIES = new Set([
     'greenhouse', 'linkedin', 'indeed', 'workday', 'icims', 'lever',
     'ashby', 'smartrecruiters', 'brassring', 'job board', 'careers',
@@ -298,6 +348,7 @@ const Tracker = (() => {
       : isTrackableJobInfo(info) && info.platform
         ? 'medium'
         : 'low';
+    info.description = extractJobDescription(posting);
 
     return info;
   }
@@ -628,6 +679,10 @@ const Tracker = (() => {
       if (options.category !== undefined) metadata.category = options.category;
       if (options.tags !== undefined) metadata.tags = options.tags;
       if (options.notes !== undefined) metadata.notes = options.notes;
+      // Only overwrite the stored description when this track pass actually
+      // captured one, so re-tracking from a metadata-poor application step can't
+      // wipe a good description scraped from the original listing.
+      if (options.description) metadata.description = options.description;
       if (options.company) metadata.company = options.company;
       if (options.position) metadata.position = options.position;
       if (shouldPromoteSubmission || shouldApplyExplicitStatus || Object.keys(metadata).length) {
@@ -647,6 +702,7 @@ const Tracker = (() => {
         category: options.category,
         tags: options.tags,
         notes: options.notes,
+        description: options.description || jobInfo.description || undefined,
         ...(normalizedStatus === 'applied' ? { appliedAt: new Date().toISOString() } : {}),
         source: 'extension',
       });

@@ -180,6 +180,11 @@ const GoApplyAPI = (() => {
   // returns basic account identity.
   async function getGoApplyProfile() { return request('/api/goapply/profile'); }
   async function syncProfile(profile) { return request('/api/goapply/profile', { method: 'PUT', body: JSON.stringify(profile) }); }
+  // User-managed hiring-season categories, offered as the track-flow category
+  // dropdown. Stored on the GoApply profile so they sync with the dashboard.
+  async function saveJobCategories(jobCategories) {
+    return request('/api/goapply/profile', { method: 'PUT', body: JSON.stringify({ jobCategories }) });
+  }
 
   // ─── Jobs ───────────────────────────────────────────────────────
   async function getJobs(status) { return request('/api/goapply/jobs' + (status ? `?status=${status}` : '')); }
@@ -220,11 +225,31 @@ const GoApplyAPI = (() => {
   async function getResume(id) { return request(`/api/resume/documents/${id}`); }
   async function getResumePdf(id) { return requestBinary(`/api/resume/documents/${id}/pdf`); }
   async function compileResumePdf(id) { return requestBinary(`/api/resume/documents/${id}/compile`, { method: 'POST' }); }
+  async function updateResume(id, data) { return request(`/api/resume/documents/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  // Create a résumé tailored for a tracked job. Omitting `content` makes the API
+  // clone the user's default résumé template; linkedJobId attaches it to the job.
+  async function createResumeForJob({ name, jobId, jobDescription } = {}) {
+    return request('/api/resume/documents', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...(name ? { name } : {}),
+        ...(jobId ? { linkedJobId: jobId } : {}),
+        ...(jobDescription ? { jobDescription } : {}),
+      }),
+    });
+  }
 
   // ─── Cover Letters ──────────────────────────────────────────────
   async function getCoverLetters() { return request('/api/goapply/cover-letters'); }
   async function getCoverLetter(id) { return request(`/api/goapply/cover-letters/${id}`); }
   async function saveCoverLetter(data) { return request('/api/goapply/cover-letters', { method: 'POST', body: JSON.stringify(data) }); }
+  // Omitting `content` makes the API clone the user's default cover-letter template.
+  async function createCoverLetterForJob({ jobId, title } = {}) {
+    return request('/api/goapply/cover-letters', {
+      method: 'POST',
+      body: JSON.stringify({ title: title || 'Cover Letter', ...(jobId ? { jobId } : {}) }),
+    });
+  }
   async function setDefaultCoverLetter(id) { return request(`/api/goapply/cover-letters/${id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) }); }
   async function getCoverLetterPdf(id) { return requestBinary(`/api/goapply/cover-letters/${id}/pdf`); }
   async function compileCoverLetterPdf(id) { return requestBinary(`/api/goapply/cover-letters/${id}/compile`, { method: 'POST' }); }
@@ -405,11 +430,11 @@ const GoApplyAPI = (() => {
     getToken, setToken, checkAuth,
     getAIPreference, setAIPreference,
     listAIProviders, testAIProvider,
-    getProfile, getGoApplyProfile, syncProfile,
+    getProfile, getGoApplyProfile, syncProfile, saveJobCategories,
     getJobs, trackJob, updateJob, deleteJob,
     getKanban, reorderCards,
-    getResumes, getResume, getResumePdf, compileResumePdf,
-    getCoverLetters, getCoverLetter, saveCoverLetter, setDefaultCoverLetter, getCoverLetterPdf, compileCoverLetterPdf,
+    getResumes, getResume, getResumePdf, compileResumePdf, updateResume, createResumeForJob,
+    getCoverLetters, getCoverLetter, saveCoverLetter, createCoverLetterForJob, setDefaultCoverLetter, getCoverLetterPdf, compileCoverLetterPdf,
     getAnswers, saveAnswer,
     generateCoverLetter, tailorResume, generateEmail, generateCustomAnswer,
     openAgentPort, getAgentCapabilities, buildAgentRequest,

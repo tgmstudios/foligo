@@ -640,7 +640,8 @@ const AgentController = (() => {
     const image = await backgroundBrowserTool('captured-image', { imageId });
     if (!image?.ok || !image.dataUrl) return { applied: false, note: image?.error || 'Captured image is unavailable.' };
     const blob = await fetch(image.dataUrl).then((response) => response.blob());
-    const file = new File([blob], `goapply-capture-${imageId.slice(0, 8)}.png`, { type: blob.type || 'image/png' });
+    const extension = (blob.type || 'image/png').split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+    const file = new File([blob], `goapply-capture-${imageId.slice(0, 8)}.${extension}`, { type: blob.type || 'image/png' });
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(file);
     const input = target.matches?.('input[type="file"]')
@@ -854,6 +855,30 @@ const AgentController = (() => {
     return runApplicationFlow({ mode, messages, context: buildContext(), onEvent }, advancesLeft - 1);
   }
 
+  // Page-mutating DOM tools whose result an active gif_creator recording
+  // should capture. computer and navigate_browser are hooked in the service
+  // worker itself (with real coordinates), so they are not hinted here.
+  const GIF_RECORDABLE_TOOLS = new Map([
+    ['click_page_element', 'Click'],
+    ['type_in_page_element', 'Type'],
+    ['scroll_page', 'Scroll'],
+    ['form_input', 'Fill field'],
+    ['set_field_value', 'Fill field'],
+    ['set_field_values', 'Fill fields'],
+    ['select_field_option', 'Select option'],
+    ['set_checkbox_state', 'Toggle checkbox'],
+    ['click_element', 'Click'],
+    ['upload_image', 'Upload file'],
+    ['attach_document', 'Attach document'],
+  ]);
+
+  function hintGifFrame(toolName, output) {
+    if (!GIF_RECORDABLE_TOOLS.has(toolName) || !toolOutputSucceeded(toolName, output)) return;
+    try {
+      chrome.runtime.sendMessage({ action: 'gif-frame', label: GIF_RECORDABLE_TOOLS.get(toolName) }).catch(() => {});
+    } catch (error) {}
+  }
+
   async function executeClientTool(toolName, input, callContext = {}) {
     const tabScopedDomTools = new Set([
       'inspect_page', 'read_page', 'find', 'form_input', 'get_page_text',
@@ -862,6 +887,7 @@ const AgentController = (() => {
     if (tabScopedDomTools.has(toolName) && Number.isInteger(input?.tabId)) {
       const own = await chrome.runtime.sendMessage({ action: 'get-own-tab-id' }).catch(() => null);
       if (own?.tabId != null && input.tabId !== own.tabId) {
+        // The target tab's own controller hints the recorder for this call.
         return chrome.runtime.sendMessage({
           action: 'browser-tab-tool',
           tabId: input.tabId,
@@ -870,6 +896,12 @@ const AgentController = (() => {
         });
       }
     }
+    const output = await dispatchClientTool(toolName, input, callContext);
+    hintGifFrame(toolName, output);
+    return output;
+  }
+
+  async function dispatchClientTool(toolName, input, callContext = {}) {
     switch (toolName) {
       case 'set_field_value': return toolSetFieldValue(input);
       case 'set_field_values': return toolSetFieldValues(input);
@@ -912,6 +944,7 @@ const AgentController = (() => {
       case 'tabs_close_mcp': return backgroundBrowserTool('close-tab', input);
       case 'resize_window': return backgroundBrowserTool('resize-window', input);
       case 'take_screenshot': return backgroundBrowserTool('screenshot');
+      case 'gif_creator': return backgroundBrowserTool('gif', input);
       case 'group_tabs': return backgroundBrowserTool('group-tabs', input);
       case 'download_file': return backgroundBrowserTool('download', input);
       case 'schedule_browser_task': return backgroundBrowserTool('schedule', input);

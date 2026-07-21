@@ -129,8 +129,18 @@ function createExtensionAgentServerTools(prisma, userId, aiManager, context = {}
   return {
     web_search,
     pull_page,
-    get_resume,
-    get_cover_letter,
+    // The job-assistant descriptions of these two read tools point at
+    // save_resume/save_cover_letter, which are not registered in the
+    // extension tool set — re-describe them so the model is never steered
+    // toward a tool it cannot call here.
+    get_resume: {
+      ...get_resume,
+      description: 'Load the full LaTeX content and job description of ONE of the user\'s Foligo resumes, by id (see list_foligo_documents for the catalog). Read-only — resumes cannot be created or edited from the extension.',
+    },
+    get_cover_letter: {
+      ...get_cover_letter,
+      description: 'Load the full LaTeX source of ONE of the user\'s saved Foligo cover letters, by id (see list_foligo_documents for the catalog). Read-only — saved letters cannot be created or edited from the extension; use generate_cover_letter to draft new text for the current page instead.',
+    },
     get_goapply_profile,
     get_saved_answers,
     save_answer: jobAssistantTool({
@@ -609,6 +619,24 @@ const CLIENT_AGENT_TOOL_DEFS = {
     description: 'Capture the visible area of the current tab. The result contains a data URL that the side panel can preview.',
     inputSchema: z.object({ tabId: z.number().int().optional() }),
   }),
+  gif_creator: tool({
+    description: 'Record the browser session as an animated GIF and export it, scoped to the current GoApply tab group. Flow: call action "start_recording", then immediately take_screenshot to capture the initial state as the first frame; subsequent browser actions (clicks, typing, scrolls, navigation) are captured automatically. Before "stop_recording", take_screenshot again to capture the final state. Then "export" with either download:true (save the .gif) or a coordinate [x,y] to drag-and-drop the GIF onto a page upload/drop target. Use "clear" to discard frames. Exported GIFs include click indicators, drag paths, action labels, a progress bar, and a watermark unless disabled via options.',
+    inputSchema: z.object({
+      action: z.enum(['start_recording', 'stop_recording', 'export', 'clear']),
+      tabId: z.number().int().optional().describe('Tab identifying which workspace group this applies to.'),
+      coordinate: z.array(z.number()).length(2).optional().describe('Viewport [x, y] for drag-and-drop upload. Required for export unless download is true.'),
+      download: z.boolean().optional().describe('If true, download the GIF instead of drag-dropping it. Export only.'),
+      filename: z.string().max(240).optional().describe('Optional filename for the exported GIF. Export only.'),
+      options: z.object({
+        showClickIndicators: z.boolean().optional(),
+        showDragPaths: z.boolean().optional(),
+        showActionLabels: z.boolean().optional(),
+        showProgressBar: z.boolean().optional(),
+        showWatermark: z.boolean().optional(),
+        quality: z.number().int().min(1).max(30).optional().describe('GIF quality, 1-30 (lower is higher quality). Default 10.'),
+      }).optional().describe('Optional GIF overlay/quality options for export.'),
+    }),
+  }),
   group_tabs: tool({
     description: 'Create or update a named Chrome tab group from tab ids returned by get_tabs.',
     inputSchema: z.object({
@@ -660,6 +688,7 @@ function getExtensionAgentCapabilities(prisma, userId, aiManager) {
       'job-application-autofill',
       'foligo-document-selection',
       'foligo-job-tracking',
+      'session-gif-recording',
       'interruptible-streaming',
     ],
   };
