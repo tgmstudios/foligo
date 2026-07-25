@@ -7,6 +7,11 @@ FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 # node-canvas build dependencies (alpine/musl)
 RUN apk add --no-cache python3 make g++ cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev
 
+# canvas 2.x has no compatible Node 22/musl prebuild.  Without this setting
+# node-pre-gyp waits for the GitHub download to time out before falling back to
+# the toolchain above.
+ENV npm_config_build_from_source=true
+
 WORKDIR /app
 
 RUN corepack enable
