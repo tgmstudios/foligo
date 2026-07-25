@@ -45,6 +45,10 @@ export function useChatSessions(scope: ChatSessionScope, getContextId: () => str
     return data as SavedChatSession
   }
 
+  function clearActive() {
+    activeSessionId.value = null
+  }
+
   async function save(chatHistory: Array<{ role: string; content: string }>, metadata?: Record<string, any>) {
     if (!activeSessionId.value) await create(metadata)
     const { data } = await api.put(`/ai/chat-sessions/${activeSessionId.value}`, { chatHistory, metadata })
@@ -54,5 +58,5 @@ export function useChatSessions(scope: ChatSessionScope, getContextId: () => str
     return data as SavedChatSession
   }
 
-  return { sessions, activeSessionId, loadingSessions, refresh, create, open, save }
+  return { sessions, activeSessionId, loadingSessions, refresh, create, open, clearActive, save }
 }

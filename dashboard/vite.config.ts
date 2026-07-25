@@ -16,7 +16,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', '@wysimark/vue'],
+    include: ['react', 'react-dom'],
     esbuildOptions: {
       define: {
         global: 'globalThis',
@@ -30,7 +30,7 @@ export default defineConfig({
     postcss: './postcss.config.js',
   },
   server: {
-    port: 80,
+    port: 5173,
     host: true,
     allowedHosts: [
       'localhost',

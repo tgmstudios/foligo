@@ -1,9 +1,9 @@
 <template>
   <div v-if="isOpen" class="creator-overlay fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div class="flex min-h-screen items-center justify-center p-4 text-center">
       <div class="creator-backdrop fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
 
-      <div class="creator-card inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
+      <div class="creator-card w-full max-w-5xl bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all">
         <!-- Header -->
         <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 pt-6 pb-4">
           <div class="flex items-center justify-between">
@@ -31,13 +31,13 @@
         </div>
 
         <!-- Chat Interface -->
-        <div class="bg-gray-800 px-6 py-4">
+        <div class="creator-chat bg-gray-800 px-6 py-4">
           <div class="mb-4">
             <ChatSessionPicker
               :sessions="chatSessions.sessions.value"
               :active-session-id="chatSessions.activeSessionId.value"
-              :loading="chatSessions.loadingSessions.value"
-              :disabled="chat.streaming.value"
+              :loading="chatSessions.loadingSessions.value || loadingSavedChat"
+              :disabled="chat.streaming.value || loadingSavedChat"
               @select="openSavedChat"
               @new="newChat"
             />
@@ -75,7 +75,12 @@
           </div>
 
           <!-- Chat Messages -->
-          <div v-else-if="modeSelected" class="space-y-4 max-h-[600px] overflow-y-auto mb-4">
+          <div
+            v-else-if="modeSelected"
+            ref="chatScrollContainer"
+            class="creator-messages space-y-4 overflow-y-auto overscroll-contain mb-4"
+            @scroll="updateFollowState"
+          >
             <div
               v-for="message in chat.messages.value"
               :key="message.id"
@@ -201,10 +206,23 @@
               :disabled="!canRespond"
               placeholder="Type your message... (Shift+Enter for new line)"
               rows="1"
-              class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 resize-none overflow-hidden min-h-[44px] max-h-[200px]"
+              class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[44px] max-h-[200px]"
               style="line-height: 1.5;"
             ></textarea>
             <button
+              v-if="chat.streaming.value"
+              type="button"
+              @click="chat.stop"
+              title="Stop generating"
+              aria-label="Stop generating"
+              class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 h-[44px]"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="6" y="6" width="12" height="12" rx="1.5" />
+              </svg>
+            </button>
+            <button
+              v-else
               @click="sendMessage"
               :disabled="!canRespond || !currentMessage.trim()"
               class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed h-[44px]"
@@ -254,6 +272,10 @@ const selectedInteractionMode = ref<'text' | 'voice'>('text')
 const voiceAgentId = ref('')
 const currentMessage = ref('')
 const messageTextarea = ref<HTMLTextAreaElement | null>(null)
+const chatScrollContainer = ref<HTMLDivElement | null>(null)
+const shouldFollowChat = ref(true)
+const loadingSavedChat = ref(false)
+let savedChatLoadId = 0
 
 const chatSessions = useChatSessions('content-creator', () => props.projectId)
 
@@ -265,6 +287,22 @@ const chat = useAgenticChat(
 )
 
 const canRespond = computed(() => !chat.streaming.value && modeSelected.value && selectedInteractionMode.value === 'text')
+
+function updateFollowState() {
+  const container = chatScrollContainer.value
+  if (!container) return
+  // A tiny threshold accounts for fractional layout pixels and lets someone
+  // who has just reached the bottom continue following a streamed response.
+  shouldFollowChat.value = container.scrollHeight - container.scrollTop - container.clientHeight <= 4
+}
+
+function followChatIfNeeded() {
+  if (!shouldFollowChat.value) return
+  nextTick(() => {
+    const container = chatScrollContainer.value
+    if (container) container.scrollTop = container.scrollHeight
+  })
+}
 
 const TOOL_LABELS: Record<string, { done: string; error: string }> = {
   list_posts: { done: 'Searched your posts', error: 'Search failed' },
@@ -319,15 +357,18 @@ onMounted(loadVoiceConfig)
 
 const open = async () => {
   isOpen.value = true
+  chat.reset()
+  chatSessions.clearActive()
   await chatSessions.refresh()
-  await newChat()
   nextTick(() => {
     if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
   })
 }
 
-const newChat = async () => {
-  await chatSessions.create()
+const newChat = () => {
+  savedChatLoadId += 1
+  loadingSavedChat.value = false
+  chatSessions.clearActive()
   modeSelected.value = false
   selectedInteractionMode.value = 'text'
   chat.reset()
@@ -335,16 +376,33 @@ const newChat = async () => {
 }
 
 const openSavedChat = async (id: string) => {
-  const session = await chatSessions.open(id)
-  chat.loadHistory(session.chatHistory || [])
-  selectedInteractionMode.value = 'text'
-  modeSelected.value = true
+  if (!id || loadingSavedChat.value) return
+  const loadId = ++savedChatLoadId
+  loadingSavedChat.value = true
+  try {
+    const session = await chatSessions.open(id)
+    // Ignore a response for a chat that was superseded by a new selection,
+    // a new chat, or a closed modal while the request was pending.
+    if (!isOpen.value || loadId !== savedChatLoadId) return
+    chat.loadHistory(session.chatHistory || [])
+    selectedInteractionMode.value = 'text'
+    modeSelected.value = true
+    shouldFollowChat.value = true
+    followChatIfNeeded()
+  } catch (error) {
+    console.error('Failed to open saved chat', error)
+  } finally {
+    if (loadId === savedChatLoadId) loadingSavedChat.value = false
+  }
 }
 
 const close = () => {
+  savedChatLoadId += 1
+  loadingSavedChat.value = false
   isOpen.value = false
   modeSelected.value = false
   chat.reset()
+  chatSessions.clearActive()
   currentMessage.value = ''
   if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
 }
@@ -360,7 +418,11 @@ const selectMode = async (mode: 'text' | 'voice') => {
   selectedInteractionMode.value = mode
   modeSelected.value = true
   if (mode === 'voice') await startVoiceSession()
-  else showGreeting()
+  else {
+    shouldFollowChat.value = true
+    showGreeting()
+    followChatIfNeeded()
+  }
 }
 
 const adjustTextareaHeight = () => {
@@ -382,6 +444,8 @@ const sendMessage = async () => {
   if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
   await chat.sendMessage(text)
 }
+
+watch(() => chat.messages.value, followChatIfNeeded, { deep: true })
 
 const startVoiceSession = async () => {
   const projectId = props.projectId
@@ -514,6 +578,21 @@ defineExpose({ open, close })
 </script>
 
 <style scoped>
-.creator-card { transform-origin: center; }
+.creator-card {
+  transform-origin: center;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+.creator-chat {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.creator-messages {
+  min-height: 0;
+  flex: 1 1 auto;
+}
 .creator-backdrop { transition: background-color 700ms ease, backdrop-filter 700ms ease; }
 </style>

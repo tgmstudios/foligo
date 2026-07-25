@@ -1,6 +1,10 @@
 <template>
   <div class="chat-sidebar flex-1 flex flex-col min-h-0 min-w-0 overflow-x-hidden">
-    <div class="flex-1 min-w-0 overflow-x-hidden overflow-y-auto p-4 space-y-4" ref="scrollContainer">
+    <div
+      ref="scrollContainer"
+      class="flex-1 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain p-4 space-y-4"
+      @scroll="updateFollowState"
+    >
       <div v-if="messages.length === 0" class="text-center py-10 text-gray-400 text-sm px-4">
         {{ emptyStateText }}
       </div>
@@ -152,6 +156,7 @@ const pendingFiles = ref<File[]>([])
 const fileInput = ref<HTMLInputElement>()
 const textarea = ref<HTMLTextAreaElement>()
 const scrollContainer = ref<HTMLDivElement>()
+const shouldFollowChat = ref(true)
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -267,7 +272,16 @@ function newline(event: KeyboardEvent) {
   })
 }
 
+function updateFollowState() {
+  const container = scrollContainer.value
+  if (!container) return
+  // Stay with a streamed reply only while the reader remains at the bottom.
+  // The threshold also treats a just-completed scroll-to-bottom as following.
+  shouldFollowChat.value = container.scrollHeight - container.scrollTop - container.clientHeight <= 4
+}
+
 watch(() => props.messages, () => {
+  if (!shouldFollowChat.value) return
   nextTick(() => {
     if (scrollContainer.value) {
       scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight

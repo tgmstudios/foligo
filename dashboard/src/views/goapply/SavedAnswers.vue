@@ -177,18 +177,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useGoApplyStore, type SavedAnswer } from '@/stores/goapply'
 import { formatDistanceToNow } from 'date-fns'
 import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
+import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 
 const store = useGoApplyStore()
 
 const showForm = ref(false)
 const editingAnswer = ref<SavedAnswer | null>(null)
-const search = ref('')
-const categoryFilter = ref('all')
-const sort = ref<'updated' | 'question-asc' | 'question-desc'>('updated')
+const PREFERENCE_KEY = 'goapply-saved-answer-preferences'
+const PREFERENCE_VERSION = 1
+const SORT_OPTIONS = ['updated', 'question-asc', 'question-desc'] as const
+const savedPreferences = readPreferenceCookie<Partial<{ search: string; category: string; sort: string }>>(PREFERENCE_KEY, PREFERENCE_VERSION)
+const search = ref(typeof savedPreferences?.search === 'string' ? savedPreferences.search : '')
+const categoryFilter = ref(typeof savedPreferences?.category === 'string' ? savedPreferences.category : 'all')
+const sort = ref<typeof SORT_OPTIONS[number]>(SORT_OPTIONS.includes(savedPreferences?.sort as typeof SORT_OPTIONS[number]) ? savedPreferences!.sort as typeof SORT_OPTIONS[number] : 'updated')
+
+if (savedPreferences && (
+  (savedPreferences.search !== undefined && typeof savedPreferences.search !== 'string') ||
+  (savedPreferences.category !== undefined && typeof savedPreferences.category !== 'string') ||
+  (savedPreferences.sort !== undefined && !SORT_OPTIONS.includes(savedPreferences.sort as typeof SORT_OPTIONS[number]))
+)) clearPreferenceCookie(PREFERENCE_KEY)
+
+watch([search, categoryFilter, sort], () => {
+  writePreferenceCookie(PREFERENCE_KEY, PREFERENCE_VERSION, {
+    search: search.value, category: categoryFilter.value, sort: sort.value,
+  })
+}, { flush: 'sync' })
 
 const categories = computed(() => {
   const set = new Set<string>()

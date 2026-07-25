@@ -2,3 +2,13 @@ packages:
   - api
   - dashboard
   - sites
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - '@scarf/scarf'
+  - '@parcel/watcher'
+  - esbuild
+  - canvas
+  - vue-demi

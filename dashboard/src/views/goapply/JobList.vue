@@ -191,19 +191,7 @@ watch([search, statusFilter, categoryFilter, tagFilter, sortBy], () => {
     search: search.value, status: statusFilter.value, category: categoryFilter.value,
     tag: tagFilter.value, sort: sortBy.value,
   })
-})
-
-const preferencesReady = ref(store.jobs.length > 0)
-let jobsLoadStarted = store.isLoading
-watch(() => store.isLoading, (loading) => {
-  if (loading) jobsLoadStarted = true
-  else if (jobsLoadStarted) preferencesReady.value = true
-}, { immediate: true })
-watch([preferencesReady, categories, tags], ([ready]) => {
-  if (!ready) return
-  if (categoryFilter.value && !categories.value.includes(categoryFilter.value)) categoryFilter.value = ''
-  if (tagFilter.value && !tags.value.includes(tagFilter.value)) tagFilter.value = ''
-}, { immediate: true })
+}, { flush: 'sync' })
 
 const filteredJobs = computed(() => {
   let jobs = store.jobs

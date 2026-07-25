@@ -189,19 +189,8 @@ watch([search, categoryFilter, tagFilter, sortBy], () => {
   writePreferenceCookie(PREFERENCE_COOKIE, PREFERENCE_VERSION, {
     search: search.value, category: categoryFilter.value, tag: tagFilter.value, sort: sortBy.value,
   })
-})
+}, { flush: 'sync' })
 
-const preferencesReady = ref(store.jobs.length > 0)
-let jobsLoadStarted = store.isLoading
-watch(() => store.isLoading, (loading) => {
-  if (loading) jobsLoadStarted = true
-  else if (jobsLoadStarted) preferencesReady.value = true
-}, { immediate: true })
-watch([preferencesReady, categories, tags], ([ready]) => {
-  if (!ready) return
-  if (categoryFilter.value && !categories.value.includes(categoryFilter.value)) categoryFilter.value = ''
-  if (tagFilter.value && !tags.value.includes(tagFilter.value)) tagFilter.value = ''
-}, { immediate: true })
 const canReorder = computed(() => sortBy.value === 'manual' && !search.value && !categoryFilter.value && !tagFilter.value)
 
 const visibleJobs = computed(() => {

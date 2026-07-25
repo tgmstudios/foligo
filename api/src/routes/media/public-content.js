@@ -49,17 +49,6 @@ router.get('/projects/:projectId/content', async (req, res) => {
         orderBy: { order: 'asc' }
       });
 
-      console.log(`Content query for project ${projectId}:`, {
-        projectId,
-        contentCount: content.length,
-        content: content.map(c => ({
-          id: c.id,
-          title: c.title,
-          contentType: c.contentType,
-          type: c.type
-        }))
-      });
-
       // Cache content data for 15 minutes
       await cache.set(cacheKey, content, 900);
     }
@@ -75,4 +64,3 @@ router.get('/projects/:projectId/content', async (req, res) => {
 });
 
 module.exports = router;
-

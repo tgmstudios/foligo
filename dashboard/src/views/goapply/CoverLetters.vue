@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import '@/studio/adapters'
 import { getAdapter } from '@/studio/registry'
@@ -98,6 +98,7 @@ import { useGoApplyStore } from '@/stores/goapply'
 import { formatRelativeDate } from '@/utils/formatRelativeDate'
 import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
 import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
+import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 
 const router = useRouter()
 const adapter = getAdapter('cover-letter')
@@ -106,10 +107,28 @@ const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cl
 const creating = ref(false)
 const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<CoverLetterDocument | null>(null)
-const search = ref('')
-const filter = ref<'all' | 'linked' | 'template' | 'default'>('all')
-const categoryFilter = ref('all')
-const sort = ref<'updated' | 'name-asc' | 'name-desc'>('updated')
+const PREFERENCE_KEY = 'goapply-cover-letter-preferences'
+const PREFERENCE_VERSION = 1
+const FILTER_OPTIONS = ['all', 'linked', 'template', 'default'] as const
+const SORT_OPTIONS = ['updated', 'name-asc', 'name-desc'] as const
+const savedPreferences = readPreferenceCookie<Partial<{ search: string; filter: string; category: string; sort: string }>>(PREFERENCE_KEY, PREFERENCE_VERSION)
+const search = ref(typeof savedPreferences?.search === 'string' ? savedPreferences.search : '')
+const filter = ref<typeof FILTER_OPTIONS[number]>(FILTER_OPTIONS.includes(savedPreferences?.filter as typeof FILTER_OPTIONS[number]) ? savedPreferences!.filter as typeof FILTER_OPTIONS[number] : 'all')
+const categoryFilter = ref(typeof savedPreferences?.category === 'string' ? savedPreferences.category : 'all')
+const sort = ref<typeof SORT_OPTIONS[number]>(SORT_OPTIONS.includes(savedPreferences?.sort as typeof SORT_OPTIONS[number]) ? savedPreferences!.sort as typeof SORT_OPTIONS[number] : 'updated')
+
+if (savedPreferences && (
+  (savedPreferences.search !== undefined && typeof savedPreferences.search !== 'string') ||
+  (savedPreferences.filter !== undefined && !FILTER_OPTIONS.includes(savedPreferences.filter as typeof FILTER_OPTIONS[number])) ||
+  (savedPreferences.category !== undefined && typeof savedPreferences.category !== 'string') ||
+  (savedPreferences.sort !== undefined && !SORT_OPTIONS.includes(savedPreferences.sort as typeof SORT_OPTIONS[number]))
+)) clearPreferenceCookie(PREFERENCE_KEY)
+
+watch([search, filter, categoryFilter, sort], () => {
+  writePreferenceCookie(PREFERENCE_KEY, PREFERENCE_VERSION, {
+    search: search.value, filter: filter.value, category: categoryFilter.value, sort: sort.value,
+  })
+}, { flush: 'sync' })
 
 const categories = computed(() =>
   [...new Set(goApplyStore.jobs.map(job => job.category).filter((value): value is string => Boolean(value)))].sort()
