@@ -243,6 +243,27 @@ chrome.tabs.onCreated.addListener(async (tab) => {
  * origin, so job-board CORS policies cannot block Foligo profile/board sync.
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // A final application often navigates away before its content script can see
+  // the confirmation. Keep a short-lived handoff in the service worker so the
+  // confirmation document can verify success and promote the exact same card.
+  if (message?.action === 'submission-pending') {
+    chrome.storage.session.set({ goapplyPendingSubmission: message.pending })
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+  if (message?.action === 'submission-read') {
+    chrome.storage.session.get('goapplyPendingSubmission')
+      .then((stored) => sendResponse({ ok: true, pending: stored.goapplyPendingSubmission || null }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+  if (message?.action === 'submission-clear') {
+    chrome.storage.session.remove('goapplyPendingSubmission')
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
   // Content scripts don't know their own tab id; they ask here so streamed
   // agent events broadcast to the side panel can be tagged with it.
   if (message?.action === 'get-own-tab-id') {
