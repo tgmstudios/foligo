@@ -58,6 +58,7 @@
         "core/agent-controller.js",
         "core/boards.js",
         "core/banners.js",
+        "core/submission-state.js",
         "core/consent.js",
         "core/tutorial.js",
         "core/ui.js",
