@@ -81,16 +81,22 @@
             >
               <td class="px-4 py-3 text-sm text-white font-medium">{{ job.company }}</td>
               <td class="px-4 py-3 text-sm text-gray-300">
-                {{ job.position }}
-                <a
-                  v-if="job.url"
-                  :href="job.url"
-                  target="_blank"
-                  class="ml-1 text-primary-400 hover:underline"
-                  title="Open job posting"
-                >
-                  &#8599;
-                </a>
+                <div class="flex items-center gap-1">
+                  <span>{{ job.position }}</span>
+                  <a
+                    v-if="job.url"
+                    :href="job.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+                    title="Open job posting in a new tab"
+                    aria-label="Open job posting in a new tab"
+                  >
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14m-2 0v5a2 2 0 002 2h9a2 2 0 002-2v-9" />
+                    </svg>
+                  </a>
+                </div>
               </td>
               <td class="px-4 py-3 text-xs">
                 <div v-if="job.category" class="text-gray-300 mb-1">{{ job.category }}</div>

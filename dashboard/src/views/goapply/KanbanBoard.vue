@@ -81,16 +81,31 @@
                 <p class="text-xs text-gray-400 truncate mt-0.5">{{ job.position }}</p>
                 <p v-if="job.category" class="text-xs text-primary-300 truncate mt-1">{{ job.category }}</p>
               </div>
-              <!-- Edit button -->
-              <button
-                @click="openEditForm(job)"
-                class="ml-1 p-1 text-gray-500 hover:text-white transition-colors flex-shrink-0"
-                title="Edit job"
-              >
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
+              <div class="ml-1 flex flex-shrink-0 items-center gap-1">
+                <a
+                  v-if="job.url"
+                  :href="job.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="rounded p-1 text-gray-500 transition-colors hover:bg-gray-700 hover:text-white"
+                  title="Open job posting in a new tab"
+                  aria-label="Open job posting in a new tab"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14m-2 0v5a2 2 0 002 2h9a2 2 0 002-2v-9" />
+                  </svg>
+                </a>
+                <!-- Edit button -->
+                <button
+                  @click="openEditForm(job)"
+                  class="rounded p-1 text-gray-500 transition-colors hover:bg-gray-700 hover:text-white"
+                  title="Edit job"
+                >
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 00-2-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div v-if="job.tags.length" class="flex flex-wrap gap-1 mt-2">
