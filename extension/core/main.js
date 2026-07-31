@@ -35,6 +35,57 @@
     broadcastToSidePanel(tabId, { type: 'turn-complete', result });
   }
 
+  // ─── Submission handoff ───────────────────────────────────────────
+
+  // A successful final submit can replace this document entirely. The
+  // background worker owns this marker so the confirmation page can prove its
+  // own success state before promoting the job card.
+  async function persistPendingSubmission(jobInfo) {
+    if (typeof SubmissionState === 'undefined') return false;
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'submission-pending',
+        pending: SubmissionState.create(jobInfo),
+      });
+      return response?.ok === true;
+    } catch (error) {
+      warn('Could not persist pending submission:', error.message);
+      return false;
+    }
+  }
+
+  async function clearPendingSubmission() {
+    try { await chrome.runtime.sendMessage({ action: 'submission-clear' }); } catch (error) {}
+  }
+
+  async function recordConfirmedSubmission(jobInfo) {
+    await Tracker.trackApplication({ ...jobInfo, platform: platform?.platform }, 'applied');
+    await clearPendingSubmission();
+    UI.showSuccessModal(jobInfo);
+  }
+
+  async function recoverPendingSubmission() {
+    if (typeof SubmissionState === 'undefined') return false;
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'submission-read' });
+      const pending = response?.pending;
+      if (!SubmissionState.isRecoverable(pending)) {
+        if (pending) await clearPendingSubmission();
+        return false;
+      }
+      // Never promote merely because a page loaded. A confirmation signal must
+      // independently exist in the newly loaded document.
+      if (!SubmissionState.shouldPromote(pending, Tracker.detectSuccess(platform?.config))) return false;
+      const jobInfo = pending.jobInfo;
+      log('Recovered a verified submission after navigation.');
+      await recordConfirmedSubmission(jobInfo);
+      return true;
+    } catch (error) {
+      warn('Submission recovery failed:', error.message);
+      return false;
+    }
+  }
+
   // ─── Submit tracking ──────────────────────────────────────────────
 
   // Success is only inferred after the user actually clicks the real submit
@@ -47,12 +98,13 @@
     button.addEventListener('click', () => {
       if (successWatcher) return;
       const info = currentJobInfo || {};
+      // Start persistence before navigation. The background-owned marker is
+      // harmless unless this page or a later confirmation page proves success.
+      persistPendingSubmission(info);
       successWatcher = Tracker.watchForSuccess(platform?.config, async () => {
         log('Submitted!');
-        try {
-          await Tracker.trackApplication({ ...info, platform: platform?.platform }, 'applied');
-        } catch(e) { warn('Submission tracking failed:', e.message); }
-        UI.showSuccessModal(info);
+        try { await recordConfirmedSubmission(info); }
+        catch(e) { warn('Submission tracking failed:', e.message); }
       });
     }, { once: true });
   }
@@ -77,6 +129,7 @@
   async function startup() {
     await new Promise(r => Consent.showIfNeeded(r));
     await new Promise(r => Tutorial.start(r));
+    await recoverPendingSubmission();
     await start();
   }
 
