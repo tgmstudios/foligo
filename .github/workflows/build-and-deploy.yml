@@ -169,10 +169,11 @@ jobs:
         id: extract_branch
 
       - name: Redeploy Rancher
+        env:
+          RANCHER_TOKEN: ${{ secrets.RANCHER_TOKEN }}
         run: |
           url='https://rancher.tgm.one'
           cluster=c-lx99g
-          token=${{ secrets.RANCHER_TOKEN }}
           ts=$(date -u +%s)
 
           redeploy() {
@@ -180,7 +181,11 @@ jobs:
               local image="registry.tgm.one/foligo/$app:latest"
               local api_path="$url/k8s/clusters/$cluster/apis/apps/v1/namespaces/$namespace/deployments/$app"
               local http_code
-              http_code=$(curl -s -o /dev/stderr -w "%{http_code}" -u "$token" -k \
+              # Deployment responses include the complete Pod spec, including
+              # environment values. Discard every response body; log only the
+              # component name and HTTP status.
+              http_code=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+                --user "$RANCHER_TOKEN" --insecure \
                 -X PATCH \
                 -H "Content-Type: application/strategic-merge-patch+json" \
                 -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$ts\"}},\"spec\":{\"containers\":[{\"name\":\"$app\",\"image\":\"$image\",\"imagePullPolicy\":\"Always\"}]}}}}" \
