@@ -148,6 +148,15 @@
       @close="quickEditDoc = null"
       @saved="fetchDocuments"
     />
+
+    <NewResumeModal
+      :is-open="showNewResumeModal"
+      :documents="documents"
+      :jobs="goApplyStore.jobs"
+      :creating="creating"
+      @close="showNewResumeModal = false"
+      @create="handleCreateResume"
+    />
   </div>
 </template>
 
@@ -161,15 +170,17 @@ import { useGoApplyStore } from '@/stores/goapply'
 import { formatRelativeDate } from '@/utils/formatRelativeDate'
 import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
 import LinkedJobBadge from '@/components/goapply/LinkedJobBadge.vue'
+import NewResumeModal from '@/components/goapply/NewResumeModal.vue'
 import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 
 const router = useRouter()
 const adapter = getAdapter('resume')
 const goApplyStore = useGoApplyStore()
 
-const { documents, isLoading, fetchDocuments, createDocument, updateDocument, cloneDocument, deleteDocument } = useResumeDocuments()
+const { documents, isLoading, fetchDocuments, createDocument, loadDocument, updateDocument, cloneDocument, deleteDocument } = useResumeDocuments()
 
 const creating = ref(false)
+const showNewResumeModal = ref(false)
 const openMenuId = ref<string | null>(null)
 const quickEditDoc = ref<ResumeDocumentSummary | null>(null)
 const PREFERENCE_KEY = 'goapply-resume-preferences'
@@ -230,11 +241,27 @@ function openStudio(id: string) {
   router.push({ name: 'studio-resume', params: { id } })
 }
 
-async function handleNew() {
+function handleNew() {
+  showNewResumeModal.value = true
+}
+
+async function handleCreateResume(payload: { name: string; templateId: string; jobId: string; initialPrompt: string }) {
   creating.value = true
   try {
-    const doc = await createDocument()
-    openStudio(doc.id)
+    const content = payload.templateId ? (await loadDocument(payload.templateId)).content : undefined
+    const job = payload.jobId ? goApplyStore.jobs.find(j => j.id === payload.jobId) : undefined
+    const doc = await createDocument({
+      name: payload.name || undefined,
+      content,
+      jobDescription: job?.description || job?.notes || undefined,
+      linkedJobId: job?.id,
+    })
+    showNewResumeModal.value = false
+    router.push({
+      name: 'studio-resume',
+      params: { id: doc.id },
+      query: payload.initialPrompt ? { initialPrompt: payload.initialPrompt } : {},
+    })
   } finally {
     creating.value = false
   }

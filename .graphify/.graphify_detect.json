@@ -424,7 +424,7 @@
     "video": []
   },
   "total_files": 414,
-  "total_words": 374541,
+  "total_words": 374893,
   "needs_graph": true,
   "warning": null,
   "skipped_sensitive": [
@@ -433,8 +433,9 @@
   "graphifyignore_patterns": 14,
   "git": {
     "source_owner": "git",
-    "source_hash": "53cc33299c99ddd6031eb141b3ee0090b73b5796",
+    "source_hash": "b0436f7750108c0ef16109d8b5b278ebddc2f43a",
     "branches": [
+      "feat/goapply-workflow-resilience",
       "main"
     ],
     "max_commits": 200,
@@ -446,11 +447,11 @@
     "source": "default-auto",
     "root": ".",
     "git_root": ".",
-    "head": "53cc33299c99ddd6031eb141b3ee0090b73b5796",
+    "head": "b0436f7750108c0ef16109d8b5b278ebddc2f43a",
     "candidate_count": 540,
     "included_count": 414,
-    "excluded_untracked_count": 0,
-    "excluded_ignored_count": 121638,
+    "excluded_untracked_count": 1,
+    "excluded_ignored_count": 119689,
     "excluded_sensitive_count": 1,
     "missing_committed_count": 0,
     "warnings": [],

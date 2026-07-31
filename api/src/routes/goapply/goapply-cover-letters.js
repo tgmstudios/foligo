@@ -30,11 +30,17 @@ async function ensureCoverLetterPdfDir() {
   await fs.mkdir(COVER_LETTER_PDF_DIR, { recursive: true });
 }
 
-function buildCoverLetterSystemPrompt({ content, job, portfolioContext }) {
+function buildCoverLetterSystemPrompt({ content, job, portfolioContext, resumeDocuments }) {
   let portfolioSection = 'No portfolio content available.';
   if (portfolioContext.length > 0) {
     portfolioSection = 'AVAILABLE PORTFOLIO CONTENT (use fetch_portfolio_item for full details):\n' +
       portfolioContext.map((p) => `- [ID: ${p.id}] ${p.title || 'Untitled'} (${p.contentType})${p.excerpt ? `: ${p.excerpt}` : ''}`).join('\n');
+  }
+
+  let resumeDocumentsSection = 'No resume documents available.';
+  if (resumeDocuments.length > 0) {
+    resumeDocumentsSection = 'RESUME DOCUMENTS (use fetch_resume_document for the full LaTeX source):\n' +
+      resumeDocuments.map((d) => `- [ID: ${d.id}] ${d.name}${d.linkedJob ? ` (tailored for ${d.linkedJob.position} @ ${d.linkedJob.company})` : ''}`).join('\n');
   }
 
   return `You are an expert cover letter writer and LaTeX editor, working inside an agentic cover letter editor. You collaborate with the user to write and refine a LaTeX cover letter in real time.
@@ -48,10 +54,13 @@ ${job ? `TARGET JOB:\nCompany: ${job.company}\nPosition: ${job.position}\n${job.
 
 ${portfolioSection}
 
+${resumeDocumentsSection}
+
 RULES:
 - Use the edit_cover_letter_section tool for small, targeted changes (wording, a paragraph, a detail). The "search" text must match the current document verbatim and uniquely.
 - Use the write_cover_letter tool only for the first draft or large restructures — it replaces the whole document, so always output a complete, valid, compilable .tex file.
 - Use fetch_portfolio_item when you need more detail about a specific project/experience than its excerpt gives you.
+- Use fetch_resume_document when you want to keep this letter consistent with (or pull specific accomplishments from) one of the user's resumes — it only reads that resume, it never edits the current letter.
 - The github_* tools (github_list_repos, github_browse_files, github_read_file, github_search_code) read the user's connected GitHub repositories — use them ONLY to gather real facts about the user's projects worth mentioning in the letter, starting with github_list_repos. They never operate on the letter itself.
 - Use web_search / pull_page only for public-web research (company facts, role terminology).
 - The CURRENT DOCUMENT above is always the up-to-date letter — it is your only source for existing letter text. NEVER call github_search_code, web_search, or any other lookup tool to find text in the current document; copy the "search" text for edit_cover_letter_section directly from the document shown above.
@@ -323,18 +332,33 @@ router.post('/cover-letters/:id/chat', chatUpload.array('attachments', 5), async
 
   const doc = { content: letter.content };
   const tools = {
-    ...createCoverLetterEditorTools(doc, (postId) => fetchPortfolioItem(userId, postId)),
+    ...createCoverLetterEditorTools(
+      doc,
+      (postId) => fetchPortfolioItem(userId, postId),
+      (documentId) => prisma.resumeDocument.findFirst({ where: { id: documentId, userId } }),
+    ),
     ...createGithubTools({ userId, sessionKey: `cover-letter:${letter.id}` }),
   };
 
   let assistantText = '';
 
   try {
-    const portfolioContext = await getPortfolioContext(userId);
+    const [portfolioContext, resumeDocuments] = await Promise.all([
+      getPortfolioContext(userId),
+      prisma.resumeDocument.findMany({
+        where: { userId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true, name: true,
+          linkedJob: { select: { company: true, position: true } },
+        },
+      }),
+    ]);
     const systemInstruction = buildCoverLetterSystemPrompt({
       content: doc.content,
       job: letter.job,
       portfolioContext,
+      resumeDocuments,
     });
 
     for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {

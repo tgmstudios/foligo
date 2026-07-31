@@ -20,8 +20,8 @@
     "hash": "afea0039e0b96e7276a7feaa31349935"
   },
   "api/src/routes/resume.js": {
-    "mtime": 1784613422000,
-    "hash": "c900938ad772d37bd69070fdf0fb45a7"
+    "mtime": 1785518017645.272,
+    "hash": "c8540f2c4d9bc082024c5b352d8f382f"
   },
   "api/src/routes/users.js": {
     "mtime": 1783927170000,
@@ -192,8 +192,8 @@
     "hash": "9bcd24bb17473ce65148b0f3ec5734bd"
   },
   "dashboard/src/composables/useResumeDocuments.ts": {
-    "mtime": 1784045607000,
-    "hash": "fefc7ea90105c4c8d44a72f243fbfa72"
+    "mtime": 1785518579275.9683,
+    "hash": "c3e0e4047778fdc155ebe481745db488"
   },
   "dashboard/src/layouts/DashboardLayout.vue": {
     "mtime": 1784521834000,
@@ -352,8 +352,8 @@
     "hash": "edfb1904b16f0fc8a6a6db77c09d0f2f"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
-    "mtime": 1785018498593.6313,
-    "hash": "8463da05eba56d8ca1d5c2c715e9157b"
+    "mtime": 1785518627736.228,
+    "hash": "c9bf967f13e0ef389d18fecea52011b5"
   },
   "dashboard/src/views/goapply/SavedAnswers.vue": {
     "mtime": 1785018498597.6318,
@@ -392,8 +392,8 @@
     "hash": "463b69e9a3500828686b0bb35e53981f"
   },
   "dashboard/src/views/studio/EditorStudioView.vue": {
-    "mtime": 1784566425000,
-    "hash": "62278a60ff1f25744ea19248038cc450"
+    "mtime": 1785518644566.3018,
+    "hash": "da4c6df55f9e50f7edfc076823916210"
   },
   "dashboard/src/views/users/UsersView.vue": {
     "mtime": 1783886532000,
@@ -444,7 +444,7 @@
     "hash": "c02129e0010416b8e1d71002ca53afc8"
   },
   "extension/core/main.js": {
-    "mtime": 1784614890000,
+    "mtime": 1785517962099.6228,
     "hash": "080e7c5b63d96edfe2a97c3bb4db8503"
   },
   "extension/core/tracker.js": {
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1785018831600.5664,
-    "hash": "047e1cb60b6d8e41fa51fa546dcd333f"
+    "mtime": 1785518138149.1355,
+    "hash": "f894cfb98a3fdc96ad82298f41b07c78"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049000,
@@ -1016,7 +1016,7 @@
     "hash": "06643979f55fbbf06c52faddb81c3d4a"
   },
   "extension/background.js": {
-    "mtime": 1784612866000,
+    "mtime": 1785517962099.6228,
     "hash": "5a8eee8b88fb08b8c631c19bb0af9410"
   },
   ".claude/CLAUDE.md": {
@@ -1328,8 +1328,8 @@
     "hash": "77a08a96b2f7bca2dbba13d92ead5f5d"
   },
   "api/src/routes/goapply/goapply-cover-letters.js": {
-    "mtime": 1784612631000,
-    "hash": "59ecae21170c1b2e03aff39806b3c1bb"
+    "mtime": 1785518126183.938,
+    "hash": "06a708c92aa456e8de8fb1d83043b82e"
   },
   "api/src/routes/goapply/goapply-job-applications.js": {
     "mtime": 1784613389000,
@@ -1508,8 +1508,8 @@
     "hash": "231c0b4a54472aa6eb505e55dc4dbf10"
   },
   "api/src/services/goapply/cover-letter-editor-tools.js": {
-    "mtime": 1784564903000,
-    "hash": "10d20fd831b5f8c1692aa4d63b2fe37b"
+    "mtime": 1785518105215.8416,
+    "hash": "8e1b8b01bbb27f580fd835f2902bd37e"
   },
   "api/src/services/goapply/goapply-content-generation.js": {
     "mtime": 1783927170000,
@@ -1528,8 +1528,8 @@
     "hash": "9b019fa61d482b1c819e7a5346ef3972"
   },
   "api/src/services/goapply/resume-editor-tools.js": {
-    "mtime": 1784564917000,
-    "hash": "bc9d1f8001b06d492ce08739f0bb4336"
+    "mtime": 1785517990045.5752,
+    "hash": "f7de1f7c61555b0b060c5cae207a21e4"
   },
   "api/src/services/goapply/web-search-tool.js": {
     "mtime": 1784612610000,

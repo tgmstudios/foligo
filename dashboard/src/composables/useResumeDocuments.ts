@@ -48,7 +48,7 @@ export function useResumeDocuments() {
     }
   }
 
-  async function createDocument(params: { name?: string; content?: string; jobDescription?: string } = {}): Promise<ResumeDocument> {
+  async function createDocument(params: { name?: string; content?: string; jobDescription?: string; linkedJobId?: string } = {}): Promise<ResumeDocument> {
     const response = await api.post('/resume/documents', params)
     await fetchDocuments()
     return response.data

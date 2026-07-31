@@ -31,11 +31,17 @@ async function ensurePdfDir() {
   await fs.mkdir(PDF_STORAGE_DIR, { recursive: true });
 }
 
-function buildSystemPrompt({ content, jobDescription, portfolioContext }) {
+function buildSystemPrompt({ content, jobDescription, portfolioContext, otherDocuments }) {
   let portfolioSection = 'No portfolio content available.';
   if (portfolioContext.length > 0) {
     portfolioSection = 'AVAILABLE PORTFOLIO CONTENT (use fetch_portfolio_item for full details):\n' +
       portfolioContext.map((p) => `- [ID: ${p.id}] ${p.title || 'Untitled'} (${p.contentType})${p.excerpt ? `: ${p.excerpt}` : ''}`).join('\n');
+  }
+
+  let otherDocumentsSection = 'No other resume documents available.';
+  if (otherDocuments.length > 0) {
+    otherDocumentsSection = 'OTHER RESUME DOCUMENTS (use fetch_resume_document for the full LaTeX source):\n' +
+      otherDocuments.map((d) => `- [ID: ${d.id}] ${d.name}${d.linkedJob ? ` (tailored for ${d.linkedJob.position} @ ${d.linkedJob.company})` : ''}`).join('\n');
   }
 
   return `You are an expert resume writer and LaTeX editor, working inside an agentic resume editor. You collaborate with the user to write and refine a LaTeX resume in real time.
@@ -49,10 +55,13 @@ ${jobDescription ? `TARGET JOB DESCRIPTION:\n${jobDescription}\n` : 'No target j
 
 ${portfolioSection}
 
+${otherDocumentsSection}
+
 RULES:
 - Use the edit_resume_section tool for small, targeted changes (wording, a bullet, a date, a section tweak). The "search" text must match the current document verbatim and uniquely.
 - Use the write_resume tool only for the first draft or large restructures — it replaces the whole document, so always output a complete, valid, compilable .tex file.
 - Use fetch_portfolio_item when you need more detail about a specific project/experience than its excerpt gives you.
+- Use fetch_resume_document when the user asks to reuse, reference, or pull in content/formatting from another one of their resumes — it only reads that other document, it never edits the current one.
 - The github_* tools (github_list_repos, github_browse_files, github_read_file, github_search_code) read the user's connected GitHub repositories — use them ONLY to gather real facts about the user's projects for resume bullets, starting with github_list_repos. They never operate on the resume itself.
 - Use web_search / pull_page only for public-web research (company facts, terminology, LaTeX package docs).
 - The CURRENT DOCUMENT above is always the up-to-date resume — it is your only source for existing resume text. NEVER call github_search_code, web_search, or any other lookup tool to find text in the current document; copy the "search" text for edit_resume_section directly from the document shown above.
@@ -424,18 +433,33 @@ router.post('/documents/:id/chat', chatUpload.array('attachments', 5), (req, res
 
   const doc = { content: document.content };
   const tools = {
-    ...createResumeEditorTools(doc, (postId) => fetchPortfolioItem(userId, postId)),
+    ...createResumeEditorTools(
+      doc,
+      (postId) => fetchPortfolioItem(userId, postId),
+      (documentId) => prisma.resumeDocument.findFirst({ where: { id: documentId, userId } }),
+    ),
     ...createGithubTools({ userId, sessionKey: `resume-doc:${document.id}` }),
   };
 
   let assistantText = '';
 
   try {
-    const portfolioContext = await getPortfolioContext(userId);
+    const [portfolioContext, otherDocuments] = await Promise.all([
+      getPortfolioContext(userId),
+      prisma.resumeDocument.findMany({
+        where: { userId, id: { not: document.id } },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true, name: true,
+          linkedJob: { select: { company: true, position: true } },
+        },
+      }),
+    ]);
     const systemInstruction = buildSystemPrompt({
       content: doc.content,
       jobDescription: document.jobDescription,
       portfolioContext,
+      otherDocuments,
     });
 
     for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {

@@ -370,8 +370,13 @@ watch(() => route.params.id, (id) => {
   }
 })
 
-onMounted(() => {
-  openDocument(documentId.value)
+onMounted(async () => {
+  await openDocument(documentId.value)
+  const initialPrompt = typeof route.query.initialPrompt === 'string' ? route.query.initialPrompt : ''
+  if (initialPrompt) {
+    router.replace({ query: {} })
+    chat.sendMessage(initialPrompt)
+  }
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 

@@ -13,8 +13,10 @@ const { createPullPageTool } = require('./pull-page-tool');
 /**
  * @param {{ content: string }} doc - mutable box holding the current LaTeX source
  * @param {(postId: string) => Promise<object|null>} fetchPost - resolves a portfolio content item by id
+ * @param {(documentId: string) => Promise<object|null>} [fetchResumeDocument] - resolves one of the
+ *   user's resume documents (id, name, content, jobDescription) by id, for cross-referencing
  */
-function createCoverLetterEditorTools(doc, fetchPost) {
+function createCoverLetterEditorTools(doc, fetchPost, fetchResumeDocument) {
   const webSearch = createWebSearchTool({ toolFn: tool, z });
   const pullPage = createPullPageTool({ toolFn: tool, z });
 
@@ -65,6 +67,23 @@ function createCoverLetterEditorTools(doc, fetchPost) {
           contentType: post.contentType,
           content: post.content,
           excerpt: post.excerpt,
+        });
+      },
+    }),
+
+    fetch_resume_document: tool({
+      description: 'Fetch the full LaTeX source of one of the user\'s resume documents/templates, to reference its wording, achievements, or structure — for example, keeping the cover letter\'s tone and highlighted accomplishments consistent with the resume being submitted alongside it. Pick documentId from the "RESUME DOCUMENTS" list in your context; this does NOT edit the current letter, it only returns text for you to read.',
+      inputSchema: z.object({
+        documentId: z.string().describe('The UUID of the resume document to fetch, from the "RESUME DOCUMENTS" list.'),
+      }),
+      execute: async ({ documentId }) => {
+        if (!fetchResumeDocument) return 'No resume documents are available to fetch.';
+        const resume = await fetchResumeDocument(documentId);
+        if (!resume) return `No resume document found with id ${documentId}.`;
+        return JSON.stringify({
+          name: resume.name,
+          jobDescription: resume.jobDescription,
+          latex: resume.content,
         });
       },
     }),

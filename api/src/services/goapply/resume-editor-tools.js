@@ -13,8 +13,10 @@ const { createPullPageTool } = require('./pull-page-tool');
 /**
  * @param {{ content: string }} doc - mutable box holding the current LaTeX source
  * @param {(postId: string) => Promise<object|null>} fetchPost - resolves a portfolio content item by id
+ * @param {(documentId: string) => Promise<object|null>} [fetchResumeDocument] - resolves another one of the
+ *   user's resume documents (id, name, content, jobDescription) by id, for cross-referencing
  */
-function createResumeEditorTools(doc, fetchPost) {
+function createResumeEditorTools(doc, fetchPost, fetchResumeDocument) {
   const webSearch = createWebSearchTool({ toolFn: tool, z });
   const pullPage = createPullPageTool({ toolFn: tool, z });
 
@@ -65,6 +67,23 @@ function createResumeEditorTools(doc, fetchPost) {
           contentType: post.contentType,
           content: post.content,
           excerpt: post.excerpt,
+        });
+      },
+    }),
+
+    fetch_resume_document: tool({
+      description: 'Fetch the full LaTeX source of another one of the user\'s OTHER resume documents/templates (a past version, a different variant, or a template), to reference its formatting, structure, or wording — for example, reusing a section layout or pulling in content the user already wrote elsewhere. Pick documentId from the "OTHER RESUME DOCUMENTS" list in your context; this does NOT edit or affect the current document in any way, it only returns text for you to read.',
+      inputSchema: z.object({
+        documentId: z.string().describe('The UUID of the other resume document to fetch, from the "OTHER RESUME DOCUMENTS" list.'),
+      }),
+      execute: async ({ documentId }) => {
+        if (!fetchResumeDocument) return 'No other resume documents are available to fetch.';
+        const other = await fetchResumeDocument(documentId);
+        if (!other) return `No resume document found with id ${documentId}.`;
+        return JSON.stringify({
+          name: other.name,
+          jobDescription: other.jobDescription,
+          latex: other.content,
         });
       },
     }),
