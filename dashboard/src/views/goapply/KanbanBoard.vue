@@ -91,9 +91,7 @@
                   title="Open job posting in a new tab"
                   aria-label="Open job posting in a new tab"
                 >
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14m-2 0v5a2 2 0 002 2h9a2 2 0 002-2v-9" />
-                  </svg>
+                  <ArrowTopRightOnSquareIcon class="h-4 w-4" />
                 </a>
                 <!-- Edit button -->
                 <button
@@ -101,9 +99,7 @@
                   class="rounded p-1 text-gray-500 transition-colors hover:bg-gray-700 hover:text-white"
                   title="Edit job"
                 >
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 00-2-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
+                  <PencilSquareIcon class="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -178,6 +174,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { useGoApplyStore, JOB_STATUSES, KANBAN_COLUMNS, type JobStatus, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
 import { marked } from 'marked'
+import { ArrowTopRightOnSquareIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
 import JobForm from '@/views/goapply/JobForm.vue'
 import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 

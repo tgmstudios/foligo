@@ -336,16 +336,16 @@
     "hash": "bd28bf37e05091f25d131fbbe28cb7e7"
   },
   "dashboard/src/views/goapply/JobList.vue": {
-    "mtime": 1785018618066.9414,
-    "hash": "3eedd72f8de203cc5cd7a84061271158"
+    "mtime": 1785529895197.3455,
+    "hash": "f9c7c870d47b218a33c53166bb7ce56a"
   },
   "dashboard/src/views/goapply/JobTracker.vue": {
     "mtime": 1783903800000,
     "hash": "d3058cad6eabf92d02cbc108b7ab666d"
   },
   "dashboard/src/views/goapply/KanbanBoard.vue": {
-    "mtime": 1785018618066.9414,
-    "hash": "d77754103717f6ae9846969d7b576d8f"
+    "mtime": 1785529850509.709,
+    "hash": "89abfe1954d67f6048ec2ea01434cee4"
   },
   "dashboard/src/views/goapply/ProfileSettings.vue": {
     "mtime": 1784614172000,
@@ -444,8 +444,8 @@
     "hash": "c02129e0010416b8e1d71002ca53afc8"
   },
   "extension/core/main.js": {
-    "mtime": 1785517962099.6228,
-    "hash": "080e7c5b63d96edfe2a97c3bb4db8503"
+    "mtime": 1785518877274.3135,
+    "hash": "c6f0fc7a8f0a1ad412156b929a62c0d3"
   },
   "extension/core/tracker.js": {
     "mtime": 1784614871000,
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1785518138149.1355,
-    "hash": "f894cfb98a3fdc96ad82298f41b07c78"
+    "mtime": 1785528317794.3013,
+    "hash": "07a9da06006779566da074a70c3bb655"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049000,
@@ -1016,8 +1016,8 @@
     "hash": "06643979f55fbbf06c52faddb81c3d4a"
   },
   "extension/background.js": {
-    "mtime": 1785517962099.6228,
-    "hash": "5a8eee8b88fb08b8c631c19bb0af9410"
+    "mtime": 1785518877274.1768,
+    "hash": "14fbbb7e8c12858f3dfc9e95f1759c77"
   },
   ".claude/CLAUDE.md": {
     "mtime": 1783905422000,
@@ -1730,5 +1730,21 @@
   "extension/offscreen.html": {
     "mtime": 1784612763000,
     "hash": "4cadce1aed6f6f5edf6d382f44870866"
+  },
+  "dashboard/src/components/goapply/NewResumeModal.vue": {
+    "mtime": 1785518598929.2725,
+    "hash": "12ab103189565f0923c053ba04009700"
+  },
+  "extension/core/submission-state.js": {
+    "mtime": 1785518877274.3943,
+    "hash": "a69b4250ee133da50b622dafa20732dd"
+  },
+  "extension/tests/submission-handoff.integration.test.js": {
+    "mtime": 1785518877274.4353,
+    "hash": "bef6cf8b86d7edebb79c1132bcd952d2"
+  },
+  "extension/tests/submission-state.test.js": {
+    "mtime": 1785518877274.6426,
+    "hash": "e7418a4f7d21025b244876f46e23e1e6"
   }
 }
