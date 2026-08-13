@@ -20,6 +20,7 @@ module.exports = {
   listProviders: () => aim.listProviders(),
   testProvider: (type) => aim.testProvider(type),
   getProvider: (type, overrides) => aim.getProvider(type, overrides),
+  listAvailableModels: (type, overrides) => aim.listAvailableModels(type, overrides),
 
   // Direct access to manager for advanced use
   manager: aim,

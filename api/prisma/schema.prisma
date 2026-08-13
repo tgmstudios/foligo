@@ -433,6 +433,10 @@ model AiModel {
   endpoint     String?
   apiKey       String?
   headers      Json?
+  // { streaming, tools, vision, json, reasoning, maxTokens } — overrides the
+  // provider type's hardcoded defaults (see services/ai/providers/index.js)
+  // when present, so admins can tune per-model without a code change.
+  capabilities Json?
   modelType    String   @default("QUICK")
   enabled      Boolean  @default(true)
   isDefault    Boolean  @default(false)
@@ -441,6 +445,47 @@ model AiModel {
 
   @@index([modelType, enabled])
   @@map("ai_models")
+}
+
+// Per-provider connection defaults (endpoint/apiKey/headers) an admin can set
+// once instead of re-entering them on every AiModel under that provider.
+// AiModel-level fields still win when set — see toOverrides() in
+// services/ai/model-config.js.
+model AiProviderConfig {
+  id           String   @id @default(uuid())
+  providerType String   @unique
+  endpoint     String?
+  apiKey       String?
+  headers      Json?
+  enabled      Boolean  @default(true)
+  // Set when this provider authenticates via OAuth device-code login (e.g.
+  // "Sign in with ChatGPT" for codex) instead of a static API key. apiKey
+  // holds the current access token in that case; oauthRefreshToken lets
+  // getProviderConfig() silently renew it before it expires.
+  oauthRefreshToken String?
+  oauthExpiresAt    DateTime?
+  // ChatGPT account id from the OAuth id_token's "https://api.openai.com/auth"
+  // claim — codex needs this as a request header when calling the ChatGPT
+  // backend (not needed for plain API-key auth). Not a secret.
+  oauthAccountId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("ai_provider_configs")
+}
+
+// Explicit primary + fallback chain per task type, configured from the
+// "Default models & fallbacks" panel. order[0] is the primary model tried
+// first; order[1..] are fallbacks tried in sequence if earlier ones are
+// unavailable. Entries are AiModel ids. Absent for a modelType means "use
+// the implicit isDefault/createdAt ordering" (see model-config.js).
+model AiModelDefaults {
+  id        String   @id @default(uuid())
+  modelType String   @unique
+  order     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("ai_model_defaults")
 }
 
 // Voice AI configuration. Foligo currently supports ElevenLabs, but keeps the

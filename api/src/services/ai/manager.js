@@ -22,9 +22,33 @@
  */
 
 const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
-const { createProvider, listProviders, isProviderConfigured, SAFETY_SETTINGS } = require('./providers');
-const { resolveModel, listModelSelections, ensureBootstrapModels } = require('./model-config');
+const { createProvider, listProviders, isProviderConfigured, listAvailableModels, SAFETY_SETTINGS } = require('./providers');
+const { resolveModel, listModelSelections, ensureBootstrapModels, getDisabledProviderTypes } = require('./model-config');
 const { createAILogger } = require('../core/logger');
+
+/**
+ * Each key is only consulted by its matching provider — harmlessly ignored
+ * by the rest, same as passing extra keys to any of them.
+ *   - google.safetySettings: see top of file.
+ *   - openai.store: required by codex's ChatGPT-backend path
+ *     (chatgpt.com/backend-api/codex rejects requests where `store` isn't
+ *     explicitly false).
+ *   - openai.reasoningSummary: reasoning models (codex, gpt-5-thinking
+ *     family) still reason internally without this, but the Responses API
+ *     won't emit any reasoning-summary text to show in the UI's "thinking"
+ *     panel unless a summary is explicitly requested — gated on the active
+ *     provider actually being reasoning-capable so it isn't sent (and
+ *     rejected) for non-reasoning OpenAI models.
+ */
+function buildProviderOptions(provider) {
+  return {
+    google: { safetySettings: SAFETY_SETTINGS },
+    openai: {
+      store: false,
+      ...(provider.capabilities?.reasoning ? { reasoningSummary: 'detailed' } : {}),
+    },
+  };
+}
 
 class AIManager {
   constructor() {
@@ -86,9 +110,16 @@ class AIManager {
       this.logger.warn(`Could not build database AI fallback chain: ${error.message}`);
     }
 
+    let disabledProviders = new Set();
+    try {
+      disabledProviders = await getDisabledProviderTypes();
+    } catch (error) {
+      this.logger.warn(`Could not check disabled AI providers: ${error.message}`);
+    }
     const environmentSelections = [this._defaultProvider, ...this._fallbackChain]
       .filter((selection, index, all) => all.indexOf(selection) === index)
-      .filter(isProviderConfigured);
+      .filter(isProviderConfigured)
+      .filter(selection => !disabledProviders.has(selection));
 
     // A null selection preserves the legacy database-default/environment
     // lookup only when no concrete database candidates could be enumerated.
@@ -137,8 +168,7 @@ class AIManager {
       toolChoice,
       temperature,
       maxOutputTokens: maxTokens ?? provider.capabilities?.maxTokens,
-      // Only consulted by the Google provider; harmlessly ignored by others.
-      providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },
+      providerOptions: buildProviderOptions(provider),
     });
 
     const functionCalls = result.toolCalls?.length
@@ -242,7 +272,7 @@ class AIManager {
         stopWhen: stepCountIs(externalToolLoop ? 1 : (maxSteps ?? 30)),
         temperature,
         maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
-        providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },
+        providerOptions: buildProviderOptions(prov),
       });
 
       const iterator = result.fullStream[Symbol.asyncIterator]();
@@ -334,7 +364,7 @@ class AIManager {
           messages: [{ role: 'user', content: prompt }],
           temperature,
           maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
-          providerOptions: { google: { safetySettings: SAFETY_SETTINGS } },
+          providerOptions: buildProviderOptions(prov),
         });
 
         for await (const part of result.fullStream) {
@@ -380,6 +410,15 @@ class AIManager {
 
   clearProviderCache() {
     this._providers.clear();
+  }
+
+  /**
+   * Discover models exposed by a live OpenAI-compatible provider (GET /models).
+   * @param {string} type — provider type
+   * @param {object} overrides — { endpoint, apiKey, headers }
+   */
+  async listAvailableModels(type, overrides = {}) {
+    return listAvailableModels(type, overrides);
   }
 
   /**

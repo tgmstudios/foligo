@@ -32,16 +32,16 @@
     "hash": "fdfb67545fd58d23ee576eddf4e36cad"
   },
   "api/src/services/ai/index.js": {
-    "mtime": 1783727156000,
-    "hash": "973e64e56446a9914fb039a17aaa5d03"
+    "mtime": 1786574985272.9797,
+    "hash": "c0f7fc76dd231772b56f52e6fe2de4be"
   },
   "api/src/services/ai/manager.js": {
-    "mtime": 1784567224000,
-    "hash": "b0f04ab9eff6f12728a34f097f868150"
+    "mtime": 1786579949980.1777,
+    "hash": "c97e451c1562d5811a74766676c920db"
   },
   "api/src/services/ai/providers/index.js": {
-    "mtime": 1784567625000,
-    "hash": "f67dcee8620964ab5b822c4d491cc37a"
+    "mtime": 1786580142716.73,
+    "hash": "0a4f53bf52b9bc5f97c239289537f34c"
   },
   "api/src/utils/encryption.js": {
     "mtime": 1763329672000,
@@ -56,12 +56,12 @@
     "hash": "6975a4b69538bdd3885f845c9ef12ee3"
   },
   "dashboard/src/components/AIContentCreatorModal.vue": {
-    "mtime": 1785018132914.0974,
-    "hash": "4a7f04df1fd643e2e1f22dba4bb524d8"
+    "mtime": 1785796503544.3203,
+    "hash": "b4399c184d25a457cc08d15cd8cb9534"
   },
   "dashboard/src/components/agentic-editor/ChatSidebar.vue": {
-    "mtime": 1785016349945.9211,
-    "hash": "d0ce1a1fa67dcd4f406e4e9b55f71401"
+    "mtime": 1785796421459.2546,
+    "hash": "2988d6bd5fe87dcbb848a6b1541f5fa6"
   },
   "dashboard/src/components/agentic-editor/DocumentEditor.vue": {
     "mtime": 1784044422000,
@@ -160,8 +160,8 @@
     "hash": "1d78b43fb03172f941e407490c9a0c4d"
   },
   "dashboard/src/components/studio/StudioChatSidebar.vue": {
-    "mtime": 1784566419000,
-    "hash": "8ef233778d1c04380c61b492129b5c2a"
+    "mtime": 1785796434466.131,
+    "hash": "52c0ecfb840477b38fc2b6200f6d72ab"
   },
   "dashboard/src/components/studio/StudioHeader.vue": {
     "mtime": 1783904546000,
@@ -176,8 +176,8 @@
     "hash": "f48884f89071201480703b9d72892cb5"
   },
   "dashboard/src/composables/useAgenticChat.ts": {
-    "mtime": 1784566357000,
-    "hash": "dfa62e6520742040dcf098fd5d94f352"
+    "mtime": 1785796361927.12,
+    "hash": "022df2de22116b8511dd746c07f39e6a"
   },
   "dashboard/src/composables/useAutosave.ts": {
     "mtime": 1783877903000,
@@ -232,8 +232,8 @@
     "hash": "2b5d0bcab2631e914daced83814354b9"
   },
   "dashboard/src/stores/goapply.ts": {
-    "mtime": 1784614088000,
-    "hash": "4e124c8e0b39bdf3a402678eaa12fd9b"
+    "mtime": 1785798275798.458,
+    "hash": "25ad1da9bc2d8c7dc511e805d8db9256"
   },
   "dashboard/src/stores/projects.ts": {
     "mtime": 1784521834000,
@@ -328,15 +328,15 @@
     "hash": "26abad9a3fa268872c7eb66cebbe0603"
   },
   "dashboard/src/views/goapply/JobAssistant.vue": {
-    "mtime": 1784566453000,
-    "hash": "dc1df23b880c536f997847124d6c4fe1"
+    "mtime": 1785796469837.4553,
+    "hash": "8d0ed1fe0b182aa30ed14e3c9c470e85"
   },
   "dashboard/src/views/goapply/JobForm.vue": {
     "mtime": 1784614115000,
     "hash": "bd28bf37e05091f25d131fbbe28cb7e7"
   },
   "dashboard/src/views/goapply/JobList.vue": {
-    "mtime": 1785529895197.3455,
+    "mtime": 1785789038774.7085,
     "hash": "f9c7c870d47b218a33c53166bb7ce56a"
   },
   "dashboard/src/views/goapply/JobTracker.vue": {
@@ -344,16 +344,16 @@
     "hash": "d3058cad6eabf92d02cbc108b7ab666d"
   },
   "dashboard/src/views/goapply/KanbanBoard.vue": {
-    "mtime": 1785529850509.709,
-    "hash": "89abfe1954d67f6048ec2ea01434cee4"
+    "mtime": 1785865527501.5273,
+    "hash": "7aa51a0d14d6f6b38e58fce526ecefc6"
   },
   "dashboard/src/views/goapply/ProfileSettings.vue": {
     "mtime": 1784614172000,
     "hash": "edfb1904b16f0fc8a6a6db77c09d0f2f"
   },
   "dashboard/src/views/goapply/ResumeGallery.vue": {
-    "mtime": 1785518627736.228,
-    "hash": "c9bf967f13e0ef389d18fecea52011b5"
+    "mtime": 1785796734942.293,
+    "hash": "28c6506a25f7aa22282a082985adaa6b"
   },
   "dashboard/src/views/goapply/SavedAnswers.vue": {
     "mtime": 1785018498597.6318,
@@ -392,8 +392,8 @@
     "hash": "463b69e9a3500828686b0bb35e53981f"
   },
   "dashboard/src/views/studio/EditorStudioView.vue": {
-    "mtime": 1785518644566.3018,
-    "hash": "da4c6df55f9e50f7edfc076823916210"
+    "mtime": 1785798476020.2507,
+    "hash": "73635000d9541191d6661a4879a9bf21"
   },
   "dashboard/src/views/users/UsersView.vue": {
     "mtime": 1783886532000,
@@ -776,8 +776,8 @@
     "hash": "72d33b74ea143d59a695edadee388a21"
   },
   ".graphify/GRAPH_REPORT.md": {
-    "mtime": 1785528317794.3013,
-    "hash": "07a9da06006779566da074a70c3bb655"
+    "mtime": 1786579996703.8147,
+    "hash": "b8504207bf59bc1fe84b9991dea0ea88"
   },
   ".graphify/studio/index.html": {
     "mtime": 1783710049000,
@@ -860,8 +860,8 @@
     "hash": "aaf9632234d1c606aa58ef9b279483c9"
   },
   "pnpm-lock.yaml": {
-    "mtime": 1784566894000,
-    "hash": "29987ffe9131a88c63b960ca1b7a58e4"
+    "mtime": 1786579054280.6938,
+    "hash": "75347b3bce29ad5a7c7481c44a3b2352"
   },
   "pnpm-workspace.yaml": {
     "mtime": 1785016774296.1816,
@@ -920,8 +920,8 @@
     "hash": "094b19ab150581e628d742c2d74a1224"
   },
   "api/src/services/ai/model-config.js": {
-    "mtime": 1783927170000,
-    "hash": "90e74b05a5bfe82ef8a6b2c15ad57228"
+    "mtime": 1786579149729.387,
+    "hash": "97f55b756ad80f2e967a8ac4f159d7ec"
   },
   "dashboard/src/components/common/ListActionIcon.vue": {
     "mtime": 1783886500000,
@@ -948,8 +948,8 @@
     "hash": "95d838a1938e808def002fb744770188"
   },
   "dashboard/src/views/admin/AdminAiModelsView.vue": {
-    "mtime": 1783886582000,
-    "hash": "886b2541b9a7392bba12eee24c83acbb"
+    "mtime": 1786578467467.044,
+    "hash": "2813f5e6b0dcb86436b049c9973bccea"
   },
   "dashboard/src/views/admin/AdminContentDetailView.vue": {
     "mtime": 1783886311000,
@@ -964,12 +964,12 @@
     "hash": "507ebb8d5261c846ea32fca2ae102a9f"
   },
   "dashboard/src/views/studio/ContentStudioView.vue": {
-    "mtime": 1784566436000,
-    "hash": "b715674671323b23b5ae2604ccb1e759"
+    "mtime": 1785796456586.54,
+    "hash": "eb6644c547f56b9eeb36ab8ca8cdf8e8"
   },
   ".github/workflows/build-and-deploy.yml": {
-    "mtime": 1783920244000,
-    "hash": "42595b58ecd7519b9b47f82866797572"
+    "mtime": 1785789038730.6777,
+    "hash": "a7f4e5b09767c9049c8da2681127f389"
   },
   "api/.graphify/GRAPH_REPORT.md": {
     "mtime": 1783885905000,
@@ -1012,8 +1012,8 @@
     "hash": "52d38f10d3fa58f7b62eacaa2fc627d6"
   },
   "dashboard/src/views/studio/CoverLetterStudioView.vue": {
-    "mtime": 1784566431000,
-    "hash": "06643979f55fbbf06c52faddb81c3d4a"
+    "mtime": 1785796462660.1938,
+    "hash": "9c54b34bfd7a2b4a0f6a2b32692baf6e"
   },
   "extension/background.js": {
     "mtime": 1785518877274.1768,
@@ -1232,8 +1232,8 @@
     "hash": "b34baac106cfb2448439bfa1d99e8c13"
   },
   "api/src/routes/admin/admin-ai-models.js": {
-    "mtime": 1783927170000,
-    "hash": "4374a537dc3f8f0c5fb54b726a396f7b"
+    "mtime": 1786579126292.4226,
+    "hash": "fa091ebdf0c17f6a3efc20c01156e804"
   },
   "api/src/routes/admin/admin-content.js": {
     "mtime": 1783927170000,
@@ -1704,16 +1704,16 @@
     "hash": "498a82145c847b79bf512657380d8095"
   },
   "extension/side-panel.js": {
-    "mtime": 1784614959000,
-    "hash": "69944a930cbdeb56454e780b785fc88c"
+    "mtime": 1785796670508.808,
+    "hash": "47b80fcdcee31a96263c6cabc0a52038"
   },
   "extension/CLAUDE_BROWSER_PARITY.md": {
     "mtime": 1784612981000,
     "hash": "0879e535fe9245b1c8347916ae7508bc"
   },
   "extension/side-panel.html": {
-    "mtime": 1784614897000,
-    "hash": "0a5988164668e593911cfb7815a0b4a6"
+    "mtime": 1785796521398.9812,
+    "hash": "1de8d7c35dcfd2a7cecf93b9c27d2084"
   },
   "api/prisma/migrations/20260721055554_goapply_description_and_categories/migration.sql": {
     "mtime": 1784613354000,
@@ -1732,8 +1732,8 @@
     "hash": "4cadce1aed6f6f5edf6d382f44870866"
   },
   "dashboard/src/components/goapply/NewResumeModal.vue": {
-    "mtime": 1785518598929.2725,
-    "hash": "12ab103189565f0923c053ba04009700"
+    "mtime": 1785796726678.7205,
+    "hash": "f7ebf2034018ad1ba652dc67ece3a49c"
   },
   "extension/core/submission-state.js": {
     "mtime": 1785518877274.3943,
