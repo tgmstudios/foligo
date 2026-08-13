@@ -27,8 +27,8 @@
       </button>
     </div>
 
-    <div v-if="!isMobile && !canReorder" class="mb-4 rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2 text-xs text-gray-400">
-      Dragging to reorder is disabled while a search, filter, or sort other than "Manual Order" is active. Clear them to drag jobs between or within columns.
+    <div v-if="!canReorder" class="mb-4 rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2 text-xs text-gray-400">
+      You can still drag jobs between columns. To reorder jobs within a column, clear the search and filters and choose "Manual Order".
     </div>
 
     <div v-if="store.isLoading && store.jobs.length === 0" class="text-center py-12 text-gray-400">
@@ -63,8 +63,10 @@
           v-model="column.jobs"
           :group="{ name: 'goapply-kanban', pull: true, put: true }"
           :animation="200"
-          :sort="true"
-          :disabled="isMobile || !canReorder"
+          :sort="canReorder"
+          :delay="isMobile ? 150 : 0"
+          :delay-on-touch-only="true"
+          :touch-start-threshold="4"
           ghost-class="opacity-50"
           drag-class="shadow-lg"
           class="space-y-2 min-h-[120px] p-2 rounded-lg bg-gray-800/50 border border-dashed border-gray-700 transition-colors"
@@ -76,8 +78,9 @@
           <div
             v-for="(job, jobIdx) in column.jobs"
             :key="job.id"
+            :data-job-id="job.id"
             class="card p-3"
-            :class="isMobile ? '' : (canReorder ? 'cursor-grab active:cursor-grabbing select-none' : 'select-none')"
+            :class="isMobile ? '' : 'cursor-grab active:cursor-grabbing select-none'"
           >
             <div class="flex items-start justify-between">
               <div class="min-w-0 flex-1">
@@ -207,7 +210,7 @@ watch([search, categoryFilter, tagFilter, sortBy], () => {
   })
 }, { flush: 'sync' })
 
-const canReorder = computed(() => sortBy.value === 'manual' && !search.value && !categoryFilter.value && !tagFilter.value)
+const canReorder = computed(() => sortBy.value === 'manual' && !search.value.trim() && !categoryFilter.value && !tagFilter.value)
 
 const visibleJobs = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -270,11 +273,33 @@ function renderMarkdown(text: string) {
 // ── Drag & Drop / Reorder ────────────────────────────────────────────
 
 // @add fires when an item is dragged FROM another list INTO this column.
-// Note: saveColumnOrder already sets status=column.status for every item,
-// so we don't need to read evt.data or manually mutate job.status.
-// The server will update both sortOrder and status via the bulk reorder endpoint.
-async function handleAdd(_evt: any, _newStatus: JobStatus, colIdx: number) {
-  await saveColumnOrder(colIdx)
+// A filtered or automatically sorted board only persists the moved job's new
+// status: reordering the visible subset would corrupt the order of hidden jobs.
+async function handleAdd(evt: any, newStatus: JobStatus, colIdx: number) {
+  if (canReorder.value) {
+    await saveColumnOrder(colIdx)
+    return
+  }
+
+  const column = localColumns.value[colIdx]
+  const jobId = evt.item instanceof HTMLElement ? evt.item.dataset.jobId : undefined
+  const movedJob = column?.jobs.find(job => job.id === jobId)
+    ?? (typeof evt.newIndex === 'number' ? column?.jobs[evt.newIndex] : undefined)
+
+  if (!movedJob) {
+    await store.fetchJobs()
+    return
+  }
+
+  try {
+    await store.reorderJobs([{
+      id: movedJob.id,
+      sortOrder: movedJob.sortOrder,
+      status: newStatus,
+    }])
+  } catch {
+    await store.fetchJobs()
+  }
 }
 
 // @update fires when item order changes within the same column
