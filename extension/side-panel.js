@@ -56,6 +56,7 @@
   const historyBackBtn = document.getElementById('sp-history-back');
   const historyListEl = document.getElementById('sp-history-list');
   const composeEl = document.querySelector('.sp-compose');
+  const queueEl = document.getElementById('sp-queue');
 
   let trackedTabId = null;
   let trackedGroupId = chrome.tabGroups.TAB_GROUP_ID_NONE;
@@ -454,12 +455,87 @@
     currentAssistantRaw = '';
     currentThinkingEl = null;
     currentThinkingRaw = '';
+    messageQueue = [];
+    renderQueue();
     if (placeholderText) {
       const empty = document.createElement('div');
       empty.className = 'sp-empty';
       empty.textContent = placeholderText;
       messagesEl.appendChild(empty);
     }
+  }
+
+  // ─── Message queue ───────────────────────────────────────────────
+  // agentBusy is a single shared slot (rescan/chat/field-fill all use it), so
+  // a chat message typed while it's held just waits here instead of being
+  // dropped — and fires automatically the moment setAgentBusy(false) runs,
+  // no matter what freed the slot.
+  let messageQueue = [];
+
+  function renderQueue() {
+    queueEl.innerHTML = '';
+    queueEl.hidden = messageQueue.length === 0;
+    for (const item of messageQueue) {
+      const row = document.createElement('div');
+      row.className = 'sp-queue-item';
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'sp-queue-text';
+      textSpan.textContent = item.text;
+      textSpan.title = item.text;
+      row.appendChild(textSpan);
+
+      const actions = document.createElement('div');
+      actions.className = 'sp-queue-actions';
+
+      const sendNowBtn = document.createElement('button');
+      sendNowBtn.type = 'button';
+      sendNowBtn.className = 'sp-queue-btn';
+      sendNowBtn.title = 'Interrupt and send now';
+      sendNowBtn.setAttribute('aria-label', 'Interrupt and send now');
+      sendNowBtn.textContent = '▶';
+      sendNowBtn.addEventListener('click', () => interruptAndSend(item.id));
+      actions.appendChild(sendNowBtn);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'sp-queue-btn sp-queue-remove';
+      removeBtn.title = 'Remove from queue';
+      removeBtn.setAttribute('aria-label', 'Remove from queue');
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => removeQueuedMessage(item.id));
+      actions.appendChild(removeBtn);
+
+      row.appendChild(actions);
+      queueEl.appendChild(row);
+    }
+  }
+
+  function enqueueMessage(text) {
+    messageQueue.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, text });
+    renderQueue();
+  }
+
+  function removeQueuedMessage(id) {
+    messageQueue = messageQueue.filter((message) => message.id !== id);
+    renderQueue();
+  }
+
+  function dequeueNext() {
+    if (agentBusy || !messageQueue.length) return;
+    const next = messageQueue.shift();
+    renderQueue();
+    dispatchChatText(next.text);
+  }
+
+  async function interruptAndSend(id) {
+    const index = messageQueue.findIndex((message) => message.id === id);
+    if (index === -1) return;
+    const [message] = messageQueue.splice(index, 1);
+    messageQueue.unshift(message);
+    renderQueue();
+    if (agentBusy) await interruptCurrentTurn();
+    else dequeueNext();
   }
 
   function removeEmptyState() {
@@ -942,11 +1018,14 @@
   // right thing and the compose box can't fire a second overlapping turn.
   let agentBusy = false;
   function setAgentBusy(busy) {
+    const wasBusy = agentBusy;
     agentBusy = busy;
     stopBtn.hidden = !busy;
     rescanBtn.disabled = busy;
-    sendBtn.disabled = busy;
     syncTrackingControlState();
+    // Frees up the shared slot for whatever's next in the queue — a plain
+    // chat message, unaffected by rescan/track/field-fill also using it.
+    if (wasBusy && !busy) dequeueNext();
   }
 
   async function waitForAgentIdle(timeoutMs = 10000, tabId = agentOwnerTabId ?? trackedTabId) {
@@ -959,7 +1038,8 @@
     return false;
   }
 
-  stopBtn.addEventListener('click', async () => {
+  async function interruptCurrentTurn() {
+    if (!agentBusy) return;
     stopBtn.disabled = true;
     const ownerTabId = agentOwnerTabId ?? trackedTabId;
     const result = await sendRawToTab(ownerTabId, 'sp-stop');
@@ -967,7 +1047,9 @@
     await waitForAgentIdle(10000, ownerTabId);
     setAgentBusy(false);
     stopBtn.disabled = false;
-  });
+  }
+
+  stopBtn.addEventListener('click', interruptCurrentTurn);
 
   async function runRescan() {
     if (agentBusy) return;
@@ -1072,10 +1154,7 @@
     findSubmitBtn.disabled = false;
   }
 
-  async function sendCurrentMessage() {
-    const text = inputEl.value.trim();
-    if (!text || agentBusy) return;
-    inputEl.value = '';
+  async function dispatchChatText(text) {
     addMessage('user', text);
     currentAssistantEl = null;
     currentAssistantRaw = '';
@@ -1095,6 +1174,18 @@
     setAgentBusy(false);
     await persistVisibleChat();
     inputEl.focus();
+  }
+
+  async function sendCurrentMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    inputEl.value = '';
+    if (agentBusy) {
+      enqueueMessage(text);
+      inputEl.focus();
+      return;
+    }
+    await dispatchChatText(text);
   }
 
   rescanBtn.addEventListener('click', runRescan);

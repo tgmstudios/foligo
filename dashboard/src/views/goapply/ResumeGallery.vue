@@ -245,7 +245,7 @@ function handleNew() {
   showNewResumeModal.value = true
 }
 
-async function handleCreateResume(payload: { name: string; templateId: string; jobId: string; initialPrompt: string }) {
+async function handleCreateResume(payload: { name: string; templateId: string; jobId: string; initialPrompt: string; provider?: string }) {
   creating.value = true
   try {
     const content = payload.templateId ? (await loadDocument(payload.templateId)).content : undefined
@@ -257,10 +257,13 @@ async function handleCreateResume(payload: { name: string; templateId: string; j
       linkedJobId: job?.id,
     })
     showNewResumeModal.value = false
+    const query: Record<string, string> = {}
+    if (payload.initialPrompt) query.initialPrompt = payload.initialPrompt
+    if (payload.provider) query.provider = payload.provider
     router.push({
       name: 'studio-resume',
       params: { id: doc.id },
-      query: payload.initialPrompt ? { initialPrompt: payload.initialPrompt } : {},
+      query,
     })
   } finally {
     creating.value = false

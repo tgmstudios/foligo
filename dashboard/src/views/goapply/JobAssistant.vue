@@ -119,12 +119,14 @@
             </div>
           </details>
           <StudioChatSidebar
-            v-model="selectedProvider" :messages="chat.messages.value" :streaming="chat.streaming.value"
+            v-model="selectedProvider" :messages="chat.messages.value" :streaming="chat.streaming.value" :queue="chat.queue.value"
             placeholder="Ask about this application, tailor materials, or prepare for next steps…"
             empty-state-text="This workspace is grounded in your selected job and attachments. Ask for a fit analysis, resume feedback, a cover-letter plan, interview prep, or help with an application question."
             allow-attachments
             @send="sendMessage"
             @stop="chat.stop"
+            @interrupt-send="chat.sendNow"
+            @remove-queued="chat.removeFromQueue"
           />
         </template>
       </main>

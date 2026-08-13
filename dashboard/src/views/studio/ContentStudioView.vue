@@ -54,6 +54,7 @@
         v-model="selectedProvider"
         :messages="chat.messages.value"
         :streaming="chat.streaming.value"
+        :queue="chat.queue.value"
         :sessions="chatSessions.sessions.value"
         :active-session-id="chatSessions.activeSessionId.value"
         :sessions-loading="chatSessions.loadingSessions.value"
@@ -61,6 +62,8 @@
         empty-state-text="Ask the agent to draft a section, restructure the post, or tweak wording — it'll edit the document directly."
         @send="chat.sendMessage"
         @stop="chat.stop"
+        @interrupt-send="chat.sendNow"
+        @remove-queued="chat.removeFromQueue"
         @select-session="selectChatSession"
         @new-session="newChatSession"
       />

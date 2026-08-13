@@ -85,6 +85,30 @@
     </div>
 
     <div class="border-t border-gray-700 p-3 bg-gray-800/50 flex-shrink-0">
+      <div v-if="queue.length" class="mb-2 space-y-1.5">
+        <div v-for="item in queue" :key="item.id" class="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-700/60 px-2.5 py-1.5 text-xs text-gray-200">
+          <svg class="w-3.5 h-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span class="flex-1 min-w-0 truncate" :title="item.text">{{ item.text || `${item.attachments.length} file(s)` }}</span>
+          <button
+            type="button"
+            class="flex-shrink-0 text-gray-400 hover:text-primary-400"
+            title="Interrupt and send now"
+            aria-label="Interrupt and send now"
+            @click="$emit('interrupt-send', item.id)"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </button>
+          <button
+            type="button"
+            class="flex-shrink-0 text-gray-400 hover:text-red-400"
+            title="Remove from queue"
+            aria-label="Remove from queue"
+            @click="$emit('remove-queued', item.id)"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
       <div v-if="pendingFiles.length" class="mb-2 flex flex-wrap gap-2">
         <span v-for="(file, index) in pendingFiles" :key="`${file.name}-${index}`" class="inline-flex max-w-full items-center gap-1.5 rounded-md border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-gray-200">
           <span class="max-w-48 truncate">{{ file.name }}</span>
@@ -93,17 +117,16 @@
       </div>
       <div class="flex items-end space-x-2">
         <input ref="fileInput" type="file" multiple class="hidden" accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.xml,.rtf" @change="selectFiles" />
-        <button v-if="allowAttachments" type="button" :disabled="streaming || pendingFiles.length >= 5" class="h-[40px] flex-shrink-0 rounded-lg border border-gray-600 px-3 text-gray-300 hover:bg-gray-700 disabled:opacity-50" title="Attach files" @click="fileInput?.click()">📎</button>
+        <button v-if="allowAttachments" type="button" :disabled="pendingFiles.length >= 5" class="h-[40px] flex-shrink-0 rounded-lg border border-gray-600 px-3 text-gray-300 hover:bg-gray-700 disabled:opacity-50" title="Attach files" @click="fileInput?.click()">📎</button>
         <textarea
           ref="textarea"
           v-model="draft"
           @keydown.enter.exact.prevent="send"
           @keydown.enter.ctrl.exact="newline"
           @keydown.enter.meta.exact="newline"
-          :disabled="streaming"
-          :placeholder="placeholder"
+          :placeholder="streaming ? 'Type another message — it will queue until this reply finishes…' : placeholder"
           rows="1"
-          class="chat-textarea flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[40px] max-h-[160px] text-sm leading-relaxed"
+          class="chat-textarea flex-1 px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none overflow-y-auto min-h-[40px] max-h-[160px] text-sm leading-relaxed"
         ></textarea>
         <button
           v-if="streaming"
@@ -116,9 +139,9 @@
           </svg>
         </button>
         <button
-          v-else
           @click="send"
           :disabled="!draft.trim() && !pendingFiles.length"
+          :title="streaming ? 'Queue message' : 'Send'"
           class="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed h-[40px] flex-shrink-0"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,15 +156,17 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
 import { marked } from 'marked'
-import type { AgenticChatMessage, ToolActivity } from '@/composables/useAgenticChat'
+import type { AgenticChatMessage, QueuedChatMessage, ToolActivity } from '@/composables/useAgenticChat'
 
 const props = withDefaults(defineProps<{
   messages: AgenticChatMessage[]
   streaming: boolean
+  queue?: QueuedChatMessage[]
   placeholder?: string
   emptyStateText?: string
   allowAttachments?: boolean
 }>(), {
+  queue: () => [],
   placeholder: 'Ask the agent to edit this document…',
   emptyStateText: 'Ask the agent to draft a section, make an edit, or tweak wording — it\'ll edit the document directly.',
 })
@@ -149,6 +174,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'send', message: string, files: File[]): void
   (e: 'stop'): void
+  (e: 'interrupt-send', id: string): void
+  (e: 'remove-queued', id: string): void
 }>()
 
 const draft = ref('')
@@ -244,7 +271,7 @@ watch(draft, () => {
 })
 
 function send() {
-  if ((!draft.value.trim() && !pendingFiles.value.length) || props.streaming) return
+  if (!draft.value.trim() && !pendingFiles.value.length) return
   emit('send', draft.value.trim(), [...pendingFiles.value])
   draft.value = ''
   pendingFiles.value = []

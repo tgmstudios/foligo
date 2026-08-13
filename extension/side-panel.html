@@ -121,8 +121,11 @@
       <div class="sp-history-list" id="sp-history-list"></div>
     </div>
     <footer class="sp-compose">
-      <textarea id="sp-input" class="sp-input" rows="1" placeholder="Ask GoApply AI…" aria-label="Message"></textarea>
-      <button id="sp-send" class="sp-send" type="button">Send</button>
+      <div class="sp-queue" id="sp-queue" hidden></div>
+      <div class="sp-compose-row">
+        <textarea id="sp-input" class="sp-input" rows="1" placeholder="Ask GoApply AI…" aria-label="Message"></textarea>
+        <button id="sp-send" class="sp-send" type="button">Send</button>
+      </div>
     </footer>
   </div>
   <script src="core/api.js"></script>

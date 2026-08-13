@@ -196,39 +196,65 @@
           </div>
 
           <!-- Input (only show in text mode) -->
-          <div v-if="selectedInteractionMode === 'text'" class="flex items-end space-x-3">
-            <textarea
-              ref="messageTextarea"
-              v-model="currentMessage"
-              @keydown.enter.exact.prevent="sendMessage"
-              @keydown.enter.shift.exact="handleShiftEnter"
-              @input="adjustTextareaHeight"
-              :disabled="!canRespond"
-              placeholder="Type your message... (Shift+Enter for new line)"
-              rows="1"
-              class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[44px] max-h-[200px]"
-              style="line-height: 1.5;"
-            ></textarea>
-            <button
-              v-if="chat.streaming.value"
-              type="button"
-              @click="chat.stop"
-              title="Stop generating"
-              aria-label="Stop generating"
-              class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 h-[44px]"
-            >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="6" y="6" width="12" height="12" rx="1.5" />
-              </svg>
-            </button>
-            <button
-              v-else
-              @click="sendMessage"
-              :disabled="!canRespond || !currentMessage.trim()"
-              class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed h-[44px]"
-            >
-              Send
-            </button>
+          <div v-if="selectedInteractionMode === 'text'">
+            <div v-if="chat.queue.value.length" class="mb-2 space-y-1.5">
+              <div v-for="item in chat.queue.value" :key="item.id" class="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-700/60 px-2.5 py-1.5 text-xs text-gray-200">
+                <svg class="w-3.5 h-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="flex-1 min-w-0 truncate" :title="item.text">{{ item.text }}</span>
+                <button
+                  type="button"
+                  class="flex-shrink-0 text-gray-400 hover:text-purple-400"
+                  title="Interrupt and send now"
+                  aria-label="Interrupt and send now"
+                  @click="chat.sendNow(item.id)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </button>
+                <button
+                  type="button"
+                  class="flex-shrink-0 text-gray-400 hover:text-red-400"
+                  title="Remove from queue"
+                  aria-label="Remove from queue"
+                  @click="chat.removeFromQueue(item.id)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-end space-x-3">
+              <textarea
+                ref="messageTextarea"
+                v-model="currentMessage"
+                @keydown.enter.exact.prevent="sendMessage"
+                @keydown.enter.shift.exact="handleShiftEnter"
+                @input="adjustTextareaHeight"
+                :disabled="!canRespond"
+                :placeholder="chat.streaming.value ? 'Type another message — it will queue until this reply finishes…' : 'Type your message... (Shift+Enter for new line)'"
+                rows="1"
+                class="flex-1 px-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 resize-none overflow-y-auto min-h-[44px] max-h-[200px]"
+                style="line-height: 1.5;"
+              ></textarea>
+              <button
+                v-if="chat.streaming.value"
+                type="button"
+                @click="chat.stop"
+                title="Stop generating"
+                aria-label="Stop generating"
+                class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 h-[44px]"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                </svg>
+              </button>
+              <button
+                @click="sendMessage"
+                :disabled="!canRespond || !currentMessage.trim()"
+                :title="chat.streaming.value ? 'Queue message' : 'Send'"
+                class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed h-[44px]"
+              >
+                Send
+              </button>
+            </div>
           </div>
         </div>
 
@@ -286,7 +312,7 @@ const chat = useAgenticChat(
   () => ({ projectId: props.projectId, currentPage: props.currentPage })
 )
 
-const canRespond = computed(() => !chat.streaming.value && modeSelected.value && selectedInteractionMode.value === 'text')
+const canRespond = computed(() => modeSelected.value && selectedInteractionMode.value === 'text')
 
 function updateFollowState() {
   const container = chatScrollContainer.value
@@ -438,7 +464,7 @@ const adjustTextareaHeight = () => {
 const handleShiftEnter = () => adjustTextareaHeight()
 
 const sendMessage = async () => {
-  if (!currentMessage.value.trim() || chat.streaming.value) return
+  if (!currentMessage.value.trim()) return
   const text = currentMessage.value.trim()
   currentMessage.value = ''
   if (messageTextarea.value) messageTextarea.value.style.height = 'auto'

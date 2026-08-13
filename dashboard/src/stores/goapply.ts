@@ -358,6 +358,16 @@ export const useGoApplyStore = defineStore('goapply', () => {
   async function reorderJobs(items: { id: string; sortOrder: number; status?: JobStatus }[]) {
     return withErrorToast(async () => {
       const { data } = await api.put('/goapply/jobs/reorder', { items })
+      // Keep local state in sync with what was just persisted — otherwise the
+      // next recompute of a filtered/sorted view (e.g. toggling search or the
+      // sort dropdown) rebuilds from stale sortOrder/status and the drag
+      // appears to silently revert.
+      for (const item of items) {
+        const idx = jobs.value.findIndex((j) => j.id === item.id)
+        if (idx !== -1) {
+          jobs.value[idx] = { ...jobs.value[idx], sortOrder: item.sortOrder, ...(item.status ? { status: item.status } : {}) }
+        }
+      }
       return data
     }, 'Failed to reorder jobs')
   }

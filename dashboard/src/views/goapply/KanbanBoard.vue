@@ -27,6 +27,10 @@
       </button>
     </div>
 
+    <div v-if="!isMobile && !canReorder" class="mb-4 rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2 text-xs text-gray-400">
+      Dragging to reorder is disabled while a search, filter, or sort other than "Manual Order" is active. Clear them to drag jobs between or within columns.
+    </div>
+
     <div v-if="store.isLoading && store.jobs.length === 0" class="text-center py-12 text-gray-400">
       Loading board...
     </div>
@@ -73,7 +77,7 @@
             v-for="(job, jobIdx) in column.jobs"
             :key="job.id"
             class="card p-3"
-            :class="isMobile ? '' : 'cursor-grab active:cursor-grabbing'"
+            :class="isMobile ? '' : (canReorder ? 'cursor-grab active:cursor-grabbing select-none' : 'select-none')"
           >
             <div class="flex items-start justify-between">
               <div class="min-w-0 flex-1">

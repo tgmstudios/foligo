@@ -30,6 +30,12 @@ export interface AgenticChatCallbacks {
   onTurnComplete?: (history: Array<{ role: string; content: string }>) => void | Promise<void>
 }
 
+export interface QueuedChatMessage {
+  id: string
+  text: string
+  attachments: File[]
+}
+
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
@@ -48,6 +54,7 @@ export function useAgenticChat(
 ) {
   const messages = ref<AgenticChatMessage[]>([])
   const streaming = ref(false)
+  const queue = ref<QueuedChatMessage[]>([])
   let abortController: AbortController | null = null
 
   function handleEvent(event: any, assistantMsg: AgenticChatMessage) {
@@ -100,9 +107,21 @@ export function useAgenticChat(
     }
   }
 
+  /**
+   * Public entry point. While a turn is already streaming, further sends are
+   * queued instead of firing immediately — the queue drains automatically as
+   * each turn finishes (see the `finally` block in performSend).
+   */
   async function sendMessage(userText: string, attachments: File[] = []) {
-    if (streaming.value || (!userText.trim() && !attachments.length)) return
+    if (!userText.trim() && !attachments.length) return
+    if (streaming.value) {
+      queue.value.push({ id: uid(), text: userText.trim(), attachments })
+      return
+    }
+    await performSend(userText, attachments)
+  }
 
+  async function performSend(userText: string, attachments: File[] = []) {
     // Captured before this turn's messages are pushed — some backends (e.g.
     // Content, which has no server-side chat storage like ResumeDocument
     // does) rely on the client resending prior turns each request.
@@ -204,6 +223,10 @@ export function useAgenticChat(
       } catch (error) {
         console.error('Failed to save chat history:', error)
       }
+      if (queue.value.length) {
+        const next = queue.value.shift()!
+        void performSend(next.text, next.attachments)
+      }
     }
   }
 
@@ -211,8 +234,29 @@ export function useAgenticChat(
     abortController?.abort()
   }
 
+  /** Interrupts the in-flight turn (if any) and sends a queued message immediately, ahead of the rest of the queue. */
+  function sendNow(id: string) {
+    const index = queue.value.findIndex(m => m.id === id)
+    if (index === -1) return
+    const [message] = queue.value.splice(index, 1)
+    if (streaming.value) {
+      // The `finally` block in performSend dequeues the front of the queue
+      // once the abort settles, so putting it back at the front here is
+      // enough to have it go out next.
+      queue.value.unshift(message)
+      stop()
+    } else {
+      void performSend(message.text, message.attachments)
+    }
+  }
+
+  function removeFromQueue(id: string) {
+    queue.value = queue.value.filter(m => m.id !== id)
+  }
+
   function reset() {
     messages.value = []
+    queue.value = []
   }
 
   function loadHistory(history: Array<{ role: string; content: string; attachments?: Array<{ name: string; type?: string; size?: number }> }>) {
@@ -222,9 +266,10 @@ export function useAgenticChat(
       content: m.content,
       attachments: m.attachments,
     }))
+    queue.value = []
   }
 
-  return { messages, streaming, sendMessage, stop, reset, loadHistory }
+  return { messages, streaming, queue, sendMessage, sendNow, removeFromQueue, stop, reset, loadHistory }
 }
 
 export { API_URL }

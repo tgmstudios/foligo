@@ -67,6 +67,17 @@
               <span>Save as default prompt</span>
             </label>
           </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-400 mb-1.5">Model</label>
+            <select
+              v-model="provider"
+              class="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            >
+              <option :value="undefined">Default</option>
+              <option v-for="p in configuredProviders" :key="p.type" :value="p.type">{{ p.displayName }}</option>
+            </select>
+          </div>
         </div>
 
         <div class="px-6 py-4 border-t border-gray-700 flex justify-end space-x-3">
@@ -91,10 +102,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import type { ResumeDocumentSummary } from '@/composables/useResumeDocuments'
 import type { GoApplyJob } from '@/stores/goapply'
 import { readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
+import api from '@/services/api'
 
 const DEFAULT_PROMPT_KEY = 'goapply-resume-default-prompt'
 const DEFAULT_PROMPT_VERSION = 1
@@ -108,17 +120,34 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'create', payload: { name: string; templateId: string; jobId: string; initialPrompt: string }): void
+  (e: 'create', payload: { name: string; templateId: string; jobId: string; initialPrompt: string; provider?: string }): void
 }>()
+
+interface AiProvider {
+  type: string
+  displayName: string
+  configured: boolean
+}
 
 const name = ref('')
 const templateId = ref('')
 const jobId = ref('')
 const initialPrompt = ref('')
 const saveAsDefault = ref(false)
+const provider = ref<string | undefined>(undefined)
+const configuredProviders = ref<AiProvider[]>([])
 
 const templates = computed(() => props.documents.filter((doc) => doc.isTemplate))
 const sortedJobs = computed(() => [...props.jobs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+
+onMounted(async () => {
+  try {
+    const response = await api.get('/ai/providers')
+    configuredProviders.value = response.data.providers.filter((p: AiProvider) => p.configured)
+  } catch {
+    // Provider list is a nicety, not required for resume creation — fail silently.
+  }
+})
 
 watch(() => props.isOpen, (open) => {
   if (!open) return
@@ -126,6 +155,7 @@ watch(() => props.isOpen, (open) => {
   templateId.value = ''
   jobId.value = ''
   saveAsDefault.value = false
+  provider.value = undefined
   initialPrompt.value = readPreferenceCookie<{ prompt: string }>(DEFAULT_PROMPT_KEY, DEFAULT_PROMPT_VERSION)?.prompt || ''
 })
 
@@ -142,6 +172,7 @@ function submit() {
     templateId: templateId.value,
     jobId: jobId.value,
     initialPrompt: initialPrompt.value.trim(),
+    provider: provider.value,
   })
 }
 </script>

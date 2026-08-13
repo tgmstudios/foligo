@@ -77,6 +77,7 @@
           v-model="selectedProvider"
           :messages="chat.messages.value"
           :streaming="chat.streaming.value"
+          :queue="chat.queue.value"
           :sessions="chatSessions.sessions.value"
           :active-session-id="chatSessions.activeSessionId.value"
           :sessions-loading="chatSessions.loadingSessions.value"
@@ -85,6 +86,8 @@
           empty-state-text="Ask the agent to draft a section, tailor the resume to a job description, or tweak wording — it'll edit the document directly."
           @send="chat.sendMessage"
           @stop="chat.stop"
+          @interrupt-send="chat.sendNow"
+          @remove-queued="chat.removeFromQueue"
           @select-session="selectChatSession"
           @new-session="newChatSession"
         />
@@ -138,10 +141,12 @@ import { useChatSessions } from '@/composables/useChatSessions'
 import { useAutosave } from '@/composables/useAutosave'
 import type { ResumeDocument } from '@/composables/useResumeDocuments'
 import api from '@/services/api'
+import { useGoApplyStore } from '@/stores/goapply'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const goApplyStore = useGoApplyStore()
 
 // Studio currently only ever hosts the resume adapter — swap this for a
 // route-meta-driven lookup once a second content type registers itself.
@@ -327,11 +332,18 @@ useAutosave(content, dirty, async (value) => {
   await adapter.saveDocument(documentId.value, { content: value }, 'autosave')
 })
 
-function downloadPdf() {
+async function downloadPdf() {
   if (!pdfUrl.value) return
+  // Studio can be deep-linked to directly, bypassing the GoApply layout that
+  // normally loads the profile — fetch it on demand if it isn't cached yet.
+  const profile = goApplyStore.profile || (await goApplyStore.fetchProfile())
+  const fullName = [profile?.firstName, profile?.lastName].map((v) => String(v || '').trim()).filter(Boolean).join(' ')
+    || String(profile?.name || '').trim()
+  const filename = `${fullName ? `${fullName} Resume` : 'Resume'}.pdf`
+    .replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()
   const link = document.createElement('a')
   link.href = pdfUrl.value
-  link.download = `${documentTitle.value || 'resume'}.pdf`
+  link.download = filename
   link.click()
 }
 
@@ -373,8 +385,10 @@ watch(() => route.params.id, (id) => {
 onMounted(async () => {
   await openDocument(documentId.value)
   const initialPrompt = typeof route.query.initialPrompt === 'string' ? route.query.initialPrompt : ''
+  const initialProvider = typeof route.query.provider === 'string' ? route.query.provider : ''
   if (initialPrompt) {
     router.replace({ query: {} })
+    if (initialProvider) selectedProvider.value = initialProvider
     chat.sendMessage(initialPrompt)
   }
   window.addEventListener('beforeunload', handleBeforeUnload)
