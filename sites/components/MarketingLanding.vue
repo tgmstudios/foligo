@@ -1,74 +1,243 @@
 <template>
   <main class="marketing-shell">
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <header class="site-header">
-      <NuxtLink class="brand" to="/" aria-label="Foligo home"><span class="brand-mark">f.</span>foligo</NuxtLink>
-      <nav class="desktop-nav" aria-label="Main navigation">
-        <a href="#studio">Studio</a><a href="#applications">GoApply</a><a href="#mobile">Mobile</a>
-      </nav>
-      <div class="header-actions">
-        <NuxtLink class="text-link" to="/login">Log in</NuxtLink>
-        <NuxtLink class="button button-small" to="/signup">Start building <span aria-hidden="true">↗</span></NuxtLink>
+
+    <header class="masthead">
+      <div class="masthead-row">
+        <NuxtLink class="brand" to="/" aria-label="Foligo home">
+          <svg class="brand-mark" viewBox="0 0 100 100" width="26" height="26" role="img" aria-labelledby="markTitleHeader">
+            <title id="markTitleHeader">Foligo mark: a wave smoothing into a straight line</title>
+            <defs>
+              <linearGradient id="gradHeader" x1="0%" y1="50%" x2="100%" y2="50%">
+                <stop offset="0%" stop-color="#6366F1" />
+                <stop offset="100%" stop-color="#8B5CF6" />
+              </linearGradient>
+            </defs>
+            <path d="M10 50 C 20 25, 30 25, 40 50 S 50 75, 60 50 C 65 40, 75 45, 90 45" stroke="url(#gradHeader)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          </svg>
+          <span>foligo</span>
+        </NuxtLink>
+        <p class="masthead-tag">Vol. I — portfolios, written by talking</p>
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="#studio"><em>01</em> Studio</a>
+          <a href="#applications"><em>02</em> GoApply</a>
+          <a href="#mobile"><em>03</em> Mobile</a>
+        </nav>
+        <div class="header-actions">
+          <NuxtLink class="text-link" to="/login">Log in</NuxtLink>
+          <NuxtLink class="button button-small" to="/signup">Start writing <span aria-hidden="true">→</span></NuxtLink>
+        </div>
+        <button class="menu-button" type="button" :aria-expanded="menuOpen" aria-controls="mobile-nav" @click="menuOpen = !menuOpen">
+          <span class="sr-only">{{ menuOpen ? 'Close' : 'Open' }} navigation</span><span aria-hidden="true">{{ menuOpen ? '×' : '☰' }}</span>
+        </button>
       </div>
-      <button class="menu-button" type="button" :aria-expanded="menuOpen" aria-controls="mobile-nav" @click="menuOpen = !menuOpen">
-        <span class="sr-only">{{ menuOpen ? 'Close' : 'Open' }} navigation</span><span aria-hidden="true">{{ menuOpen ? '×' : '☰' }}</span>
-      </button>
       <nav v-if="menuOpen" id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation">
-        <a href="#studio" @click="menuOpen = false">Studio</a><a href="#applications" @click="menuOpen = false">GoApply</a><a href="#mobile" @click="menuOpen = false">Mobile</a>
-        <NuxtLink to="/login" @click="menuOpen = false">Log in</NuxtLink><NuxtLink to="/signup" @click="menuOpen = false">Start building</NuxtLink>
+        <a href="#studio" @click="menuOpen = false">01 · Studio</a>
+        <a href="#applications" @click="menuOpen = false">02 · GoApply</a>
+        <a href="#mobile" @click="menuOpen = false">03 · Mobile</a>
+        <NuxtLink to="/login" @click="menuOpen = false">Log in</NuxtLink>
+        <NuxtLink to="/signup" @click="menuOpen = false">Start writing</NuxtLink>
       </nav>
     </header>
 
     <section id="main-content" class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot"></span> Your work has a better story</p>
-        <h1 id="hero-title">Make the work<br><em>do the talking.</em></h1>
-        <p class="hero-lede">Foligo turns a conversation about your work into a portfolio, then carries that context into every application.</p>
-        <div class="hero-actions"><NuxtLink class="button" to="/signup">Build your portfolio <span aria-hidden="true">→</span></NuxtLink><a class="button button-ghost" href="#workflow">See the workflow <span aria-hidden="true">↓</span></a></div>
-        <p class="quiet-note">Start from a conversation, your voice, or the work already on your desk.</p>
-      </div>
-      <div class="hero-visual" aria-label="Foligo product interface preview">
-        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
-        <div class="product-window">
-          <div class="window-bar"><span></span><span></span><span></span><p>Foligo Studio <i></i> Draft</p></div>
-          <div class="product-body">
-            <aside><div class="mini-logo">f.</div><div class="rail active"></div><div class="rail"></div><div class="rail"></div><div class="rail bottom"></div></aside>
-            <div class="conversation"><p class="tiny-label">PROJECT / 01</p><h2>Tell Foligo about<br>what you made.</h2><div class="chat-bubble">I led the redesign of our community tools, from research through launch.</div><div class="typing"><b></b><b></b><b></b></div></div>
-            <div class="preview-card"><p class="tiny-label">LIVE PREVIEW</p><div class="preview-line wide"></div><div class="preview-line"></div><div class="preview-image"><span>Case study</span></div><p class="preview-title">Community, made clearer.</p><div class="preview-tags"><i>Research</i><i>Product</i></div></div>
+      <div class="hero-grid">
+        <div class="hero-lead">
+          <p class="kicker">No. 01 — Draft</p>
+          <h1 id="hero-title">Your work<br /><em>already has</em><br />a shape.</h1>
+          <p class="hero-dek">Foligo starts with a conversation, typed or spoken, about what you've made. It turns that into a portfolio you edit in a real studio, publish under your own name, and reuse for every application that follows.</p>
+          <div class="hero-actions">
+            <NuxtLink class="button" to="/signup">Start talking <span aria-hidden="true">→</span></NuxtLink>
+            <a class="button button-ghost" href="#studio">Read how it works <span aria-hidden="true">↓</span></a>
           </div>
         </div>
-        <div class="voice-chip"><span>⌁</span><div><small>VOICE MODE</small><strong>Listening to your story</strong></div><b></b></div>
+        <nav class="contents" aria-label="Page contents">
+          <p class="contents-label">In this issue</p>
+          <ol>
+            <li><a href="#studio"><span class="contents-index">01</span><span class="contents-title">Studio<small>Talk it out, shape it in the editor</small></span></a></li>
+            <li><a href="#publish"><span class="contents-index">02</span><span class="contents-title">Publish<small>Give the work an address</small></span></a></li>
+            <li><a href="#applications"><span class="contents-index">03</span><span class="contents-title">GoApply<small>Turn projects into applications</small></span></a></li>
+            <li><a href="#mobile"><span class="contents-index">04</span><span class="contents-title">Mobile<small>Carry the work with you</small></span></a></li>
+          </ol>
+        </nav>
+      </div>
+      <svg class="hero-mark" viewBox="0 0 100 100" width="120" height="120" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="gradHero" x1="0%" y1="50%" x2="100%" y2="50%">
+            <stop offset="0%" stop-color="#6366F1" />
+            <stop offset="100%" stop-color="#8B5CF6" />
+          </linearGradient>
+        </defs>
+        <path class="hero-mark-path" d="M10 50 C 20 25, 30 25, 40 50 S 50 75, 60 50 C 65 40, 75 45, 90 45" stroke="url(#gradHero)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </svg>
+    </section>
+
+    <div class="divider" aria-hidden="true">
+      <svg viewBox="0 0 400 40" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gradDiv1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#6366F1" />
+            <stop offset="35%" stop-color="#8B5CF6" />
+            <stop offset="100%" stop-color="#8B5CF6" stop-opacity=".25" />
+          </linearGradient>
+        </defs>
+        <path d="M0 20 C8 6,16 6,24 20 S40 34,48 20 C54 12,60 20,70 20 L400 20" stroke="url(#gradDiv1)" stroke-width="2" fill="none" />
+      </svg>
+    </div>
+
+    <section id="studio" class="chapter chapter-dark" aria-labelledby="studio-title">
+      <div class="chapter-head">
+        <p class="kicker">Chapter 01</p>
+        <h2 id="studio-title">Say it before you write it.</h2>
+      </div>
+      <div class="chapter-body">
+        <div class="chapter-copy">
+          <p>Most portfolio builders start with a blank page. Foligo starts with a conversation: type or talk through a project the way you'd explain it to a colleague — what you built, what changed, and why it mattered.</p>
+          <blockquote class="pull-quote">"What did you actually ship?" is a better prompt than a blank text field.</blockquote>
+          <p>That conversation becomes structured draft content — a case study, a role, a piece of writing — landing in the content studio, a focused editor for arranging and rewriting before anything goes public.</p>
+          <dl class="footnotes">
+            <div><dt>Conversational creation</dt><dd>Describe a project in your own words; Foligo drafts the structure for you.</dd></div>
+            <div><dt>Voice mode</dt><dd>Talk instead of type — the same drafting happens starting from speech.</dd></div>
+            <div><dt>Content studio</dt><dd>Edit, reorder, and polish drafts alongside the rest of your portfolio.</dd></div>
+          </dl>
+        </div>
+        <div class="studio-mockup" aria-hidden="true">
+          <div class="mockup-bar">
+            <span class="mockup-label">Foligo Studio</span>
+            <span class="status-pill">Draft <span aria-hidden="true">→</span> Published</span>
+          </div>
+          <div class="mockup-body">
+            <ul class="mockup-rail">
+              <li class="active">Case Studies</li>
+              <li>Experience</li>
+              <li>Writing</li>
+              <li>Settings</li>
+            </ul>
+            <div class="mockup-doc">
+              <p class="mockup-meta">PROJECT 03 — LAST EDITED 4M AGO</p>
+              <h3>Community tools, rebuilt for scale</h3>
+              <p>Led the redesign of our community tooling from research through launch, cutting moderator response time and giving members a clearer path to get help.</p>
+              <div class="mockup-tags"><span>Research</span><span>Product design</span><span>0→1</span></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section id="studio" class="statement-section" aria-labelledby="studio-title">
-      <div><p class="eyebrow">The Foligo studio</p><h2 id="studio-title">Not a blank page.<br>A working conversation.</h2></div>
-      <p class="section-copy">Start with what you remember. Foligo helps turn the raw material into project stories, experience, and writing you can refine in a content studio built to keep your work organized.</p>
+    <section id="publish" class="chapter chapter-light" aria-labelledby="publish-title">
+      <div class="chapter-head">
+        <p class="kicker">Chapter 02</p>
+        <h2 id="publish-title">Give the work an address.</h2>
+      </div>
+      <div class="chapter-body chapter-body-reverse">
+        <div class="publish-mockup" aria-hidden="true">
+          <div class="url-bar"><span>https://</span><strong>alexmorgan</strong><span>.foligo.org</span></div>
+          <ul class="publish-list">
+            <li><span class="publish-index">01</span><span>Community tools, rebuilt for scale</span></li>
+            <li><span class="publish-index">02</span><span>Research-to-release: a workflow retrospective</span></li>
+            <li><span class="publish-index">03</span><span>Notes on writing for internal tools</span></li>
+          </ul>
+        </div>
+        <div class="chapter-copy">
+          <p>When a draft is ready, publish it to a portfolio site on your own subdomain — <code>yourname.foligo.org</code> — with a theme you choose, not a template everyone else is using too.</p>
+          <p>It's a living document. Add a project, revise a case study, or take something down, and your public site updates without a rebuild or a deploy.</p>
+        </div>
+      </div>
     </section>
 
-    <section class="feature-grid" aria-label="Portfolio creation features">
-      <article class="feature-card conversation-card"><p class="card-index">01 / CONVERSATION</p><h3>Talk through the work.</h3><p>Use conversational creation to develop portfolio content from the way you naturally describe it.</p><div class="conversation-lines"><span>What changed after launch?</span><span>How did the team decide?</span><span>What would you show first?</span></div></article>
-      <article class="feature-card voice-card"><p class="card-index">02 / VOICE</p><h3>Say it out loud.</h3><p>Voice workflows turn a natural conversation about a project or experience into content you can shape.</p><div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
-      <article class="feature-card publishing-card"><p class="card-index">03 / PUBLISH</p><h3>Give it a home.</h3><p>Organize content in your CMS, choose a theme, and publish a portfolio site on your own subdomain.</p><div class="theme-stack" aria-hidden="true"><div></div><div></div><div></div></div></article>
+    <div class="divider" aria-hidden="true">
+      <svg viewBox="0 0 400 40" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gradDiv2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#8B5CF6" stop-opacity=".25" />
+            <stop offset="65%" stop-color="#8B5CF6" />
+            <stop offset="100%" stop-color="#6366F1" />
+          </linearGradient>
+        </defs>
+        <path d="M0 20 L330 20 C340 20,346 12,352 20 S368 34,376 20 C382 12,390 20,400 20" stroke="url(#gradDiv2)" stroke-width="2" fill="none" />
+      </svg>
+    </div>
+
+    <section id="applications" class="chapter chapter-dark" aria-labelledby="applications-title">
+      <div class="chapter-head">
+        <p class="kicker">Chapter 03</p>
+        <h2 id="applications-title">The portfolio doesn't stop at publish.</h2>
+      </div>
+      <div class="chapter-body">
+        <div class="chapter-copy">
+          <p>The same material you wrote for your portfolio becomes source content for tailored resumes and cover letters. GoApply, Foligo's companion tool, keeps track of where each one goes.</p>
+          <blockquote class="pull-quote">One body of work, reused instead of rewritten for every role.</blockquote>
+          <p>A browser extension — the GoApply agent — can act on job listings you're already looking at, drafting an application from your existing projects without starting over in a blank cover letter.</p>
+          <NuxtLink class="inline-link" to="/signup">Start an application workflow <span aria-hidden="true">→</span></NuxtLink>
+        </div>
+        <div class="applications-mockup" aria-hidden="true">
+          <div class="resume-sheet">
+            <p class="mockup-meta">TAILORED RESUME</p>
+            <h3>Alex Morgan</h3>
+            <p class="resume-role">Product designer building thoughtful systems and clear experiences.</p>
+            <div class="resume-block"><b>Selected work</b><span>Community tools, rebuilt for scale</span><span>Research-to-release workflow</span></div>
+          </div>
+          <div class="kanban">
+            <div class="kanban-top"><span>GoApply</span></div>
+            <div class="kanban-columns">
+              <div><small>Saved</small><p>Product designer, Platform team</p></div>
+              <div><small>Applied</small><p class="accent-card">Design systems lead<br /><i>Resume linked</i></p></div>
+              <div><small>Interview</small><p class="accent-card-2">Experience designer</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section id="workflow" class="workflow-section" aria-labelledby="workflow-title">
-      <div class="workflow-intro"><p class="eyebrow">A concise portfolio workflow</p><h2 id="workflow-title">From “I did a thing”<br>to a body of work.</h2></div>
-      <ol class="workflow-list"><li><span>01</span><div><h3>Capture the context</h3><p>Bring a project, role, or rough idea into a conversation or voice session.</p></div></li><li><span>02</span><div><h3>Shape the narrative</h3><p>Refine content in the studio, alongside the rest of your portfolio.</p></div></li><li><span>03</span><div><h3>Publish when it is ready</h3><p>Choose a presentation and make the work available through your portfolio site.</p></div></li></ol>
+    <section id="mobile" class="chapter chapter-light" aria-labelledby="mobile-title">
+      <div class="chapter-head">
+        <p class="kicker">Chapter 04</p>
+        <h2 id="mobile-title">Carry the work with you.</h2>
+      </div>
+      <div class="chapter-body chapter-body-reverse">
+        <div class="phone" aria-hidden="true">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <p class="mockup-meta">FOLIGO / IOS</p>
+            <h3>Today's work</h3>
+            <div class="phone-project"><span>01</span><strong>Community tools</strong><i>In progress</i></div>
+            <div class="phone-project"><span>02</span><strong>Résumé — Platform role</strong><i>Ready to review</i></div>
+          </div>
+        </div>
+        <div class="chapter-copy">
+          <p>Browse your projects, review a drafted case study, or check on an application from the Foligo iOS app — the same account and the same work, wherever you left it.</p>
+          <p>Between the app and the browser extension, the portfolio is something you keep up with in the in-between moments, not a project you sit down to maintain.</p>
+        </div>
+      </div>
     </section>
 
-    <section id="applications" class="applications-section" aria-labelledby="applications-title">
-      <div class="application-copy"><p class="eyebrow">Your next application</p><h2 id="applications-title">The portfolio does not stop at publish.</h2><p>Use your work as source material for tailored resumes and cover letters. Then keep each opportunity moving with GoApply.</p><NuxtLink class="inline-link" to="/signup">Start an application workflow <span aria-hidden="true">→</span></NuxtLink></div>
-      <div class="application-ui" aria-label="GoApply workflow preview"><div class="resume-sheet"><p class="tiny-label">TAILORED RESUME</p><h3>Alex Morgan</h3><div class="resume-rule"></div><p>Product designer building thoughtful systems and clear experiences.</p><div class="resume-block"><b>SELECTED WORK</b><span>Community tools redesign</span><span>Research-to-release workflow</span></div></div><div class="kanban"><div class="kanban-top"><span>GoApply</span><b>+ Add role</b></div><div class="kanban-columns"><div><small>SAVED</small><p>Product designer</p><p>Design systems lead</p></div><div><small>APPLIED</small><p class="lime-card">Platform designer<br><i>Resume linked</i></p></div><div><small>INTERVIEW</small><p class="purple-card">Experience designer</p></div></div></div></div>
+    <section class="epilogue" aria-labelledby="epilogue-title">
+      <p class="kicker">Epilogue</p>
+      <h2 id="epilogue-title">Start with what you already know.</h2>
+      <p>You don't need a finished portfolio to begin. You need one project you can talk about.</p>
+      <NuxtLink class="button" to="/signup">Start with Foligo <span aria-hidden="true">→</span></NuxtLink>
     </section>
 
-    <section id="mobile" class="mobile-section" aria-labelledby="mobile-title">
-      <div class="phone" aria-hidden="true"><div class="phone-notch"></div><div class="phone-screen"><p class="tiny-label">FOLIGO / MOBILE</p><h3>Today’s work</h3><div class="phone-project"><span>01</span><strong>Community tools</strong><i>In progress</i></div><div class="phone-project"><span>02</span><strong>Resume — Platform</strong><i>Ready to review</i></div><div class="phone-nav"><b>⌂</b><b>□</b><b>◌</b></div></div></div>
-      <div><p class="eyebrow">Built for the in-between moments</p><h2 id="mobile-title">Your work, within reach.</h2><p>Browse projects and stay connected to your portfolio from the Foligo iOS app, with the same account and project space you use everywhere else.</p></div>
-    </section>
-
-    <section class="closing-cta" aria-labelledby="closing-title"><p class="eyebrow">Make room for the work</p><h2 id="closing-title">Build a portfolio that can keep up.</h2><NuxtLink class="button" to="/signup">Start with Foligo <span aria-hidden="true">→</span></NuxtLink></section>
-    <footer><NuxtLink class="brand" to="/"><span class="brand-mark">f.</span>foligo</NuxtLink><p>Portfolio creation and job workflows, connected.</p><NuxtLink to="/login">Log in</NuxtLink></footer>
+    <footer>
+      <div class="footer-brand">
+        <NuxtLink class="brand" to="/">
+          <svg class="brand-mark" viewBox="0 0 100 100" width="22" height="22" role="img" aria-labelledby="markTitleFooter">
+            <title id="markTitleFooter">Foligo mark: a wave smoothing into a straight line</title>
+            <defs>
+              <linearGradient id="gradFooter" x1="0%" y1="50%" x2="100%" y2="50%">
+                <stop offset="0%" stop-color="#6366F1" />
+                <stop offset="100%" stop-color="#8B5CF6" />
+              </linearGradient>
+            </defs>
+            <path d="M10 50 C 20 25, 30 25, 40 50 S 50 75, 60 50 C 65 40, 75 45, 90 45" stroke="url(#gradFooter)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          </svg>
+          <span>foligo</span>
+        </NuxtLink>
+        <p>Portfolio creation and job workflows, connected.</p>
+      </div>
+      <p class="colophon">No invented metrics or testimonials on this page — just what Foligo does.</p>
+      <NuxtLink to="/login">Log in</NuxtLink>
+    </footer>
   </main>
 </template>
 
@@ -79,7 +248,7 @@ useHead({
   title: 'Foligo — Make the work do the talking',
   meta: [
     { name: 'description', content: 'Foligo helps you create a portfolio through conversation or voice, then carry your work into resumes, cover letters, and GoApply workflows.' },
-    { name: 'theme-color', content: '#111019' },
+    { name: 'theme-color', content: '#15141d' },
     { property: 'og:title', content: 'Foligo — Make the work do the talking' },
     { property: 'og:description', content: 'Portfolio creation and job workflows, connected.' }
   ]
@@ -87,5 +256,198 @@ useHead({
 </script>
 
 <style scoped>
-.marketing-shell{--ink:#111019;--panel:#1a1824;--paper:#f2eee6;--muted:#afaabb;--lime:#d6ff61;--violet:#aa8cff;--line:rgba(242,238,230,.16);background:var(--ink);color:var(--paper);overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,sans-serif}.skip-link{position:absolute;left:1rem;top:-4rem;background:var(--lime);color:var(--ink);padding:.7rem 1rem;z-index:10}.skip-link:focus{top:1rem}.site-header{max-width:1280px;margin:auto;min-height:84px;padding:0 28px;display:flex;gap:30px;align-items:center;border-bottom:1px solid var(--line);position:relative}.brand{color:var(--paper);font-size:1.38rem;font-weight:800;letter-spacing:-.08em;text-decoration:none;white-space:nowrap}.brand-mark{color:var(--lime);font-style:italic}.desktop-nav{display:flex;gap:24px;margin-left:auto}.desktop-nav a,.text-link,footer a{color:var(--muted);font-size:.88rem;text-decoration:none}.desktop-nav a:hover,.text-link:hover,footer a:hover{color:var(--paper)}.header-actions{display:flex;align-items:center;gap:18px}.button{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 20px;background:var(--lime);color:#191722;text-decoration:none;font-weight:750;border:1px solid var(--lime);border-radius:2px;transition:background-color .2s,color .2s,border-color .2s}.button:hover{background:#ebffad;border-color:#ebffad}.button-small{min-height:42px;padding:0 15px;font-size:.86rem}.button-ghost{background:transparent;color:var(--paper);border-color:var(--line)}.button-ghost:hover{background:rgba(242,238,230,.08);border-color:var(--paper)}.menu-button{display:none;margin-left:auto;width:44px;height:44px;border:1px solid var(--line);background:none;color:var(--paper);font-size:1.4rem}.mobile-nav{display:none}.hero{max-width:1280px;margin:auto;min-height:700px;padding:100px 28px 82px;display:grid;grid-template-columns:minmax(0,.93fr) minmax(440px,1.07fr);gap:48px;align-items:center}.eyebrow{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--lime);margin:0 0 20px}.status-dot{display:inline-block;width:7px;height:7px;margin-right:8px;background:var(--lime);border-radius:50%}.hero h1{font-size:clamp(3.8rem,7vw,7.3rem);line-height:.89;letter-spacing:-.085em;margin:0;max-width:720px}.hero h1 em{font-family:Georgia,serif;font-weight:400;color:var(--violet);letter-spacing:-.07em}.hero-lede{font-size:1.12rem;line-height:1.55;color:#cac5d1;max-width:510px;margin:31px 0}.hero-actions{display:flex;gap:13px;flex-wrap:wrap}.quiet-note{font-size:.78rem;color:var(--muted);margin-top:20px}.hero-visual{position:relative;min-height:460px;display:flex;align-items:center;justify-content:center}.orbit{position:absolute;border:1px solid rgba(170,140,255,.3);border-radius:50%;transform:rotate(-26deg)}.orbit-one{width:560px;height:270px}.orbit-two{width:420px;height:420px;border-color:rgba(214,255,97,.16)}.product-window{position:relative;width:min(100%,620px);border:1px solid rgba(242,238,230,.23);background:#23202d;box-shadow:22px 25px 0 rgba(170,140,255,.16)}.window-bar{height:39px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 13px;gap:6px}.window-bar span{width:7px;height:7px;border-radius:50%;background:#615c69}.window-bar p{font-size:.65rem;color:var(--muted);margin:auto}.window-bar i{display:inline-block;width:5px;height:5px;background:var(--lime);border-radius:50%;margin-left:4px}.product-body{height:338px;display:grid;grid-template-columns:52px 1fr 43%;}.product-body aside{border-right:1px solid var(--line);padding:13px 16px;display:flex;flex-direction:column;gap:15px}.mini-logo{font-weight:900;color:var(--lime)}.rail{width:18px;height:2px;background:#7d7787}.rail.active{background:var(--lime);width:23px}.rail.bottom{margin-top:auto}.conversation{padding:29px 23px}.tiny-label{font-size:.57rem;letter-spacing:.12em;color:var(--muted);margin:0 0 12px;font-weight:800}.conversation h2{font-size:1.5rem;line-height:1.03;letter-spacing:-.055em;margin:0}.chat-bubble{margin-top:26px;padding:10px 12px;background:#353141;color:#ded9e4;font-size:.7rem;line-height:1.45;border-radius:2px 8px 8px}.typing{display:flex;gap:4px;margin-top:12px}.typing b{width:5px;height:5px;border-radius:50%;background:var(--lime)}.typing b:nth-child(2){opacity:.6}.typing b:nth-child(3){opacity:.25}.preview-card{padding:26px 16px;background:#e5dfd3;color:#24212c}.preview-line{height:5px;background:#827999;width:58%;margin:7px 0}.preview-line.wide{width:82%;margin-top:18px}.preview-image{height:126px;background:linear-gradient(145deg,#b7a0f1,#d6ff61);margin:18px 0 13px;display:flex;align-items:end;padding:9px;color:#26202f;font-size:.63rem;font-weight:800}.preview-title{font-size:.83rem;font-weight:800;margin:0 0 8px}.preview-tags{display:flex;gap:5px}.preview-tags i{font-style:normal;font-size:.55rem;padding:3px 5px;border:1px solid #a49cad}.voice-chip{position:absolute;right:-3%;bottom:14px;z-index:2;background:var(--paper);color:var(--ink);padding:12px 16px;min-width:198px;display:flex;align-items:center;gap:10px;box-shadow:8px 8px 0 var(--lime)}.voice-chip>span{font-size:1.4rem;color:#5c38ae}.voice-chip small,.voice-chip strong{display:block}.voice-chip small{font-size:.52rem;letter-spacing:.12em;color:#776f80}.voice-chip strong{font-size:.67rem;margin-top:3px}.voice-chip b{margin-left:auto;width:7px;height:7px;border-radius:50%;background:#6ed493}.statement-section,.workflow-section{max-width:1280px;margin:auto;padding:120px 28px;display:grid;grid-template-columns:1fr 1fr;gap:90px;border-top:1px solid var(--line)}h2{font-size:clamp(2.5rem,4.4vw,5rem);line-height:.95;letter-spacing:-.075em;margin:0}.section-copy{align-self:end;font-size:1.2rem;line-height:1.55;color:#c5c0cc;max-width:520px;margin:0}.feature-grid{max-width:1280px;margin:auto;padding:0 28px 120px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.feature-card{min-height:395px;padding:26px;background:#1d1a27;border:1px solid var(--line);position:relative;overflow:hidden}.card-index{font-size:.63rem;letter-spacing:.13em;color:var(--lime);font-weight:800}.feature-card h3{font-size:1.7rem;letter-spacing:-.055em;margin:84px 0 12px}.feature-card>p:not(.card-index){color:var(--muted);font-size:.92rem;line-height:1.5;max-width:270px}.conversation-lines{position:absolute;bottom:22px;left:26px;right:26px;display:grid;gap:7px}.conversation-lines span{font-size:.7rem;padding:9px;border:1px solid rgba(242,238,230,.13);color:#cec8d7}.conversation-lines span:nth-child(2){margin-left:23px;border-color:rgba(170,140,255,.5)}.voice-card{background:#322850}.voice-card h3{color:var(--lime)}.wave{position:absolute;bottom:27px;left:27px;right:27px;height:55px;display:flex;gap:7px;align-items:center}.wave i{width:5px;background:var(--lime);height:21%;}.wave i:nth-child(2),.wave i:nth-child(8){height:48%}.wave i:nth-child(3),.wave i:nth-child(7){height:80%}.wave i:nth-child(4),.wave i:nth-child(6){height:55%}.wave i:nth-child(5){height:100%}.publishing-card{background:#d6ff61;color:var(--ink)}.publishing-card .card-index{color:#573ca1}.publishing-card>p:not(.card-index){color:#454050}.theme-stack{position:absolute;bottom:28px;right:26px;width:230px;height:112px}.theme-stack div{position:absolute;border:1px solid rgba(17,16,25,.32);width:165px;height:90px}.theme-stack div:nth-child(1){background:#b79aff;left:0;top:18px}.theme-stack div:nth-child(2){background:#f2eee6;left:28px;top:9px}.theme-stack div:nth-child(3){background:#22202d;left:57px;top:0}.workflow-section{background:#16141e;max-width:none;padding-left:max(28px,calc((100vw - 1224px)/2));padding-right:max(28px,calc((100vw - 1224px)/2));}.workflow-list{list-style:none;margin:0;padding:0}.workflow-list li{display:grid;grid-template-columns:55px 1fr;gap:12px;border-top:1px solid var(--line);padding:20px 0}.workflow-list li:last-child{border-bottom:1px solid var(--line)}.workflow-list span{color:var(--lime);font-size:.69rem;font-weight:800}.workflow-list h3{font-size:1.25rem;letter-spacing:-.04em;margin:0}.workflow-list p{color:var(--muted);font-size:.85rem;line-height:1.5;margin:7px 0 0}.applications-section{padding:124px max(28px,calc((100vw - 1224px)/2));display:grid;grid-template-columns:.76fr 1.24fr;gap:70px;align-items:center;background:var(--paper);color:var(--ink)}.applications-section .eyebrow{color:#5535a1}.application-copy h2{max-width:500px}.application-copy>p:not(.eyebrow){color:#585261;line-height:1.6;margin:25px 0}.inline-link{color:#392071;font-weight:800;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:4px}.application-ui{height:385px;background:#ddd6e9;border:1px solid #beb4cc;position:relative;padding:28px;display:flex;align-items:end;justify-content:center}.resume-sheet{position:absolute;left:7%;top:36px;width:215px;height:296px;padding:20px;background:#f9f6ee;box-shadow:12px 13px 0 rgba(81,48,126,.25);z-index:1}.resume-sheet h3{font-size:1.35rem;margin:0;letter-spacing:-.05em}.resume-sheet p:not(.tiny-label){font-size:.56rem;line-height:1.45;color:#676170}.resume-rule{height:3px;width:60px;background:#aa8cff;margin:12px 0}.resume-block{display:grid;gap:6px;margin-top:25px;font-size:.55rem}.resume-block b{font-size:.48rem;letter-spacing:.1em;color:#5c478a}.kanban{width:78%;height:245px;background:#282334;color:var(--paper);padding:15px 17px;margin-left:90px}.kanban-top{display:flex;justify-content:space-between;font-size:.65rem;font-weight:800;border-bottom:1px solid #494355;padding-bottom:11px}.kanban-top b{color:var(--lime);font-size:.58rem}.kanban-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:15px}.kanban-columns small{font-size:.48rem;letter-spacing:.1em;color:#aaa3b6}.kanban-columns p{font-size:.56rem;line-height:1.35;margin:9px 0;padding:8px;background:#3a3545}.kanban-columns .lime-card{background:var(--lime);color:#24202e;font-weight:800}.kanban-columns i{font-size:.47rem;font-weight:500}.kanban-columns .purple-card{background:#aa8cff;color:#211a31;font-weight:800}.mobile-section{max-width:1020px;margin:auto;min-height:580px;padding:105px 28px;display:grid;grid-template-columns:330px 1fr;gap:125px;align-items:center}.mobile-section>div:last-child>p:not(.eyebrow){color:var(--muted);max-width:440px;line-height:1.6;margin-top:26px}.phone{width:255px;height:486px;background:#0b0a10;border:7px solid #504b58;border-radius:34px;padding:13px;box-shadow:16px 16px 0 #483579;margin:auto;position:relative}.phone-notch{width:90px;height:18px;background:#0b0a10;border-radius:0 0 13px 13px;position:absolute;z-index:2;top:0;left:76px}.phone-screen{height:100%;background:#e9e5db;color:#1a1823;border-radius:19px;padding:44px 14px 13px;position:relative}.phone-screen .tiny-label{color:#66577e}.phone-screen h3{font-size:1.5rem;letter-spacing:-.06em;margin:0 0 22px}.phone-project{padding:11px 0;border-top:1px solid #bbb4bf;display:grid;grid-template-columns:24px 1fr;gap:4px;font-size:.62rem}.phone-project span{color:#7151b0;font-weight:800}.phone-project strong{font-size:.72rem}.phone-project i{grid-column:2;color:#6d6474;font-size:.55rem;font-style:normal}.phone-nav{position:absolute;bottom:13px;left:14px;right:14px;display:flex;justify-content:space-around;border-top:1px solid #bbb4bf;padding-top:10px}.phone-nav b{font-size:.82rem;color:#705e91}.closing-cta{max-width:1280px;margin:0 auto;padding:125px 28px;border-top:1px solid var(--line);text-align:center}.closing-cta h2{max-width:760px;margin:0 auto 34px}footer{max-width:1280px;margin:auto;padding:28px;display:flex;align-items:center;gap:25px;border-top:1px solid var(--line)}footer p{color:var(--muted);font-size:.75rem;margin:0 auto 0 0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}a:focus-visible,button:focus-visible{outline:3px solid var(--lime);outline-offset:3px}@media (max-width:820px){.site-header{min-height:70px}.desktop-nav,.header-actions{display:none}.menu-button{display:block}.mobile-nav{position:absolute;display:grid;gap:5px;top:69px;left:0;right:0;padding:13px 28px 18px;background:#24212e;border-bottom:1px solid var(--line);z-index:5}.mobile-nav a{color:var(--paper);text-decoration:none;padding:10px 0;font-weight:700}.hero{grid-template-columns:1fr;min-height:auto;padding-top:72px}.hero-visual{min-height:400px}.statement-section,.workflow-section,.applications-section{grid-template-columns:1fr;gap:45px}.feature-grid{grid-template-columns:1fr}.feature-card{min-height:330px}.applications-section{padding-top:85px;padding-bottom:85px}.mobile-section{grid-template-columns:1fr;gap:60px;text-align:center}.mobile-section>div:last-child>p:not(.eyebrow){margin-left:auto;margin-right:auto}.phone{order:2}.application-ui{height:355px}.kanban{width:87%;margin-left:57px}.resume-sheet{left:3%;transform:scale(.84);transform-origin:left bottom}.product-window{transform:scale(.88)}.voice-chip{right:3%}}@media (max-width:520px){.hero{padding:60px 20px}.site-header,footer{padding-left:20px;padding-right:20px}.hero h1{font-size:3.85rem}.hero-visual{min-height:310px}.product-window{transform:scale(.67)}.voice-chip{bottom:-5px;right:0;transform:scale(.82);transform-origin:right}.statement-section,.workflow-section,.feature-grid,.mobile-section,.closing-cta{padding-left:20px;padding-right:20px}.statement-section,.workflow-section{padding-top:78px;padding-bottom:78px}.applications-section{padding-left:20px;padding-right:20px}.application-ui{margin:0 -20px;height:330px}.kanban{height:218px;margin-left:42px;padding:13px}.resume-sheet{transform:scale(.72);top:29px}.kanban-columns{gap:5px}.kanban-columns p{font-size:.5rem;padding:6px}.mobile-section{padding-top:80px;padding-bottom:80px}footer{flex-wrap:wrap}footer p{order:3;flex-basis:100%;margin:0}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+.marketing-shell {
+  --ink: #15141d;
+  --ink-soft: #221f2c;
+  --paper: #f6f2ea;
+  --paper-dim: #ece5d6;
+  --rule-on-paper: rgba(21, 20, 29, 0.14);
+  --rule-on-ink: rgba(246, 242, 234, 0.16);
+  --muted-on-paper: #55525f;
+  --muted-on-ink: #b9b4c4;
+  --indigo-text: #4338ca;
+  --violet-text: #c4b5fd;
+  --indigo: #6366f1;
+  --violet: #8b5cf6;
+  --font-display: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+.marketing-shell * { box-sizing: border-box; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip-link { position: absolute; left: 1rem; top: -4rem; background: var(--ink); color: var(--paper); padding: .7rem 1.1rem; z-index: 20; text-decoration: none; font-family: var(--font-mono); font-size: .85rem; }
+.skip-link:focus { top: 1rem; }
+
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- header ---------- */
+.masthead { max-width: 1280px; margin: 0 auto; padding: 0 24px; border-bottom: 1px solid var(--rule-on-paper); }
+.masthead-row { min-height: 76px; display: flex; align-items: center; gap: 28px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.masthead-tag { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; color: var(--muted-on-paper); white-space: nowrap; display: none; }
+.desktop-nav { display: flex; gap: 22px; margin-left: auto; }
+.desktop-nav a { color: var(--muted-on-paper); font-size: .9rem; text-decoration: none; transition: color .15s; }
+.desktop-nav a em { font-style: normal; font-family: var(--font-mono); color: var(--indigo-text); margin-right: 4px; }
+.desktop-nav a:hover { color: var(--ink); }
+.header-actions { display: flex; align-items: center; gap: 18px; }
+.text-link { color: var(--muted-on-paper); font-size: .88rem; text-decoration: none; }
+.text-link:hover { color: var(--ink); }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; padding: 0 20px; background: var(--ink); color: var(--paper); text-decoration: none; font-weight: 600; font-size: .92rem; border: 1px solid var(--ink); border-radius: 2px; transition: background-color .15s, color .15s, border-color .15s; }
+.button:hover { background: var(--indigo-text); border-color: var(--indigo-text); color: #fff; }
+.button-small { min-height: 40px; padding: 0 15px; font-size: .85rem; }
+.button-ghost { background: transparent; color: var(--ink); border-color: var(--rule-on-paper); }
+.button-ghost:hover { background: rgba(21, 20, 29, 0.06); border-color: var(--ink); color: var(--ink); }
+.menu-button { display: none; margin-left: auto; width: 42px; height: 42px; border: 1px solid var(--rule-on-paper); background: none; color: var(--ink); font-size: 1.3rem; }
+.mobile-nav { display: none; }
+
+/* ---------- hero ---------- */
+.hero { max-width: 1280px; margin: 0 auto; padding: 64px 24px 80px; position: relative; }
+.hero-grid { display: grid; grid-template-columns: 1.15fr 0.7fr; gap: 56px; align-items: start; }
+.kicker { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--indigo-text); margin: 0 0 14px; }
+.hero-lead h1 { font-family: var(--font-display); font-size: clamp(2.6rem, 5.2vw, 4.4rem); line-height: 1.04; font-weight: 600; margin: 0 0 22px; letter-spacing: -.01em; }
+.hero-lead h1 em { font-style: italic; color: var(--indigo-text); }
+.hero-dek { max-width: 46ch; font-size: 1.1rem; line-height: 1.6; color: var(--muted-on-paper); margin: 0 0 30px; }
+.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.contents { margin-top: 8px; border-top: 1px solid var(--rule-on-paper); padding-top: 18px; }
+.contents-label { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-on-paper); margin: 0 0 12px; }
+.contents ol { list-style: none; margin: 0; padding: 0; }
+.contents li + li { border-top: 1px solid var(--rule-on-paper); }
+.contents a { display: flex; gap: 14px; align-items: baseline; padding: 14px 0; text-decoration: none; color: var(--ink); }
+.contents-index { font-family: var(--font-mono); color: var(--indigo-text); font-size: .85rem; flex-shrink: 0; }
+.contents-title { font-weight: 600; }
+.contents-title small { display: block; font-weight: 400; font-family: var(--font-body); color: var(--muted-on-paper); font-size: .82rem; margin-top: 3px; }
+.contents a:hover .contents-title, .contents a:focus-visible .contents-title { text-decoration: underline; text-decoration-color: var(--violet); text-underline-offset: 4px; }
+.hero-mark { display: block; margin: 56px auto 0; opacity: .9; }
+.hero-mark-path { stroke-dasharray: 220; stroke-dashoffset: 0; }
+
+/* ---------- dividers ---------- */
+.divider { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+.divider svg { display: block; width: 100%; height: 24px; }
+
+/* ---------- chapters ---------- */
+.chapter { padding: 84px 24px; }
+.chapter-dark { background: var(--ink); color: var(--paper); }
+.chapter-light { background: var(--paper); color: var(--ink); }
+.chapter-dark .kicker, .chapter-dark p, .chapter-dark dt { color: inherit; }
+.chapter-dark .muted, .chapter-dark p { color: var(--muted-on-ink); }
+.chapter-dark .kicker { color: var(--violet-text); }
+.chapter-head { max-width: 1280px; margin: 0 auto; padding-bottom: 40px; border-bottom: 1px solid var(--rule-on-paper); }
+.chapter-dark .chapter-head { border-bottom-color: var(--rule-on-ink); }
+.chapter-head h2 { font-family: var(--font-display); font-size: clamp(1.9rem, 3.4vw, 2.7rem); font-weight: 600; margin: 0; max-width: 18ch; }
+.chapter-body { max-width: 1280px; margin: 0 auto; padding-top: 48px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 60px; align-items: start; }
+.chapter-body-reverse { grid-template-columns: 0.9fr 1.1fr; }
+.chapter-body-reverse .publish-mockup, .chapter-body-reverse .phone { order: -1; }
+.chapter-copy p { font-size: 1.05rem; line-height: 1.7; margin: 0 0 20px; max-width: 56ch; }
+.chapter-dark .chapter-copy p { color: var(--muted-on-ink); }
+.chapter-copy code { font-family: var(--font-mono); background: var(--rule-on-paper); padding: .1em .35em; border-radius: 2px; font-size: .92em; }
+.chapter-dark .chapter-copy code { background: var(--rule-on-ink); color: var(--violet-text); }
+.pull-quote { font-family: var(--font-display); font-style: italic; font-size: 1.35rem; line-height: 1.5; margin: 28px 0; padding-left: 22px; border-left: 3px solid var(--violet); max-width: 40ch; }
+.footnotes { margin: 32px 0 0; display: grid; gap: 18px; border-top: 1px solid var(--rule-on-paper); padding-top: 24px; }
+.chapter-dark .footnotes { border-top-color: var(--rule-on-ink); }
+.footnotes dt { font-family: var(--font-mono); font-size: .8rem; letter-spacing: .03em; text-transform: uppercase; color: var(--indigo-text); margin-bottom: 4px; }
+.chapter-dark .footnotes dt { color: var(--violet-text); }
+.footnotes dd { margin: 0; font-size: .95rem; color: var(--muted-on-paper); max-width: 48ch; }
+.chapter-dark .footnotes dd { color: var(--muted-on-ink); }
+.inline-link { display: inline-flex; gap: 8px; color: inherit; font-weight: 600; text-decoration: underline; text-decoration-color: var(--violet); text-underline-offset: 4px; }
+
+/* ---------- studio mockup ---------- */
+.studio-mockup { border: 1px solid var(--rule-on-ink); border-radius: 4px; overflow: hidden; background: var(--ink-soft); }
+.mockup-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--rule-on-ink); }
+.mockup-label { font-family: var(--font-mono); font-size: .8rem; color: var(--muted-on-ink); }
+.status-pill { font-family: var(--font-mono); font-size: .72rem; padding: 4px 10px; border: 1px solid var(--violet); color: var(--violet-text); border-radius: 20px; }
+.mockup-body { display: grid; grid-template-columns: 130px 1fr; }
+.mockup-rail { list-style: none; margin: 0; padding: 16px 0; border-right: 1px solid var(--rule-on-ink); }
+.mockup-rail li { padding: 9px 16px; font-size: .85rem; color: var(--muted-on-ink); }
+.mockup-rail li.active { color: var(--paper); border-left: 2px solid var(--violet); background: rgba(139, 92, 246, 0.1); }
+.mockup-doc { padding: 22px; }
+.mockup-meta { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .04em; color: var(--muted-on-ink); margin: 0 0 10px; }
+.mockup-doc h3 { font-family: var(--font-display); font-size: 1.4rem; margin: 0 0 12px; }
+.mockup-doc p { color: var(--muted-on-ink); font-size: .92rem; line-height: 1.6; margin: 0 0 16px; max-width: 42ch; }
+.mockup-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.mockup-tags span { font-size: .76rem; border: 1px solid var(--rule-on-ink); border-radius: 20px; padding: 4px 10px; color: var(--muted-on-ink); }
+
+/* ---------- publish mockup ---------- */
+.publish-mockup { border: 1px solid var(--rule-on-paper); border-radius: 4px; overflow: hidden; background: #fff; }
+.url-bar { display: flex; align-items: center; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--rule-on-paper); font-family: var(--font-mono); font-size: .82rem; color: var(--muted-on-paper); }
+.url-bar strong { color: var(--indigo-text); font-weight: 700; }
+.publish-list { list-style: none; margin: 0; padding: 8px 0; }
+.publish-list li { display: flex; gap: 14px; padding: 14px 20px; border-top: 1px solid var(--rule-on-paper); font-size: .95rem; }
+.publish-list li:first-child { border-top: none; }
+.publish-index { font-family: var(--font-mono); color: var(--indigo-text); font-size: .82rem; }
+
+/* ---------- applications mockup ---------- */
+.applications-mockup { display: grid; gap: 18px; }
+.resume-sheet { background: var(--ink-soft); border: 1px solid var(--rule-on-ink); border-radius: 4px; padding: 22px; }
+.resume-sheet h3 { font-family: var(--font-display); font-size: 1.3rem; margin: 6px 0 8px; }
+.resume-role { font-size: .88rem; color: var(--muted-on-ink); margin: 0 0 16px; }
+.resume-block { display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--rule-on-ink); }
+.resume-block b { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; color: var(--violet-text); }
+.resume-block span { font-size: .88rem; color: var(--muted-on-ink); }
+.kanban { background: var(--ink-soft); border: 1px solid var(--rule-on-ink); border-radius: 4px; padding: 18px; }
+.kanban-top { font-family: var(--font-mono); font-size: .8rem; color: var(--muted-on-ink); margin-bottom: 14px; }
+.kanban-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kanban-columns small { display: block; font-family: var(--font-mono); font-size: .68rem; letter-spacing: .04em; color: var(--muted-on-ink); margin-bottom: 8px; }
+.kanban-columns p { font-size: .82rem; background: rgba(246, 242, 234, 0.06); border: 1px solid var(--rule-on-ink); border-radius: 3px; padding: 10px; margin: 0; line-height: 1.4; }
+.accent-card { border-color: var(--indigo) !important; }
+.accent-card i { color: var(--violet-text); font-style: normal; font-size: .74rem; }
+.accent-card-2 { border-color: var(--violet) !important; }
+
+/* ---------- phone ---------- */
+.phone { width: 240px; border: 8px solid var(--ink); border-radius: 30px; background: var(--ink); position: relative; margin: 0 auto; }
+.phone-notch { width: 70px; height: 16px; background: var(--ink); border-radius: 0 0 10px 10px; margin: 0 auto; }
+.phone-screen { background: var(--paper); border-radius: 20px; padding: 20px 16px; min-height: 300px; }
+.phone-screen h3 { font-family: var(--font-display); font-size: 1.15rem; margin: 4px 0 16px; }
+.phone-project { border-top: 1px solid var(--rule-on-paper); padding: 12px 0; display: grid; grid-template-columns: 20px 1fr; gap: 4px 10px; }
+.phone-project span { font-family: var(--font-mono); font-size: .72rem; color: var(--indigo-text); }
+.phone-project strong { font-size: .9rem; }
+.phone-project i { grid-column: 2; font-style: normal; font-size: .76rem; color: var(--muted-on-paper); }
+
+/* ---------- epilogue ---------- */
+.epilogue { max-width: 720px; margin: 0 auto; padding: 100px 24px; text-align: left; border-top: 1px solid var(--rule-on-paper); }
+.epilogue h2 { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 2.9rem); font-weight: 600; margin: 0 0 18px; }
+.epilogue p { font-size: 1.05rem; color: var(--muted-on-paper); margin: 0 0 30px; max-width: 48ch; }
+
+/* ---------- footer ---------- */
+footer { max-width: 1280px; margin: 0 auto; padding: 40px 24px 56px; border-top: 1px solid var(--rule-on-paper); display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; }
+.footer-brand { display: flex; flex-direction: column; gap: 6px; }
+.footer-brand p { margin: 0; font-size: .85rem; color: var(--muted-on-paper); }
+.colophon { margin: 0 auto 0 0; font-family: var(--font-mono); font-size: .78rem; color: var(--muted-on-paper); }
+footer > a { color: var(--muted-on-paper); font-size: .88rem; text-decoration: none; }
+footer > a:hover { color: var(--ink); }
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-mark-path { stroke-dasharray: 220; stroke-dashoffset: 220; animation: draw-mark 1.4s ease forwards .2s; }
+  .contents a { transition: transform .15s; }
+  .contents a:hover, .contents a:focus-visible { transform: translateX(4px); }
+}
+@keyframes draw-mark { to { stroke-dashoffset: 0; } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .hero-grid, .chapter-body, .chapter-body-reverse { grid-template-columns: 1fr; }
+  .chapter-body-reverse .publish-mockup, .chapter-body-reverse .phone { order: 0; }
+  .masthead-tag { display: none; }
+  .kanban-columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .desktop-nav, .header-actions { display: none; }
+  .menu-button { display: block; }
+  .mobile-nav { display: flex; flex-direction: column; gap: 4px; padding: 12px 0 20px; }
+  .mobile-nav a, .mobile-nav :deep(a) { color: var(--ink); text-decoration: none; padding: 10px 4px; border-top: 1px solid var(--rule-on-paper); font-size: .95rem; }
+  .mockup-body { grid-template-columns: 1fr; }
+  .mockup-rail { display: none; }
+}
+@media (max-width: 480px) {
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .phone { width: 100%; max-width: 280px; }
+}
 </style>
