@@ -127,7 +127,7 @@ router.get('/:subdomain', async (req, res) => {
     const publicCacheKey = `project:${projectIdentity.id}:public`;
     const cachedSite = await cache.get(publicCacheKey);
     if (cachedSite) {
-      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300');
       res.set('ETag', `\"site-${projectIdentity.id}-${cachedSite.siteConfig?.publishedRevision || 1}\"`);
       return res.json(cachedSite);
     }
@@ -308,7 +308,7 @@ router.get('/:subdomain', async (req, res) => {
       contentLinks: contentLinks
     };
     await cache.set(publicCacheKey, publicSite, 300);
-    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300');
     res.set('ETag', `\"site-${project.id}-${publicSite.siteConfig.publishedRevision || 1}\"`);
     res.json(publicSite);
   } catch (error) {

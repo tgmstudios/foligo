@@ -7,9 +7,9 @@ const GoApplyAPI = (() => {
   // ─── Server Endpoints ───────────────────────────────────────────
   // Lets the extension point at production, a local dev stack, or a
   // custom pair of URLs (e.g. a staging deploy) instead of hardcoding
-  // api.foligo.tech everywhere.
+  // api.foligo.org everywhere.
   const ENVIRONMENTS = {
-    production: { api: 'https://api.foligo.tech', web: 'https://app.foligo.tech' },
+    production: { api: 'https://api.foligo.org', web: 'https://app.foligo.org' },
     local: { api: 'http://localhost:3000', web: 'http://localhost' },
   };
   const DEFAULT_ENV = 'production';

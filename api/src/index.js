@@ -72,7 +72,7 @@ const additionalCorsOrigins = (process.env.ADDITIONAL_CORS_ORIGINS || '')
   .filter(origin => origin.length > 0);
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'https://app.foligo.tech',
+  process.env.FRONTEND_URL || 'https://app.foligo.org',
   'http://localhost:9010', // Dashboard dev server
   'http://localhost:9011', // Sites dev server
 
@@ -125,7 +125,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'https://api.foligo.tech',
+        url: 'https://api.foligo.org',
         description: 'Production server',
       },
       {

@@ -2,8 +2,8 @@
 set -e
 
 export NODE_ENV="${NODE_ENV:-development}"
-export API_BASE_URL="${API_BASE_URL:-https://api.foligo.tech}"
-export DASHBOARD_URL="${DASHBOARD_URL:-https://app.foligo.tech}"
+export API_BASE_URL="${API_BASE_URL:-https://api.foligo.org}"
+export DASHBOARD_URL="${DASHBOARD_URL:-https://app.foligo.org}"
 
 # Generate runtime environment configuration
 echo "Generating environment configuration..."

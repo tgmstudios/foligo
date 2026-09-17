@@ -101,7 +101,7 @@
                     Yes, create a public portfolio site for me
                   </label>
                   <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Get a custom subdomain (e.g., yourname.foligo.tech) where your portfolio will be publicly accessible
+                    Get a custom subdomain (e.g., yourname.foligo.org) where your portfolio will be publicly accessible
                   </p>
                 </div>
               </div>
@@ -124,7 +124,7 @@
                     placeholder="yourname"
                   />
                   <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 sm:text-sm">
-                    .foligo.tech
+                    .foligo.org
                   </span>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">

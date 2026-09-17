@@ -19,7 +19,7 @@ async function generateSocialPost(contentData, projectData, platform = 'linkedin
 
   try {
     // Build the foligo link
-    const foligoLink = `https://${projectData.subdomain}.foligo.tech/${contentData.slug || contentData.id}`;
+    const foligoLink = `https://${projectData.subdomain}.foligo.org/${contentData.slug || contentData.id}`;
 
     // Build project links section
     const projectLinks = [];

@@ -6,7 +6,7 @@
   const KEY = script?.getAttribute('data-key') || window.FOLIGO_ANALYTICS_KEY || '';
   if (!KEY) return;
 
-  const ENDPOINT = 'https://api.foligo.tech/api/analytics/events';
+  const ENDPOINT = 'https://api.foligo.org/api/analytics/events';
   const VISITOR_KEY = 'foligo_visitor_id';
   const SESSION_KEY = 'foligo_session_id';
   const VISIT_COUNT_KEY = 'foligo_visit_count';

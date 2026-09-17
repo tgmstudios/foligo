@@ -6,6 +6,7 @@
 
 <script setup>
 import { useSubdomain } from '~/composables/useSubdomain'
+import { usePublicSiteHead } from '~/composables/usePublicSiteHead.js'
 
 const route = useRoute()
 const runtime = useRuntimeConfig()
@@ -23,10 +24,7 @@ const { data: siteData, pending, error } = await useFetch(() => {
   server: true
 })
 
-useHead(() => (siteData.value ? {
-  title: siteData.value.siteConfig?.metaTitle || siteData.value.project?.name || 'Portfolio',
-  meta: [{ name: 'description', content: siteData.value.siteConfig?.metaDescription || siteData.value.project?.description || '' }]
-} : {}))
+usePublicSiteHead(siteData, runtime)
 </script>
 
 <style scoped>

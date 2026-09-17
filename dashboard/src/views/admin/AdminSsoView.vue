@@ -439,8 +439,8 @@ const redirectUri = computed(() => {
   if (!providerId) return ''
   
   // IdPs must return to the public API callback, never the dashboard's relative /api proxy.
-  const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'https://api.foligo.tech/api'
-  const apiOrigin = apiUrl.startsWith('/') ? 'https://api.foligo.tech' : new URL(apiUrl).origin
+  const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'https://api.foligo.org/api'
+  const apiOrigin = apiUrl.startsWith('/') ? 'https://api.foligo.org' : new URL(apiUrl).origin
   return `${apiOrigin}/api/auth/sso/callback/${providerId}`
 })
 

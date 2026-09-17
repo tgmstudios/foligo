@@ -81,7 +81,7 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-300">{{ item.project.name }}</div>
                 <div v-if="item.project.subdomain" class="text-sm text-gray-400">
-                  {{ item.project.subdomain }}.foligo.tech
+                  {{ item.project.subdomain }}.foligo.org
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">

@@ -13,7 +13,7 @@ export default defineNuxtPlugin(() => {
   const VISIT_COUNT_KEY = 'foligo_visit_count'
   const PREV_PATH_KEY = 'foligo_prev_path'
   const ENTER_TIME_KEY = 'foligo_enter_time'
-  const ENDPOINT = 'https://api.foligo.tech/api/analytics/events'
+  const ENDPOINT = 'https://api.foligo.org/api/analytics/events'
 
   // ── Init visitor/session ───────────────────────────────────────
   let visitorId = localStorage.getItem(VISITOR_KEY)

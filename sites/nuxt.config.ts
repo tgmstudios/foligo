@@ -14,8 +14,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'https://api.foligo.tech',
-      dashboardUrl: process.env.DASHBOARD_URL || 'https://app.foligo.tech',
+      apiBaseUrl: process.env.API_BASE_URL || 'https://api.foligo.org',
+      dashboardUrl: process.env.DASHBOARD_URL || 'https://app.foligo.org',
       analyticsKey: process.env.NUXT_PUBLIC_ANALYTICS_KEY || ''
     }
   },

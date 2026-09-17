@@ -246,7 +246,7 @@ function openSetup() { showSetup.value = true }
 async function copy(value: string) { await navigator.clipboard.writeText(value); toast.success('Write key copied') }
 function onProjectChange(event: Event) { selectedId.value = (event as CustomEvent).detail.projectId; revealedKey.value = '' }
 function formatNumber(value: number) { return new Intl.NumberFormat(undefined, { notation: value >= 10000 ? 'compact' : 'standard' }).format(value) }
-const snippet = computed(() => `<script src="https://api.foligo.tech/analytics.js" data-key="${revealedKey.value || property.value?.writeKeyPrefix + '...' || 'fa_YOUR_KEY'}" defer><\\/script>`)
+const snippet = computed(() => `<script src="https://api.foligo.org/analytics.js" data-key="${revealedKey.value || property.value?.writeKeyPrefix + '...' || 'fa_YOUR_KEY'}" defer><\\/script>`)
 watch([selectedId, days], load); onMounted(() => { window.addEventListener('project-changed', onProjectChange); load() }); onBeforeUnmount(() => window.removeEventListener('project-changed', onProjectChange))
 </script>
 

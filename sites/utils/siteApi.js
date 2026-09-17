@@ -1,6 +1,6 @@
 // API service for site data
 export class SiteApiService {
-  constructor(baseUrl = 'https://api.foligo.tech') {
+  constructor(baseUrl = 'https://api.foligo.org') {
     this.baseUrl = baseUrl
   }
 
@@ -135,8 +135,8 @@ export class SiteApiService {
 
   extractSubdomain(hostname) {
     const parts = hostname.split('.')
-    // Check if it's a foligo.tech subdomain
-    if (parts.length >= 3 && parts[parts.length - 2] === 'foligo' && parts[parts.length - 1] === 'tech') {
+    // Check if it's a foligo.org subdomain
+    if (parts.length >= 3 && parts[parts.length - 2] === 'foligo' && parts[parts.length - 1] === 'org') {
       return parts[0]
     }
     return null

@@ -72,8 +72,8 @@ describe('extension API browser-agent compatibility handshake', () => {
     const request = await api.buildAgentRequest({ mode: 'chat', messages: [{ role: 'user', content: 'go' }] });
 
     expect(sendMessage).toHaveBeenCalledTimes(1);
-    expect(sendMessage.mock.calls[0][0].url).toBe('https://api.foligo.tech/api/ai/agent/capabilities');
-    expect(request.url).toBe('https://api.foligo.tech/api/ai/agent/turn');
+    expect(sendMessage.mock.calls[0][0].url).toBe('https://api.foligo.org/api/ai/agent/capabilities');
+    expect(request.url).toBe('https://api.foligo.org/api/ai/agent/turn');
     expect(request.options.headers['X-Foligo-Agent-Protocol']).toBe('2');
     expect(JSON.parse(request.options.body)).toMatchObject({
       mode: 'chat',

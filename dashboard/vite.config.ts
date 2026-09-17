@@ -34,10 +34,9 @@ export default defineConfig({
     host: true,
     allowedHosts: [
       'localhost',
-      'foligo.tech',
-      'www.foligo.tech',
-      'foligo.tech',
-      'app.foligo.tech'
+      'foligo.org',
+      'www.foligo.org',
+      'app.foligo.org'
     ],
     // Ensure Vite serves index.html for all routes (history mode support)
     fs: {

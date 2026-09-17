@@ -379,7 +379,7 @@
                         class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                         placeholder="my-portfolio"
                       />
-                      <p class="text-xs text-gray-400 mt-1">Will be available at {subdomain}.foligo.tech</p>
+                      <p class="text-xs text-gray-400 mt-1">Will be available at {subdomain}.foligo.org</p>
                     </div>
                   </div>
                   <div class="mt-4">
@@ -591,7 +591,7 @@
                 <!-- Template -->
                 <div>
                   <h4 class="text-md font-medium text-white mb-4">Template</h4>
-                  <p class="text-xs text-gray-400 mb-3">Pick the public renderer for {{ project?.subdomain ? `${project.subdomain}.foligo.tech` : 'your portfolio' }}.</p>
+                  <p class="text-xs text-gray-400 mb-3">Pick the public renderer for {{ project?.subdomain ? `${project.subdomain}.foligo.org` : 'your portfolio' }}.</p>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <label
                       v-for="option in templateOptions"

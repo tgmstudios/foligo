@@ -199,7 +199,6 @@ router.put('/:id/site-config', [
       where: { projectId },
       update: {
         ...updateData,
-        layoutConfig: updateData.layoutConfig || {},
         publishedRevision: { increment: 1 }
       },
       create: {

@@ -76,7 +76,7 @@ setInterval(cleanupExpiredSessions, 5 * 60 * 1000);
  */
 function getRedirectUri(providerId) {
   // OAuth providers require the stable public API callback, never the dashboard host.
-  const baseUrl = process.env.API_URL || 'https://api.foligo.tech';
+  const baseUrl = process.env.API_URL || 'https://api.foligo.org';
   
   const redirectUri = `${baseUrl}/api/auth/sso/callback/${providerId}`;
   return redirectUri;
@@ -222,7 +222,7 @@ router.get('/login/:providerId', async (req, res) => {
  *     tags: [SSO Auth]
  */
 router.get('/callback/:providerId', async (req, res) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'https://app.foligo.tech';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://app.foligo.org';
   
   try {
     const { providerId } = req.params;

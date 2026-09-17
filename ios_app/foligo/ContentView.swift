@@ -8,7 +8,7 @@
 import SwiftUI
 
 enum FoligoAPI {
-    static let baseURL = URL(string: "https://api.foligo.tech").unsafelyUnwrapped
+    static let baseURL = URL(string: "https://api.foligo.org").unsafelyUnwrapped
     
     fileprivate static func getProjects(authToken: String) async -> Projects? {
         var request = URLRequest(url: baseURL.appendingPathComponent("/api/users/me/projects"))

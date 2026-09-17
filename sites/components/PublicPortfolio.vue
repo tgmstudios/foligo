@@ -41,7 +41,7 @@
       </div>
     </main>
 
-    <main v-else class="detail">
+    <main v-else-if="page.kind === 'detail'" class="detail">
       <NuxtLink class="back" :to="archiveHref(page.item)">← Back to {{ typeLabel(page.item.contentType) }}</NuxtLink>
       <p class="eyebrow">{{ page.item.contentType.toLowerCase() }}</p>
       <h1>{{ page.item.title }}</h1><p class="lede">{{ page.item.excerpt }}</p>
@@ -49,13 +49,20 @@
       <article v-html="renderMarkdown(page.item.content || '')" />
     </main>
 
-    <footer>© {{ new Date().getFullYear() }} {{ config.siteName || site.name }} · <a href="https://foligo.tech">Built with Foligo</a></footer>
+    <main v-else class="detail">
+      <p class="eyebrow">Not found</p><h1>Nothing here</h1>
+      <p class="lede">That page doesn't exist on this portfolio.</p>
+      <NuxtLink class="back" to="/">← Back home</NuxtLink>
+    </main>
+
+    <footer>© {{ new Date().getFullYear() }} {{ config.siteName || site.name }} · <a href="https://foligo.org">Built with Foligo</a></footer>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { renderMarkdown } from '~/utils/markdownRenderer'
+import { resolvePortfolioPage, itemHref, archiveHref } from '~/utils/portfolio-routing.js'
 
 const props = defineProps({ siteData: { type: Object, required: true }, route: { type: Object, required: true } })
 const site = computed(() => props.siteData.project || {})
@@ -70,17 +77,7 @@ const sections = computed(() => [
   { key: 'experiences', label: 'Experience', href: '/experiences', items: collections.value.experiences || [] }
 ].filter(section => section.items.length))
 const pathParts = computed(() => props.route.path.split('/').filter(Boolean))
-const allItems = computed(() => [...(collections.value.projects || []), ...(collections.value.blogs || []), ...(collections.value.experiences || [])])
-const page = computed(() => {
-  const [first, slug] = pathParts.value
-  if (!first) return { kind: 'home' }
-  const map = { projects: ['Projects', collections.value.projects || []], blog: ['Writing', collections.value.blogs || []], experiences: ['Experience', collections.value.experiences || []] }
-  if (!slug && map[first]) return { kind: 'archive', label: map[first][0], items: map[first][1] }
-  const item = allItems.value.find(candidate => candidate.slug === (slug || first))
-  return item ? { kind: 'detail', item } : { kind: 'archive', label: 'Work', items: [] }
-})
-function itemHref(item) { return `/${item.contentType === 'PROJECT' ? 'project' : item.contentType === 'BLOG' ? 'blog' : 'experience'}/${item.slug}` }
-function archiveHref(item) { return item.contentType === 'PROJECT' ? '/projects' : item.contentType === 'BLOG' ? '/blog' : '/experiences' }
+const page = computed(() => resolvePortfolioPage(pathParts.value, collections.value))
 function typeLabel(type) { return type === 'BLOG' ? 'Writing' : type === 'EXPERIENCE' ? 'Experience' : 'Projects' }
 </script>
 
