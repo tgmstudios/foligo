@@ -50,6 +50,10 @@ export interface SiteConfig {
   indexLayout: string
   archiveLayout: string
   singleLayout: string
+  templateId: 'studio' | 'editorial' | 'terminal'
+  templateVersion: number
+  templateSettings?: Record<string, unknown> | null
+  theme?: Record<string, unknown> | null
   metaTitle?: string
   metaDescription?: string
   favicon?: string

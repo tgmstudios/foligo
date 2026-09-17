@@ -588,52 +588,21 @@
                   </div>
                 </div>
 
-                <!-- Layout Settings -->
+                <!-- Template -->
                 <div>
-                  <h4 class="text-md font-medium text-white mb-4">Layout Settings</h4>
+                  <h4 class="text-md font-medium text-white mb-4">Template</h4>
+                  <p class="text-xs text-gray-400 mb-3">Pick the public renderer for {{ project?.subdomain ? `${project.subdomain}.foligo.tech` : 'your portfolio' }}.</p>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label for="indexLayout" class="block text-sm font-medium text-gray-300 mb-1">
-                        Index Layout
-                      </label>
-                      <select
-                        id="indexLayout"
-                        v-model="siteForm.indexLayout"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="grid">Grid</option>
-                        <option value="list">List</option>
-                        <option value="masonry">Masonry</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label for="archiveLayout" class="block text-sm font-medium text-gray-300 mb-1">
-                        Archive Layout
-                      </label>
-                      <select
-                        id="archiveLayout"
-                        v-model="siteForm.archiveLayout"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="grid">Grid</option>
-                        <option value="list">List</option>
-                        <option value="masonry">Masonry</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label for="singleLayout" class="block text-sm font-medium text-gray-300 mb-1">
-                        Single Layout
-                      </label>
-                      <select
-                        id="singleLayout"
-                        v-model="siteForm.singleLayout"
-                        class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="standard">Standard</option>
-                        <option value="wide">Wide</option>
-                        <option value="minimal">Minimal</option>
-                      </select>
-                    </div>
+                    <label
+                      v-for="option in templateOptions"
+                      :key="option.id"
+                      class="relative flex flex-col gap-1 p-4 rounded-lg border-2 cursor-pointer transition-colors"
+                      :class="siteForm.templateId === option.id ? 'border-primary-500 bg-primary-500/10' : 'border-gray-600 bg-gray-700 hover:border-gray-500'"
+                    >
+                      <input v-model="siteForm.templateId" type="radio" name="templateId" :value="option.id" class="sr-only">
+                      <span class="text-sm font-semibold text-white">{{ option.name }}</span>
+                      <span class="text-xs text-gray-400">{{ option.description }}</span>
+                    </label>
                   </div>
                 </div>
 
@@ -745,6 +714,12 @@ const projectForm = reactive({
   isPublished: false
 })
 
+const templateOptions = [
+  { id: 'studio', name: 'Studio', description: 'Bold sans-serif grid — for product and design portfolios.' },
+  { id: 'editorial', name: 'Editorial', description: 'Serif headlines, wide reading columns — for writers and researchers.' },
+  { id: 'terminal', name: 'Terminal', description: 'Dark monospace theme — for engineers and open-source work.' }
+]
+
 const siteForm = reactive({
   siteName: '',
   siteDescription: '',
@@ -763,6 +738,7 @@ const siteForm = reactive({
   indexLayout: 'portfolio',
   archiveLayout: 'list',
   singleLayout: 'standard',
+  templateId: 'studio' as 'studio' | 'editorial' | 'terminal',
   metaTitle: '',
   metaDescription: ''
 })
@@ -878,9 +854,7 @@ const saveProjectSettings = async () => {
       accentColor: siteForm.accentColor,
       backgroundColor: siteForm.backgroundColor,
       textColor: siteForm.textColor,
-      indexLayout: siteForm.indexLayout,
-      archiveLayout: siteForm.archiveLayout,
-      singleLayout: siteForm.singleLayout,
+      templateId: siteForm.templateId,
       metaTitle: siteForm.metaTitle,
       metaDescription: siteForm.metaDescription,
       layoutConfig: {} // Add empty layoutConfig object
@@ -932,9 +906,7 @@ const initializeForms = () => {
       siteForm.accentColor = config.accentColor || '#F59E0B'
       siteForm.backgroundColor = config.backgroundColor || '#FFFFFF'
       siteForm.textColor = config.textColor || '#1F2937'
-      siteForm.indexLayout = config.indexLayout || 'portfolio'
-      siteForm.archiveLayout = config.archiveLayout || 'list'
-      siteForm.singleLayout = config.singleLayout || 'standard'
+      siteForm.templateId = config.templateId || 'studio'
       siteForm.metaTitle = config.metaTitle || ''
       siteForm.metaDescription = config.metaDescription || ''
     }

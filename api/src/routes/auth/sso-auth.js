@@ -75,8 +75,8 @@ setInterval(cleanupExpiredSessions, 5 * 60 * 1000);
  * Get the redirect URI for SSO callback
  */
 function getRedirectUri(providerId) {
-  // Use API_URL if set, otherwise construct from request
-  const baseUrl = process.env.API_URL;
+  // OAuth providers require the stable public API callback, never the dashboard host.
+  const baseUrl = process.env.API_URL || 'https://api.foligo.tech';
   
   const redirectUri = `${baseUrl}/api/auth/sso/callback/${providerId}`;
   return redirectUri;
@@ -222,7 +222,7 @@ router.get('/login/:providerId', async (req, res) => {
  *     tags: [SSO Auth]
  */
 router.get('/callback/:providerId', async (req, res) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://app.foligo.tech';
   
   try {
     const { providerId } = req.params;

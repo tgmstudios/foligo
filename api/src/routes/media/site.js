@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../../services/core/database');
+const { cache } = require('../../services/core/redis');
 
 /**
  * @swagger
@@ -115,7 +115,23 @@ router.get('/:subdomain', async (req, res) => {
   try {
     const { subdomain } = req.params;
 
-    // Find project by subdomain
+    // Resolve the project by its indexed subdomain, then use the existing
+    // project cache family for the heavy public-site document.
+    const projectIdentity = await prisma.project.findUnique({
+      where: { subdomain },
+      select: { id: true, isPublished: true }
+    });
+    if (!projectIdentity || !projectIdentity.isPublished) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    const publicCacheKey = `project:${projectIdentity.id}:public`;
+    const cachedSite = await cache.get(publicCacheKey);
+    if (cachedSite) {
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
+      res.set('ETag', `\"site-${projectIdentity.id}-${cachedSite.siteConfig?.publishedRevision || 1}\"`);
+      return res.json(cachedSite);
+    }
+
     const project = await prisma.project.findUnique({
       where: { subdomain },
       include: {
@@ -265,15 +281,7 @@ router.get('/:subdomain', async (req, res) => {
       other: contentWithPublished.filter(c => !['PROJECT', 'BLOG', 'EXPERIENCE', 'SKILL'].includes(c.contentType))
     };
 
-    // Debug: Log the siteConfig being returned
-    console.log('Site Config Data:', {
-      hasSiteConfig: !!project.siteConfig,
-      profileImage: project.siteConfig?.profileImage,
-      profileName: project.siteConfig?.profileName,
-      profileBio: project.siteConfig?.profileBio
-    });
-
-    res.json({
+    const publicSite = {
       project: {
         id: project.id,
         name: project.name,
@@ -298,7 +306,11 @@ router.get('/:subdomain', async (req, res) => {
       },
       content: contentByType,
       contentLinks: contentLinks
-    });
+    };
+    await cache.set(publicCacheKey, publicSite, 300);
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
+    res.set('ETag', `\"site-${project.id}-${publicSite.siteConfig.publishedRevision || 1}\"`);
+    res.json(publicSite);
   } catch (error) {
     console.error('Error fetching site data:', error);
     res.status(500).json({ error: 'Internal server error' });

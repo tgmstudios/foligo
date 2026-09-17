@@ -59,6 +59,12 @@ const cache = {
     if (!redisClient) return false;
     try {
       await redisClient.del(key);
+      // Public portfolios are cached as a sibling of the existing project
+      // cache key, so every established project/content invalidation keeps
+      // the public document fresh without a Redis KEYS scan.
+      if (/^project:[^:]+$/.test(key)) {
+        await redisClient.del(`${key}:public`);
+      }
       return true;
     } catch (error) {
       console.error('Redis DEL error:', error);

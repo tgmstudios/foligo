@@ -9,7 +9,7 @@ const GoApplyAPI = (() => {
   // custom pair of URLs (e.g. a staging deploy) instead of hardcoding
   // api.foligo.tech everywhere.
   const ENVIRONMENTS = {
-    production: { api: 'https://api.foligo.tech', web: 'https://foligo.tech' },
+    production: { api: 'https://api.foligo.tech', web: 'https://app.foligo.tech' },
     local: { api: 'http://localhost:3000', web: 'http://localhost' },
   };
   const DEFAULT_ENV = 'production';

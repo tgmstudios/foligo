@@ -173,6 +173,10 @@ router.put('/:id/site-config', [
   body('indexLayout').optional().isIn(['grid', 'list', 'masonry']),
   body('archiveLayout').optional().isIn(['grid', 'list', 'masonry']),
   body('singleLayout').optional().isIn(['standard', 'wide', 'minimal']),
+  body('templateId').optional().isIn(['studio', 'editorial', 'terminal']),
+  body('templateVersion').optional().isInt({ min: 1, max: 1 }),
+  body('templateSettings').optional().isObject(),
+  body('theme').optional().isObject(),
   body('metaTitle').optional().trim(),
   body('metaDescription').optional().trim(),
   body('favicon').optional().trim(),
@@ -180,20 +184,23 @@ router.put('/:id/site-config', [
 ], async (req, res) => {
   try {
     const projectId = req.params.id;
-    const updateData = req.body;
-
-    // Remove undefined values
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      }
-    });
+    const allowedFields = [
+      'siteName', 'siteDescription', 'profileName', 'profileBio', 'profileImage',
+      'socialLinks', 'primaryColor', 'secondaryColor', 'accentColor',
+      'backgroundColor', 'textColor', 'indexLayout', 'archiveLayout',
+      'singleLayout', 'metaTitle', 'metaDescription', 'favicon', 'layoutConfig',
+      'templateId', 'templateVersion', 'templateSettings', 'theme'
+    ];
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).filter(([key, value]) => allowedFields.includes(key) && value !== undefined)
+    );
 
     const siteConfig = await prisma.siteConfig.upsert({
       where: { projectId },
       update: {
         ...updateData,
-        layoutConfig: updateData.layoutConfig || {}
+        layoutConfig: updateData.layoutConfig || {},
+        publishedRevision: { increment: 1 }
       },
       create: {
         projectId,

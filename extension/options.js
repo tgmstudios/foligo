@@ -3,8 +3,8 @@ const $ = id => document.getElementById(id);
 
 async function refreshStatus() {
   const { web } = await GoApplyAPI.getEndpoints();
-  $('openDashboardLink').href = `${web}/dashboard/settings`;
-  $('dashboardHint').textContent = `${web.replace(/^https?:\/\//, '')}/dashboard · Manage profile, resumes, AI, Kanban board`;
+  $('openDashboardLink').href = `${web}/settings`;
+  $('dashboardHint').textContent = `${web.replace(/^https?:\/\//, '')} · Manage profile, resumes, AI, Kanban board`;
 
   try {
     const authed = await GoApplyAPI.checkAuth();

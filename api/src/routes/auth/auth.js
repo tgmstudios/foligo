@@ -516,7 +516,7 @@ router.post('/device-code/exchange', async (req, res) => {
  * POST /api/auth/device-code/external
  * (authenticated) Accepts a device code from the foligo web page
  * and stores it in Redis for the extension to exchange.
- * Used by the foligo.tech/auth/link-device page content script.
+ * Used by the app.foligo.tech/auth/link-device page content script.
  */
 router.post('/device-code/external', authenticateToken, async (req, res) => {
   try {

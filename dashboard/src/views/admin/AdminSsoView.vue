@@ -438,16 +438,10 @@ const redirectUri = computed(() => {
   const providerId = formData.value.providerId || editingProvider.value?.providerId
   if (!providerId) return ''
   
-  // Get the API base URL from window.ENV (runtime config) or environment variable
-  const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || '/api'
-  
-  // If it's a relative URL, construct from current origin
-  if (apiUrl.startsWith('/')) {
-    return `${window.location.origin}${apiUrl}/auth/sso/callback/${providerId}`
-  }
-  
-  // If it's an absolute URL, use it directly
-  return `${apiUrl}/auth/sso/callback/${providerId}`
+  // IdPs must return to the public API callback, never the dashboard's relative /api proxy.
+  const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || 'https://api.foligo.tech/api'
+  const apiOrigin = apiUrl.startsWith('/') ? 'https://api.foligo.tech' : new URL(apiUrl).origin
+  return `${apiOrigin}/api/auth/sso/callback/${providerId}`
 })
 
 const copyRedirectUri = async () => {

@@ -36,7 +36,7 @@ setInterval(cleanupExpiredState, 5 * 60 * 1000);
 
 function getRedirectUri() {
   if (process.env.GITHUB_OAUTH_REDIRECT_URI) return process.env.GITHUB_OAUTH_REDIRECT_URI;
-  return `${process.env.API_URL}/api/integrations/github/callback`;
+  return `${process.env.API_URL || 'https://api.foligo.tech'}/api/integrations/github/callback`;
 }
 
 // =============================================================================
@@ -70,7 +70,7 @@ router.post('/connect', authenticateToken, (req, res) => {
 // (public route — identity comes from the `state` lookup, not a header)
 // =============================================================================
 router.get('/callback', async (req, res) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://app.foligo.tech';
 
   try {
     const { code, state, error: oauthError } = req.query;

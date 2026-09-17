@@ -1,6 +1,6 @@
 /**
  * Foligo Device-Code Auth Bridge
- * Injected on foligo.tech and local dev web app pages. Detects
+ * Injected on app.foligo.tech and local development web app pages. Detects
  * /auth/link-device?code=XXXXXX and submits the device code to the
  * configured Foligo API, authenticated with the JWT the dashboard
  * keeps in localStorage.

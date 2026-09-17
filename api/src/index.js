@@ -72,12 +72,10 @@ const additionalCorsOrigins = (process.env.ADDITIONAL_CORS_ORIGINS || '')
   .filter(origin => origin.length > 0);
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3001',
+  process.env.FRONTEND_URL || 'https://app.foligo.tech',
   'http://localhost:9010', // Dashboard dev server
   'http://localhost:9011', // Sites dev server
-  'https://foligo.tech',
-  'https://www.foligo.tech',
-  /^https:\/\/.*\.foligo\.tech$/,
+
   /^http:\/\/localhost(:\d+)?$/ // Allow any localhost port for development (browsers omit :80)
 ];
 
