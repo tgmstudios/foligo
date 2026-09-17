@@ -12,7 +12,13 @@ const router = express.Router();
 // Whitelist of keys that are safe to expose and update
 const ALLOWED_KEYS = [
   'searxng_url',
+  'allow_public_signups',
 ];
+
+const BOOLEAN_KEYS = new Set(['allow_public_signups']);
+const DEFAULTS = {
+  allow_public_signups: process.env.ALLOW_PUBLIC_SIGNUPS !== 'false' ? 'true' : 'false',
+};
 
 // GET /api/admin/settings — return current values for all allowed keys
 router.get('/', async (_req, res) => {
@@ -21,7 +27,10 @@ router.get('/', async (_req, res) => {
       where: { key: { in: ALLOWED_KEYS } },
     });
     const map = Object.fromEntries(
-      ALLOWED_KEYS.map((k) => [k, settings.find((s) => s.key === k)?.value ?? process.env[k.toUpperCase()] ?? '']),
+      ALLOWED_KEYS.map((k) => [
+        k,
+        settings.find((s) => s.key === k)?.value ?? DEFAULTS[k] ?? process.env[k.toUpperCase()] ?? '',
+      ]),
     );
     res.json(map);
   } catch (error) {
@@ -45,6 +54,9 @@ router.put('/', requireAdmin, async (req, res) => {
       }
       if (typeof value !== 'string') {
         return res.status(400).json({ error: `Setting ${key} must be a string.` });
+      }
+      if (BOOLEAN_KEYS.has(key) && !['true', 'false'].includes(value)) {
+        return res.status(400).json({ error: `Setting ${key} must be "true" or "false".` });
       }
 
       const setting = await prisma.platformSetting.upsert({

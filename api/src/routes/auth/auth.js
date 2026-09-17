@@ -97,9 +97,14 @@ router.post('/register', [
   body('name').trim().isLength({ min: 1 })
 ], async (req, res) => {
   try {
-    // Gate: public sign-ups can be disabled via env var.
-    // SSO/OAuth account creation (sso-auth.js) is unaffected.
-    const allowSignups = process.env.ALLOW_PUBLIC_SIGNUPS !== 'false';
+    // Public sign-ups are controlled by the persisted admin setting. An explicit
+    // false env value remains a hard operational override for incident response.
+    const registrationSetting = await prisma.platformSetting.findUnique({
+      where: { key: 'allow_public_signups' },
+      select: { value: true },
+    });
+    const allowSignups = process.env.ALLOW_PUBLIC_SIGNUPS !== 'false'
+      && registrationSetting?.value !== 'false';
     if (!allowSignups) {
       return res.status(403).json({
         error: 'Registration Disabled',

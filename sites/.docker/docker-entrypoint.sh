@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+export NODE_ENV="${NODE_ENV:-development}"
+export API_BASE_URL="${API_BASE_URL:-https://api.foligo.tech}"
+export DASHBOARD_URL="${DASHBOARD_URL:-https://dashboard.foligo.tech}"
+
 # Generate runtime environment configuration
 echo "Generating environment configuration..."
 if [ -f /app/.output/public/env.js.template ]; then
@@ -20,4 +24,3 @@ if [ "$(id -u)" = "0" ]; then
 else
   exec "$@"
 fi
-
