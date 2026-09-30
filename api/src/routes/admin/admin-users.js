@@ -12,6 +12,42 @@ const router = express.Router();
 // All admin routes require admin authentication
 router.use(requireAdmin);
 
+function safeAiModel(model) {
+  return {
+    id: model.id,
+    slug: model.slug,
+    name: model.name,
+    providerType: model.providerType,
+    modelType: model.modelType,
+    enabled: model.enabled,
+  };
+}
+
+function safeAiModelGrant(grant) {
+  return {
+    id: grant.id,
+    aiModelId: grant.aiModelId,
+    createdAt: grant.createdAt,
+    aiModel: safeAiModel(grant.aiModel),
+  };
+}
+
+const safeAiModelGrantSelect = {
+  id: true,
+  aiModelId: true,
+  createdAt: true,
+  aiModel: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      providerType: true,
+      modelType: true,
+      enabled: true,
+    },
+  },
+};
+
 /**
  * @swagger
  * /api/admin/users:
@@ -90,6 +126,101 @@ router.get('/users', [
 });
 
 /**
+ * GET /api/admin/users/ai-model-catalog
+ * Safe model display metadata for assigning per-user AI model grants.
+ */
+router.get('/users/ai-model-catalog', async (_req, res) => {
+  try {
+    const [models, disabledProviders] = await Promise.all([
+      prisma.aiModel.findMany({
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          providerType: true,
+          modelType: true,
+          enabled: true,
+        },
+        orderBy: [{ modelType: 'asc' }, { name: 'asc' }],
+      }),
+      prisma.aiProviderConfig.findMany({
+        where: { enabled: false },
+        select: { providerType: true },
+      }),
+    ]);
+    const disabledProviderTypes = new Set(disabledProviders.map(({ providerType }) => providerType));
+    res.json({
+      models: models.map(model => ({
+        ...safeAiModel(model),
+        providerDisabled: disabledProviderTypes.has(model.providerType),
+      })),
+    });
+  } catch (error) {
+    console.error('Admin get AI model catalog error:', error);
+    res.status(500).json({ error: 'Failed to retrieve AI model catalog' });
+  }
+});
+
+router.put('/users/:id/ai-model-grants', [
+  body('modelIds').isArray(),
+  body('modelIds.*').isUUID(),
+  handleValidation,
+], async (req, res) => {
+  try {
+    const { id: userId } = req.params;
+    const modelIds = [...new Set(req.body.modelIds)];
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!user) {
+      return res.status(404).json({
+        error: 'User Not Found',
+        message: 'The requested user does not exist',
+      });
+    }
+
+    const models = await prisma.aiModel.findMany({
+      where: { id: { in: modelIds } },
+      select: { id: true },
+    });
+    if (models.length !== modelIds.length) {
+      return res.status(400).json({ error: 'Unknown AI model id' });
+    }
+
+    await prisma.$transaction(async tx => {
+      const existingGrants = await tx.userAiModelGrant.findMany({
+        where: { userId },
+        select: { aiModelId: true },
+      });
+      const existingModelIds = new Set(existingGrants.map(grant => grant.aiModelId));
+      const desiredModelIds = new Set(modelIds);
+      const obsoleteModelIds = [...existingModelIds].filter(modelId => !desiredModelIds.has(modelId));
+      const missingModelIds = modelIds.filter(modelId => !existingModelIds.has(modelId));
+
+      if (obsoleteModelIds.length) {
+        await tx.userAiModelGrant.deleteMany({
+          where: { userId, aiModelId: { in: obsoleteModelIds } },
+        });
+      }
+      if (missingModelIds.length) {
+        await tx.userAiModelGrant.createMany({
+          data: missingModelIds.map(aiModelId => ({ userId, aiModelId })),
+          skipDuplicates: true,
+        });
+      }
+    });
+
+    const aiModelGrants = await prisma.userAiModelGrant.findMany({
+      where: { userId },
+      select: safeAiModelGrantSelect,
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({ aiModelGrants: aiModelGrants.map(safeAiModelGrant) });
+  } catch (error) {
+    console.error('Admin replace user AI model grants error:', error);
+    res.status(500).json({ error: 'Failed to replace AI model grants' });
+  }
+});
+
+/**
  * @swagger
  * /api/admin/users/{id}:
  *   get:
@@ -141,6 +272,10 @@ router.get('/users/:id', async (req, res) => {
             }
           }
         },
+        aiModelGrants: {
+          select: safeAiModelGrantSelect,
+          orderBy: { createdAt: 'asc' },
+        },
         _count: {
           select: {
             projectsOwned: true,
@@ -158,7 +293,13 @@ router.get('/users/:id', async (req, res) => {
       });
     }
 
-    res.json(user);
+    res.json({
+      ...user,
+      aiModelGrants: user.aiModelGrants.map(grant => ({
+        ...grant,
+        aiModel: safeAiModel(grant.aiModel),
+      })),
+    });
   } catch (error) {
     console.error('Admin get user error:', error);
     res.status(500).json({
