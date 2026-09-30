@@ -6,9 +6,10 @@
 const express = require('express');
 const router = express.Router();
 const ai = require('../../services/ai/manager');
-const { authenticateToken } = require('../../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../../middleware/auth');
 const { prisma } = require('../../services/core/database');
 const { generateCoverLetter, generateCustomAnswer } = require('../../services/goapply/goapply-content-generation');
+const { sendAiRouteError } = require('../../services/ai/route-error');
 
 /**
  * GET /api/ai/providers
@@ -17,7 +18,7 @@ const { generateCoverLetter, generateCustomAnswer } = require('../../services/go
  */
 router.get('/providers', authenticateToken, async (req, res) => {
   try {
-    const providers = await ai.listProviders();
+    const providers = await ai.listProviders({ userId: req.user.id });
     res.json({ providers });
   } catch (error) {
     res.status(500).json({ error: 'Failed to list providers', message: error.message });
@@ -42,7 +43,7 @@ router.get('/voice-config', authenticateToken, async (_req, res) => {
  * Test a specific provider's connectivity.
  * Body: { type: 'opencode' }
  */
-router.post('/test-provider', authenticateToken, async (req, res) => {
+router.post('/test-provider', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { type } = req.body;
     if (!type) return res.status(400).json({ error: 'Missing "type" field' });
@@ -64,10 +65,10 @@ router.post('/generate-text', authenticateToken, async (req, res) => {
     const { prompt, provider, temperature, maxTokens } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing "prompt" field' });
 
-    const result = await ai.generateText(prompt, { provider, temperature, maxTokens });
+    const result = await ai.generateText(prompt, { userId: req.user.id, provider, temperature, maxTokens });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
-    res.status(500).json({ error: 'Generation failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Generation failed' });
   }
 });
 
@@ -81,10 +82,10 @@ router.post('/chat', authenticateToken, async (req, res) => {
     const { messages, provider, temperature, maxTokens, tools } = req.body;
     if (!messages?.length) return res.status(400).json({ error: 'Missing "messages" array' });
 
-    const result = await ai.generateChat(messages, { provider, temperature, maxTokens, tools });
+    const result = await ai.generateChat(messages, { userId: req.user.id, provider, temperature, maxTokens, tools });
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: 'Chat failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Chat failed' });
   }
 });
 
@@ -102,10 +103,10 @@ router.post('/cover-letter', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: jobDescription, company, role' });
     }
 
-    const result = await generateCoverLetter(ai, { jobDescription, company, role, provider });
+    const result = await generateCoverLetter(ai, { userId: req.user.id, jobDescription, company, role, provider });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
-    res.status(500).json({ error: 'Cover letter generation failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Cover letter generation failed' });
   }
 });
 
@@ -131,10 +132,10 @@ ${resumeText}
 
 TAILORED RESUME:`;
 
-    const result = await ai.generateText(prompt, { provider, temperature: 0.5, maxTokens: 8192 });
+    const result = await ai.generateText(prompt, { userId: req.user.id, provider, temperature: 0.5, maxTokens: 8192 });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
-    res.status(500).json({ error: 'Resume tailoring failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Resume tailoring failed' });
   }
 });
 
@@ -158,10 +159,10 @@ router.post('/email', authenticateToken, async (req, res) => {
     };
 
     const prompt = templates[type] || templates['follow-up'];
-    const result = await ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 2048 });
+    const result = await ai.generateText(prompt, { userId: req.user.id, provider, temperature: 0.7, maxTokens: 2048 });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
-    res.status(500).json({ error: 'Email generation failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Email generation failed' });
   }
 });
 
@@ -175,10 +176,10 @@ router.post('/custom-answer', authenticateToken, async (req, res) => {
     const { question, jobDescription, provider } = req.body;
     if (!question) return res.status(400).json({ error: 'Missing "question" field' });
 
-    const result = await generateCustomAnswer(ai, { question, jobDescription, provider });
+    const result = await generateCustomAnswer(ai, { userId: req.user.id, question, jobDescription, provider });
     res.json({ text: result.text, reasoning: result.reasoning || undefined });
   } catch (error) {
-    res.status(500).json({ error: 'Answer generation failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Answer generation failed' });
   }
 });
 

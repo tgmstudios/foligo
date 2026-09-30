@@ -17,7 +17,7 @@ module.exports = {
   generateWithTools: (prompt, tools, opts) => aim.generateWithTools(prompt, tools, opts),
 
   // Provider management
-  listProviders: () => aim.listProviders(),
+  listProviders: (opts) => aim.listProviders(opts),
   testProvider: (type) => aim.testProvider(type),
   getProvider: (type, overrides) => aim.getProvider(type, overrides),
   listAvailableModels: (type, overrides) => aim.listAvailableModels(type, overrides),

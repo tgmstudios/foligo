@@ -9,7 +9,7 @@ class AIService {
    * Generate resume content tailored to a job description.
    * Delegates to the model-agnostic AIManager.
    */
-  async generateResumeContent({ jobDescription, userProfile, projects, size = 'medium' }, provider = null) {
+  async generateResumeContent({ jobDescription, userProfile, projects, size = 'medium', userId }, provider = null) {
     const sizeInstructions = {
       small: 'Keep descriptions brief and concise (1-2 sentences per project).',
       medium: 'Provide moderate detail (2-3 sentences per project).',
@@ -46,7 +46,7 @@ Return JSON:
 Return ONLY valid JSON, no markdown, no code blocks.`;
 
     try {
-      let { text } = await ai.generateText(prompt, { temperature: 0.5, maxTokens: 4096, provider });
+      let { text } = await ai.generateText(prompt, { userId, temperature: 0.5, maxTokens: 4096, provider });
 
       text = text.trim();
       if (text.startsWith('```json')) text = text.replace(/^```json\n?/, '').replace(/\n?```$/, '');

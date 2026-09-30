@@ -139,6 +139,7 @@ async function generateFinalContent(mode, contentType, chatHistory, currentConte
     return result;
   } catch (error) {
     logger.error('Content generation error', { error: error.message, stack: error.stack });
+    if (['USER_MODEL_ACCESS_DENIED', 'NO_AI_MODEL_ACCESS'].includes(error.code)) throw error;
     throw new GeminiAPIError(`Failed to generate final content: ${error.message}`, error);
   }
 }

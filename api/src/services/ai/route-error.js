@@ -1,0 +1,25 @@
+const USER_MODEL_ACCESS_CODES = new Set([
+  'USER_MODEL_ACCESS_DENIED',
+  'NO_AI_MODEL_ACCESS',
+]);
+
+function isUserModelAccessError(error) {
+  return USER_MODEL_ACCESS_CODES.has(error?.code) || USER_MODEL_ACCESS_CODES.has(error?.cause?.code);
+}
+
+function sendAiRouteError(res, error, fallbackError) {
+  const code = error?.code || error?.cause?.code;
+  if (isUserModelAccessError(error)) {
+    res.status(403).json({
+      error: 'AI model access denied',
+      code,
+      message: error.message || error.cause?.message || 'You do not have access to an AI model.',
+    });
+    return true;
+  }
+
+  res.status(500).json({ ...fallbackError, message: error.message });
+  return false;
+}
+
+module.exports = { isUserModelAccessError, sendAiRouteError };

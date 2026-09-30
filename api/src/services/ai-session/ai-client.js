@@ -20,6 +20,7 @@ function createAiClient(logger) {
       return text;
     } catch (error) {
       logger.error(`${context} failed`, { error: error.message });
+      if (['USER_MODEL_ACCESS_DENIED', 'NO_AI_MODEL_ACCESS'].includes(error.code)) throw error;
       throw new GeminiAPIError(`${context} failed: ${error.message}`, error);
     }
   }
@@ -32,6 +33,7 @@ function createAiClient(logger) {
       return await ai.generateChat(messages, genOpts);
     } catch (error) {
       logger.error(`${context} failed`, { error: error.message });
+      if (['USER_MODEL_ACCESS_DENIED', 'NO_AI_MODEL_ACCESS'].includes(error.code)) throw error;
       throw new GeminiAPIError(`${context} failed: ${error.message}`, error);
     }
   }

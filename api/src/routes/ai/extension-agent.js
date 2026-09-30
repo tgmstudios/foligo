@@ -169,7 +169,7 @@ router.post('/turn', authenticateToken, async (req, res) => {
     const providerMessages = flattenToolMessages(messages);
     for await (const part of ai.streamChat(providerMessages, {
       systemInstruction: buildSystemPrompt(context), tools, maxSteps: 40,
-      provider, modelType: mode === 'chat' ? 'LONG' : 'QUICK', externalToolLoop: true,
+      userId: req.user.id, provider, modelType: mode === 'chat' ? 'LONG' : 'QUICK', externalToolLoop: true,
     })) {
       if (part.type === 'text-delta') send({ type: 'text-delta', text: part.text });
       else if (part.type === 'reasoning-delta') send({ type: 'reasoning-delta', text: part.text });

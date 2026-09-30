@@ -17,6 +17,7 @@
 
 const { prisma } = require('../services/core/database');
 const ai = require('../services/ai/manager');
+const { sendAiRouteError } = require('../services/ai/route-error');
 
 const SCORING_SYSTEM = `You are an expert resume evaluator following the HackerRank Hiring Agent scoring system.
 
@@ -104,11 +105,12 @@ function parseEvaluation(result) {
   return null;
 }
 
-async function requestEvaluation(content, modelType) {
+async function requestEvaluation(content, modelType, userId) {
   return ai.generateChat([
     { role: 'user', content: `Evaluate this resume according to the HackerRank Hiring Agent rubric:\n\n${content}` },
   ], {
     systemInstruction: SCORING_SYSTEM,
+    userId,
     modelType,
     temperature: 0.1,
     // Reasoning models may use several thousand output tokens before emitting
@@ -138,13 +140,13 @@ async function scoreResume(req, res) {
     }
 
     // Send to AI for scoring — use QUICK model for fast response
-    let result = await requestEvaluation(document.content, 'QUICK');
+    let result = await requestEvaluation(document.content, 'QUICK', req.user.id);
     let evaluation = parseEvaluation(result);
 
     // Empty text is possible with reasoning-capable models, and malformed JSON
     // should not turn a transient model response into an immediate 500.
     if (!evaluation) {
-      result = await requestEvaluation(document.content, 'LONG');
+      result = await requestEvaluation(document.content, 'LONG', req.user.id);
       evaluation = parseEvaluation(result);
     }
 
@@ -190,7 +192,7 @@ async function scoreResume(req, res) {
     res.json(response);
   } catch (error) {
     console.error('Resume scoring error:', error);
-    res.status(500).json({ error: 'Scoring Failed', message: error.message });
+    sendAiRouteError(res, error, { error: 'Scoring Failed' });
   }
 }
 

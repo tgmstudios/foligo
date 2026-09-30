@@ -164,7 +164,7 @@ function createExtensionAgentServerTools(prisma, userId, aiManager, context = {}
         role: z.string().min(1),
       }),
       execute: async ({ jobDescription, company, role }) => {
-        const result = await generateCoverLetter(aiManager, { jobDescription, company, role });
+        const result = await generateCoverLetter(aiManager, { userId, jobDescription, company, role });
         return { objectType: 'coverLetterDraft', text: result.text };
       },
     }),
@@ -175,7 +175,7 @@ function createExtensionAgentServerTools(prisma, userId, aiManager, context = {}
         jobDescription: z.string().optional(),
       }),
       execute: async ({ question, jobDescription }) => {
-        const result = await generateCustomAnswer(aiManager, { question, jobDescription });
+        const result = await generateCustomAnswer(aiManager, { userId, question, jobDescription });
         return { objectType: 'customAnswerDraft', text: result.text };
       },
     }),

@@ -58,6 +58,7 @@ async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, u
     // Call through AIManager with tools + system prompt
     const { text: responseText, functionCalls } = await aiChat(messages, {
       tools,
+      userId,
       systemInstruction: systemPrompt,
       temperature: GENERATION_CONFIG.RESUME_CHATBOT.temperature,
       maxTokens: GENERATION_CONFIG.RESUME_CHATBOT.maxOutputTokens,
@@ -91,6 +92,7 @@ async function handleResumeChatbotSession(resumeText, jobPosting, chatHistory, u
       error: error.message,
       stack: error.stack
     });
+    if (['USER_MODEL_ACCESS_DENIED', 'NO_AI_MODEL_ACCESS'].includes(error.code)) throw error;
     throw new GeminiAPIError(`Failed to handle resume chatbot session: ${error.message}`, error);
   }
 }

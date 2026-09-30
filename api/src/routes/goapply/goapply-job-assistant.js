@@ -196,7 +196,7 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
   };
   let assistantText = '';
   try {
-    for await (const part of ai.streamChat(messages, { systemInstruction: buildJobAssistantPrompt(context), tools, maxSteps: 40, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { userId: req.user.id, systemInstruction: buildJobAssistantPrompt(context), tools, maxSteps: 40, provider: req.body.provider })) {
       if (part.type === 'text-delta') { assistantText += part.text; send({ type: 'text-delta', text: part.text }); }
       else if (part.type === 'reasoning-delta') send({ type: 'reasoning-delta', text: part.text });
       else if (part.type === 'tool-call') send({ type: 'tool-call', toolCallId: part.toolCallId, toolName: part.toolName, input: part.input });

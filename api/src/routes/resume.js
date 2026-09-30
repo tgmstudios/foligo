@@ -462,7 +462,7 @@ router.post('/documents/:id/chat', chatUpload.array('attachments', 5), (req, res
       otherDocuments,
     });
 
-    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           assistantText += part.text;

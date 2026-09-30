@@ -37,6 +37,15 @@ class GeminiService {
     return { aiText: this._ai.aiText, aiChat: this._ai.aiChat, logger: this.logger };
   }
 
+  _depsForUser(userId) {
+    if (!userId) return this._deps;
+    return {
+      aiText: (prompt, options = {}) => this._ai.aiText(prompt, { ...options, userId }),
+      aiChat: (messages, options = {}) => this._ai.aiChat(messages, { ...options, userId }),
+      logger: this.logger,
+    };
+  }
+
   // ─── Internal helpers (replaces _callModelWithRetry) ──────────────
 
   /** Simple text generation through AIManager. Keeps retry + logging. */
@@ -69,7 +78,8 @@ class GeminiService {
     const {
       temperature = GENERATION_CONFIG.DEFAULT.temperature,
       maxOutputTokens = GENERATION_CONFIG.DEFAULT.maxOutputTokens,
-      _skipLog = false
+      _skipLog = false,
+      userId
     } = options;
 
     if (!_skipLog) {
@@ -77,7 +87,7 @@ class GeminiService {
       this.logger.debug('Prompt preview', { preview: prompt.substring(0, 300) });
     }
 
-    const text = await this._aiText(prompt, { temperature, maxTokens: maxOutputTokens, context: 'Generate content' });
+    const text = await this._aiText(prompt, { userId, temperature, maxTokens: maxOutputTokens, context: 'Generate content' });
 
     if (!_skipLog) {
       this.logger.info('Response received', { responseLength: text.length });
@@ -107,7 +117,7 @@ class GeminiService {
    * Now uses XML-based prompts and structured_data extraction
    */
   async generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context = {}) {
-    return sessionFlow.generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context, this._deps);
+    return sessionFlow.generateFinalContent(mode, contentType, chatHistory, currentContent, changes, context, this._depsForUser(context.userId));
   }
 
   /**
@@ -187,8 +197,8 @@ class GeminiService {
    * Creates platform-appropriate post with links to foligo site and project links
    * @param {string} platform - 'linkedin' or 'x'
    */
-  async generateSocialPost(contentData, projectData, platform = 'linkedin') {
-    return socialPost.generateSocialPost(contentData, projectData, platform, this._deps);
+  async generateSocialPost(contentData, projectData, platform = 'linkedin', { userId } = {}) {
+    return socialPost.generateSocialPost(contentData, projectData, platform, this._depsForUser(userId));
   }
 
   /**

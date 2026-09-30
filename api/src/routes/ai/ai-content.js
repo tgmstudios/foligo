@@ -25,6 +25,7 @@ const { findSimilarPostPairs } = require('../../services/content/post-similarity
 const { matchOrCreateSkills, matchOrCreateTags } = require('../../services/content/skill-tag-matcher');
 const { setupSSE } = require('../../utils/sse');
 const ai = require('../../services/ai/manager');
+const { sendAiRouteError } = require('../../services/ai/route-error');
 const { createPortfolioAgentTools } = require('../../services/content/portfolio-agent-tools');
 
 // Configure multer for resume uploads
@@ -501,7 +502,7 @@ HARD RULES:
 - After making changes, briefly tell the user what you did in plain prose.`;
 
   try {
-    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           send({ type: 'text-delta', text: part.text });
@@ -1037,10 +1038,7 @@ router.post('/resume-chatbot/session',
       });
     } catch (error) {
       console.error('Resume chatbot session error:', error);
-      res.status(500).json({
-        error: 'Session Failed',
-        message: error.message || 'Unable to process resume chatbot session'
-      });
+      sendAiRouteError(res, error, { error: 'Session Failed' });
     }
   }
 );
@@ -1521,15 +1519,12 @@ router.post('/social-posts', [
     }
 
     // Generate social post for selected platform
-    const result = await geminiService.generateSocialPost(content, project, platform);
+    const result = await geminiService.generateSocialPost(content, project, platform, { userId });
 
     res.json(result);
   } catch (error) {
     console.error('Social post generation error:', error);
-    res.status(500).json({
-      error: 'Social Post Generation Failed',
-      message: error.message || 'Unable to generate social post'
-    });
+    sendAiRouteError(res, error, { error: 'Social Post Generation Failed' });
   }
 });
 

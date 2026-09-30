@@ -124,7 +124,7 @@ After making edits, briefly tell the user what you changed and why, in plain pro
   let assistantText = '';
 
   try {
-    for await (const part of ai.streamChat(messages, { systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           assistantText += part.text;

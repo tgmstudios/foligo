@@ -20,9 +20,9 @@ Requirements:
 - Format with "Dear Hiring Manager," opening and "Sincerely," closing`;
 }
 
-async function generateCoverLetter(ai, { jobDescription, company, role, provider }) {
+async function generateCoverLetter(ai, { userId, jobDescription, company, role, provider }) {
   const prompt = buildCoverLetterPrompt({ jobDescription, company, role });
-  return ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 4096 });
+  return ai.generateText(prompt, { userId, provider, temperature: 0.7, maxTokens: 4096 });
 }
 
 function buildCustomAnswerPrompt({ question, jobDescription }) {
@@ -37,9 +37,9 @@ ${question}
 ANSWER (2-4 sentences):`;
 }
 
-async function generateCustomAnswer(ai, { question, jobDescription, provider }) {
+async function generateCustomAnswer(ai, { userId, question, jobDescription, provider }) {
   const prompt = buildCustomAnswerPrompt({ question, jobDescription });
-  return ai.generateText(prompt, { provider, temperature: 0.7, maxTokens: 1024 });
+  return ai.generateText(prompt, { userId, provider, temperature: 0.7, maxTokens: 1024 });
 }
 
 module.exports = {
