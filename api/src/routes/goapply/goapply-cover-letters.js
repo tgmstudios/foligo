@@ -11,6 +11,7 @@ const githubService = require('../../services/github/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../../services/goapply/portfolio-context');
 const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../../utils/sse');
+const { preflightSSEModelAccess } = require('../../services/ai/route-error');
 
 const router = express.Router();
 
@@ -309,6 +310,10 @@ router.post('/cover-letters/:id/chat', chatUpload.array('attachments', 5), async
   if (!letter) {
     return res.status(404).json({ error: 'Not Found', message: 'Cover letter does not exist' });
   }
+
+  if (!await preflightSSEModelAccess(req, res, ai, {
+    provider: req.body.provider, fallbackError: { error: 'Cover letter chat failed' },
+  })) return;
 
   let attachments;
   try {

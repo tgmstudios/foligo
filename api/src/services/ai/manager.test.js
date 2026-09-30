@@ -202,6 +202,27 @@ describe('AIManager user-scoped model selection', () => {
     expect(createProvider).not.toHaveBeenCalled();
   });
 
+  test('preflights an explicit stream selection through the user resolver without creating a provider', async () => {
+    await expect(manager.preflightStreamAccess({ userId: 'user-1', provider: 'granted-model-id' }))
+      .resolves.toEqual(['granted-model-id']);
+
+    expect(resolveModelForUser).toHaveBeenCalledWith('user-1', 'granted-model-id');
+    expect(listModelSelectionsForUser).not.toHaveBeenCalled();
+    expect(resolveModel).not.toHaveBeenCalled();
+    expect(createProvider).not.toHaveBeenCalled();
+  });
+
+  test('preflights a default stream selection through user grants and rejects no-grant users', async () => {
+    listModelSelectionsForUser.mockResolvedValue([]);
+
+    await expect(manager.preflightStreamAccess({ userId: 'user-1', modelType: 'LONG' }))
+      .rejects.toMatchObject({ name: 'UserModelAuthorizationError', code: 'NO_AI_MODEL_ACCESS' });
+
+    expect(listModelSelectionsForUser).toHaveBeenCalledWith('user-1', 'LONG');
+    expect(resolveModel).not.toHaveBeenCalled();
+    expect(createProvider).not.toHaveBeenCalled();
+  });
+
   test('uses only resolved user grant selections in a streaming fallback chain', async () => {
     listModelSelectionsForUser.mockResolvedValue(['user-flash', 'user-pro']);
     resolveModelForUser.mockImplementation(async (_userId, selection) => ({

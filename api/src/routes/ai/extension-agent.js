@@ -18,6 +18,7 @@ const {
 } = require('../../services/extension/extension-agent-tools');
 const { flattenToolMessages } = require('../../services/ai/message-history');
 const { setupSSE } = require('../../utils/sse');
+const { preflightSSEModelAccess } = require('../../services/ai/route-error');
 
 const NEVER_SUBMIT_RULE = `HARD RULE — never violate this: you may highlight the application's final Submit/Apply button with find_submit_button, but you must NEVER click it, and click_element will refuse any element that looks like a final submit action. The user always reviews and submits the application themselves. If asked to submit the application, politely refuse and explain that you can prepare everything but the user must click submit.`;
 
@@ -154,6 +155,11 @@ router.post('/turn', authenticateToken, async (req, res) => {
   if (!buildSystemPrompt) return res.status(400).json({ error: 'Validation Error', message: 'mode must be one of rescan, field, chat.' });
   if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'Validation Error', message: 'messages must be a non-empty array.' });
 
+  const modelType = mode === 'chat' ? 'LONG' : 'QUICK';
+  if (!await preflightSSEModelAccess(req, res, ai, {
+    provider, modelType, fallbackError: { error: 'Extension agent request failed' },
+  })) return;
+
   const { send, aborted, cleanup } = setupSSE(req, res);
 
   const tools = {
@@ -169,7 +175,7 @@ router.post('/turn', authenticateToken, async (req, res) => {
     const providerMessages = flattenToolMessages(messages);
     for await (const part of ai.streamChat(providerMessages, {
       systemInstruction: buildSystemPrompt(context), tools, maxSteps: 40,
-      userId: req.user.id, provider, modelType: mode === 'chat' ? 'LONG' : 'QUICK', externalToolLoop: true,
+      userId: req.user.id, provider, modelType, externalToolLoop: true,
     })) {
       if (part.type === 'text-delta') send({ type: 'text-delta', text: part.text });
       else if (part.type === 'reasoning-delta') send({ type: 'reasoning-delta', text: part.text });

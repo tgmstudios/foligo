@@ -8,6 +8,7 @@ const { createContentEditorTools } = require('../../services/content/content-edi
 const { createGithubTools } = require('../../services/github/github-tools');
 const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../../utils/sse');
+const { preflightSSEModelAccess } = require('../../services/ai/route-error');
 const { snapshotContentRevision } = require('./content-crud');
 
 const router = express.Router();
@@ -59,6 +60,10 @@ router.post('/content/:id/chat', chatUpload.array('attachments', 5), (req, res, 
   if (!canEdit) {
     return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this content' });
   }
+
+  if (!await preflightSSEModelAccess(req, res, ai, {
+    provider: req.body.provider, fallbackError: { error: 'Content chat failed' },
+  })) return;
 
   let attachments;
   try {

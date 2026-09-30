@@ -7,6 +7,7 @@ const { createGithubTools } = require('../../services/github/github-tools');
 const githubService = require('../../services/github/github-service');
 const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../../utils/sse');
+const { preflightSSEModelAccess } = require('../../services/ai/route-error');
 const { projectAccessWhere } = require('../../utils/project-access-where');
 
 const ALL_PROJECT_ROLES = ['VIEWER', 'EDITOR', 'ADMIN'];
@@ -177,6 +178,10 @@ router.post('/assistant/sessions/:id/chat', assistantUpload.array('attachments',
   if (!session || !session.jobId) return res.status(404).json({ error: 'Not Found', message: 'Assistant session not found.' });
   const context = await getJobAssistantContext(req.user.id, session);
   if (!context) return res.status(409).json({ error: 'Job Missing', message: 'The attached job no longer exists.' });
+
+  if (!await preflightSSEModelAccess(req, res, ai, {
+    provider: req.body.provider, fallbackError: { error: 'Job assistant request failed' },
+  })) return;
 
   let attachments;
   try {

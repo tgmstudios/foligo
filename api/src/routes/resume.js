@@ -12,6 +12,7 @@ const githubService = require('../services/github/github-service');
 const { fetchPortfolioItem, getPortfolioContext } = require('../services/goapply/portfolio-context');
 const { prepareAttachments, buildModelMessage } = require('../services/goapply/ai-attachment-text');
 const { setupSSE } = require('../utils/sse');
+const { preflightSSEModelAccess } = require('../services/ai/route-error');
 
 const router = express.Router();
 
@@ -409,6 +410,10 @@ router.post('/documents/:id/chat', chatUpload.array('attachments', 5), (req, res
   if (!document) {
     return res.status(404).json({ error: 'Not Found', message: 'Resume document does not exist' });
   }
+
+  if (!await preflightSSEModelAccess(req, res, ai, {
+    provider: req.body.provider, fallbackError: { error: 'Resume chat failed' },
+  })) return;
 
   let attachments;
   try {

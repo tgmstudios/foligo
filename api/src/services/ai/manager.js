@@ -125,6 +125,16 @@ class AIManager {
       : (environmentSelections.length ? environmentSelections : [null]);
   }
 
+  /**
+   * Validate a streaming request before an SSE response commits its headers.
+   * This deliberately consults only user-scoped grant resolvers and creates no
+   * provider, so it cannot fall back to environment configuration or infer.
+   */
+  async preflightStreamAccess({ userId, provider, modelType = 'QUICK' } = {}) {
+    if (!userId) throw new UserModelAuthorizationError('An authenticated user is required for AI model access');
+    return this._fallbackSelections(provider, modelType, userId);
+  }
+
   async _withFallback(requestedProvider, modelType, fn, userId = null) {
     const types = await this._fallbackSelections(requestedProvider, modelType, userId);
 

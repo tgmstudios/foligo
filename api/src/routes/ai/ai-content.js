@@ -25,7 +25,7 @@ const { findSimilarPostPairs } = require('../../services/content/post-similarity
 const { matchOrCreateSkills, matchOrCreateTags } = require('../../services/content/skill-tag-matcher');
 const { setupSSE } = require('../../utils/sse');
 const ai = require('../../services/ai/manager');
-const { sendAiRouteError } = require('../../services/ai/route-error');
+const { sendAiRouteError, preflightSSEModelAccess } = require('../../services/ai/route-error');
 const { createPortfolioAgentTools } = require('../../services/content/portfolio-agent-tools');
 
 // Configure multer for resume uploads
@@ -449,6 +449,10 @@ router.post('/portfolio/chat', [
   if (!canEdit) {
     return res.status(403).json({ error: 'Access Denied', message: 'You do not have permission to edit this project' });
   }
+
+  if (!await preflightSSEModelAccess(req, res, ai, {
+    provider: req.body.provider, fallbackError: { error: 'Portfolio chat failed' },
+  })) return;
 
   const { send, aborted, cleanup } = setupSSE(req, res);
 

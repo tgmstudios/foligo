@@ -22,4 +22,23 @@ function sendAiRouteError(res, error, fallbackError) {
   return false;
 }
 
-module.exports = { isUserModelAccessError, sendAiRouteError };
+/**
+ * Validate the authenticated user's model selection before committing SSE
+ * headers. This is intentionally caller-supplied AIManager access so the
+ * helper has no alternate configuration path of its own.
+ */
+async function preflightSSEModelAccess(req, res, ai, {
+  provider,
+  modelType = 'QUICK',
+  fallbackError = { error: 'AI request failed' },
+} = {}) {
+  try {
+    await ai.preflightStreamAccess({ userId: req.user?.id, provider, modelType });
+    return true;
+  } catch (error) {
+    sendAiRouteError(res, error, fallbackError);
+    return false;
+  }
+}
+
+module.exports = { isUserModelAccessError, sendAiRouteError, preflightSSEModelAccess };
