@@ -111,6 +111,30 @@ async function toOverrides(record) {
   return overrides;
 }
 
+class UserModelAuthorizationError extends Error {
+  constructor(message = 'The selected AI model is not available to this user') {
+    super(message);
+    this.name = 'UserModelAuthorizationError';
+    this.code = 'USER_MODEL_ACCESS_DENIED';
+  }
+}
+
+async function resolveModelForUser(userId, selection) {
+  if (!userId || !selection) throw new UserModelAuthorizationError();
+
+  const disabledProviders = await getDisabledProviderTypes();
+  const record = await prisma.aiModel.findFirst({
+    where: {
+      enabled: true,
+      OR: [{ id: selection }, { slug: selection }],
+      userAiModelGrants: { some: { userId } },
+    },
+  });
+
+  if (!record || disabledProviders.has(record.providerType)) throw new UserModelAuthorizationError();
+  return { key: record.id, providerType: record.providerType, overrides: await toOverrides(record), record };
+}
+
 async function resolveModel(selection, modelType = 'QUICK') {
   await ensureBootstrapModels();
   const normalizedType = VALID_MODEL_TYPES.includes(String(modelType).toUpperCase())
@@ -149,6 +173,32 @@ async function resolveModel(selection, modelType = 'QUICK') {
     : null;
 }
 
+async function listModelSelectionsForUser(userId, modelType = 'QUICK') {
+  if (!userId) return [];
+
+  const normalizedType = VALID_MODEL_TYPES.includes(String(modelType).toUpperCase())
+    ? String(modelType).toUpperCase()
+    : 'QUICK';
+  const disabledProviders = await getDisabledProviderTypes();
+  const records = (await prisma.aiModel.findMany({
+    where: {
+      enabled: true,
+      providerType: { notIn: [...disabledProviders] },
+      userAiModelGrants: { some: { userId } },
+    },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+  })).filter(record => record.enabled && !disabledProviders.has(record.providerType));
+
+  const validIds = new Set(records.map(record => record.id));
+  const explicitOrder = (await getModelOrder(normalizedType)).filter(id => validIds.has(id));
+  const explicitSet = new Set(explicitOrder);
+  const rest = records
+    .filter(record => !explicitSet.has(record.id))
+    .sort((a, b) => Number(b.modelType === normalizedType) - Number(a.modelType === normalizedType))
+    .map(record => record.id);
+  return [...explicitOrder, ...rest];
+}
+
 /**
  * Return enabled database models in fallback order: requested model class
  * first, then the other class. Database IDs are returned as selections so
@@ -179,7 +229,8 @@ async function listModelSelections(modelType = 'QUICK') {
 }
 
 module.exports = {
-  resolveModel, listModelSelections, ensureBootstrapModels,
+  UserModelAuthorizationError, resolveModel, resolveModelForUser,
+  listModelSelections, listModelSelectionsForUser, ensureBootstrapModels,
   getProviderConfig, getDisabledProviderTypes, getModelOrder,
   VALID_MODEL_TYPES, VALID_PROVIDER_TYPES,
 };

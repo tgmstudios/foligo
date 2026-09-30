@@ -36,6 +36,7 @@ model User {
   apiTokens          ApiToken[]
   integrations       UserIntegration[]
   aiChatSessions     AiChatSession[]
+  aiModelGrants      UserAiModelGrant[]
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -448,9 +449,27 @@ model AiModel {
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  userAiModelGrants UserAiModelGrant[]
 
   @@index([modelType, enabled])
   @@map("ai_models")
+}
+
+// Explicit administrator-managed model access grants. Credentials remain on
+// AiModel and AiProviderConfig; this relation carries only authorization data.
+model UserAiModelGrant {
+  id        String   @id @default(uuid())
+  userId    String
+  aiModelId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiModel AiModel @relation(fields: [aiModelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, aiModelId])
+  @@index([userId])
+  @@index([aiModelId])
+  @@map("user_ai_model_grants")
 }
 
 // Per-provider connection defaults (endpoint/apiKey/headers) an admin can set
