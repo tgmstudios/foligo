@@ -1,45 +1,24 @@
 /**
  * AI Manager — unified model-agnostic AI service.
  *
- * Central entry point for ALL AI operations across Foligo.
- * Routes requests to the configured provider, with optional fallback.
- * Calls go through the `ai` SDK's generateText() against whichever
- * provider's LanguageModel is selected — one call path for every backend.
- *
- * Usage:
- *   const ai = require('./services/ai/manager');
- *   const text = await ai.generateText('What is AI?');
- *   const result = await ai.generateChat([{role:'user', content:'Hello'}]);
- *
- * Per-request provider override:
- *   const text = await ai.generateText('...', { provider: 'opencode' });
- *
- * Features:
- *   - Provider cache (lazy init, reused)
- *   - Fallback across providers on real call failure
- *   - Per-request provider selection
- *   - Model listing for UIs
+ * Central entry point for ALL AI operations across Foligo. User-scoped calls
+ * resolve only models granted to their trusted user ID. Admin/internal provider
+ * configuration operations use the legacy global configuration path.
  */
 
 const { generateText: sdkGenerateText, streamText: sdkStreamText, stepCountIs } = require('ai');
 const { createProvider, listProviders, isProviderConfigured, listAvailableModels, SAFETY_SETTINGS } = require('./providers');
-const { resolveModel, listModelSelections, ensureBootstrapModels, getDisabledProviderTypes } = require('./model-config');
+const {
+  UserModelAuthorizationError,
+  resolveModel,
+  resolveModelForUser,
+  listModelSelections,
+  listModelSelectionsForUser,
+  ensureBootstrapModels,
+  getDisabledProviderTypes,
+} = require('./model-config');
 const { createAILogger } = require('../core/logger');
 
-/**
- * Each key is only consulted by its matching provider — harmlessly ignored
- * by the rest, same as passing extra keys to any of them.
- *   - google.safetySettings: see top of file.
- *   - openai.store: required by codex's ChatGPT-backend path
- *     (chatgpt.com/backend-api/codex rejects requests where `store` isn't
- *     explicitly false).
- *   - openai.reasoningSummary: reasoning models (codex, gpt-5-thinking
- *     family) still reason internally without this, but the Responses API
- *     won't emit any reasoning-summary text to show in the UI's "thinking"
- *     panel unless a summary is explicitly requested — gated on the active
- *     provider actually being reasoning-capable so it isn't sent (and
- *     rejected) for non-reasoning OpenAI models.
- */
 function buildProviderOptions(provider) {
   return {
     google: { safetySettings: SAFETY_SETTINGS },
@@ -48,6 +27,12 @@ function buildProviderOptions(provider) {
       ...(provider.capabilities?.reasoning ? { reasoningSummary: 'detailed' } : {}),
     },
   };
+}
+
+function noAiModelAccessError() {
+  const error = new UserModelAuthorizationError('No AI models are available to this user');
+  error.code = 'NO_AI_MODEL_ACCESS';
+  return error;
 }
 
 class AIManager {
@@ -60,24 +45,25 @@ class AIManager {
   }
 
   /**
-   * Get or create a cached provider instance.
-   * @param {string} type — provider type
-   * @param {object} overrides — optional config overrides
+   * Get or create a cached provider instance. A user-scoped call must supply a
+   * concrete granted model selection; it never reaches the global resolver.
    */
-  async getProvider(selection = null, overrides = {}, modelType = 'QUICK') {
+  async getProvider(selection = null, overrides = {}, modelType = 'QUICK', userId = null) {
     let resolved = null;
-    try {
-      resolved = await resolveModel(selection, modelType);
-    } catch (error) {
-      // Environment configuration remains a safe bootstrap/fallback while a
-      // migration is being deployed or before an administrator adds models.
-      this.logger.warn(`Database AI model lookup failed; using environment configuration: ${error.message}`);
+    if (userId) {
+      resolved = await resolveModelForUser(userId, selection);
+    } else {
+      try {
+        resolved = await resolveModel(selection, modelType);
+      } catch (error) {
+        this.logger.warn(`Database AI model lookup failed; using environment configuration: ${error.message}`);
+      }
     }
+
     const type = resolved?.providerType || selection || this._defaultProvider;
     const mergedOverrides = { ...(resolved?.overrides || {}), ...overrides };
     const key = resolved?.key || type;
 
-    // If overrides provided, don't cache — create fresh (for custom endpoints)
     if (Object.keys(mergedOverrides).length > 0 && !resolved) {
       return createProvider(type, mergedOverrides);
     }
@@ -97,10 +83,23 @@ class AIManager {
     return this._providers.get(key);
   }
 
-  /** Default provider */
+  /** Default provider for legacy internal callers only. */
   get defaultProvider() { return this.getProvider(); }
 
-  async _fallbackSelections(requestedProvider, modelType) {
+  async _fallbackSelections(requestedProvider, modelType, userId = null) {
+    if (userId) {
+      if (requestedProvider) {
+        // Resolve before provider creation so an unauthorized explicit model
+        // cannot be silently replaced by a fallback or environment provider.
+        await resolveModelForUser(userId, requestedProvider);
+        return [requestedProvider];
+      }
+
+      const selections = await listModelSelectionsForUser(userId, modelType);
+      if (!selections.length) throw noAiModelAccessError();
+      return selections;
+    }
+
     if (requestedProvider) return [requestedProvider];
 
     let databaseSelections = [];
@@ -121,44 +120,30 @@ class AIManager {
       .filter(isProviderConfigured)
       .filter(selection => !disabledProviders.has(selection));
 
-    // A null selection preserves the legacy database-default/environment
-    // lookup only when no concrete database candidates could be enumerated.
     return databaseSelections.length
       ? [...databaseSelections, ...environmentSelections]
       : (environmentSelections.length ? environmentSelections : [null]);
   }
 
-  /**
-   * Run an operation against the default provider, falling back to the next
-   * provider in the chain if the *actual call* fails — not just a health
-   * check. A provider can pass a cheap health check (e.g. respond to "ping")
-   * and still fail on a real request (e.g. malformed tool schema, upstream
-   * rejecting a specific payload), so fallback has to cover real failures too.
-   */
-  async _withFallback(requestedProvider, modelType, fn) {
-    const types = await this._fallbackSelections(requestedProvider, modelType);
+  async _withFallback(requestedProvider, modelType, fn, userId = null) {
+    const types = await this._fallbackSelections(requestedProvider, modelType, userId);
 
     let lastError;
     for (const type of types) {
-      const provider = await this.getProvider(type, {}, modelType);
+      const provider = await this.getProvider(type, {}, modelType, userId);
       if (!provider) continue;
       try {
         return await fn(provider);
       } catch (e) {
         lastError = e;
         this.logger.warn(`Provider "${type}" call failed, trying next in chain: ${e.message}`);
-        // Drop the cached instance in case it's the source of the failure
-      this._providers.delete(provider?.cacheKey || type);
+        this._providers.delete(provider?.cacheKey || type);
       }
     }
 
     throw new Error(`No healthy AI provider available. Tried: ${types.join(', ')}. Last error: ${lastError?.message}`);
   }
 
-  /**
-   * Run a single generateText call against a provider's LanguageModel and
-   * normalize the SDK result into Foligo's { text, reasoning, functionCalls } shape.
-   */
   async _callModel(provider, { messages, system, tools, toolChoice, temperature, maxTokens }) {
     const result = await sdkGenerateText({
       model: provider.model,
@@ -182,16 +167,10 @@ class AIManager {
     };
   }
 
-  // ─── Public API ────────────────────────────────────────────────
+  // ─── Public generation API ────────────────────────────────────────
 
-  /**
-   * Generate text from a prompt.
-   * @param {string} prompt
-   * @param {object} options — { temperature, maxTokens, provider, ... }
-   * @returns {Promise<{text:string, reasoning:string|null}>}
-   */
   async generateText(prompt, options = {}) {
-    const { provider: reqProvider, modelType = 'QUICK', ...genOpts } = options;
+    const { provider: reqProvider, modelType = 'QUICK', userId, ...genOpts } = options;
     return this._withFallback(reqProvider, modelType, async (prov) => {
       this.logger.debug(`generateText via ${prov.name}`, { promptLen: prompt.length });
       const { text, reasoning } = await this._callModel(prov, {
@@ -199,29 +178,19 @@ class AIManager {
         messages: [{ role: 'user', content: prompt }],
       });
       return { text: text || '', reasoning };
-    });
+    }, userId);
   }
 
-  /**
-   * Generate from chat messages.
-   * @param {Array<{role:string, content:string}>} messages
-   * @param {object} options — { temperature, maxTokens, tools, systemInstruction, provider, ... }
-   * @returns {Promise<{text:string|null, functionCalls:Array|null}>}
-   */
   async generateChat(messages, options = {}) {
-    const { provider: reqProvider, modelType = 'QUICK', systemInstruction, ...genOpts } = options;
+    const { provider: reqProvider, modelType = 'QUICK', userId, systemInstruction, ...genOpts } = options;
     return this._withFallback(reqProvider, modelType, (prov) => {
       this.logger.debug(`generateChat via ${prov.name}`, { msgCount: messages.length });
       return this._callModel(prov, { ...genOpts, messages, system: systemInstruction });
-    });
+    }, userId);
   }
 
-  /**
-   * Generate with tool/function calling.
-   * @returns {Promise<{text:string|null, functionCalls:Array|null}>}
-   */
   async generateWithTools(prompt, tools, options = {}) {
-    const { provider: reqProvider, modelType = 'QUICK', systemInstruction, ...genOpts } = options;
+    const { provider: reqProvider, modelType = 'QUICK', userId, systemInstruction, ...genOpts } = options;
     return this._withFallback(reqProvider, modelType, (prov) => {
       this.logger.debug(`generateWithTools via ${prov.name}`, { toolCount: Object.keys(tools || {}).length });
       return this._callModel(prov, {
@@ -230,35 +199,20 @@ class AIManager {
         system: systemInstruction,
         tools,
       });
-    });
+    }, userId);
   }
 
-  /**
-   * Stream a chat completion, driving a multi-step agentic tool-calling loop.
-   * Yields raw `ai` SDK `fullStream` parts (text-delta, reasoning-delta, tool-call,
-   * tool-result, tool-error, finish, ...) so callers can forward them (e.g. as SSE)
-   * as they arrive.
-   *
-   * Fallback only applies *before* the first chunk arrives — once a provider has
-   * started streaming, a later failure is yielded as an `{ type: 'error' }` part
-   * rather than silently retried, since a partial response may already be visible
-   * to the caller.
-   *
-   * @param {Array<{role:string, content:string}>} messages
-   * @param {object} options — { temperature, maxTokens, tools, systemInstruction, maxSteps, provider }
-   * @returns {AsyncGenerator<object>}
-   */
   async *streamChat(messages, options = {}) {
     const {
-      provider: reqProvider, modelType = 'QUICK', systemInstruction, tools,
+      provider: reqProvider, modelType = 'QUICK', userId, systemInstruction, tools,
       maxSteps, temperature, maxTokens, externalToolLoop = false,
     } = options;
-    const types = await this._fallbackSelections(reqProvider, modelType);
+    const types = await this._fallbackSelections(reqProvider, modelType, userId);
 
     let lastError;
     const attemptedProviders = new Set();
     for (const type of types) {
-      const prov = await this.getProvider(type, {}, modelType);
+      const prov = await this.getProvider(type, {}, modelType, userId);
       if (!prov) continue;
       const providerKey = prov.cacheKey || type || prov.name;
       if (attemptedProviders.has(providerKey)) continue;
@@ -284,18 +238,11 @@ class AIManager {
           const { value, done } = await iterator.next();
           if (done) break;
 
-          // AI SDK reports provider request failures as stream parts (usually
-          // after start/start-step), not necessarily as thrown iterator
-          // errors. Until user-visible output or a tool action is emitted it
-          // is safe to discard bookkeeping parts and try the next provider.
-          // A "length" finish here means the model burned its whole token
-          // budget (e.g. on reasoning) before ever producing output — same
-          // as an outright failure from the caller's perspective.
           if (!committed && (value?.type === 'error' || (value?.type === 'finish' && (value.finishReason === 'error' || value.finishReason === 'length')))) {
             lastError = value.error || new Error(
               value?.finishReason === 'length'
                 ? 'Provider ran out of output tokens before producing any response.'
-                : 'Provider stream finished with an error before producing output.'
+                : 'Provider stream finished with an error before producing output.',
             );
             this.logger.warn(`Provider "${type}" stream failed before output, trying next: ${lastError?.message || lastError}`);
             this._providers.delete(providerKey);
@@ -312,10 +259,6 @@ class AIManager {
             }
           } else {
             yield value;
-            // Once output has started, a mid-stream "length" cutoff can no
-            // longer fall back to another provider — the partial response is
-            // already visible. Surface it explicitly instead of letting the
-            // turn end silently (callers already handle `error` parts).
             if (value?.type === 'finish' && value.finishReason === 'length') {
               yield { type: 'error', error: new Error('Response was cut off before finishing — it ran out of output space (often mid-reasoning). Try again, or ask for a smaller, more targeted change.') };
             }
@@ -343,18 +286,13 @@ class AIManager {
     throw new Error(`No healthy AI provider available for streaming. Tried: ${types.join(', ')}. Last error: ${lastError?.message}`);
   }
 
-  /**
-   * Stream a single-prompt text generation (no tools, no multi-step).
-   * Yields raw text-delta parts from the AI SDK's fullStream.
-   * Lightweight — no fallback buffering since it's a single prompt.
-   */
   async *streamGenerate(prompt, options = {}) {
-    const { provider: reqProvider, modelType = 'LONG', system, temperature, maxTokens } = options;
-    const types = await this._fallbackSelections(reqProvider, modelType);
+    const { provider: reqProvider, modelType = 'LONG', userId, system, temperature, maxTokens } = options;
+    const types = await this._fallbackSelections(reqProvider, modelType, userId);
 
     let lastError;
     for (const type of types) {
-      const prov = await this.getProvider(type, {}, modelType);
+      const prov = await this.getProvider(type, {}, modelType, userId);
       if (!prov) continue;
 
       try {
@@ -385,9 +323,27 @@ class AIManager {
   }
 
   /**
-   * List all configured providers with status.
+   * User-scoped lists contain only granted model records. Without a userId,
+   * retain the legacy global listing for trusted admin/internal callers.
    */
-  async listProviders() {
+  async listProviders(options = {}) {
+    const { userId } = options;
+    if (userId) {
+      const selections = await listModelSelectionsForUser(userId);
+      return Promise.all(selections.map(async selection => {
+        const { record } = await resolveModelForUser(userId, selection);
+        return {
+          type: record.id,
+          slug: record.slug,
+          displayName: record.name,
+          model: record.model,
+          modelType: record.modelType,
+          isDefault: record.isDefault,
+          configured: true,
+        };
+      }));
+    }
+
     try {
       await ensureBootstrapModels();
       const models = await require('../core/database').prisma.aiModel.findMany({
@@ -412,19 +368,12 @@ class AIManager {
     this._providers.clear();
   }
 
-  /**
-   * Discover models exposed by a live OpenAI-compatible provider (GET /models).
-   * @param {string} type — provider type
-   * @param {object} overrides — { endpoint, apiKey, headers }
-   */
+  /** Trusted admin/internal provider discovery path. */
   async listAvailableModels(type, overrides = {}) {
     return listAvailableModels(type, overrides);
   }
 
-  /**
-   * Test a specific provider.
-   * @returns {{ ok: boolean, latency: number, error?: string }}
-   */
+  /** Trusted admin/internal provider health-check path. */
   async testProvider(type) {
     const start = Date.now();
     try {
@@ -438,5 +387,4 @@ class AIManager {
   }
 }
 
-// Singleton
 module.exports = new AIManager();

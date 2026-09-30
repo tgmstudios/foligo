@@ -8,21 +8,42 @@ jest.mock('./providers', () => ({
   createProvider: jest.fn(),
   listProviders: jest.fn(() => []),
   isProviderConfigured: jest.fn(type => type === 'gemini'),
+  listAvailableModels: jest.fn(),
 }));
 
-jest.mock('./model-config', () => ({
-  resolveModel: jest.fn(),
-  listModelSelections: jest.fn(),
-  ensureBootstrapModels: jest.fn(),
-}));
+jest.mock('./model-config', () => {
+  class UserModelAuthorizationError extends Error {
+    constructor(message = 'The selected AI model is not available to this user') {
+      super(message);
+      this.name = 'UserModelAuthorizationError';
+      this.code = 'USER_MODEL_ACCESS_DENIED';
+    }
+  }
+
+  return {
+    UserModelAuthorizationError,
+    resolveModel: jest.fn(),
+    resolveModelForUser: jest.fn(),
+    listModelSelections: jest.fn(),
+    listModelSelectionsForUser: jest.fn(),
+    ensureBootstrapModels: jest.fn(),
+    getDisabledProviderTypes: jest.fn(() => new Set()),
+  };
+});
 
 jest.mock('../core/logger', () => ({
   createAILogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
 }));
 
-const { streamText, stepCountIs } = require('ai');
+const { generateText, streamText, stepCountIs } = require('ai');
 const { createProvider, isProviderConfigured } = require('./providers');
-const { resolveModel, listModelSelections } = require('./model-config');
+const {
+  UserModelAuthorizationError,
+  resolveModel,
+  resolveModelForUser,
+  listModelSelections,
+  listModelSelectionsForUser,
+} = require('./model-config');
 const manager = require('./manager');
 
 function streamOf(parts) {
@@ -117,5 +138,133 @@ describe('AIManager streaming fallback', () => {
     )) {}
 
     expect(stepCountIs).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('AIManager user-scoped model selection', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    manager.clearProviderCache();
+    resolveModelForUser.mockResolvedValue({
+      key: 'granted-model-id',
+      providerType: 'openai',
+      overrides: { model: 'granted-model' },
+    });
+    createProvider.mockImplementation((type, overrides) => ({
+      name: type,
+      displayName: type,
+      model: { id: overrides.model || type },
+      capabilities: { maxTokens: 4096 },
+    }));
+  });
+
+  test('uses a granted explicitly selected model for a user-scoped generation request', async () => {
+    generateText.mockResolvedValue({ text: 'granted response' });
+
+    await expect(manager.generateText('hello', { userId: 'user-1', provider: 'granted-model-id' }))
+      .resolves.toEqual({ text: 'granted response', reasoning: null });
+
+    expect(resolveModelForUser).toHaveBeenCalledWith('user-1', 'granted-model-id');
+    expect(resolveModel).not.toHaveBeenCalled();
+    expect(generateText).toHaveBeenCalledWith(expect.objectContaining({ model: { id: 'granted-model' } }));
+  });
+
+  test('rejects an explicitly ungranted model without trying another provider', async () => {
+    resolveModelForUser.mockRejectedValue(new UserModelAuthorizationError());
+
+    await expect(manager.generateText('hello', { userId: 'user-1', provider: 'ungranted-model' }))
+      .rejects.toMatchObject({ name: 'UserModelAuthorizationError', code: 'USER_MODEL_ACCESS_DENIED' });
+
+    expect(listModelSelectionsForUser).not.toHaveBeenCalled();
+    expect(createProvider).not.toHaveBeenCalled();
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  test('does not create an environment provider for a raw provider selection from a user-scoped request', async () => {
+    resolveModelForUser.mockRejectedValue(new UserModelAuthorizationError());
+
+    await expect(manager.generateText('hello', { userId: 'user-1', provider: 'openai' }))
+      .rejects.toMatchObject({ code: 'USER_MODEL_ACCESS_DENIED' });
+
+    expect(resolveModelForUser).toHaveBeenCalledWith('user-1', 'openai');
+    expect(createProvider).not.toHaveBeenCalled();
+    expect(resolveModel).not.toHaveBeenCalled();
+  });
+
+  test('rejects user-scoped defaults with NO_AI_MODEL_ACCESS when the user has no grants', async () => {
+    listModelSelectionsForUser.mockResolvedValue([]);
+
+    await expect(manager.generateChat([{ role: 'user', content: 'hello' }], { userId: 'user-1' }))
+      .rejects.toMatchObject({ name: 'UserModelAuthorizationError', code: 'NO_AI_MODEL_ACCESS' });
+
+    expect(resolveModelForUser).not.toHaveBeenCalled();
+    expect(resolveModel).not.toHaveBeenCalled();
+    expect(createProvider).not.toHaveBeenCalled();
+  });
+
+  test('uses only resolved user grant selections in a streaming fallback chain', async () => {
+    listModelSelectionsForUser.mockResolvedValue(['user-flash', 'user-pro']);
+    resolveModelForUser.mockImplementation(async (_userId, selection) => ({
+      key: selection,
+      providerType: 'opencode',
+      overrides: { model: selection === 'user-flash' ? 'granted-flash' : 'granted-pro' },
+    }));
+    streamText.mockImplementation(({ model }) => model.id === 'granted-flash'
+      ? streamOf([{ type: 'start' }, { type: 'error', error: new Error('granted flash failed') }])
+      : streamOf([{ type: 'text-delta', text: 'granted pro worked' }]));
+
+    const parts = [];
+    for await (const part of manager.streamChat([{ role: 'user', content: 'hello' }], { userId: 'user-1' })) parts.push(part);
+
+    expect(listModelSelectionsForUser).toHaveBeenCalledWith('user-1', 'QUICK');
+    expect(listModelSelections).not.toHaveBeenCalled();
+    expect(createProvider.mock.calls.map(([, overrides]) => overrides.model)).toEqual(['granted-flash', 'granted-pro']);
+    expect(parts).toEqual([{ type: 'text-delta', text: 'granted pro worked' }]);
+  });
+
+  test('lists only records returned by the user-scoped model resolvers', async () => {
+    listModelSelectionsForUser.mockResolvedValue(['granted-model-id']);
+    resolveModelForUser.mockResolvedValue({
+      key: 'granted-model-id',
+      providerType: 'openai',
+      overrides: { model: 'granted-model' },
+      record: {
+        id: 'granted-model-id',
+        slug: 'granted-model',
+        name: 'Granted model',
+        model: 'granted-model',
+        modelType: 'QUICK',
+        isDefault: true,
+      },
+    });
+
+    await expect(manager.listProviders({ userId: 'user-1' })).resolves.toEqual([{
+      type: 'granted-model-id',
+      slug: 'granted-model',
+      displayName: 'Granted model',
+      model: 'granted-model',
+      modelType: 'QUICK',
+      isDefault: true,
+      configured: true,
+    }]);
+
+    expect(listModelSelectionsForUser).toHaveBeenCalledWith('user-1');
+    expect(resolveModelForUser).toHaveBeenCalledWith('user-1', 'granted-model-id');
+    expect(resolveModel).not.toHaveBeenCalled();
+  });
+
+  test('retains the trusted admin provider test path without a user grant', async () => {
+    resolveModel.mockResolvedValue({
+      key: 'admin-openai',
+      providerType: 'openai',
+      overrides: { model: 'admin-model' },
+    });
+    generateText.mockResolvedValue({ text: 'pong' });
+
+    await expect(manager.testProvider('openai')).resolves.toMatchObject({ ok: true });
+
+    expect(resolveModel).toHaveBeenCalledWith('openai', 'QUICK');
+    expect(resolveModelForUser).not.toHaveBeenCalled();
+    expect(generateText).toHaveBeenCalledWith(expect.objectContaining({ model: { id: 'admin-model' } }));
   });
 });
