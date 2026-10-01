@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, query } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { prisma } = require('../../services/core/database');
 const { cache } = require('../../services/core/redis');
 const { requireAdmin } = require('../../middleware/auth');
@@ -126,8 +126,20 @@ router.get('/users', [
 });
 
 /**
- * GET /api/admin/users/ai-model-catalog
- * Safe model display metadata for assigning per-user AI model grants.
+ * @swagger
+ * /api/admin/users/ai-model-catalog:
+ *   get:
+ *     summary: List safe AI model metadata for user-grant assignment
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Model catalog without credentials or provider configuration secrets
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin privileges required
  */
 router.get('/users/ai-model-catalog', async (_req, res) => {
   try {
@@ -161,59 +173,115 @@ router.get('/users/ai-model-catalog', async (_req, res) => {
   }
 });
 
+const MAX_MODEL_IDS_PER_USER = 100;
+const GRANT_REPLACEMENT_MAX_ATTEMPTS = 3;
+
+function isTransactionConflict(error) {
+  return error && error.code === 'P2034';
+}
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/ai-model-grants:
+ *   put:
+ *     summary: Replace all AI model grants for a user
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [modelIds]
+ *             properties:
+ *               modelIds:
+ *                 type: array
+ *                 maxItems: 100
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *     responses:
+ *       200:
+ *         description: Replacement completed; returns safe current grants only
+ *       400:
+ *         description: Invalid user/model identifier, too many model IDs, or unknown model
+ *       404:
+ *         description: User not found
+ */
 router.put('/users/:id/ai-model-grants', [
-  body('modelIds').isArray(),
+  param('id').isUUID(),
+  body('modelIds').isArray({ max: MAX_MODEL_IDS_PER_USER }),
   body('modelIds.*').isUUID(),
   handleValidation,
 ], async (req, res) => {
+  const { id: userId } = req.params;
+  const modelIds = [...new Set(req.body.modelIds)];
+
   try {
-    const { id: userId } = req.params;
-    const modelIds = [...new Set(req.body.modelIds)];
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-    if (!user) {
+    let result;
+    for (let attempt = 0; attempt < GRANT_REPLACEMENT_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        result = await prisma.$transaction(async tx => {
+          const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true } });
+          if (!user) return { status: 404 };
+
+          const models = await tx.aiModel.findMany({
+            where: { id: { in: modelIds } },
+            select: { id: true },
+          });
+          if (models.length !== modelIds.length) return { status: 400 };
+
+          const existingGrants = await tx.userAiModelGrant.findMany({
+            where: { userId },
+            select: { aiModelId: true },
+          });
+          const existingModelIds = new Set(existingGrants.map(grant => grant.aiModelId));
+          const desiredModelIds = new Set(modelIds);
+          const obsoleteModelIds = [...existingModelIds].filter(modelId => !desiredModelIds.has(modelId));
+          const missingModelIds = modelIds.filter(modelId => !existingModelIds.has(modelId));
+
+          if (obsoleteModelIds.length) {
+            await tx.userAiModelGrant.deleteMany({
+              where: { userId, aiModelId: { in: obsoleteModelIds } },
+            });
+          }
+          if (missingModelIds.length) {
+            await tx.userAiModelGrant.createMany({
+              data: missingModelIds.map(aiModelId => ({ userId, aiModelId })),
+              skipDuplicates: true,
+            });
+          }
+
+          const aiModelGrants = await tx.userAiModelGrant.findMany({
+            where: { userId },
+            select: safeAiModelGrantSelect,
+            orderBy: { createdAt: 'asc' },
+          });
+          return { status: 200, aiModelGrants };
+        }, { isolationLevel: 'Serializable' });
+        break;
+      } catch (error) {
+        if (!isTransactionConflict(error) || attempt === GRANT_REPLACEMENT_MAX_ATTEMPTS - 1) throw error;
+      }
+    }
+
+    if (result.status === 404) {
       return res.status(404).json({
         error: 'User Not Found',
         message: 'The requested user does not exist',
       });
     }
-
-    const models = await prisma.aiModel.findMany({
-      where: { id: { in: modelIds } },
-      select: { id: true },
-    });
-    if (models.length !== modelIds.length) {
-      return res.status(400).json({ error: 'Unknown AI model id' });
-    }
-
-    await prisma.$transaction(async tx => {
-      const existingGrants = await tx.userAiModelGrant.findMany({
-        where: { userId },
-        select: { aiModelId: true },
-      });
-      const existingModelIds = new Set(existingGrants.map(grant => grant.aiModelId));
-      const desiredModelIds = new Set(modelIds);
-      const obsoleteModelIds = [...existingModelIds].filter(modelId => !desiredModelIds.has(modelId));
-      const missingModelIds = modelIds.filter(modelId => !existingModelIds.has(modelId));
-
-      if (obsoleteModelIds.length) {
-        await tx.userAiModelGrant.deleteMany({
-          where: { userId, aiModelId: { in: obsoleteModelIds } },
-        });
-      }
-      if (missingModelIds.length) {
-        await tx.userAiModelGrant.createMany({
-          data: missingModelIds.map(aiModelId => ({ userId, aiModelId })),
-          skipDuplicates: true,
-        });
-      }
-    });
-
-    const aiModelGrants = await prisma.userAiModelGrant.findMany({
-      where: { userId },
-      select: safeAiModelGrantSelect,
-      orderBy: { createdAt: 'asc' },
-    });
-    res.json({ aiModelGrants: aiModelGrants.map(safeAiModelGrant) });
+    if (result.status === 400) return res.status(400).json({ error: 'Unknown AI model id' });
+    res.json({ aiModelGrants: result.aiModelGrants.map(safeAiModelGrant) });
   } catch (error) {
     console.error('Admin replace user AI model grants error:', error);
     res.status(500).json({ error: 'Failed to replace AI model grants' });
