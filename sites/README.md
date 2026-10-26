@@ -175,7 +175,7 @@ The system supports multiple content types:
 
 ### Environment Variables
 
-- `API_BASE_URL`: Base URL for the API (defaults to `https://api.foligo.tech`)
+- `API_BASE_URL`: Base URL for the API (defaults to `https://api.foligo.org`)
 
 ### Site Configuration
 
@@ -222,7 +222,7 @@ npm run preview
 The application is designed to run on port 80 and handle all subdomain requests. It uses Nuxt.js with SSR enabled for optimal performance and SEO.
 
 ### DNS Configuration
-Configure DNS to point `*.foligo.tech` to this application.
+Configure DNS to point `*.foligo.org` to this application.
 
 ### Site Creation
 1. Create sites through the dashboard with subdomains

@@ -65,7 +65,7 @@ model Project {
   name        String
   description String?
   ownerId     String
-  subdomain   String?  @unique // e.g., "my-portfolio" for my-portfolio.foligo.tech
+  subdomain   String?  @unique // e.g., "my-portfolio" for my-portfolio.foligo.org
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -218,6 +218,12 @@ model SiteConfig {
 
   // Layout Configuration
   layoutConfig Json // Store layout preferences
+  // Stable public renderer selection and constrained per-template settings.
+  templateId        String @default("studio")
+  templateVersion   Int    @default(1)
+  templateSettings  Json?
+  theme             Json?
+  publishedRevision Int    @default(1)
 
   // Color Scheme
   primaryColor    String @default("#3B82F6")

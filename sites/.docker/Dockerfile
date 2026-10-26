@@ -49,10 +49,12 @@ RUN addgroup -g 1001 -S nodejs && \
 RUN chown -R nuxt:nodejs /app && \
     chown root:root /docker-entrypoint.sh
 
-EXPOSE 80
+# The runtime drops to the unprivileged `nuxt` user in the entrypoint, so it
+# must bind an unprivileged port. The Kubernetes Service continues exposing 80.
+EXPOSE 3000
 
 ENV NODE_ENV=production
-ENV PORT=80
+ENV PORT=3000
 ENV HOST=0.0.0.0
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

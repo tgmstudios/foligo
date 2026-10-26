@@ -69,7 +69,7 @@
               <label class="label">Slug</label>
               <div class="flex">
                 <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-700 text-gray-400 text-sm">
-                  {{ project?.subdomain }}.foligo.tech/
+                  {{ project?.subdomain }}.foligo.org/
                 </span>
                 <input
                   v-model="editForm.slug"
@@ -804,7 +804,7 @@ const getPostUrl = (): string => {
   
   // Otherwise construct it from content and project
   const slug = content.value.slug || content.value.id
-  return `https://${project.value.subdomain}.foligo.tech/${slug}`
+  return `https://${project.value.subdomain}.foligo.org/${slug}`
 }
 
 const postToLinkedIn = () => {

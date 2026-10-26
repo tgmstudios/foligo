@@ -1,187 +1,45 @@
 <template>
-  <div>
-    <!-- Loading State -->
-    <div v-if="pending" class="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p class="text-slate-300">Loading site...</p>
-      </div>
-    </div>
-
-    <!-- Error State -->
-    <SiteNotFound v-else-if="error" :error="error" />
-
-    <!-- Site Content -->
-    <div v-else-if="siteData" class="min-h-screen" :style="siteStyles">
-
-      <!-- Unified Layout -->
-      <UnifiedLayout 
-        :site-data="siteData"
-        :route="route"
-      />
-    </div>
-
-    <!-- Fallback State -->
-    <div v-else class="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold text-white mb-4">No Site Data</h1>
-        <p class="text-slate-300">Unable to load site data.</p>
-        <button @click="loadSiteData" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Retry
-        </button>
-      </div>
-    </div>
-  </div>
+  <MarketingLanding v-if="isMarketingHost" />
+  <div v-else-if="pending" class="state">Loading portfolio…</div>
+  <SiteNotFound v-else-if="error || !siteData" :error="error" />
+  <PublicPortfolio v-else :site-data="siteData" :route="route" />
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watchEffect } from 'vue'
-import { siteApi } from '~/utils/siteApi'
-import { useSubdomain } from '~/composables/useSubdomain'
+import { computed } from 'vue'
+import MarketingLanding from '~/components/MarketingLanding.vue'
+import { getDashboardRedirect } from '~/utils/dashboard-routing.js'
+import { usePublicSiteHead } from '~/composables/usePublicSiteHead.js'
 
-// Get the current route and hostname
 const route = useRoute()
-const config = useRuntimeConfig()
-const { extractSubdomain } = useSubdomain()
+const runtime = useRuntimeConfig()
+const headers = process.server ? useRequestHeaders(['host', 'x-forwarded-host']) : {}
+const host = computed(() => (process.client ? window.location.hostname : (headers['x-forwarded-host'] || headers.host || '').split(':')[0]).toLowerCase())
+const isMarketingHost = computed(() => ['foligo.org', 'www.foligo.org', 'localhost', '127.0.0.1'].includes(host.value))
+const legacyDashboardRedirect = computed(() => getDashboardRedirect(
+  `https://${host.value}${route.fullPath}`,
+  runtime.public.dashboardUrl,
+))
 
-// Debug variables
-const isDev = process.dev || (process.client && window.ENV?.NODE_ENV === 'development') || process.env.NODE_ENV === 'development'
-const hostname = ref('')
-const subdomain = ref('')
-
-// Extract subdomain from hostname
-const getSubdomain = () => {
-  let host = ''
-  
-  if (process.client) {
-    host = window.location.hostname
-  } else if (process.server) {
-    const headers = useRequestHeaders()
-    host = headers.host || headers['x-forwarded-host'] || ''
-  }
-  
-  hostname.value = host
-  console.log('Extracting subdomain from hostname:', host)
-  
-  if (!host) {
-    console.log('No hostname found')
-    return null
-  }
-  
-  // Development fallback - if we're on localhost, use 'test' as subdomain
-  if (host === 'localhost' || host === '127.0.0.1' || host.includes('localhost')) {
-    console.log('Development mode detected, using test subdomain')
-    subdomain.value = 'test'
-    return 'test'
-  }
-  
-  const extracted = extractSubdomain()
-  subdomain.value = extracted
-  console.log('Subdomain extraction result:', { host, extracted })
-  return extracted
+if (legacyDashboardRedirect.value) {
+  await navigateTo(legacyDashboardRedirect.value, { external: true, redirectCode: 308 })
 }
 
-// Apply dark mode to HTML element
-useHead({
-  htmlAttrs: {
-    class: 'dark'
-  }
+const subdomain = computed(() => {
+  const parts = host.value.split('.')
+  return parts.length >= 3 && parts.slice(-2).join('.') === 'foligo.org' ? parts[0] : null
 })
 
-// Fetch site data based on subdomain
-const { data: siteData, pending, error, refresh } = await useFetch(() => {
-  const extractedSubdomain = getSubdomain()
-  console.log('Building API URL with subdomain:', extractedSubdomain)
-  
-  if (!extractedSubdomain) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Invalid subdomain'
-    })
-  }
-  
-  const url = `/api/site/${extractedSubdomain}`
-  console.log('Final API URL:', url)
-  return url
-}, {
-  key: 'site-data',
-  baseURL: config.public.apiBaseUrl,
+const { data: siteData, pending, error } = await useFetch(() => (subdomain.value ? `/api/site/${subdomain.value}` : null), {
+  key: () => `public-site-${subdomain.value || 'marketing'}`,
+  baseURL: runtime.public.apiBaseUrl,
   server: true,
-  transform: (data) => data,
-  onRequestError({ request, error }) {
-    console.error('Request error:', error)
-  },
-  onResponseError({ response }) {
-    console.error('Response error:', response.status, response.statusText)
-  }
+  immediate: !isMarketingHost.value
 })
 
-// Update meta tags when siteData is available
-watchEffect(() => {
-  if (siteData.value) {
-    useHead({
-      title: siteData.value.siteConfig?.metaTitle || siteData.value.project?.name || 'Portfolio',
-      meta: [
-        { name: 'description', content: siteData.value.siteConfig?.metaDescription || siteData.value.project?.description || '' },
-        { name: 'theme-color', content: siteData.value.siteConfig?.primaryColor || '#3B82F6' }
-      ],
-      link: siteData.value.siteConfig?.favicon ? [{ rel: 'icon', href: siteData.value.siteConfig.favicon }] : []
-    })
-  }
-})
-
-// Dynamic styles based on site config
-const siteStyles = computed(() => {
-  if (!siteData.value?.siteConfig) return {}
-  
-  const config = siteData.value.siteConfig
-  return {
-    '--primary-color': config.primaryColor,
-    '--secondary-color': config.secondaryColor,
-    '--accent-color': config.accentColor,
-    '--background-color': config.backgroundColor,
-    '--text-color': config.textColor,
-    backgroundColor: config.backgroundColor,
-    color: config.textColor
-  }
-})
-
-// Layout is now unified - no need for layout selection logic
-
-// Manual retry function
-const loadSiteData = () => {
-  refresh()
-}
-
-// Handle client-side navigation
-onMounted(() => {
-  if (process.client) {
-    console.log('Component mounted, refreshing data...')
-    // Refresh data when navigating to different subdomains
-    const handleRouteChange = () => {
-      console.log('Route changed, refreshing data...')
-      refresh()
-    }
-    
-    // Listen for route changes
-    window.addEventListener('popstate', handleRouteChange)
-    
-    // Cleanup
-    onUnmounted(() => {
-      window.removeEventListener('popstate', handleRouteChange)
-    })
-  }
-})
+usePublicSiteHead(siteData, runtime)
 </script>
 
-<style>
-:root {
-  --primary-color: #3B82F6;
-  --secondary-color: #1E40AF;
-  --accent-color: #F59E0B;
-  --background-color: #FFFFFF;
-  --text-color: #1F2937;
-}
-
-/* Dynamic CSS variables will be applied via the computed siteStyles */
+<style scoped>
+.state { min-height: 100vh; display: grid; place-items: center; background: #0d1117; color: #e6edf3; font: 600 1rem system-ui; }
 </style>

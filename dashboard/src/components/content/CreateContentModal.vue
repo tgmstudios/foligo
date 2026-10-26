@@ -107,7 +107,7 @@
                 </label>
                 <div class="flex">
                   <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-700 text-gray-400 text-xs sm:text-sm">
-                    {{ project?.subdomain || 'project' }}.foligo.tech/
+                    {{ project?.subdomain || 'project' }}.foligo.org/
                   </span>
                   <input
                     id="slug"

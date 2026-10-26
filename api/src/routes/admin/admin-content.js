@@ -174,8 +174,10 @@ router.put('/content/:id', [
       }
     });
 
-    // Clear content cache
+    // Clear content cache — cache.del on the base project key also evicts
+    // the sibling public-portfolio cache entry (see services/core/redis.js).
     if (existingContent.projectId) {
+      await cache.del(`project:${existingContent.projectId}`);
       await cache.del(`project:${existingContent.projectId}:content`);
     }
 
@@ -220,8 +222,10 @@ router.delete('/content/:id', async (req, res) => {
       where: { id }
     });
 
-    // Clear content cache
+    // Clear content cache — cache.del on the base project key also evicts
+    // the sibling public-portfolio cache entry (see services/core/redis.js).
     if (content.projectId) {
+      await cache.del(`project:${content.projectId}`);
       await cache.del(`project:${content.projectId}:content`);
     }
 

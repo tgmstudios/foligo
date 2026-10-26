@@ -31,16 +31,7 @@
               placeholder="Platform description"
             ></textarea>
           </div>
-          
-          <div class="flex justify-end">
-            <button
-              @click="saveSiteSettings"
-              :disabled="isSaving"
-              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {{ isSaving ? 'Saving...' : 'Save Settings' }}
-            </button>
-          </div>
+          <p class="text-sm text-gray-500">Site name and description are not persisted yet.</p>
         </div>
       </div>
 
@@ -48,17 +39,7 @@
       <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <h3 class="text-lg font-semibold text-white mb-4">Security Settings</h3>
         <div class="space-y-4">
-          <div class="flex items-center">
-            <input
-              id="requireEmailVerification"
-              v-model="siteSettings.requireEmailVerification"
-              type="checkbox"
-              class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-600 rounded bg-gray-700"
-            />
-            <label for="requireEmailVerification" class="ml-2 text-sm text-gray-300">
-              Require email verification for new users
-            </label>
-          </div>
+          <p class="text-sm text-gray-500">Email-verification configuration is not persisted yet.</p>
           
           <div class="flex items-center">
             <input
@@ -110,15 +91,7 @@
             ></textarea>
           </div>
           
-          <div class="flex justify-end">
-            <button
-              @click="saveSiteSettings"
-              :disabled="isSaving"
-              class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {{ isSaving ? 'Saving...' : 'Save Settings' }}
-            </button>
-          </div>
+          <p class="text-sm text-yellow-500">Maintenance mode is not persisted yet.</p>
         </div>
       </div>
     </div>
@@ -145,23 +118,25 @@ const siteSettings = reactive({
 
 const fetchSiteSettings = async () => {
   try {
-    // TODO: Implement API endpoint to fetch site settings
-    // const response = await api.get('/admin/settings')
-    // Object.assign(siteSettings, response.data)
-  } catch (error) {
+    const response = await api.get('/admin/settings')
+    siteSettings.allowRegistration = response.data.allow_public_signups !== 'false'
+  } catch (error: any) {
     console.error('Failed to fetch site settings:', error)
+    toast.error(error.response?.data?.error || 'Failed to load site settings')
   }
 }
 
 const saveSiteSettings = async () => {
   try {
     isSaving.value = true
-    // TODO: Implement API endpoint to save site settings
-    // await api.put('/admin/settings', siteSettings)
-    toast.success('Site settings saved successfully')
+    const response = await api.put('/admin/settings', {
+      allow_public_signups: String(siteSettings.allowRegistration)
+    })
+    siteSettings.allowRegistration = response.data.allow_public_signups === 'true'
+    toast.success('Registration setting saved')
   } catch (error: any) {
     console.error('Failed to save site settings:', error)
-    toast.error(error.response?.data?.message || 'Failed to save site settings')
+    toast.error(error.response?.data?.error || 'Failed to save registration setting')
   } finally {
     isSaving.value = false
   }

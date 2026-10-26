@@ -52,7 +52,7 @@ class AuthViewModel {
     var alertTitle = ""
     var alertMessage = ""
     
-    private let baseURL = "https://api.foligo.tech"
+    private let baseURL = "https://api.foligo.org"
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     

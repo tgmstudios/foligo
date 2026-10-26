@@ -20,12 +20,12 @@ An empty list permits clients without an `Origin` header, which is useful for se
 
 The snippet below provides automatic visitor/session management, device fingerprinting, return-visitor counting, and page-flow tracking — all client-side, with no personal data.
 
-Production endpoint: `POST https://api.foligo.tech/api/analytics/events`
+Production endpoint: `POST https://api.foligo.org/api/analytics/events`
 
 ```html
 <script>
 (function () {
-  const ENDPOINT = 'https://api.foligo.tech/api/analytics/events';
+  const ENDPOINT = 'https://api.foligo.org/api/analytics/events';
   const KEY = 'fa_REPLACE_WITH_YOUR_WRITE_KEY';
   const VISITOR_KEY = 'foligo_visitor_id';
   const SESSION_KEY = 'foligo_session_id';
@@ -137,7 +137,7 @@ For a single-page app, wrap the fetch call in a function and invoke it after eac
 Event names must begin with a letter and can contain up to 64 letters, numbers, dots, colons, underscores, or hyphens.
 
 ```js
-await fetch('https://api.foligo.tech/api/analytics/events', {
+await fetch('https://api.foligo.org/api/analytics/events', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ const pageEnteredAt = Date.now();
 window.addEventListener('beforeunload', () => {
   const duration = Date.now() - pageEnteredAt;
   navigator.sendBeacon(
-    'https://api.foligo.tech/api/analytics/events',
+    'https://api.foligo.org/api/analytics/events',
     JSON.stringify({
       name: 'page_view',
       visitorId,
@@ -252,4 +252,4 @@ Foligo does not persist the sender IP address. `visitorId` and `sessionId` are p
 
 Select **Rotate key** in Integration settings when a key is exposed or as part of normal credential rotation. Rotation invalidates the previous key immediately and does not remove historical data.
 
-The OpenAPI definition and interactive API explorer are available at `https://api.foligo.tech/api-docs`.
+The OpenAPI definition and interactive API explorer are available at `https://api.foligo.org/api-docs`.

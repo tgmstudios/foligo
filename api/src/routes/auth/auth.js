@@ -97,9 +97,14 @@ router.post('/register', [
   body('name').trim().isLength({ min: 1 })
 ], async (req, res) => {
   try {
-    // Gate: public sign-ups can be disabled via env var.
-    // SSO/OAuth account creation (sso-auth.js) is unaffected.
-    const allowSignups = process.env.ALLOW_PUBLIC_SIGNUPS !== 'false';
+    // Public sign-ups are controlled by the persisted admin setting. An explicit
+    // false env value remains a hard operational override for incident response.
+    const registrationSetting = await prisma.platformSetting.findUnique({
+      where: { key: 'allow_public_signups' },
+      select: { value: true },
+    });
+    const allowSignups = process.env.ALLOW_PUBLIC_SIGNUPS !== 'false'
+      && registrationSetting?.value !== 'false';
     if (!allowSignups) {
       return res.status(403).json({
         error: 'Registration Disabled',
@@ -511,7 +516,7 @@ router.post('/device-code/exchange', async (req, res) => {
  * POST /api/auth/device-code/external
  * (authenticated) Accepts a device code from the foligo web page
  * and stores it in Redis for the extension to exchange.
- * Used by the foligo.tech/auth/link-device page content script.
+ * Used by the app.foligo.org/auth/link-device page content script.
  */
 router.post('/device-code/external', authenticateToken, async (req, res) => {
   try {

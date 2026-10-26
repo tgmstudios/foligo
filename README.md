@@ -219,7 +219,7 @@ cd sites
 npm install
 
 # Configure environment (optional)
-# - API_BASE_URL=https://api.foligo.tech
+# - API_BASE_URL=https://api.foligo.org
 
 # Start development server
 npm run dev
@@ -338,7 +338,7 @@ VITE_APP_VERSION=1.0.0
 ### Sites
 
 ```env
-API_BASE_URL=https://api.foligo.tech
+API_BASE_URL=https://api.foligo.org
 ```
 
 ## 📚 API Endpoints
@@ -556,8 +556,8 @@ npm run build
 
 For sites with custom subdomains, configure DNS:
 
-- Point `*.foligo.tech` to the sites application
-- Point `api.foligo.tech` to the API server
+- Point `*.foligo.org` to the sites application
+- Point `api.foligo.org` to the API server
 
 ## 📱 iOS App
 
@@ -601,4 +601,4 @@ Built by the Foligo Team
 **Version**: 1.0.0  
 **Last Updated**: 2026
 
-For more information, visit [Foligo Documentation](https://api.foligo.tech/api-docs)
+For more information, visit [Foligo Documentation](https://api.foligo.org/api-docs)

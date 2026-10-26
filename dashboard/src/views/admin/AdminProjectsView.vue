@@ -50,7 +50,7 @@
                 <div>
                   <div class="text-sm font-medium text-white">{{ project.name }}</div>
                   <div v-if="project.subdomain" class="text-sm text-gray-400">
-                    {{ project.subdomain }}.foligo.tech
+                    {{ project.subdomain }}.foligo.org
                   </div>
                 </div>
               </td>
