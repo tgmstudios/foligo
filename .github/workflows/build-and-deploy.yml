@@ -103,7 +103,7 @@ jobs:
           cache-from: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache-${{ github.ref_name }}
           cache-to: type=registry,ref=registry.tgm.one/foligo/dashboard:buildcache-${{ github.ref_name }},mode=max
           build-args: |
-            TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+            TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local
             TURBO_TEAM=foligo
           secrets: |
             TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
@@ -154,7 +154,7 @@ jobs:
           cache-from: type=registry,ref=registry.tgm.one/foligo/sites:buildcache-${{ github.ref_name }}
           cache-to: type=registry,ref=registry.tgm.one/foligo/sites:buildcache-${{ github.ref_name }},mode=max
           build-args: |
-            TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local:3000
+            TURBO_API=http://turbo-cache.turbo-cache.svc.cluster.local
             TURBO_TEAM=foligo
           secrets: |
             TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}
@@ -185,7 +185,7 @@ jobs:
               # environment values. Discard every response body; log only the
               # component name and HTTP status.
               http_code=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
-                --user "$RANCHER_TOKEN" --insecure \
+                --user "$RANCHER_TOKEN" \
                 -X PATCH \
                 -H "Content-Type: application/strategic-merge-patch+json" \
                 -d "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"deployed-at\":\"$ts\"}},\"spec\":{\"containers\":[{\"name\":\"$app\",\"image\":\"$image\",\"imagePullPolicy\":\"Always\"}]}}}}" \

@@ -31,6 +31,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/welcome',
+      name: 'landing',
+      component: () => import('@/views/landing/LandingView.vue')
+    },
+    {
       path: '/login',
       name: 'login',
       component: LoginView,
@@ -268,8 +273,8 @@ router.beforeEach(async (to, from, next) => {
   
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.token) {
-    // No token at all — redirect to login
-    next('/login')
+    // Visitors hitting the bare root see the marketing page; deep links go to login
+    next(to.path === '/' ? '/welcome' : '/login')
     return
   }
   
