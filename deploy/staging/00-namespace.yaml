@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foligo-staging
+  labels:
+    app.kubernetes.io/part-of: foligo-staging
+    tgm.one/data-classification: production-snapshot-private

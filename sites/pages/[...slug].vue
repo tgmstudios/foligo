@@ -20,7 +20,7 @@ const { data: siteData, pending, error } = await useFetch(() => {
   return `/api/site/${subdomain}`
 }, {
   key: 'public-site',
-  baseURL: runtime.public.apiBaseUrl,
+  baseURL: (process.server && runtime.apiInternalUrl) || runtime.public.apiBaseUrl,
   server: true
 })
 

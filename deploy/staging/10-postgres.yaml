@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: postgres, namespace: foligo-staging}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector: {matchLabels: {app: postgres}}
+  template:
+    metadata: {labels: {app: postgres}}
+    spec:
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:16
+          ports: [{name: pg, containerPort: 5432}]
+          env:
+            - {name: POSTGRES_USER, value: foligo}
+            - {name: POSTGRES_DB, value: foligo}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: foligo-staging-db, key: password}}
+          readinessProbe:
+            exec: {command: [sh, -c, "pg_isready -U foligo -d foligo"]}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 1Gi}
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+    - metadata: {name: data, labels: {app: postgres}}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: proxmox-ssd-zfs
+        resources: {requests: {storage: 5Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: postgres, namespace: foligo-staging}
+spec:
+  selector: {app: postgres}
+  ports: [{name: pg, port: 5432, targetPort: pg}]

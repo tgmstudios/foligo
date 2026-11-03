@@ -15,7 +15,9 @@ const route = useRoute()
 const runtime = useRuntimeConfig()
 const headers = process.server ? useRequestHeaders(['host', 'x-forwarded-host']) : {}
 const host = computed(() => (process.client ? window.location.hostname : (headers['x-forwarded-host'] || headers.host || '').split(':')[0]).toLowerCase())
-const isMarketingHost = computed(() => ['foligo.org', 'www.foligo.org', 'localhost', '127.0.0.1'].includes(host.value))
+const stagingMarketingHost = (runtime.public.stagingMarketingHost || '').toLowerCase()
+const stagingSiteSuffix = (runtime.public.stagingSiteSuffix || '').toLowerCase()
+const isMarketingHost = computed(() => ['foligo.org', 'www.foligo.org', 'localhost', '127.0.0.1'].includes(host.value) || (!!stagingMarketingHost && host.value === stagingMarketingHost))
 const legacyDashboardRedirect = computed(() => getDashboardRedirect(
   `https://${host.value}${route.fullPath}`,
   runtime.public.dashboardUrl,
@@ -26,13 +28,14 @@ if (legacyDashboardRedirect.value) {
 }
 
 const subdomain = computed(() => {
+  if (stagingSiteSuffix && host.value.endsWith(stagingSiteSuffix)) return host.value.slice(0, -stagingSiteSuffix.length) || null
   const parts = host.value.split('.')
   return parts.length >= 3 && parts.slice(-2).join('.') === 'foligo.org' ? parts[0] : null
 })
 
 const { data: siteData, pending, error } = await useFetch(() => (subdomain.value ? `/api/site/${subdomain.value}` : null), {
   key: () => `public-site-${subdomain.value || 'marketing'}`,
-  baseURL: runtime.public.apiBaseUrl,
+  baseURL: (process.server && runtime.apiInternalUrl) || runtime.public.apiBaseUrl,
   server: true,
   immediate: !isMarketingHost.value
 })

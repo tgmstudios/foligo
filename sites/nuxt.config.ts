@@ -13,10 +13,15 @@ export default defineNuxtConfig({
     dirs: ['~/components']
   },
   runtimeConfig: {
+    // Staging-only: server-side API URL (NUXT_API_INTERNAL_URL). Empty in production.
+    apiInternalUrl: process.env.NUXT_API_INTERNAL_URL || '',
     public: {
       apiBaseUrl: process.env.API_BASE_URL || 'https://api.foligo.org',
       dashboardUrl: process.env.DASHBOARD_URL || 'https://app.foligo.org',
-      analyticsKey: process.env.NUXT_PUBLIC_ANALYTICS_KEY || ''
+      analyticsKey: process.env.NUXT_PUBLIC_ANALYTICS_KEY || '',
+      // Staging-only host mapping (empty in production).
+      stagingMarketingHost: process.env.NUXT_PUBLIC_STAGING_MARKETING_HOST || '',
+      stagingSiteSuffix: process.env.NUXT_PUBLIC_STAGING_SITE_SUFFIX || ''
     }
   },
   app: {
