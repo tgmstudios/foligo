@@ -108,16 +108,8 @@ export interface GoApplyJob {
   updatedAt: string
 }
 
-export type JobStatus =
-  | 'saved'
-  | 'applied'
-  | 'screening'
-  | 'interview'
-  | 'offer'
-  | 'accepted'
-  | 'rejected'
-  | 'withdrawn'
-  | 'archived'
+export type JobStatus = string
+export interface GoApplyColumn { status: string; label: string; color: string }
 
 export interface SavedAnswer {
   id: string
@@ -212,6 +204,10 @@ export const useGoApplyStore = defineStore('goapply', () => {
   // ── State ──────────────────────────────────────────────────────────
   const profile = ref<GoApplyProfile | null>(null)
   const jobs = ref<GoApplyJob[]>([])
+  const columns = ref<GoApplyColumn[]>([])
+  const columnStatuses = computed(() => columns.value.map(c => c.status))
+  const columnColors = computed(() => Object.fromEntries(columns.value.map(c => [c.status, `${c.color} text-white`])))
+  const columnLabels = computed(() => Object.fromEntries(columns.value.map(c => [c.status, c.label])))
   const answers = ref<SavedAnswer[]>([])
   const coverLetters = ref<CoverLetter[]>([])
 
@@ -222,11 +218,11 @@ export const useGoApplyStore = defineStore('goapply', () => {
   // ── Getters (kanban) ───────────────────────────────────────────────
   const kanbanColumns = computed(() => {
     const map: Record<JobStatus, GoApplyJob[]> = {} as any
-    for (const s of JOB_STATUSES) map[s] = []
+    for (const s of columnStatuses.value) map[s] = []
     for (const job of jobs.value) {
       if (map[job.status]) map[job.status].push(job)
     }
-    return KANBAN_COLUMNS.map((col) => ({
+    return columns.value.map((col) => ({
       ...col,
       jobs: map[col.status],
     }))
@@ -306,6 +302,31 @@ export const useGoApplyStore = defineStore('goapply', () => {
       profile.value = data
       return data
     }, 'Failed to update linked skills')
+  }
+
+  async function fetchColumns() {
+    return withErrorToast(async () => {
+      const { data } = await api.get('/goapply/columns')
+      columns.value = data
+    }, 'Failed to load columns')
+  }
+
+  async function saveColumn(column: { label: string; color: string }, status?: string) {
+    return withErrorToast(async () => {
+      const { data } = status
+        ? await api.put(`/goapply/columns/${status}`, column)
+        : await api.post('/goapply/columns', column)
+      if (status) columns.value = columns.value.map(c => c.status === status ? data : c)
+      else columns.value.push(data)
+    }, 'Failed to save column', 'Column saved')
+  }
+
+  async function deleteColumn(status: string, moveTo: string) {
+    return withErrorToast(async () => {
+      await api.delete(`/goapply/columns/${status}`, { data: { moveTo } })
+      jobs.value = jobs.value.map(job => job.status === status ? { ...job, status: moveTo } : job)
+      columns.value = columns.value.filter(c => c.status !== status)
+    }, 'Failed to delete column', 'Column deleted')
   }
 
   // ── Jobs ───────────────────────────────────────────────────────────
@@ -475,12 +496,14 @@ export const useGoApplyStore = defineStore('goapply', () => {
     await Promise.allSettled([
       fetchProfile(),
       fetchJobs(),
+      fetchColumns(),
       fetchAnswers(),
       fetchCoverLetters(),
     ])
   }
 
   return {
+    columns, columnStatuses, columnLabels, columnColors, fetchColumns, saveColumn, deleteColumn,
     // state
     profile,
     jobs,

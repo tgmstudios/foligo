@@ -122,8 +122,8 @@
             v-model="form.status"
             class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
-            <option v-for="s in JOB_STATUSES" :key="s" :value="s">
-              {{ STATUS_LABELS[s] }}
+            <option v-for="s in store.columnStatuses" :key="s" :value="s">
+              {{ store.columnLabels[s] }}
             </option>
           </select>
         </div>
@@ -189,7 +189,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { useGoApplyStore, JOB_STATUSES, STATUS_LABELS, type GoApplyJob, type JobFormData } from '@/stores/goapply'
+import { useGoApplyStore, type GoApplyJob, type JobFormData } from '@/stores/goapply'
 import { marked } from 'marked'
 
 const props = defineProps<{
@@ -227,7 +227,7 @@ const form = reactive<JobFormData>({
   category: props.job?.category || '',
   description: props.job?.description || '',
   tags: props.job?.tags || [],
-  status: props.job?.status || 'saved',
+  status: props.job?.status || store.columnStatuses[0] || 'saved',
   referredBy: props.job?.referredBy || '',
   sortOrder: props.job?.sortOrder ?? 0,
   appliedAt: props.job?.appliedAt
