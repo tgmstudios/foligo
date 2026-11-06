@@ -11,6 +11,9 @@ export interface User {
   updatedAt: string
   hasCompletedOnboarding?: boolean
   isAdmin?: boolean
+  // Not currently returned by /auth/login or /auth/me (API selects id,email,name,
+  // hasCompletedOnboarding,isAdmin,createdAt,updatedAt); read by UserSettingsView.
+  ssoProviderId?: string | null
 }
 
 export interface LoginCredentials {

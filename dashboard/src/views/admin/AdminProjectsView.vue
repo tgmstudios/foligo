@@ -135,11 +135,9 @@
 <script setup lang="ts">
 import ListActionIcon from '@/components/common/ListActionIcon.vue'
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import api from '@/services/api'
 
-const router = useRouter()
 const toast = useToast()
 
 const loading = ref(true)

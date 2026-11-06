@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useToast } from 'vue-toastification'
 
 const toast = useToast()
@@ -27,7 +27,7 @@ const aiApi = axios.create({
 })
 
 // Request interceptor
-const addAuthToken = (config) => {
+const addAuthToken = (config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('auth_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -45,7 +45,7 @@ aiApi.interceptors.request.use(addAuthToken, (error) => {
 })
 
 // Response interceptor
-const handleResponseError = (error) => {
+const handleResponseError = (error: AxiosError) => {
   // Handle common errors
   if (error.response?.status === 401) {
     // Unauthorized - clear auth and redirect to login

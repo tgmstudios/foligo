@@ -128,7 +128,7 @@
                   </span>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Only lowercase letters, numbers, and hyphens allowed
+                  Only lowercase letters, numbers, and hyphens allowed (3-50 characters)
                 </p>
               </div>
 
@@ -190,11 +190,22 @@
           </div>
         </div>
 
+        <!-- Inline error (actionable; form state is retained) -->
+        <div
+          v-if="errorMessage"
+          role="alert"
+          data-testid="onboarding-error"
+          class="mx-8 mb-4 rounded-md bg-red-50 dark:bg-red-900/30 p-4 text-sm text-red-800 dark:text-red-200"
+        >
+          {{ errorMessage }}
+        </div>
+
         <!-- Navigation -->
         <div class="bg-gray-50 dark:bg-gray-700 px-8 py-4 flex justify-between items-center">
           <button
             v-if="currentStep > 1"
             @click="previousStep"
+            :disabled="isLoading"
             class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Previous
@@ -204,10 +215,10 @@
           <button
             v-if="currentStep < totalSteps"
             @click="nextStep"
-            :disabled="!canProceed"
+            :disabled="!canProceed || isLoading"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Next
+            {{ isLoading ? 'Saving...' : (errorMessage ? 'Retry' : 'Next') }}
           </button>
           <button
             v-else
@@ -215,7 +226,7 @@
             :disabled="isLoading"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ isLoading ? 'Completing...' : 'Complete' }}
+            {{ isLoading ? 'Completing...' : (errorMessage ? 'Retry' : 'Complete') }}
           </button>
         </div>
       </div>
@@ -228,6 +239,7 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
+import { createOnboardingFlow, OnboardingStepError } from '@/utils/onboardingFlow'
 import squiggleLogo from '@/assets/logos/squiggle.svg'
 
 const router = useRouter()
@@ -238,6 +250,7 @@ const currentStep = ref(1)
 const totalSteps = 2
 const isLoading = ref(false)
 const wantsToCreateSite = ref(false)
+const errorMessage = ref('')
 
 const projectForm = reactive({
   name: '',
@@ -259,74 +272,74 @@ const canProceed = computed(() => {
       // If they don't want a site, they can proceed
       if (!wantsToCreateSite.value) return true
       // If they want a site, subdomain is required
-      return siteConfig.subdomain.trim().length > 0 && /^[a-z0-9-]+$/.test(siteConfig.subdomain)
+      return /^[a-z0-9-]{3,50}$/.test(siteConfig.subdomain.trim())
     default:
       return false
   }
 })
 
+const flow = createOnboardingFlow({
+  createProject: (data) => projectStore.createProject(data),
+  updateProject: (id, data) => projectStore.updateProject(id, data),
+  updateSiteConfig: (id, data) => projectStore.updateSiteConfig(id, data),
+  publishProject: (id, published) => projectStore.publishProject(id, published),
+  completeOnboarding: () => authStore.completeOnboarding()
+})
+
+const reportError = (error: unknown) => {
+  errorMessage.value =
+    error instanceof OnboardingStepError ? error.message : 'Something went wrong. Please try again.'
+  console.error('Onboarding step failed:', error)
+}
+
 const nextStep = async () => {
-  if (currentStep.value === 1 && projectForm.name) {
-    // Create the first project (without site config yet)
+  if (isLoading.value) return
+  errorMessage.value = ''
+  if (currentStep.value === 1) {
+    isLoading.value = true
     try {
-      await projectStore.createProject({
-        name: projectForm.name,
-        description: projectForm.description
-      })
+      // Created once; Back/Next and retries reuse the returned project id.
+      await flow.ensureProject({ name: projectForm.name.trim(), description: projectForm.description })
     } catch (error) {
-      console.error('Failed to create project:', error)
+      reportError(error)
       return
+    } finally {
+      isLoading.value = false
     }
   }
-  
+
   if (currentStep.value < totalSteps) {
     currentStep.value++
   }
 }
 
 const previousStep = () => {
+  errorMessage.value = ''
   if (currentStep.value > 1) {
     currentStep.value--
   }
 }
 
 const completeOnboarding = async () => {
+  if (isLoading.value) return
+  errorMessage.value = ''
+  isLoading.value = true
   try {
-    isLoading.value = true
-    
-    // If they wanted to create a site but it wasn't created yet, create it now
-    if (wantsToCreateSite.value && siteConfig.subdomain) {
-      try {
-        // Get the most recently created project
-        await projectStore.fetchProjects()
-        const projects = projectStore.ownedProjects
-        const latestProject = projects[0] // Most recent project
-        
-        if (latestProject) {
-          // Update project with subdomain
-          await projectStore.updateProject(latestProject.id, {
-            subdomain: siteConfig.subdomain
-          })
-
-          // Set up site configuration
-          await projectStore.updateSiteConfig(latestProject.id, {
-            siteName: siteConfig.siteName,
-            primaryColor: siteConfig.primaryColor,
-            secondaryColor: siteConfig.secondaryColor
-          })
-
-          // Publish the site
-          await projectStore.publishProject(latestProject.id, true)
-        }
-      } catch (error) {
-        console.error('Failed to set up site:', error)
+    await flow.finish(
+      { name: projectForm.name.trim(), description: projectForm.description },
+      {
+        wantsSite: wantsToCreateSite.value,
+        subdomain: siteConfig.subdomain,
+        siteName: siteConfig.siteName,
+        primaryColor: siteConfig.primaryColor,
+        secondaryColor: siteConfig.secondaryColor
       }
-    }
-    
-    await authStore.completeOnboarding()
+    )
     router.push('/')
   } catch (error) {
-    console.error('Failed to complete onboarding:', error)
+    // Do not navigate or report success: the user stays here with their input
+    // intact and can retry from the failed step.
+    reportError(error)
   } finally {
     isLoading.value = false
   }

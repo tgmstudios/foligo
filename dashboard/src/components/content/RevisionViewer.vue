@@ -137,7 +137,7 @@
 
 <script setup lang="ts">
 import ListActionIcon from '@/components/common/ListActionIcon.vue'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import { marked } from 'marked'
 import { formatContentStatus } from '@/utils'

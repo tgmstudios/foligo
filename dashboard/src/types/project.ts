@@ -92,6 +92,8 @@ export interface Content {
   createdAt: string
   updatedAt: string
   projectName?: string
+  // Included by GET /goapply/experience and goapply profile links (EXPERIENCE_INCLUDE)
+  project?: { id: string; name: string }
 
   // Project-specific fields
   startDate?: string

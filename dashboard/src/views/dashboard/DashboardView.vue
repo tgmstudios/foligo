@@ -86,7 +86,7 @@
           <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-white">Recent Content</h3>
-              <router-link to="/content" class="text-sm text-primary-600 hover:text-primary-500">
+              <router-link to="/blogs" class="text-sm text-primary-600 hover:text-primary-500">
                 View all
               </router-link>
             </div>
@@ -153,7 +153,7 @@
           <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-white">Recent Portfolios</h3>
-              <router-link to="/projects" class="text-sm text-primary-600 hover:text-primary-500">
+              <router-link to="/portfolios" class="text-sm text-primary-600 hover:text-primary-500">
                 View all
               </router-link>
             </div>
@@ -215,13 +215,13 @@
                 </div>
                 <div class="flex items-center space-x-2">
                   <router-link
-                    :to="`/projects/${project.id}`"
+                    :to="`/portfolios/${project.id}`"
                     class="text-primary-600 hover:text-primary-500 text-sm font-medium"
                   >
                     View
                   </router-link>
                   <router-link
-                    :to="`/projects/${project.id}/edit`"
+                    :to="`/portfolios/${project.id}`"
                     class="text-gray-400 hover:text-gray-400"
                   >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

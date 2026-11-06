@@ -18,6 +18,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
+import { parseContentType } from '@/utils/contentHelpers'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,8 +54,15 @@ onMounted(async () => {
       return
     }
     
+    const parsedContentType = parseContentType(contentType)
+    if (!parsedContentType) {
+      error.value = `Unknown content type: ${contentType}`
+      isCreating.value = false
+      return
+    }
+
     const newContent = await projectStore.createContent(targetProjectId, {
-      contentType: contentType.toUpperCase(),
+      contentType: parsedContentType,
       title: getDefaultTitle(contentType),
       content: `# ${getDefaultTitle(contentType)}\n\nStart writing your content here...`,
       status: 'DRAFT'

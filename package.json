@@ -9,7 +9,12 @@
     "dev:sites": "pnpm --filter './sites' run dev",
     "install:all": "pnpm install",
     "build": "pnpm --parallel --filter './api' --filter './dashboard' --filter './sites' run build",
-    "lint": "pnpm --parallel --filter './api' --filter './dashboard' run lint"
+    "lint": "pnpm --parallel --filter './api' --filter './dashboard' run lint",
+    "test:api": "pnpm --filter './api' run test",
+    "test:sites": "node --test sites/tests/*.mjs",
+    "test:extension": "node --test extension/tests/*.js",
+    "test:dashboard": "node --test dashboard/tests/*.test.*",
+    "test": "pnpm run test:api && pnpm run test:sites && pnpm run test:extension && pnpm run test:dashboard"
   },
   "devDependencies": {
     "turbo": "^2.10.4"

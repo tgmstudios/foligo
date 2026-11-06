@@ -241,19 +241,6 @@ const removeTag = (tag: ContentTag) => {
   emit('update:modelValue', selectedTags.value)
 }
 
-const deleteTag = async (tagId: string) => {
-  if (!confirm('Are you sure you want to delete this tag?')) return
-  
-  try {
-    await api.delete(`/content-tags/${tagId}`)
-    tags.value = tags.value.filter(t => t.id !== tagId)
-    selectedTags.value = selectedTags.value.filter(t => t.id !== tagId)
-    emit('update:modelValue', selectedTags.value)
-  } catch (error) {
-    console.error('Failed to delete tag:', error)
-  }
-}
-
 watch(() => props.modelValue, (newValue) => {
   selectedTags.value = newValue || []
 }, { deep: true })

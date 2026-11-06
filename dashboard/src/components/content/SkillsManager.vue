@@ -194,7 +194,7 @@ const showCreateModal = ref(false)
 const isCreating = ref(false)
 const showSearchResults = ref(false)
 const searchInputRef = ref<HTMLElement | null>(null)
-const dropdownStyle = ref({ top: '0px', left: '0px', width: '300px' })
+const dropdownStyle = ref<Record<string, string>>({ top: '0px', left: '0px', width: '300px' })
 
 const newSkill = ref({
   name: '',

@@ -406,7 +406,7 @@ const openEditor = (media: Media) => {
   }
 }
 
-const handleImageSaved = (newMedia: Media) => {
+const handleImageSaved = () => {
   editingMedia.value = null
   loadMedia() // Refresh the media list
 }

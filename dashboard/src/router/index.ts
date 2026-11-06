@@ -7,13 +7,11 @@ import RegisterView from '@/views/auth/RegisterView.vue'
 import OnboardingView from '@/views/onboarding/OnboardingView.vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
-import ProjectsView from '@/views/projects/ProjectsView.vue'
 import ProjectDetailView from '@/views/projects/ProjectDetailView.vue'
 import ContentEditorView from '@/views/content/ContentEditorView.vue'
 import CreateContentView from '@/views/content/CreateContentView.vue'
 import UsersView from '@/views/users/UsersView.vue'
 import SettingsView from '@/views/settings/SettingsView.vue'
-import ContentManagementView from '@/views/content/ContentManagementView.vue'
 import AnalyticsView from '@/views/analytics/AnalyticsView.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
 import AdminUsersView from '@/views/admin/AdminUsersView.vue'
@@ -25,6 +23,8 @@ import AdminSettingsView from '@/views/admin/AdminSettingsView.vue'
 import AdminUserDetailView from '@/views/admin/AdminUserDetailView.vue'
 import AdminProjectDetailView from '@/views/admin/AdminProjectDetailView.vue'
 import AdminContentDetailView from '@/views/admin/AdminContentDetailView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
+import { formatDocumentTitle } from '@/router/titles'
 import goapplyRoutes from '@/router/goapply'
 
 const router = createRouter({
@@ -34,36 +34,37 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
-      meta: { requiresGuest: true }
+      meta: { title: 'Sign in', requiresGuest: true }
     },
     {
       path: '/register',
       name: 'register',
       component: RegisterView,
-      meta: { requiresGuest: true }
+      meta: { title: 'Create account', requiresGuest: true }
     },
     {
       path: '/signup',
       name: 'signup',
       component: RegisterView,
-      meta: { requiresGuest: true }
+      meta: { title: 'Create account', requiresGuest: true }
     },
     {
       path: '/onboarding',
       name: 'onboarding',
       component: OnboardingView,
-      meta: { requiresAuth: true, requiresOnboarding: true }
+      meta: { title: 'Welcome', requiresAuth: true, requiresOnboarding: true }
     },
     {
       path: '/auth/callback',
       name: 'auth-callback',
-      component: () => import('@/views/auth/AuthCallbackView.vue')
+      component: () => import('@/views/auth/AuthCallbackView.vue'),
+      meta: { title: 'Signing in' }
     },
     {
       path: '/auth/link-device',
       name: 'auth-link-device',
       component: () => import('@/views/auth/LinkDevice.vue'),
-      meta: { requiresAuth: false }
+      meta: { title: 'Link device', requiresAuth: false }
     },
     // Editor Studio: full-page, chrome-free editors living under one global
     // /studio namespace — deliberately top-level siblings of the DashboardLayout
@@ -76,19 +77,19 @@ const router = createRouter({
       path: '/studio/resume/:id',
       name: 'studio-resume',
       component: () => import('@/views/studio/EditorStudioView.vue'),
-      meta: { requiresAuth: true }
+      meta: { title: 'Resume Studio', requiresAuth: true }
     },
     {
       path: '/studio/cover-letter/:id',
       name: 'studio-cover-letter',
       component: () => import('@/views/studio/CoverLetterStudioView.vue'),
-      meta: { requiresAuth: true }
+      meta: { title: 'Cover Letter Studio', requiresAuth: true }
     },
     {
       path: '/studio/content/:projectId/:id',
       name: 'studio-content',
       component: () => import('@/views/studio/ContentStudioView.vue'),
-      meta: { requiresAuth: true }
+      meta: { title: 'Content Studio', requiresAuth: true }
     },
     {
       // Back-compat for the old resume Studio URL.
@@ -103,122 +104,132 @@ const router = createRouter({
         {
           path: '',
           name: 'dashboard',
-          component: DashboardView
+          component: DashboardView,
+          meta: { title: 'Dashboard' }
         },
         {
           path: 'blogs',
           name: 'blogs',
-          component: () => import('@/views/content/ContentListView.vue')
+          component: () => import('@/views/content/ContentListView.vue'),
+          meta: { title: 'Blog Posts' }
         },
         {
           path: 'projects',
           name: 'projects-content',
-          component: () => import('@/views/content/ContentListView.vue')
+          component: () => import('@/views/content/ContentListView.vue'),
+          meta: { title: 'Projects' }
         },
         {
           path: 'experience',
           name: 'experience',
-          component: () => import('@/views/content/ContentListView.vue')
+          component: () => import('@/views/content/ContentListView.vue'),
+          meta: { title: 'Experience' }
         },
         {
           path: 'portfolios',
           name: 'portfolios',
-          component: () => import('@/views/content/ContentListView.vue')
+          component: () => import('@/views/content/ContentListView.vue'),
+          meta: { title: 'Portfolios' }
         },
         {
           path: 'portfolios/:id',
           name: 'portfolio-detail',
           component: ProjectDetailView,
-          props: true
+          props: true,
+          meta: { title: 'Portfolio' }
         },
         {
           path: 'content/new/:type',
           name: 'create-content',
           component: CreateContentView,
-          props: true
+          props: true,
+          meta: { title: 'New Content' }
         },
         {
           path: 'portfolios/:projectId/content/new/:type',
           name: 'create-content-portfolio',
           component: CreateContentView,
-          props: true
+          props: true,
+          meta: { title: 'New Content' }
         },
         {
           path: 'portfolios/:projectId/content/:id/edit',
           name: 'content-editor',
           component: ContentEditorView,
-          props: true
+          props: true,
+          meta: { title: 'Edit Content' }
         },
         {
           path: 'users',
           name: 'users',
           component: UsersView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Users', requiresAdmin: true }
         },
         {
           path: 'admin',
           name: 'admin-dashboard',
           component: AdminDashboardView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Admin Dashboard', requiresAdmin: true }
         },
         {
           path: 'admin/users',
           name: 'admin-users',
           component: AdminUsersView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'User Management', requiresAdmin: true }
         },
         {
           path: 'admin/users/:id',
           name: 'admin-user-detail',
           component: AdminUserDetailView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'User Details', requiresAdmin: true }
         },
         {
           path: 'admin/projects',
           name: 'admin-projects',
           component: AdminProjectsView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Portfolio Management', requiresAdmin: true }
         },
         {
           path: 'admin/projects/:id',
           name: 'admin-project-detail',
           component: AdminProjectDetailView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Portfolio Details (Admin)', requiresAdmin: true }
         },
         {
           path: 'admin/content',
           name: 'admin-content',
           component: AdminContentView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Content Management', requiresAdmin: true }
         },
         {
           path: 'admin/content/:id',
           name: 'admin-content-detail',
           component: AdminContentDetailView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Content Details (Admin)', requiresAdmin: true }
         },
         {
           path: 'admin/sso',
           name: 'admin-sso',
           component: AdminSsoView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'SSO Providers', requiresAdmin: true }
         },
         {
           path: 'admin/ai-models',
           name: 'admin-ai-models',
           component: AdminAiModelsView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'AI Models', requiresAdmin: true }
         },
         {
           path: 'admin/settings',
           name: 'admin-settings',
           component: AdminSettingsView,
-          meta: { requiresAdmin: true }
+          meta: { title: 'Platform Settings', requiresAdmin: true }
         },
         {
           path: 'analytics',
           name: 'analytics',
-          component: AnalyticsView
+          component: AnalyticsView,
+          meta: { title: 'Analytics' }
         },
         {
           path: 'settings',
@@ -227,26 +238,29 @@ const router = createRouter({
             {
               path: '',
               name: 'settings',
-              component: () => import('@/views/settings/UserSettingsView.vue')
+              component: () => import('@/views/settings/UserSettingsView.vue'),
+              meta: { title: 'User Settings' }
             },
             {
               path: 'site',
               name: 'site-settings',
               component: () => import('@/views/settings/SiteSettingsView.vue'),
-              meta: { requiresAdmin: true }
+              meta: { title: 'Site-wide Settings', requiresAdmin: true }
             }
           ]
         },
         {
           path: 'media',
           name: 'media-library',
-          component: () => import('@/views/media/MediaLibraryView.vue')
+          component: () => import('@/views/media/MediaLibraryView.vue'),
+          meta: { title: 'Media Library' }
         },
         {
           path: 'portfolios/:projectId/media',
           name: 'project-media-library',
           component: () => import('@/views/media/MediaLibraryView.vue'),
-          props: true
+          props: true,
+          meta: { title: 'Portfolio Media Library' }
         },
         goapplyRoutes,
       ]
@@ -254,13 +268,14 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
-      redirect: '/'
+      component: NotFoundView,
+      meta: { title: 'Page not found' }
     }
   ]
 })
 
 // Navigation guards
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
   
   // Wait for auth initialization if we have a token but no user
@@ -304,6 +319,10 @@ router.beforeEach(async (to, from, next) => {
   }
   
   next()
+})
+
+router.afterEach((to) => {
+  document.title = formatDocumentTitle(to)
 })
 
 export default router

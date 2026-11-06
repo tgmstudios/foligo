@@ -231,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { marked } from 'marked'
 import api from '@/services/api'
 import { renderMarkdown } from '@/lib/markdown'
@@ -305,21 +305,6 @@ const loadInitialQuestions = async () => {
   }
 }
 
-const startChat = () => {
-  phase.value = 'chat'
-  
-  // Initialize chat with context
-  const contextMessage = `I'm creating a ${props.contentType.toLowerCase()} and I've answered some questions. Here are my answers: ${answers.value.map((answer, index) => `${index + 1}. ${questions.value[index]}: ${answer}`).join('\n')}. Let's discuss this further and refine the content.`
-  
-  messages.value = [
-    {
-      id: '1',
-      role: 'user',
-      content: contextMessage
-    }
-  ]
-}
-
 const sendMessage = async () => {
   if (!currentMessage.value.trim() || isTyping.value) return
   
@@ -330,7 +315,6 @@ const sendMessage = async () => {
   }
   
   messages.value.push(userMessage)
-  const messageToSend = currentMessage.value.trim()
   currentMessage.value = ''
   isTyping.value = true
   

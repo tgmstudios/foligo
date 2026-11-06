@@ -122,11 +122,11 @@
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                   :class="{
-                    'bg-green-500/20 text-green-400 border border-green-700/50': content.isPublished,
-                    'bg-amber-500/20 text-amber-400 border border-amber-700/50': !content.isPublished
+                    'bg-green-500/20 text-green-400 border border-green-700/50': isContentPublished(content),
+                    'bg-amber-500/20 text-amber-400 border border-amber-700/50': !isContentPublished(content)
                   }"
                 >
-                  {{ content.isPublished ? 'Published' : 'Draft' }}
+                  {{ isContentPublished(content) ? 'Published' : 'Draft' }}
                 </span>
               </div>
               <p class="text-sm text-gray-600 mb-2">{{ formatContentType(content.contentType) }} • {{ getProjectName(content.projectId) }}</p>
@@ -177,6 +177,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useProjectStore, type Content, type Project } from '@/stores/projects'
 import { format } from 'date-fns'
 import { formatContentType } from '@/utils'
+import { isContentPublished } from '@/utils/contentHelpers'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
 const projectStore = useProjectStore()
@@ -276,7 +277,7 @@ const deleteContent = async (content: Content) => {
   }
 }
 
-const handleContentCreated = (newContent: Content) => {
+const handleContentCreated = () => {
   showCreateContentModal.value = false
   // Content is automatically added to the project by the store
 }

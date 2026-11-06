@@ -42,7 +42,7 @@
       <label class="text-sm text-gray-400 mb-1 block">Or enter image URL</label>
       <input
         :value="modelValue"
-        @input="updateValue($event.target.value)"
+        @input="updateValue(($event.target as HTMLInputElement).value)"
         type="url"
         class="input"
         placeholder="https://example.com/image.jpg"
@@ -96,8 +96,8 @@ import { useToast } from 'vue-toastification'
 import { isImage, type Media } from '@/services/media'
 import MediaManager from '@/components/media/MediaManager.vue'
 
-const props = defineProps<{
-  modelValue: string
+defineProps<{
+  modelValue?: string
   projectId: string
 }>()
 

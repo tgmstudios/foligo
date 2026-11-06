@@ -260,14 +260,14 @@ const setTool = (tool: typeof currentTool.value) => {
         canvas.selectionBorderColor = '#3b82f6'
         // Remove any existing crop rectangles when switching tools
         const existingCropRects = canvas.getObjects().filter((obj: any) => obj.cropRect)
-        existingCropRects.forEach((obj: any) => canvas.remove(obj))
+        existingCropRects.forEach((obj: any) => canvas?.remove(obj))
         canvas.discardActiveObject()
         canvas.requestRenderAll()
         toast.info('Click and drag to select the area to crop')
       } else {
         // Remove crop rectangles when switching away from crop tool
         const existingCropRects = canvas.getObjects().filter((obj: any) => obj.cropRect)
-        existingCropRects.forEach((obj: any) => canvas.remove(obj))
+        existingCropRects.forEach((obj: any) => canvas?.remove(obj))
         canvas.requestRenderAll()
       }
     }
@@ -354,9 +354,6 @@ const undo = () => {
               }
             })
           }
-        }, { 
-          // Preserve existing objects during load to prevent flash
-          preserveObjectStacking: true 
         }).catch((error) => {
           console.error('Error loading state:', error)
           toast.error('Failed to undo')
@@ -646,6 +643,7 @@ const handleSave = async () => {
     toast.error('Canvas or media not available')
     return
   }
+  const media = props.media
 
   // Use projectId from props, media, or route
   const projectId = effectiveProjectId.value
@@ -688,9 +686,9 @@ const handleSave = async () => {
       img.crossOrigin = 'anonymous'
       
       await new Promise<void>((resolve, reject) => {
-        img.onload = resolve
+        img.onload = () => resolve()
         img.onerror = reject
-        img.src = props.media.publicUrl
+        img.src = media.publicUrl
       })
       
       // Get canvas dimensions
@@ -737,10 +735,10 @@ const handleSave = async () => {
         }
         
         try {
-          const file = new File([blob], props.media.filename.replace(/\.[^/.]+$/, '_cropped.png'), {
+          const file = new File([blob], media.filename.replace(/\.[^/.]+$/, '_cropped.png'), {
             type: 'image/png'
           })
-          const newMedia = await uploadMedia(file, projectId, props.media.altText || undefined)
+          const newMedia = await uploadMedia(file, projectId, media.altText || undefined)
           toast.success('Image cropped and saved successfully')
           emit('saved', newMedia)
           handleClose()

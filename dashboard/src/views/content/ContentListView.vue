@@ -190,18 +190,18 @@
                 <h3 class="text-lg font-semibold text-white">{{ getItemTitle(item) }}</h3>
                 <span
                   v-if="!isPortfoliosPage"
-                  :class="getStatusClass(item.status)"
+                  :class="getStatusClass(getItemStatus(item))"
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                 >
-                  {{ formatContentStatus(item.status) }}
+                  {{ formatContentStatus(getItemStatus(item)) }}
                 </span>
               </div>
               <p v-if="getItemSubtitle(item)" class="text-sm text-gray-400 mb-2">{{ getItemSubtitle(item) }}</p>
-              <p v-if="item.excerpt" class="text-sm text-gray-300 line-clamp-2 mb-2">{{ item.excerpt }}</p>
+              <p v-if="getItemExcerpt(item)" class="text-sm text-gray-300 line-clamp-2 mb-2">{{ getItemExcerpt(item) }}</p>
               <div class="flex items-center text-xs text-gray-400 mt-2 space-x-3">
                 <span>{{ formatDate(item.updatedAt) }}</span>
                 <span v-if="!isPortfoliosPage">•</span>
-                <span v-if="!isPortfoliosPage">{{ getPortfolioName(item.projectId) }}</span>
+                <span v-if="!isPortfoliosPage">{{ getPortfolioName(getItemProjectId(item)) }}</span>
                 <span v-if="item.content">•</span>
                 <span v-if="item.content">{{ item.content.length }} characters</span>
               </div>
@@ -312,7 +312,6 @@ const searchQuery = ref('')
 const selectedPortfolioId = ref('')
 const selectedPortfolio = ref<Project | null>(null)
 
-const portfolios = computed(() => projectStore.projects)
 
 // Watch for portfolio changes from header
 watch(() => (window as any).selectedProjectId, (newId) => {
@@ -476,6 +475,13 @@ const getItemSubtitle = (item: Content | Project) => {
   }
   return null
 }
+
+// filteredContent is Content[] on content pages and Project[] on the portfolios page;
+// Projects have no status/excerpt/projectId, so these resolve to undefined there
+// (the template only shows them when !isPortfoliosPage).
+const getItemStatus = (item: Content | Project) => (item as Content).status
+const getItemExcerpt = (item: Content | Project) => (item as Content).excerpt
+const getItemProjectId = (item: Content | Project) => (item as Content).projectId
 
 const getPortfolioName = (portfolioId: string) => {
   const portfolio = projectStore.projects.find(p => p.id === portfolioId)

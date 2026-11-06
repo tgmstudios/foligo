@@ -68,7 +68,7 @@
             <!-- Revisions Timeline -->
             <div v-if="revisions.length > 0" class="space-y-6">
               <div
-                v-for="(revision, index) in revisions"
+                v-for="revision in revisions"
                 :key="revision.id"
                 class="relative"
               >

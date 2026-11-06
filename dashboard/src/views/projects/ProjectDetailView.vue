@@ -48,7 +48,7 @@
       <h3 class="mt-2 text-sm font-medium text-white">Project not found</h3>
       <p class="mt-1 text-sm text-gray-400">The project you're looking for doesn't exist or you don't have access to it.</p>
       <div class="mt-6">
-        <router-link to="/projects" class="btn btn-primary">
+        <router-link to="/portfolios" class="btn btn-primary">
           Back to Projects
         </router-link>
       </div>
@@ -169,7 +169,7 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-white">Content Overview</h3>
           <router-link
-            to="/content"
+            to="/blogs"
             class="btn btn-primary btn-sm"
           >
             <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -813,7 +813,7 @@ const deleteContent = async (content: Content) => {
   }
 }
 
-const handleContentCreated = (newContent: Content) => {
+const handleContentCreated = () => {
   showCreateContentModal.value = false
   // Content is automatically added to the project by the store
 }

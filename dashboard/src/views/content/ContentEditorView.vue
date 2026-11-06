@@ -149,7 +149,7 @@
                   class="input"
                   placeholder="Devpost URL"
                 />
-                <div v-for="(link, index) in editForm.projectLinks.other" :key="index" class="flex gap-2">
+                <div v-for="(_, index) in editForm.projectLinks.other" :key="index" class="flex gap-2">
                   <input
                     v-model="editForm.projectLinks.other[index]"
                     type="url"
@@ -178,7 +178,7 @@
             <div>
               <label class="label">Contributors</label>
               <div class="space-y-2">
-                <div v-for="(contributor, index) in editForm.contributors" :key="index" class="flex gap-2">
+                <div v-for="(_, index) in editForm.contributors" :key="index" class="flex gap-2">
                   <input
                     v-model="editForm.contributors[index]"
                     type="text"
@@ -636,11 +636,11 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
+import { normalizeProjectLinks } from '@/utils/contentHelpers'
 import MarkdownCodeEditor from '@/components/editor/MarkdownCodeEditor.vue'
 import MarkdownPreview from '@/components/studio/MarkdownPreview.vue'
 import TagManager from '@/components/content/TagManager.vue'
 import SkillsManager from '@/components/content/SkillsManager.vue'
-import ContentBlocksEditor from '@/components/content/ContentBlocksEditor.vue'
 import ExperienceRolesEditor from '@/components/content/ExperienceRolesEditor.vue'
 import ContentLinksManager from '@/components/content/ContentLinksManager.vue'
 import RevisionTimeline from '@/components/content/RevisionTimeline.vue'
@@ -719,16 +719,6 @@ const characterCount = computed(() => {
 
 const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'MMM d, yyyy')
-}
-
-const getStatusClass = (status?: string) => {
-  const classes: Record<string, string> = {
-    DRAFT: 'text-amber-400 bg-amber-400/20',
-    PUBLISHED: 'text-green-400 bg-green-400/20',
-    HIDDEN: 'text-yellow-400 bg-yellow-400/20',
-    REVISION: 'text-blue-400 bg-blue-400/20'
-  }
-  return classes[status || 'DRAFT'] || classes.DRAFT
 }
 
 const getStatusDropdownClass = (status: string) => {
@@ -877,7 +867,7 @@ const loadContent = async () => {
       }
       editForm.isOngoing = content.value.isOngoing || false
       editForm.featuredImage = content.value.featuredImage || ''
-      editForm.projectLinks = content.value.projectLinks || { github: '', devpost: '', other: [] }
+      editForm.projectLinks = normalizeProjectLinks(content.value.projectLinks)
       editForm.contributors = content.value.contributors || []
       editForm.linkedSkills = content.value.linkedSkills || []
       

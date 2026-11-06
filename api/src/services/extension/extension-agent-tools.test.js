@@ -267,8 +267,18 @@ describe('extension browser-agent tool contracts', () => {
     expect(panel).toContain('AI chooses the best résumé');
     expect(panel).toContain('id="sp-job-status"');
     expect(panel).toContain('<option value="interview">Interview</option>');
-    expect(panel).toContain('id="sp-track" type="button" disabled');
-    expect(panelScript).toContain("addStatusChip(`${currentTrackedJob ? 'Updating' : 'Tracking'} job as ${status}…`, 'job-tracking')");
+    // Track/Update button: starts disabled until page context is known, and is wired to runTrack.
+    expect(panel).toContain('id="sp-status-save" type="button" disabled');
+    expect(panel).toContain('id="sp-track-new" type="button" hidden');
+    expect(panel).not.toContain('id="sp-track"');
+    expect(panelScript).toContain("document.getElementById('sp-status-save')");
+    expect(panelScript).toContain("statusSaveBtn.addEventListener('click', () => runTrack())");
+    expect(panelScript).toContain("trackNewBtn.addEventListener('click', () => runTrack({ forceNew: true }))");
+    expect(panelScript).toContain("sendToContentScript('sp-track', { status, category, forceNew, allowStatusChange: true })");
+    expect(panelScript).toContain("currentTrackedJob ? '📋 Update' : '📋 Track'");
+    expect(panelScript).toContain("`Creating a new tracked job as ${status}…`");
+    expect(panelScript).toContain("`${currentTrackedJob ? 'Updating' : 'Tracking'} job as ${status}…`");
+    expect(panelScript).toContain("'job-tracking'");
     expect(panelScript).toContain('AI is identifying the company and job title');
     expect(panelScript).toContain('call track_current_job with the company, position, current page URL');
     expect(panelScript).toContain('currentTrackedJob?.status === pending.status');

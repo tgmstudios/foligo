@@ -232,6 +232,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
+import { normalizeSsoProviders, type SsoProviderDisplay } from '@/utils/ssoProviders'
 import squiggleLogo from '@/assets/logos/squiggle.svg'
 
 const router = useRouter()
@@ -246,18 +247,18 @@ const form = reactive({
 
 const isLoading = ref(false)
 const error = ref('')
-const ssoProviders = ref<any[]>([])
+const ssoProviders = ref<SsoProviderDisplay[]>([])
 
 const fetchSsoProviders = async () => {
   try {
     const response = await api.get('/auth/sso/providers')
-    ssoProviders.value = response.data
+    ssoProviders.value = normalizeSsoProviders(response.data)
   } catch (error) {
     console.error('Failed to fetch SSO providers:', error)
   }
 }
 
-const handleSsoLogin = (provider: any) => {
+const handleSsoLogin = (provider: SsoProviderDisplay) => {
   const redirectUrl = route.query.redirect as string || '/'
   const apiUrl = (typeof window !== 'undefined' && window.ENV?.VITE_API_URL) || import.meta.env.VITE_API_URL || '/api'
   window.location.href = `${apiUrl}/auth/sso/login/${provider.providerId}?redirect=${encodeURIComponent(redirectUrl)}`
