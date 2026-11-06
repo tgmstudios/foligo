@@ -48,6 +48,7 @@
         </form>
       </div>
 
+      <BillingPlans />
       <PersonalAiSettings />
 
       <WritingStyleQuiz />
@@ -502,6 +503,7 @@ import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import PersonalAiSettings from '@/components/PersonalAiSettings.vue'
+import BillingPlans from '@/components/BillingPlans.vue'
 import WritingStyleQuiz from '@/components/WritingStyleQuiz.vue'
 
 interface ApiToken {

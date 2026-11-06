@@ -110,6 +110,9 @@ app.use(cors({
 // Logging
 app.use(morgan('combined'));
 
+// Stripe webhook needs the raw body for signature verification (before express.json)
+app.use('/api/billing/webhook', require('./routes/billing').webhook);
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -292,6 +295,7 @@ app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
 app.use('/api/ai', authenticateToken, aiContentRoutes);
 // AI provider management + GoApply endpoints (model-agnostic)
 app.use('/api/ai', authenticateToken, aiProviderRoutes);
+app.use('/api/billing', authenticateToken, require('./routes/billing'));
 app.use('/api/ai/personal', authenticateToken, require('./routes/ai/personal-ai'));
 app.use('/api/admin/ai-billing', authenticateToken, require('./routes/admin/admin-ai-billing'));
 // Extension page-filling agent (streaming, tool-calling)

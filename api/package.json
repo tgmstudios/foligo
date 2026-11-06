@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "dev:stripe": "node scripts/stripe-listen.js",
     "dev:80": "PORT=80 nodemon src/index.js",
     "start:80": "PORT=80 node src/index.js",
     "build": "prisma generate",
@@ -53,6 +54,7 @@
     "pizzip": "^3.2.0",
     "prisma": "^5.7.1",
     "redis": "^4.6.12",
+    "stripe": "^23.1.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "uuid": "^9.0.1",
