@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
         - name: sites
-          image: 127.0.0.1:32551/foligo-staging/sites:TAG
+          image: 127.0.0.1:32551/foligo-staging/sites@sha256:a864fae3509e0fac860c8a42fa204caa82b6a930c2dc864544da7b3b22575e91
           imagePullPolicy: IfNotPresent
           ports: [{name: web, containerPort: 3000}]
           env:

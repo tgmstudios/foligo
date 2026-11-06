@@ -3,13 +3,16 @@ kind: Deployment
 metadata: {name: dashboard, namespace: foligo-staging}
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
   selector: {matchLabels: {app: dashboard}}
   template:
     metadata: {labels: {app: dashboard}}
     spec:
       containers:
         - name: dashboard
-          image: 127.0.0.1:32551/foligo-staging/dashboard:TAG
+          image: 127.0.0.1:32551/foligo-staging/dashboard@sha256:374a7f8c90f9380e2495337de2a35230ae6b8e8f5fd1ed55ce3158b47b1b45b3
           imagePullPolicy: IfNotPresent
           ports: [{name: web, containerPort: 80}]
           env: [{name: VITE_API_URL, value: "https://api-fstg.i.tgm.one/api"}]

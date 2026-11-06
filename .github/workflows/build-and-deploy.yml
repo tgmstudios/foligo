@@ -2,7 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: ["main", "staging"]
+    # Staging is on-prem/amd64 and uses deploy/staging. This legacy workflow
+    # targets west/arm64 and must never run for the staging branch.
+    branches: ["main"]
 
 # Only the newest commit on a branch should publish its images. Besides saving
 # runner capacity, this prevents an older, slower build from overwriting latest.
