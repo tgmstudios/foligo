@@ -137,6 +137,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import { fetchProjectContent } from '@/services/project-content'
 import { formatContentType, formatLinkType } from '@/utils'
 import type { ContentLink, Content } from '@/stores/projects'
 
@@ -181,8 +182,7 @@ const fetchLinks = async () => {
 
 const loadContentMap = async () => {
   try {
-    const response = await api.get(`/projects/${props.projectId}/content`)
-    const allContent: Content[] = response.data
+    const allContent: Content[] = await fetchProjectContent(props.projectId)
     contentMap.value = new Map(allContent.map(c => [c.id, c]))
   } catch (error) {
     console.error('Failed to load content map:', error)
@@ -191,9 +191,8 @@ const loadContentMap = async () => {
 
 const loadTargetOptions = async () => {
   try {
-    const response = await api.get(`/projects/${props.projectId}/content`)
     // Filter out the current content and revisions
-    targetOptions.value = response.data.filter((c: Content) => 
+    targetOptions.value = (await fetchProjectContent(props.projectId)).filter((c: Content) => 
       c.id !== props.sourceId && 
       c.status !== 'REVISION' && 
       !c.revisionOf

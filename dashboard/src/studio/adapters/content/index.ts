@@ -1,6 +1,7 @@
 import type { EditorStudioAdapter, StudioDocumentSummary } from '@/studio/types'
 import type { Content } from '@/stores/projects'
 import api, { API_URL } from '@/services/api'
+import { fetchProjectContent } from '@/services/project-content'
 import MarkdownCodeEditor from '@/components/editor/MarkdownCodeEditor.vue'
 import MarkdownPreview from '@/components/studio/MarkdownPreview.vue'
 
@@ -52,8 +53,7 @@ export function createContentAdapter(projectId: string): EditorStudioAdapter<Con
     },
 
     listDocuments: async () => {
-      const response = await api.get(`/projects/${projectId}/content`)
-      return (response.data as Content[]).map(toSummary)
+      return (await fetchProjectContent(projectId)).map(toSummary)
     },
 
     saveDocument: async (id, patch, _kind) => {
