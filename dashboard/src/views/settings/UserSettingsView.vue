@@ -48,6 +48,10 @@
         </form>
       </div>
 
+      <PersonalAiSettings />
+
+      <WritingStyleQuiz />
+
       <!-- Password Settings -->
       <div v-if="!authStore.user?.ssoProviderId" class="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <h3 class="text-lg font-semibold text-white mb-4">Change Password</h3>
@@ -497,6 +501,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
+import PersonalAiSettings from '@/components/PersonalAiSettings.vue'
+import WritingStyleQuiz from '@/components/WritingStyleQuiz.vue'
 
 interface ApiToken {
   id: string

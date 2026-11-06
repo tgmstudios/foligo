@@ -19,7 +19,7 @@
         <option value="company-asc">Company A–Z</option>
         <option value="category-asc">Category A–Z</option>
       </select>
-      <button @click="openColumn()" class="px-4 py-2 text-sm text-gray-200 rounded-lg bg-gray-700 hover:bg-gray-600">+ Add Column</button>
+      <button @click="openColumn()" aria-label="Add column" title="Add column" class="p-2 text-gray-200 rounded-lg bg-gray-700 hover:bg-gray-600"><PlusIcon class="h-5 w-5" /></button>
       <button
         @click="openCreateForm"
         class="ml-auto px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
@@ -54,10 +54,12 @@
               {{ column.label }}
             </h3>
           </div>
-          <button @click="openColumn(column)" :aria-label="`Edit ${column.label} column`" class="text-xs text-gray-400 hover:text-white">Edit</button>
+          <div class="flex items-center gap-2">
           <span class="text-xs text-gray-500 bg-gray-700 rounded-full px-2 py-0.5">
             {{ column.jobs.length }}
           </span>
+          <button @click="openColumn(column)" :aria-label="`Edit ${column.label} column`" title="Edit column" class="text-gray-400 hover:text-white"><PencilSquareIcon class="h-4 w-4" /></button>
+          </div>
         </div>
 
         <!-- Draggable Column -->
@@ -185,7 +187,7 @@
             </select>
           </label>
           <p class="text-sm text-gray-400">Deleting this column moves all its jobs to the selected column.</p>
-          <button type="button" :disabled="columnBusy || !moveTo" @click="deleteColumn" class="text-red-400 disabled:opacity-50">Delete Column</button>
+          <button type="button" :disabled="columnBusy || !moveTo" @click="deleteColumn" aria-label="Delete column" title="Delete column" class="text-red-400 disabled:opacity-50"><TrashIcon class="h-5 w-5" /></button>
         </template>
         <div class="flex justify-end gap-3">
           <button type="button" :disabled="columnBusy" @click="columnEditor = null">Cancel</button>
@@ -209,7 +211,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { useGoApplyStore, type GoApplyColumn, type JobStatus, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
 import { marked } from 'marked'
-import { ArrowTopRightOnSquareIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
+import { ArrowTopRightOnSquareIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import JobForm from '@/views/goapply/JobForm.vue'
 import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 

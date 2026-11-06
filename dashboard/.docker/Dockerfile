@@ -25,6 +25,9 @@ COPY dashboard/package.json ./dashboard/package.json
 RUN pnpm install --frozen-lockfile --filter foligo-dashboard
 
 COPY dashboard/ ./dashboard/
+COPY sites/components/BuilderCanvas.vue ./sites/components/BuilderCanvas.vue
+COPY sites/components/SitesMarkdown.vue ./sites/components/SitesMarkdown.vue
+COPY sites/utils/ ./sites/utils/
 WORKDIR /app/dashboard
 
 # Turbo remote cache

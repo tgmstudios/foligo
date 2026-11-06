@@ -4,6 +4,7 @@ const mockPrisma = {
 jest.mock('../services/core/database', () => ({ prisma: mockPrisma }));
 jest.mock('../services/core/redis', () => ({ cache: { del: jest.fn().mockResolvedValue(1) } }));
 
+jest.mock('../services/ai/manager', () => ({ generateChat: jest.fn() }));
 const express = require('express');
 const request = require('supertest');
 const { cache } = require('../services/core/redis');
@@ -113,5 +114,66 @@ describe('PUT /api/users/me', () => {
     const res = await request(app()).put('/api/users/me').send({ name: 'x' });
     expect(res.status).toBe(500);
     expect(res.body.error).toBe('Profile Update Failed');
+  });
+});
+
+describe('private writing style preferences', () => {
+  const style = { tone: 'formal', detail: 'balanced', structure: 'paragraphs', vocabulary: 'plain', sample: 'My writing.' };
+
+  test('reads only the authenticated user preferences', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ writingStyle: style });
+    const res = await request(app()).get('/api/users/me/writing-style');
+    expect(res.status).toBe(200);
+    expect(res.body.writingStyle).toEqual(style);
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' }, select: { writingStyle: true } });
+  });
+
+  test('saves validated preferences for the authenticated user', async () => {
+    const res = await request(app()).put('/api/users/me/writing-style').send({ writingStyle: style, userId: 'u2' });
+    expect(res.status).toBe(200);
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { writingStyle: { ...style, version: 1 } } });
+  });
+
+  test('rejects incomplete preferences without writing', async () => {
+    const res = await request(app()).put('/api/users/me/writing-style').send({ writingStyle: { tone: 'formal' } });
+    expect(res.status).toBe(400);
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
+  });
+
+  test('removes preferences with a database null', async () => {
+    const res = await request(app()).put('/api/users/me/writing-style').send({ writingStyle: null });
+    expect(res.status).toBe(200);
+    expect(res.body.writingStyle).toBeNull();
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { writingStyle: require('@prisma/client').Prisma.DbNull } });
+  });
+});
+
+
+describe('writing profile calibration', () => {
+  const ai = require('../services/ai/manager');
+  const profile = { tone: 'formal', detail: 'balanced', structure: 'paragraphs', vocabulary: 'plain', sample: 'My writing.' };
+  test('returns the canonical research-informed questionnaire with a private profile', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ writingStyle: null });
+    const res = await request(app()).get('/api/users/me/writing-style');
+    expect(res.body.questionnaire.questions).toHaveLength(12);
+    expect(res.body.questionnaire.questions.every(q => q.options.some(o => o.value === 'unspecified'))).toBe(true);
+  });
+  test('tests unsaved preferences without writing them and uses the authenticated model identity', async () => {
+    ai.generateChat.mockResolvedValue({ text: 'Our team tested the website and simplified the navigation. Next, we will prepare for launch.' });
+    const res = await request(app()).post('/api/users/me/writing-style/preview').send({ writingStyle: profile, userId: 'u2' });
+    expect(res.status).toBe(200);
+    expect(ai.generateChat).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ userId: 'u1', writingStyle: { ...profile, version: 1 } }));
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
+  });
+  test('rejects an invalid profile before calling AI', async () => {
+    const res = await request(app()).post('/api/users/me/writing-style/preview').send({ writingStyle: null });
+    expect(res.status).toBe(400);
+    expect(ai.generateChat).not.toHaveBeenCalled();
+  });
+  test.each([{ text: '' }, { text: 'Partial', truncated: true }])('rejects unusable preview output', async output => {
+    ai.generateChat.mockResolvedValue(output);
+    const res = await request(app()).post('/api/users/me/writing-style/preview').send({ writingStyle: profile });
+    expect(res.status).toBe(502);
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
   });
 });

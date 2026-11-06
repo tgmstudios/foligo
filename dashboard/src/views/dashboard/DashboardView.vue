@@ -10,6 +10,17 @@
       </p>
     </div>
 
+    <!-- AI chat: lives inline here; the layout's chat instance teleports into the host. -->
+    <div class="mb-8">
+      <div ref="chatHost" :class="{ hidden: aiChatView !== 'inline' }"></div>
+      <div v-if="aiChatView !== 'inline'" class="card flex items-center justify-between gap-4 px-6 py-4">
+        <p class="text-sm text-gray-400">The AI assistant is open in {{ aiChatView === 'fullscreen' ? 'full screen' : 'a popout' }}.</p>
+        <button type="button" class="btn btn-outline" title="Bring back here" aria-label="Bring back here" @click="aiChatView = 'inline'">
+          <ArrowsPointingInIcon class="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="card p-6">
@@ -86,8 +97,8 @@
           <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-white">Recent Content</h3>
-              <router-link to="/blogs" class="text-sm text-primary-600 hover:text-primary-500">
-                View all
+              <router-link to="/blogs" title="View all" aria-label="View all" class="text-primary-400 hover:text-primary-300">
+                <ArrowRightIcon class="h-5 w-5" />
               </router-link>
             </div>
           </div>
@@ -153,8 +164,8 @@
           <div class="px-6 py-4 border-b border-gray-700">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-white">Recent Portfolios</h3>
-              <router-link to="/portfolios" class="text-sm text-primary-600 hover:text-primary-500">
-                View all
+              <router-link to="/portfolios" title="View all" aria-label="View all" class="text-primary-400 hover:text-primary-300">
+                <ArrowRightIcon class="h-5 w-5" />
               </router-link>
             </div>
           </div>
@@ -216,9 +227,9 @@
                 <div class="flex items-center space-x-2">
                   <router-link
                     :to="`/portfolios/${project.id}`"
-                    class="text-primary-600 hover:text-primary-500 text-sm font-medium"
+                    title="View" aria-label="View" class="text-primary-400 hover:text-primary-300"
                   >
-                    View
+                    <EyeIcon class="h-5 w-5" />
                   </router-link>
                   <router-link
                     :to="`/portfolios/${project.id}`"
@@ -339,8 +350,10 @@
 </template>
 
 <script setup lang="ts">
+import { ArrowRightIcon, ArrowsPointingInIcon, EyeIcon } from '@heroicons/vue/24/outline'
 import ListActionIcon from '@/components/common/ListActionIcon.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useAiChatDock } from '@/composables/useAiChatDock'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore, type Project } from '@/stores/projects'
 import { useRecentActivity } from '@/composables/useRecentActivity'
@@ -352,6 +365,11 @@ import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
 import CreateContentModal from '@/components/content/CreateContentModal.vue'
 
 const authStore = useAuthStore()
+
+const { view: aiChatView, hostEl } = useAiChatDock()
+const chatHost = ref<HTMLElement | null>(null)
+onMounted(() => { hostEl.value = chatHost.value })
+onBeforeUnmount(() => { hostEl.value = null })
 const projectStore = useProjectStore()
 const toast = useToast()
 const { recentActivity } = useRecentActivity(computed(() => projectStore.projects))

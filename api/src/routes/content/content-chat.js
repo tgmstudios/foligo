@@ -1,3 +1,4 @@
+const { createInteractionTools, interactionInstructions } = require('../../services/content/interaction-tools');
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const multer = require('multer');
@@ -86,6 +87,7 @@ router.post('/content/:id/chat', chatUpload.array('attachments', 5), (req, res, 
 
   const doc = { content: existingContent.content };
   const tools = {
+    ...createInteractionTools(),
     ...createContentEditorTools(doc, { contentId: existingContent.id, projectId: existingContent.projectId }),
     ...createGithubTools({ userId, sessionKey: `content:${existingContent.id}` }),
   };
@@ -100,7 +102,7 @@ router.post('/content/:id/chat', chatUpload.array('attachments', 5), (req, res, 
     ? otherPosts.map((p) => `- [${p.contentType}/${p.status}] "${p.title}" (id: ${p.id})`).join('\n')
     : '(no other posts in this project)';
 
-  const systemInstruction = `You are an expert content editor and writer, working inside an agentic Markdown editor for a "${existingContent.contentType || existingContent.type}" post titled "${existingContent.title}".
+  const systemInstruction = `${interactionInstructions}\n\nYou are an expert content editor and writer, working inside an agentic Markdown editor for a "${existingContent.contentType || existingContent.type}" post titled "${existingContent.title}".
 
 CURRENT CONTENT (Markdown source):
 """
@@ -129,7 +131,7 @@ After making edits, briefly tell the user what you changed and why, in plain pro
   let assistantText = '';
 
   try {
-    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, stopOnTools: ['ask_user', 'request_screenshots'], provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           assistantText += part.text;

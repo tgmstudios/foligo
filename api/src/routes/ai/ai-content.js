@@ -1,3 +1,5 @@
+const { prepareAttachments, buildModelMessage } = require('../../services/goapply/ai-attachment-text');
+const { createInteractionTools, interactionInstructions } = require('../../services/content/interaction-tools');
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const multer = require('multer');
@@ -350,6 +352,7 @@ async function getResumeChatbotContext(userId) {
 }
 
 const router = express.Router();
+router.use(require('./post-rewrite'));
 
 const CURRENT_PAGE_LABELS = {
   dashboard: 'the main dashboard',
@@ -421,7 +424,15 @@ async function describeCurrentPage(currentPage, { projectId, userId }) {
  *     tags: [AI Content Generation]
  *     security: [{ bearerAuth: [] }]
  */
-router.post('/portfolio/chat', [
+const portfolioChatUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
+router.post('/portfolio/chat', portfolioChatUpload.array('attachments', 5), (req, res, next) => {
+  for (const key of ['history', 'currentPage']) {
+    if (typeof req.body[key] === 'string') {
+      try { req.body[key] = JSON.parse(req.body[key]); } catch { /* validator reports invalid data */ }
+    }
+  }
+  next();
+}, [
   body('message').trim().isLength({ min: 1 }).withMessage('Message is required'),
   body('projectId').isUUID().withMessage('Valid project ID is required'),
   body('provider').optional().isString(),
@@ -456,7 +467,10 @@ router.post('/portfolio/chat', [
 
   const { send, aborted, cleanup } = setupSSE(req, res);
 
-  const userMessage = req.body.message;
+  let attachments;
+  try { attachments = await prepareAttachments(req.files); }
+  catch (error) { send({ type: 'error', message: error.message }); cleanup(); res.end(); return; }
+  const userMessage = buildModelMessage(req.body.message, attachments);
   const priorHistory = Array.isArray(req.body.history) ? req.body.history : [];
   const messages = [
     ...priorHistory.map((m) => ({ role: m.role, content: m.content })),
@@ -473,10 +487,10 @@ router.post('/portfolio/chat', [
     ? posts.map((p) => `- [${p.contentType}/${p.status}] "${p.title}" (id: ${p.id})`).join('\n')
     : '(no posts yet)';
 
-  const tools = createPortfolioAgentTools({ projectId, userId });
+  const tools = { ...createPortfolioAgentTools({ projectId, userId }), ...createInteractionTools() };
   const currentPageContext = await describeCurrentPage(req.body.currentPage, { projectId, userId });
 
-  const systemInstruction = `You are the AI Content Creator, an agent with full read/write authority over the user's entire Foligo account: every post (BLOG, PROJECT, and EXPERIENCE entries) in the portfolio project "${project.name}" — every field, every experience role, every linked skill and tag — PLUS everything in GoApply: resumes, cover letters, tracked job applications, saved answers, and their GoApply profile, across all of their projects. You can also navigate the user anywhere in the dashboard.
+  const systemInstruction = `${interactionInstructions}\n\nYou are the AI Content Creator, an agent with full read/write authority over the user's entire Foligo account: every post (BLOG, PROJECT, and EXPERIENCE entries) in the portfolio project "${project.name}" — every field, every experience role, every linked skill and tag — PLUS everything in GoApply: resumes, cover letters, tracked job applications, saved answers, and their GoApply profile, across all of their projects. You can also navigate the user anywhere in the dashboard.
 
 ${currentPageContext ? `CURRENT PAGE:\n${currentPageContext}\n` : ''}
 CURRENT POSTS IN THIS PROJECT:
@@ -506,7 +520,7 @@ HARD RULES:
 - After making changes, briefly tell the user what you did in plain prose.`;
 
   try {
-    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, provider: req.body.provider })) {
+    for await (const part of ai.streamChat(messages, { userId, systemInstruction, tools, maxSteps: 40, stopOnTools: ['ask_user', 'request_screenshots'], provider: req.body.provider })) {
       switch (part.type) {
         case 'text-delta':
           send({ type: 'text-delta', text: part.text });

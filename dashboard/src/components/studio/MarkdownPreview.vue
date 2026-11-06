@@ -92,8 +92,15 @@ async function tryRender(source: string) {
       const code = el.textContent?.trim() || ''
       if (!code) continue
       const id = `mermaid-preview-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-      const { svg } = await mermaid.render(id, code)
-      el.innerHTML = svg
+      try {
+        const { svg } = await mermaid.render(id, code)
+        el.innerHTML = svg
+      } catch (error) {
+        // Mermaid leaves its scratch/error nodes in <body> when a render fails.
+        document.getElementById(id)?.remove()
+        document.getElementById(`d${id}`)?.remove()
+        throw error
+      }
     }
   } catch {
     if (myToken === renderToken) stale.value = true

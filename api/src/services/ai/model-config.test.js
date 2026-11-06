@@ -1,5 +1,6 @@
 jest.mock('../core/database', () => ({
   prisma: {
+    userAiConnection: { findMany: jest.fn().mockResolvedValue([]) },
     aiModel: {
       count: jest.fn(),
       createMany: jest.fn(),

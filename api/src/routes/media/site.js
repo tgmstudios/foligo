@@ -289,7 +289,7 @@ router.get('/:subdomain', async (req, res) => {
         subdomain: project.subdomain,
         isPublished: project.isPublished
       },
-      siteConfig: project.siteConfig || {
+      siteConfig: project.siteConfig ? (({ builderDraft, builderHistory, builderRevision, ...publicConfig }) => publicConfig)(project.siteConfig) : {
         siteName: project.name,
         siteDescription: project.description,
         profileName: project.name,

@@ -18,7 +18,11 @@
         @open-history="showHistory = true"
         @open-meta="showMeta = true"
         @toggle-preview="togglePreview"
-      />
+      >
+        <template #actions>
+          <RewritePostButton :post-id="documentId" :source="content" :provider="selectedProvider" :disabled="isSaving || chat.streaming.value || isReceivingContent" @apply="onContentInput" />
+        </template>
+      </StudioHeader>
     </template>
 
     <template #editor>
@@ -26,10 +30,10 @@
         <Transition name="draft-arrival">
           <div
             v-if="isReceivingContent"
-            class="pointer-events-none absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-gray-950/85 px-3 py-1.5 text-xs font-medium text-purple-200 shadow-lg backdrop-blur"
+            class="pointer-events-none absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-primary-400/30 bg-gray-950/85 px-3 py-1.5 text-xs font-medium text-primary-200 shadow-lg backdrop-blur is-working"
           >
-            <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400"></span>
-            {{ liveStatus || 'AI draft arriving' }}
+            <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-400"></span>
+            <span class="shimmer-text">{{ liveStatus || 'AI draft arriving' }}</span>
           </div>
         </Transition>
         <MarkdownCodeEditor
@@ -50,6 +54,7 @@
     </template>
 
     <template #chat>
+      <div class="flex flex-col flex-1 min-h-0">
       <StudioChatSidebar
         v-model="selectedProvider"
         :messages="chat.messages.value"
@@ -58,6 +63,7 @@
         :sessions="chatSessions.sessions.value"
         :active-session-id="chatSessions.activeSessionId.value"
         :sessions-loading="chatSessions.loadingSessions.value"
+        allow-attachments
         placeholder="Ask the agent to edit this content…"
         empty-state-text="Ask the agent to draft a section, restructure the post, or tweak wording — it'll edit the document directly."
         @send="chat.sendMessage"
@@ -67,6 +73,7 @@
         @select-session="selectChatSession"
         @new-session="newChatSession"
       />
+      </div>
     </template>
 
     <template #left-toolbar>
@@ -130,6 +137,7 @@ import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vu
 import { useToast } from 'vue-toastification'
 import StudioShell from '@/components/studio/StudioShell.vue'
 import StudioHeader from '@/components/studio/StudioHeader.vue'
+import RewritePostButton from '@/components/content/RewritePostButton.vue'
 import RevisionHistoryPopup from '@/components/studio/RevisionHistoryPopup.vue'
 import MetaEditorPopover from '@/components/studio/MetaEditorPopover.vue'
 import StudioChatSidebar from '@/components/studio/StudioChatSidebar.vue'
@@ -190,6 +198,7 @@ const chat = useAgenticChat(
   },
   () => selectedProvider.value
 )
+
 
 async function selectChatSession(id: string) {
   const session = await chatSessions.open(id)

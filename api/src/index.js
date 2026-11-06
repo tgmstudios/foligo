@@ -275,6 +275,7 @@ app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/projects', authenticateToken, projectsCrudRoutes);
 app.use('/api/projects', authenticateToken, projectsSiteConfigRoutes);
 app.use('/api/projects', authenticateToken, projectAccessRoutes);
+app.use('/api/projects', authenticateToken, require('./routes/projects/site-builder'));
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api', authenticateToken, contentCrudRoutes); // Protected content routes
 app.use('/api', authenticateToken, contentOrderRoutes); // Content reorder routes
@@ -291,6 +292,8 @@ app.use('/api', authenticateToken, revisionsRoutes); // Revisions routes
 app.use('/api/ai', authenticateToken, aiContentRoutes);
 // AI provider management + GoApply endpoints (model-agnostic)
 app.use('/api/ai', authenticateToken, aiProviderRoutes);
+app.use('/api/ai/personal', authenticateToken, require('./routes/ai/personal-ai'));
+app.use('/api/admin/ai-billing', authenticateToken, require('./routes/admin/admin-ai-billing'));
 // Extension page-filling agent (streaming, tool-calling)
 app.use('/api/ai/agent', authenticateToken, extensionAgentRoutes);
 // Old upload route deprecated - use /api/media instead

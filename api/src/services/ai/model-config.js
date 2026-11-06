@@ -1,3 +1,4 @@
+const { PERSONAL_PREFIX, listPersonalConnections, resolvePersonalConnection } = require('./personal-connections');
 const { prisma } = require('../core/database');
 const { encrypt, decrypt } = require('../../utils/encryption');
 const { refreshTokens, chatgptAccountIdFromIdToken } = require('./oauth/openai-device-auth');
@@ -120,8 +121,13 @@ class UserModelAuthorizationError extends Error {
 }
 
 async function resolveModelForUser(userId, selection) {
-  if (!userId || !selection) throw new UserModelAuthorizationError();
+  if (!userId || typeof selection !== 'string' || !selection) throw new UserModelAuthorizationError();
 
+  if (selection.startsWith(PERSONAL_PREFIX)) {
+    const personal = await resolvePersonalConnection(userId, selection);
+    if (!personal) throw new UserModelAuthorizationError();
+    return personal;
+  }
   const disabledProviders = await getDisabledProviderTypes();
   const record = await prisma.aiModel.findFirst({
     where: {
@@ -196,7 +202,11 @@ async function listModelSelectionsForUser(userId, modelType = 'QUICK') {
     .filter(record => !explicitSet.has(record.id))
     .sort((a, b) => Number(b.modelType === normalizedType) - Number(a.modelType === normalizedType))
     .map(record => record.id);
-  return [...explicitOrder, ...rest];
+  const personal = await listPersonalConnections(userId);
+  const personalSelections = personal.filter(row => row.enabled)
+    .sort((a, b) => Number(b.modelType === normalizedType) - Number(a.modelType === normalizedType))
+    .map(row => `${PERSONAL_PREFIX}${row.id}`);
+  return [...personalSelections, ...explicitOrder, ...rest];
 }
 
 /**

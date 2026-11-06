@@ -1,3 +1,7 @@
+const { meteredModel } = require('./usage');
+const { PERSONAL_PREFIX } = require('./personal-connections');
+const { isAiPolicyError } = require('./route-error');
+const { getWritingStylePrompt } = require('./writing-style');
 /**
  * AI Manager — unified model-agnostic AI service.
  *
@@ -64,6 +68,18 @@ class AIManager {
     const mergedOverrides = { ...(resolved?.overrides || {}), ...overrides };
     const key = resolved?.key || type;
 
+    if (userId) {
+      // Fresh instances prevent credentials/refreshes from leaking through a shared cache.
+      const provider = createProvider(type, mergedOverrides);
+      provider.cacheKey = `${userId}:${key}`;
+      provider.model = meteredModel(provider.model, {
+        userId, source: resolved.source || 'SERVER', selection: key,
+        providerType: type, model: resolved.record?.model || type,
+        rates: resolved.record?.billingRates,
+      });
+      return provider;
+    }
+
     if (Object.keys(mergedOverrides).length > 0 && !resolved) {
       return createProvider(type, mergedOverrides);
     }
@@ -97,7 +113,8 @@ class AIManager {
 
       const selections = await listModelSelectionsForUser(userId, modelType);
       if (!selections.length) throw noAiModelAccessError();
-      return selections;
+      const personal = selections.filter(selection => selection.startsWith(PERSONAL_PREFIX));
+      return personal.length ? personal : selections;
     }
 
     if (requestedProvider) return [requestedProvider];
@@ -145,6 +162,7 @@ class AIManager {
       try {
         return await fn(provider);
       } catch (e) {
+        if (isAiPolicyError(e)) throw e;
         lastError = e;
         this.logger.warn(`Provider "${type}" call failed, trying next in chain: ${e.message}`);
         this._providers.delete(provider?.cacheKey || type);
@@ -174,12 +192,15 @@ class AIManager {
       text: result.text || null,
       reasoning: result.reasoningText || null,
       functionCalls,
+      ...(result.finishReason === 'length' ? { truncated: true } : {}),
     };
   }
 
   // ─── Public generation API ────────────────────────────────────────
 
   async generateText(prompt, options = {}) {
+    const writingStyle = await getWritingStylePrompt(options.userId, options.writingStyle);
+    if (writingStyle) options = { ...options, system: (options.system || '') + writingStyle, systemInstruction: (options.systemInstruction || '') + writingStyle };
     const { provider: reqProvider, modelType = 'QUICK', userId, ...genOpts } = options;
     return this._withFallback(reqProvider, modelType, async (prov) => {
       this.logger.debug(`generateText via ${prov.name}`, { promptLen: prompt.length });
@@ -192,6 +213,8 @@ class AIManager {
   }
 
   async generateChat(messages, options = {}) {
+    const writingStyle = await getWritingStylePrompt(options.userId, options.writingStyle);
+    if (writingStyle) options = { ...options, system: (options.system || '') + writingStyle, systemInstruction: (options.systemInstruction || '') + writingStyle };
     const { provider: reqProvider, modelType = 'QUICK', userId, systemInstruction, ...genOpts } = options;
     return this._withFallback(reqProvider, modelType, (prov) => {
       this.logger.debug(`generateChat via ${prov.name}`, { msgCount: messages.length });
@@ -200,6 +223,8 @@ class AIManager {
   }
 
   async generateWithTools(prompt, tools, options = {}) {
+    const writingStyle = await getWritingStylePrompt(options.userId, options.writingStyle);
+    if (writingStyle) options = { ...options, system: (options.system || '') + writingStyle, systemInstruction: (options.systemInstruction || '') + writingStyle };
     const { provider: reqProvider, modelType = 'QUICK', userId, systemInstruction, ...genOpts } = options;
     return this._withFallback(reqProvider, modelType, (prov) => {
       this.logger.debug(`generateWithTools via ${prov.name}`, { toolCount: Object.keys(tools || {}).length });
@@ -213,6 +238,8 @@ class AIManager {
   }
 
   async *streamChat(messages, options = {}) {
+    const writingStyle = await getWritingStylePrompt(options.userId, options.writingStyle);
+    if (writingStyle) options = { ...options, system: (options.system || '') + writingStyle, systemInstruction: (options.systemInstruction || '') + writingStyle };
     const {
       provider: reqProvider, modelType = 'QUICK', userId, systemInstruction, tools,
       maxSteps, temperature, maxTokens, externalToolLoop = false,
@@ -233,7 +260,10 @@ class AIManager {
         system: systemInstruction,
         messages,
         tools,
-        stopWhen: stepCountIs(externalToolLoop ? 1 : (maxSteps ?? 30)),
+        stopWhen: [
+          stepCountIs(externalToolLoop ? 1 : (maxSteps ?? 30)),
+          ({ steps }) => steps.some(step => (step.toolCalls || []).some(call => options.stopOnTools?.includes(call.toolName))),
+        ],
         temperature,
         maxOutputTokens: maxTokens ?? prov.capabilities?.maxTokens,
         providerOptions: buildProviderOptions(prov),
@@ -249,6 +279,7 @@ class AIManager {
           if (done) break;
 
           if (!committed && (value?.type === 'error' || (value?.type === 'finish' && (value.finishReason === 'error' || value.finishReason === 'length')))) {
+            if (isAiPolicyError(value.error)) throw value.error;
             lastError = value.error || new Error(
               value?.finishReason === 'length'
                 ? 'Provider ran out of output tokens before producing any response.'
@@ -275,6 +306,7 @@ class AIManager {
           }
         }
       } catch (e) {
+        if (isAiPolicyError(e)) throw e;
         lastError = e;
         if (!committed) {
           this.logger.warn(`Provider "${type}" stream failed before output, trying next: ${e.message}`);
@@ -297,6 +329,8 @@ class AIManager {
   }
 
   async *streamGenerate(prompt, options = {}) {
+    const writingStyle = await getWritingStylePrompt(options.userId, options.writingStyle);
+    if (writingStyle) options = { ...options, system: (options.system || '') + writingStyle, systemInstruction: (options.systemInstruction || '') + writingStyle };
     const { provider: reqProvider, modelType = 'LONG', userId, system, temperature, maxTokens } = options;
     const types = await this._fallbackSelections(reqProvider, modelType, userId);
 
@@ -318,12 +352,14 @@ class AIManager {
         for await (const part of result.fullStream) {
           if (part.type === 'text-delta' || part.type === 'reasoning-delta') yield part;
           else if (part.type === 'error') {
+            if (isAiPolicyError(part.error)) throw part.error;
             lastError = part.error;
             break;
           }
         }
         return;
       } catch (e) {
+        if (isAiPolicyError(e)) throw e;
         lastError = e;
         this.logger.warn(`Provider "${type}" streamGenerate failed: ${e.message}`);
       }
@@ -350,6 +386,7 @@ class AIManager {
           modelType: record.modelType,
           isDefault: record.isDefault,
           configured: true,
+          source: record.id.startsWith(PERSONAL_PREFIX) ? 'PERSONAL' : 'SERVER',
         };
       }));
     }

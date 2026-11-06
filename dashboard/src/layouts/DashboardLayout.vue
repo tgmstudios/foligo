@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-900">
+  <div class="min-h-screen">
     <!-- Sidebar -->
     <div
-      class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-800/70 backdrop-blur-xl backdrop-saturate-150 shadow-lg transform transition-transform duration-300 ease-in-out"
       :class="
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       "
@@ -41,7 +41,8 @@
         </button>
       </div>
 
-      <nav class="mt-6 px-3">
+      <nav ref="navEl" class="relative mt-6 px-3">
+        <span class="nav-pill" :class="{ ready: navPillReady }" :style="navPillStyle" aria-hidden="true" />
         <!-- Settings Navigation -->
         <div v-if="isSettingsRoute" class="space-y-1">
           <button
@@ -817,7 +818,7 @@
 
 <script setup lang="ts">
 import squiggleLogo from "@/assets/logos/squiggle.svg";
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectStore } from "@/stores/projects";
@@ -834,6 +835,48 @@ const goApplyStore = useGoApplyStore();
 
 const sidebarOpen = ref(false);
 const showUserMenu = ref(false);
+
+// A single pill slides to whichever nav item is active (OrgFlow-style).
+const navEl = ref<HTMLElement | null>(null);
+const navPillReady = ref(false);
+const navPillStyle = ref<Record<string, string>>({ opacity: "0" });
+let navObserver: MutationObserver | undefined;
+let navResize: ResizeObserver | undefined;
+
+function placeNavPill() {
+  const nav = navEl.value;
+  const active = nav?.querySelector<HTMLElement>(".sidebar-item-active");
+  if (!nav || !active) {
+    navPillStyle.value = { opacity: "0" };
+    return;
+  }
+  const a = active.getBoundingClientRect();
+  const n = nav.getBoundingClientRect();
+  navPillStyle.value = {
+    opacity: "1",
+    width: `${a.width}px`,
+    height: `${a.height}px`,
+    transform: `translate(${a.left - n.left}px, ${a.top - n.top}px)`,
+  };
+}
+
+onMounted(async () => {
+  await nextTick();
+  placeNavPill();
+  requestAnimationFrame(() => (navPillReady.value = true));
+  if (navEl.value) {
+    navObserver = new MutationObserver(() => nextTick(placeNavPill));
+    navObserver.observe(navEl.value, { subtree: true, attributes: true, attributeFilter: ["class"], childList: true });
+    if (typeof ResizeObserver !== "undefined") {
+      navResize = new ResizeObserver(placeNavPill);
+      navResize.observe(navEl.value);
+    }
+  }
+});
+onUnmounted(() => {
+  navObserver?.disconnect();
+  navResize?.disconnect();
+});
 const selectedProjectId = ref("");
 const commandPaletteStore = useCommandPaletteStore();
 
@@ -869,6 +912,12 @@ const navigation = computed(() => {
       href: "/experience",
       routeName: "experience",
       icon: "ContentIcon",
+    },
+    {
+      name: "Sites",
+      href: "/sites",
+      routeName: "sites",
+      icon: "ProjectsIcon",
     },
     {
       name: "Portfolios",

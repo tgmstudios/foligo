@@ -33,6 +33,8 @@
         <div v-for="stat in stats" :key="stat.label" class="bg-gray-800 border border-gray-700 rounded-lg p-5"><p class="text-2xl font-bold text-white">{{ stat.value }}</p><p class="text-sm text-gray-400 mt-1">{{ stat.label }}</p></div>
       </div>
 
+      <AdminAiUsage :key="user.id" :user-id="user.id" />
+
       <section class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
         <form @submit.prevent="saveModelAccess">
           <fieldset :disabled="savingModelAccess" class="min-w-0">
@@ -101,6 +103,7 @@
 </template>
 
 <script setup lang="ts">
+import AdminAiUsage from '@/components/AdminAiUsage.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'

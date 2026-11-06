@@ -18,33 +18,43 @@
     </div>
 
     <div class="flex items-center space-x-1.5 flex-shrink-0">
+      <slot name="actions" />
       <button
         v-if="showPreviewToggle && !sideBySide"
         @click="$emit('toggle-preview')"
-        class="px-2.5 py-1.5 text-xs bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+        :title="previewOpen ? 'Edit' : 'Preview'"
+        :aria-label="previewOpen ? 'Edit' : 'Preview'"
+        class="p-1.5 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
       >
-        {{ previewOpen ? 'Edit' : 'Preview' }}
+        <PencilSquareIcon v-if="previewOpen" class="h-4 w-4" />
+        <EyeIcon v-else class="h-4 w-4" />
       </button>
       <button
         v-if="showHistory"
         @click="$emit('open-history')"
-        class="px-2.5 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+        title="History"
+        aria-label="History"
+        class="p-1.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
       >
-        History
+        <ClockIcon class="h-4 w-4" />
       </button>
       <button
         v-if="showMeta"
         @click="$emit('open-meta')"
-        class="px-2.5 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+        title="Meta"
+        aria-label="Meta"
+        class="p-1.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
       >
-        Meta
+        <TagIcon class="h-4 w-4" />
       </button>
       <button
         v-if="showExport"
         @click="$emit('export')"
-        class="px-2.5 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+        title="Export"
+        aria-label="Export"
+        class="p-1.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
       >
-        Export
+        <ArrowDownTrayIcon class="h-4 w-4" />
       </button>
       <button
         v-if="sideBySide"
@@ -60,15 +70,19 @@
       <button
         @click="$emit('save')"
         :disabled="!dirty || saving"
-        class="ml-1.5 px-3 py-1.5 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        :title="saving ? 'Saving…' : 'Save'"
+        :aria-label="saving ? 'Saving…' : 'Save'"
+        class="ml-1.5 p-1.5 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {{ saving ? 'Saving…' : 'Save' }}
+        <CheckIcon class="h-4 w-4" />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ArrowDownTrayIcon, CheckIcon, ClockIcon, EyeIcon, PencilSquareIcon, TagIcon } from '@heroicons/vue/24/outline'
+
 withDefaults(defineProps<{
   title: string
   dirty?: boolean

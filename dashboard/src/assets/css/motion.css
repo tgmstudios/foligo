@@ -1,0 +1,243 @@
+/*
+ * OrgFlow motion layer (dark). Ported from OrgFlow's expressive layer:
+ * staggered entrances, blur/materialize reveals, drifting aurora light, an
+ * indeterminate "thread" for AI work, iridescent button bloom, press feedback.
+ * UI motion stays under 300ms; decorative loops are slow. Hover effects only
+ * apply on devices that truly hover. Everything is gated for reduced motion.
+ */
+:root {
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --press: 140ms;
+  --fast: 160ms;
+  --base: 220ms;
+  --thread-vivid: linear-gradient(110deg, var(--teal), var(--iris) 52%, var(--apricot));
+  --highlight: rgb(255 255 255 / 0.07);
+  --skeleton: rgb(255 255 255 / 0.05);
+}
+
+@property --spin {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Keyframes ------------------------------------------------------------- */
+@keyframes enter-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes message-in { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } }
+@keyframes blur-in { from { opacity: 0; filter: blur(2px); } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.8); } }
+@keyframes materialize { from { opacity: 0; transform: scale(0.94); filter: blur(6px); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes dialog-in { from { opacity: 0; transform: scale(0.96); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes breathe { 50% { opacity: 0.55; transform: scale(0.9); } }
+@keyframes pulse-soft { to { opacity: 0.4; } }
+@keyframes text-shimmer { from { background-position: 100% 0; } to { background-position: 0% 0; } }
+@keyframes indeterminate { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+@keyframes sweep { to { transform: translateX(100%); } }
+@keyframes beacon { from { opacity: 0.6; scale: 1; } to { opacity: 0; scale: 2.8; } }
+@keyframes glow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes spin-prop { to { --spin: 360deg; } }
+@keyframes drift-a { to { transform: translate(14vw, 10vh) scale(1.15); } }
+@keyframes drift-b { to { transform: translate(-16vw, 8vh) scale(0.9); } }
+@keyframes drift-c { to { transform: translate(-10vw, -14vh) scale(1.2); } }
+
+/* Atmosphere: drifting thread-colored light + dot grid ------------------- */
+body {
+  background:
+    radial-gradient(1px 1px at 1px 1px, rgb(255 255 255 / 0.05) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--canvas);
+}
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.4;
+}
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+.aurora-blob.a {
+  width: 46vw; height: 46vw; top: -18vw; left: 8vw;
+  background: radial-gradient(closest-side, rgb(79 170 165 / 0.45), transparent);
+  animation: drift-a 26s ease-in-out infinite alternate;
+}
+.aurora-blob.b {
+  width: 40vw; height: 40vw; top: 20vh; right: -12vw;
+  background: radial-gradient(closest-side, rgb(139 120 224 / 0.5), transparent);
+  animation: drift-b 32s ease-in-out infinite alternate;
+}
+.aurora-blob.c {
+  width: 34vw; height: 34vw; bottom: -14vw; left: 30vw;
+  background: radial-gradient(closest-side, rgb(242 170 136 / 0.3), transparent);
+  animation: drift-c 29s ease-in-out infinite alternate;
+}
+.aurora-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Entrances --------------------------------------------------------------- */
+main > * { animation: enter-rise 260ms var(--ease-out) backwards; }
+
+/* Staggered group entrances (decorative; plays once when a row is inserted). */
+:is(main .grid, tbody, .stagger) > * { animation: enter-rise 300ms var(--ease-out) backwards; }
+:is(main .grid, tbody, .stagger) > :nth-child(2) { animation-delay: 40ms; }
+:is(main .grid, tbody, .stagger) > :nth-child(3) { animation-delay: 80ms; }
+:is(main .grid, tbody, .stagger) > :nth-child(4) { animation-delay: 120ms; }
+:is(main .grid, tbody, .stagger) > :nth-child(5) { animation-delay: 160ms; }
+:is(main .grid, tbody, .stagger) > :nth-child(6) { animation-delay: 200ms; }
+:is(main .grid, tbody, .stagger) > :nth-child(n + 7) { animation-delay: 240ms; }
+
+/* Modals: backdrop fades, the dialog scales in. */
+.fixed.inset-0.z-50 {
+  animation: fade-in 220ms ease-out backwards;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.fixed.inset-0.z-50 > :is(form, div, section) {
+  animation: dialog-in 260ms var(--ease-out) backwards;
+}
+.markdown-content, .message-in { animation: blur-in 220ms ease-out backwards; }
+.message-in { animation-name: message-in; animation-duration: 340ms; }
+.materialize { animation: materialize 560ms var(--ease-out) backwards; }
+
+/* Press feedback: every pressable element confirms it heard the user. */
+:where(button, [role='button'], a.btn, .btn, .sidebar-item) {
+  transition:
+    transform var(--press) var(--ease-out),
+    background-color var(--fast) ease,
+    box-shadow var(--fast) ease,
+    color var(--fast) ease,
+    opacity var(--fast) ease;
+}
+:where(button, [role='button'], .btn, .sidebar-item):active:not(:disabled) { transform: scale(0.97); }
+
+/* Primary: iridescent edge, colored bloom underneath that wakes on hover. */
+.btn-primary {
+  position: relative;
+  isolation: isolate;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    0 1px 2px rgb(119 83 206 / 0.35),
+    0 10px 24px -10px rgb(119 83 206 / 0.55);
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--thread-vivid);
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+/* Iridescent hairline crowns cards that opt in (.card-thread) or are interactive. */
+.card-thread, .card:is(a, button) { position: relative; }
+.card-thread::before, .card:is(a, button)::before {
+  content: '';
+  position: absolute;
+  inset: 0 18px auto;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--thread-vivid);
+  opacity: 0.8;
+}
+.card:is(a, button)::before { opacity: 0; transition: opacity 240ms ease; }
+
+/* AI working states -------------------------------------------------------- */
+.spin { animation: spin 700ms linear infinite; }
+.shimmer-text {
+  background: linear-gradient(90deg, var(--muted) 0%, var(--muted) 38%, var(--ink) 50%, var(--muted) 62%, var(--muted) 100%) 0 0 / 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 2.2s linear infinite;
+}
+/* An indeterminate thread runs along the edge of anything the AI is working on. */
+:where(.is-working) { position: relative; overflow: hidden; }
+.is-working::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 42%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--thread);
+  pointer-events: none;
+  animation: indeterminate 1.5s linear infinite;
+}
+.is-working.thread-top::after { top: 0; bottom: auto; }
+.skeleton-line {
+  position: relative;
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--skeleton);
+  overflow: hidden;
+}
+.skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--highlight), transparent);
+  transform: translateX(-100%);
+  animation: sweep 1.3s linear infinite;
+}
+/* Tailwind's pulse becomes a calmer breath. */
+.animate-pulse { animation: pulse-soft 1.6s ease-in-out infinite alternate; }
+
+/* Sidebar icons warm up to teal when selected. */
+.sidebar-item svg { transition: color var(--fast) ease, transform var(--fast) var(--ease-out); }
+.sidebar-item-active svg { color: var(--teal-ink); }
+
+/* Editorial period after page titles, in iris. */
+main h1:not(.no-dot):not(.markdown-content *)::after { content: '.'; color: var(--iris); }
+
+/* Hover: only for devices that truly hover (touch fires false hovers). */
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover:not(:disabled)::after { opacity: 0.45; }
+  .btn-outline:hover:not(:disabled), .btn-secondary:hover:not(:disabled) {
+    box-shadow: var(--inner-light), var(--shadow-2);
+  }
+  .card:is(a, button):hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2), 0 14px 32px -14px rgb(139 120 224 / 0.35);
+  }
+  .card:is(a, button):hover::before { opacity: 1; }
+  .card:is(a, button):active { transform: translateY(-1px) scale(0.985); }
+  .sidebar-item-inactive:hover svg { color: var(--ink-2); }
+  tbody tr { transition: background-color var(--fast) ease; }
+  tbody tr:hover { background: rgb(255 255 255 / 0.025); }
+  .card:is(a, button):hover svg:last-child { transform: translate(2px, -2px); }
+}
+.card:is(a, button) { transition: transform var(--base) var(--ease-out), box-shadow var(--base) ease; }
+
+/* Accessibility: fewer, gentler. Keep fades that aid comprehension, drop movement. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes enter-rise { from { opacity: 0; } }
+  @keyframes message-in { from { opacity: 0; } }
+  @keyframes pop-in { from { opacity: 0; } }
+  @keyframes materialize { from { opacity: 0; } }
+  @keyframes dialog-in { from { opacity: 0; } }
+  @keyframes sheet-in { from { opacity: 0; } }
+  @keyframes indeterminate { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+  @keyframes sweep { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+  .aurora-blob { animation: none; }
+  .is-working::after { width: 100%; }
+  .skeleton-line::after { transform: none; }
+  .shimmer-text { animation: none; color: var(--muted); background: none; }
+  :where(button, [role='button'], .btn, .sidebar-item):active:not(:disabled) { transform: none; }
+  .card:is(a, button):hover { transform: none; }
+}

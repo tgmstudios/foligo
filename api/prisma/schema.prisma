@@ -22,6 +22,8 @@ model User {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
+  writingStyle Json?
+
   goapplyColumns Json?
 
   // Relationships
@@ -39,6 +41,10 @@ model User {
   integrations       UserIntegration[]
   aiChatSessions     AiChatSession[]
   aiModelGrants      UserAiModelGrant[]
+  personalAiConnections UserAiConnection[]
+  aiUsagePolicy UserAiUsagePolicy?
+  aiUsageEvents AiUsageEvent[]
+  aiDeviceLogin UserAiDeviceLogin?
 
   @@unique([ssoProviderId, ssoSubject], name: "sso_provider_subject")
   @@map("users")
@@ -227,6 +233,10 @@ model SiteConfig {
   templateSettings  Json?
   theme             Json?
   publishedRevision Int    @default(1)
+  builderDraft      Json?
+  builderPublished  Json?
+  builderRevision   Int    @default(0)
+  builderHistory    Json?
 
   // Color Scheme
   primaryColor    String @default("#3B82F6")
@@ -441,6 +451,7 @@ model AiModel {
   model        String
   endpoint     String?
   apiKey       String?
+  billingRates Json? // USD per million: input, output, cacheRead, cacheWrite
   headers      Json?
   // { streaming, tools, vision, json, reasoning, maxTokens } — overrides the
   // provider type's hardcoded defaults (see services/ai/providers/index.js)
@@ -880,4 +891,70 @@ model PlatformSetting {
   updatedBy String?
 
   @@map("platform_settings")
+}
+
+// Credentials belong exclusively to one user and never inherit server secrets.
+model UserAiConnection {
+  id String @id @default(uuid())
+  userId String
+  providerType String
+  model String
+  modelType String @default("QUICK")
+  apiKey String
+  oauthRefreshToken String?
+  oauthExpiresAt DateTime?
+  oauthAccountId String?
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, providerType])
+  @@map("user_ai_connections")
+}
+
+// Null limits mean no cap. Existing accounts retain unlimited server usage.
+model UserAiUsagePolicy {
+  userId String @id
+  unlimited Boolean @default(true)
+  monthlyRequests Int?
+  monthlyTokens Int?
+  monthlyCostUsd Decimal? @db.Decimal(18, 6)
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("user_ai_usage_policies")
+}
+
+// One event per provider HTTP attempt, including tool steps and SDK retries.
+// RESERVED/UNKNOWN events retain their budget until reconciled; never auto-expire.
+model AiUsageEvent {
+  id String @id @default(uuid())
+  userId String
+  source String
+  selection String
+  providerType String
+  model String
+  status String @default("RESERVED")
+  inputTokens Int @default(0)
+  outputTokens Int @default(0)
+  cacheReadTokens Int @default(0)
+  cacheWriteTokens Int @default(0)
+  reasoningTokens Int @default(0)
+  totalTokens Int @default(0)
+  costUsd Decimal? @db.Decimal(18, 6)
+  rates Json?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, source, createdAt])
+  @@map("ai_usage_events")
+}
+
+// Persist pending logins for multiple API workers. Codes/verifiers are encrypted.
+model UserAiDeviceLogin {
+  userId String @id
+  session String
+  expiresAt DateTime
+  nextPollAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("user_ai_device_logins")
 }

@@ -2,6 +2,7 @@
   <MarketingLanding v-if="isMarketingHost" />
   <div v-else-if="pending" class="state">Loading portfolio…</div>
   <SiteNotFound v-else-if="error || !siteData" :error="error" />
+  <BuilderCanvas v-else-if="siteData.siteConfig?.builderPublished" :document="siteData.siteConfig.builderPublished" :path="route.path" :collections="siteData.content || {}" />
   <PublicPortfolio v-else :site-data="siteData" :route="route" />
 </template>
 

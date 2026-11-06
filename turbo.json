@@ -1,6 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["pnpm-lock.yaml"],
+  "globalDependencies": [
+    "pnpm-lock.yaml",
+    "sites/components/BuilderCanvas.vue",
+    "sites/utils/builder*.mjs",
+    "sites/components/SitesMarkdown.vue",
+    "sites/utils/site-markdown*.mjs"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -91,6 +91,8 @@ export function configureMarkedForMermaid() {
 
   mermaid.initialize({
     startOnLoad: false,
+    // A failing diagram mid-edit must not append mermaid's "Syntax error in text" bomb to <body>.
+    suppressErrorRendering: true,
     theme: 'dark',
     themeVariables: MERMAID_THEME_VARIABLES,
   })

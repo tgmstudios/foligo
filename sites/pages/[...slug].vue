@@ -1,10 +1,12 @@
 <template>
   <div v-if="pending" class="state">Loading…</div>
   <SiteNotFound v-else-if="error || !siteData" :error="error" />
+  <BuilderCanvas v-else-if="siteData.siteConfig?.builderPublished" :document="siteData.siteConfig.builderPublished" :path="route.path" :collections="siteData.content || {}" />
   <PublicPortfolio v-else :site-data="siteData" :route="route" />
 </template>
 
 <script setup>
+import { resolveBuilderContent } from '~/utils/builder-content.mjs'
 import { useSubdomain } from '~/composables/useSubdomain'
 import { usePublicSiteHead } from '~/composables/usePublicSiteHead.js'
 
@@ -23,6 +25,11 @@ const { data: siteData, pending, error } = await useFetch(() => {
   baseURL: (process.server && runtime.apiInternalUrl) || runtime.public.apiBaseUrl,
   server: true
 })
+
+const published = siteData.value?.siteConfig?.builderPublished
+if (published && !resolveBuilderContent(published, route.path, siteData.value.content || {})) {
+  throw createError({ statusCode: 404, statusMessage: 'Page not found' })
+}
 
 usePublicSiteHead(siteData, runtime)
 </script>

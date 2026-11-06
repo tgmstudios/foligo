@@ -1,3 +1,5 @@
+jest.mock('./writing-style', () => ({ getWritingStylePrompt: jest.fn().mockResolvedValue('') }));
+
 jest.mock('ai', () => ({
   generateText: jest.fn(),
   streamText: jest.fn(),
@@ -90,6 +92,16 @@ describe('AIManager streaming fallback', () => {
       { type: 'text-delta', text: 'fallback worked' },
       { type: 'finish', finishReason: 'stop' },
     ]);
+  });
+
+  test('stops the tool loop when an interview card needs a human answer', async () => {
+    streamText.mockReturnValue(streamOf([{ type: 'text-delta', text: 'Question' }]));
+    for await (const part of manager.streamChat([{ role: 'user', content: 'Interview me' }], { stopOnTools: ['ask_user', 'request_screenshots'] })) { void part; }
+    const conditions = streamText.mock.calls[0][0].stopWhen;
+    const humanInputCondition = conditions[1];
+    expect(humanInputCondition({ steps: [{ toolCalls: [{ toolName: 'ask_user' }] }] })).toBe(true);
+    expect(humanInputCondition({ steps: [{ toolCalls: [{ toolName: 'request_screenshots' }] }] })).toBe(true);
+    expect(humanInputCondition({ steps: [{ toolCalls: [{ toolName: 'get_post' }] }] })).toBe(false);
   });
 
   test('does not switch providers after visible output has started', async () => {
@@ -260,6 +272,7 @@ describe('AIManager user-scoped model selection', () => {
     });
 
     await expect(manager.listProviders({ userId: 'user-1' })).resolves.toEqual([{
+      source: 'SERVER',
       type: 'granted-model-id',
       slug: 'granted-model',
       displayName: 'Granted model',
@@ -287,5 +300,50 @@ describe('AIManager user-scoped model selection', () => {
     expect(resolveModel).toHaveBeenCalledWith('openai', 'QUICK');
     expect(resolveModelForUser).not.toHaveBeenCalled();
     expect(generateText).toHaveBeenCalledWith(expect.objectContaining({ model: { id: 'admin-model' } }));
+  });
+});
+
+
+test('passes authenticated writing preferences into generation system context', async () => {
+  const { getWritingStylePrompt } = require('./writing-style');
+  getWritingStylePrompt.mockResolvedValueOnce(' Preferred voice: concise.');
+  const fallback = jest.spyOn(manager, '_withFallback').mockImplementation(async (_provider, _type, fn) => fn({ name: 'test' }));
+  const call = jest.spyOn(manager, '_callModel').mockResolvedValue({ text: 'Draft', reasoning: null });
+  try {
+    await manager.generateChat([{ role: 'user', content: 'Write an introduction' }], { userId: 'u1', systemInstruction: 'Keep facts accurate.' });
+    expect(getWritingStylePrompt).toHaveBeenLastCalledWith('u1', undefined);
+    expect(call).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ system: 'Keep facts accurate. Preferred voice: concise.' }));
+  } finally { fallback.mockRestore(); call.mockRestore(); }
+});
+
+describe('personal AI billing selection', () => {
+  beforeEach(() => { jest.clearAllMocks(); manager.clearProviderCache(); });
+  test('automatic fallback remains personal when personal and server models exist', async () => {
+    listModelSelectionsForUser.mockResolvedValue(['personal:a', 'personal:b', 'server-model']);
+    await expect(manager._fallbackSelections(null, 'QUICK', 'u1')).resolves.toEqual(['personal:a', 'personal:b']);
+  });
+  test('an explicit server selection remains available with personal connections', async () => {
+    resolveModelForUser.mockResolvedValue({ key: 'server-model' });
+    await expect(manager._fallbackSelections('server-model', 'QUICK', 'u1')).resolves.toEqual(['server-model']);
+    expect(resolveModelForUser).toHaveBeenCalledWith('u1', 'server-model');
+  });
+  test('quota denials cannot be swallowed by the provider fallback chain', async () => {
+    listModelSelectionsForUser.mockResolvedValue(['server-a', 'server-b']);
+    resolveModelForUser.mockResolvedValue({ key: 'server-a', providerType: 'openai', record: { model: 'test' }, overrides: {} });
+    createProvider.mockReturnValue({ name: 'openai', model: {} });
+    const denial = Object.assign(new Error('Allowance exhausted'), { code: 'AI_USAGE_LIMIT_EXCEEDED' });
+    const fn = jest.fn().mockRejectedValue(denial);
+    await expect(manager._withFallback(null, 'QUICK', fn, 'u1')).rejects.toBe(denial);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+  test('user providers are rebuilt instead of sharing cached credential instances', async () => {
+    resolveModelForUser.mockImplementation(async user => ({ key: 'same-model', source: 'PERSONAL', providerType: 'openai', overrides: { apiKey: `${user}-secret` }, record: { model: 'test' } }));
+    createProvider.mockImplementation(() => ({ name: 'openai', model: {} }));
+    const first = await manager.getProvider('same-model', {}, 'QUICK', 'alice');
+    const second = await manager.getProvider('same-model', {}, 'QUICK', 'bob');
+    expect(first).not.toBe(second);
+    expect(createProvider.mock.calls[0][1].apiKey).toBe('alice-secret');
+    expect(createProvider.mock.calls[1][1].apiKey).toBe('bob-secret');
+    expect(manager._providers.size).toBe(0);
   });
 });

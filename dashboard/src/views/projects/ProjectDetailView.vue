@@ -8,6 +8,7 @@
           <p class="text-gray-400 mt-1">{{ project?.name || 'Loading...' }}</p>
         </div>
         <div class="flex items-center space-x-3">
+          <router-link :to="`/site-builder/${project?.id}`" class="btn btn-primary">Open Site Builder</router-link>
           <button
             @click="showCreateContentModal = true"
             class="btn btn-primary"

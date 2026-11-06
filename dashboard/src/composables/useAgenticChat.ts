@@ -13,7 +13,17 @@ export interface ToolActivity {
   busy?: boolean
 }
 
+export interface AgentInteraction {
+  id: string
+  kind: 'question' | 'screenshots'
+  question: string
+  options?: string[]
+  multiple?: boolean
+  answer?: string
+}
+
 export interface AgenticChatMessage {
+  interactions?: AgentInteraction[]
   id: string
   role: 'user' | 'assistant'
   content: string
@@ -80,6 +90,12 @@ export function useAgenticChat(
           activity.status = 'done'
           activity.output = event.output
         }
+        if (['ask_user', 'request_screenshots'].includes(event.toolName) && event.output?.waitingForUser) {
+          const interaction = { id: event.toolCallId, ...event.output }
+          ;(assistantMsg.interactions ||= []).push(interaction)
+          // Keep question context and cards in saved history, including tool-only turns.
+          assistantMsg.content += `\n\n${interaction.question}${interaction.options?.length ? `\nOptions: ${interaction.options.join('; ')}; Other; Skip for now` : ''}`
+        }
         break
       }
       case 'tool-error': {
@@ -127,7 +143,7 @@ export function useAgenticChat(
     // does) rely on the client resending prior turns each request.
     const history = messages.value
       .filter((m) => m.content)
-      .map((m) => ({ role: m.role, content: m.content }))
+      .map((m) => ({ role: m.role, content: m.content, interactions: m.interactions }))
 
     const displayText = userText.trim() || 'Please review the attached file(s).'
     const userMsg: AgenticChatMessage = { id: uid(), role: 'user', content: displayText, attachments: attachments.map(file => ({ name: file.name, type: file.type, size: file.size })) }
@@ -162,7 +178,7 @@ export function useAgenticChat(
         if (provider) form.append('provider', provider)
         form.append('history', JSON.stringify(history))
         attachments.forEach(file => form.append('attachments', file))
-        Object.entries(extraBody).forEach(([key, value]) => form.append(key, String(value)))
+        Object.entries(extraBody).filter(([, value]) => value !== undefined).forEach(([key, value]) => form.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value)))
         body = form
       } else {
         headers['Content-Type'] = 'application/json'
@@ -217,7 +233,7 @@ export function useAgenticChat(
       abortController = null
       reactiveMsg.streaming = false
       streaming.value = false
-      const savedHistory = messages.value.filter(m => m.content).map(m => ({ role: m.role, content: m.content }))
+      const savedHistory = messages.value.filter(m => m.content).map(m => ({ role: m.role, content: m.content, interactions: m.interactions }))
       try {
         await callbacks.onTurnComplete?.(savedHistory)
       } catch (error) {
@@ -259,12 +275,13 @@ export function useAgenticChat(
     queue.value = []
   }
 
-  function loadHistory(history: Array<{ role: string; content: string; attachments?: Array<{ name: string; type?: string; size?: number }> }>) {
+  function loadHistory(history: Array<{ role: string; content: string; attachments?: Array<{ name: string; type?: string; size?: number }>; interactions?: AgentInteraction[] }>) {
     messages.value = history.map(m => ({
       id: uid(),
       role: m.role as 'user' | 'assistant',
       content: m.content,
       attachments: m.attachments,
+      interactions: m.interactions,
     }))
     queue.value = []
   }

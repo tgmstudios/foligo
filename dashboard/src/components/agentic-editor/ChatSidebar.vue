@@ -43,6 +43,8 @@
           </template>
 
           <template v-else>
+            <AgentInteractionCard v-for="interaction in message.interactions || []" :key="interaction.id"
+              :interaction="interaction" :disabled="streaming" @answer="(text, files) => emit('send', text, files)" />
             <!-- Thinking block -->
             <details v-if="message.reasoning" class="mb-2 group" :open="message.streaming && !message.content">
               <summary class="cursor-pointer text-xs text-gray-400 hover:text-gray-300 select-none flex items-center space-x-1">
@@ -116,7 +118,7 @@
         </span>
       </div>
       <div class="flex items-end space-x-2">
-        <input ref="fileInput" type="file" multiple class="hidden" accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.xml,.rtf" @change="selectFiles" />
+        <input ref="fileInput" type="file" multiple class="hidden" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.xml,.rtf" @change="selectFiles" />
         <button v-if="allowAttachments" type="button" :disabled="pendingFiles.length >= 5" class="h-[40px] flex-shrink-0 rounded-lg border border-gray-600 px-3 text-gray-300 hover:bg-gray-700 disabled:opacity-50" title="Attach files" @click="fileInput?.click()">📎</button>
         <textarea
           ref="textarea"
@@ -155,6 +157,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
+import AgentInteractionCard from '@/components/chat/AgentInteractionCard.vue'
 import { marked } from 'marked'
 import type { AgenticChatMessage, QueuedChatMessage, ToolActivity } from '@/composables/useAgenticChat'
 

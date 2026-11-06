@@ -7,41 +7,38 @@
           <h1 class="text-2xl font-bold text-white">Edit Content</h1>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+          <RewritePostButton v-if="content" :post-id="content.id" :source="editForm.content" :disabled="isSaving || isDeleting" @apply="editForm.content = $event" />
           <button
             type="button"
             @click="deleteContent"
             :disabled="isDeleting || isSaving"
-            class="px-4 py-2 rounded-md text-sm font-medium border border-red-700/60 bg-red-600/10 text-red-300 hover:bg-red-600/20 disabled:cursor-not-allowed disabled:opacity-50"
+            :title="isDeleting ? 'Deleting...' : 'Delete'"
+            aria-label="Delete"
+            class="p-2 rounded-md border border-red-700/60 bg-red-600/10 text-red-300 hover:bg-red-600/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {{ isDeleting ? 'Deleting...' : 'Delete' }}
+            <TrashIcon class="h-5 w-5" />
           </button>
-          <select
-            v-model="editForm.status"
-            :class="[
-              'px-4 py-2 rounded-md text-sm font-medium border min-w-[140px] max-w-full transition-colors',
-              getStatusDropdownClass(editForm.status)
-            ]"
-          >
-            <option value="DRAFT">Draft</option>
-            <option value="PUBLISHED">Published</option>
-            <option value="HIDDEN">Hidden</option>
-          </select>
+          <SegmentedControl v-model="editForm.status" :options="statusOptions">
+            <template #default="{ option }">
+              <component :is="option.icon" class="h-5 w-5" />
+            </template>
+          </SegmentedControl>
           <button
             @click="showRevisionTimeline = true"
-            class="px-4 py-2 rounded-md text-sm font-medium bg-gray-700 text-white hover:bg-gray-600 border border-gray-600 flex items-center space-x-2"
-            title="View revision history"
+            class="p-2 rounded-md bg-gray-700 text-white hover:bg-gray-600 border border-gray-600"
+            title="Revision history"
+            aria-label="Revision history"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Revision History</span>
+            <ClockIcon class="h-5 w-5" />
           </button>
           <button
             @click="saveContent"
             :disabled="isSaving"
+            :title="isSaving ? 'Saving...' : 'Save changes'"
+            aria-label="Save changes"
             class="btn btn-primary"
           >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+            <CheckIcon class="h-5 w-5" />
           </button>
         </div>
       </div>
@@ -638,6 +635,9 @@ import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
 import { normalizeProjectLinks } from '@/utils/contentHelpers'
 import MarkdownCodeEditor from '@/components/editor/MarkdownCodeEditor.vue'
+import { TrashIcon, ClockIcon, CheckIcon, PencilSquareIcon, GlobeAltIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import SegmentedControl from '@/components/shared/SegmentedControl.vue'
+import RewritePostButton from '@/components/content/RewritePostButton.vue'
 import MarkdownPreview from '@/components/studio/MarkdownPreview.vue'
 import TagManager from '@/components/content/TagManager.vue'
 import SkillsManager from '@/components/content/SkillsManager.vue'
@@ -721,15 +721,11 @@ const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'MMM d, yyyy')
 }
 
-const getStatusDropdownClass = (status: string) => {
-  const classes: Record<string, string> = {
-    DRAFT: 'bg-amber-500/20 text-amber-300 border-amber-600/50 hover:bg-amber-500/30',
-    PUBLISHED: 'bg-green-500/20 text-green-300 border-green-600/50 hover:bg-green-500/30',
-    HIDDEN: 'bg-yellow-500/20 text-yellow-300 border-yellow-600/50 hover:bg-yellow-500/30',
-    REVISION: 'bg-blue-500/20 text-blue-300 border-blue-600/50 hover:bg-blue-500/30'
-  }
-  return classes[status || 'DRAFT'] || classes.DRAFT
-}
+const statusOptions = [
+  { value: 'DRAFT' as const, label: 'Draft', icon: PencilSquareIcon, pillClass: '!bg-amber-500/25 !text-amber-300' },
+  { value: 'PUBLISHED' as const, label: 'Published', icon: GlobeAltIcon, pillClass: '!bg-green-500/25 !text-green-300' },
+  { value: 'HIDDEN' as const, label: 'Hidden', icon: EyeSlashIcon, pillClass: '!bg-yellow-500/25 !text-yellow-300' }
+]
 
 const openEditorStudio = () => {
   if (!content.value) return

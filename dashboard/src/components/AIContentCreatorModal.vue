@@ -1,11 +1,12 @@
 <template>
-  <div v-if="isOpen" class="creator-overlay fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-screen items-center justify-center p-4 text-center">
-      <div class="creator-backdrop fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
+  <Teleport :to="teleportTarget" :disabled="!teleportTarget">
+  <div v-if="isOpen && visible" :class="isModal ? 'creator-overlay fixed inset-0 z-50 overflow-y-auto' : 'contents'">
+    <div :class="isModal ? 'flex min-h-screen items-center justify-center p-4 text-center' : 'contents'">
+      <div v-if="isModal" class="creator-backdrop fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
 
-      <div class="creator-card w-full max-w-5xl bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all">
+      <div ref="cardEl" :class="['creator-card bg-gray-800 text-left overflow-hidden', cardClass]">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 pt-6 pb-4">
+        <div :class="['bg-gradient-to-r from-primary-600 to-teal-600 flex-shrink-0', effectiveView === 'dock' ? 'px-4 py-3' : 'px-6 pt-6 pb-4']">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
               <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
@@ -15,18 +16,23 @@
               </div>
               <div>
                 <h3 class="text-lg leading-6 font-medium text-white">AI Content Creator</h3>
-                <p class="text-sm text-purple-100">Full control over your portfolio — find, edit, create, organize, or remove any post</p>
+                <p v-if="effectiveView !== 'dock'" class="text-sm text-purple-100">Full control over your portfolio — find, edit, create, organize, or remove any post</p>
               </div>
             </div>
-            <button
-              type="button"
-              @click="close"
-              class="text-white hover:text-purple-200 transition-colors"
-            >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div class="flex items-center gap-1 text-white">
+              <button v-if="effectiveView !== 'dock'" type="button" title="Pop out to bottom right" aria-label="Pop out to bottom right" class="creator-ctl" @click="setView('dock')">
+                <ArrowTopRightOnSquareIcon class="h-5 w-5" />
+              </button>
+              <button v-if="effectiveView !== 'fullscreen'" type="button" title="Full screen" aria-label="Full screen" class="creator-ctl" @click="setView('fullscreen')">
+                <ArrowsPointingOutIcon class="h-5 w-5" />
+              </button>
+              <button v-if="effectiveView === 'fullscreen' || (effectiveView === 'dock' && canDockInline)" type="button" :title="canDockInline ? 'Back to dashboard' : 'Exit full screen'" aria-label="Restore" class="creator-ctl" @click="restore">
+                <ArrowsPointingInIcon class="h-5 w-5" />
+              </button>
+              <button v-if="effectiveView !== 'inline'" type="button" title="Close" aria-label="Close" class="creator-ctl" @click="close">
+                <XMarkIcon class="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -101,7 +107,7 @@
                 </svg>
               </div>
               <div :class="[
-                'rounded-lg px-4 py-2 max-w-xs sm:max-w-md',
+                'rounded-lg px-4 py-2', bubbleWidth,
                 message.role === 'user'
                   ? 'bg-purple-600 text-white'
                   : 'bg-gray-700 text-white'
@@ -161,6 +167,8 @@
                     </template>
                   </div>
                 </template>
+                <AgentInteractionCard v-for="interaction in message.interactions || []" :key="interaction.id"
+                  :interaction="interaction" :disabled="chat.streaming.value" @answer="chat.sendMessage" />
                 <div
                   v-if="message.content"
                   class="text-sm leading-relaxed markdown-content"
@@ -259,7 +267,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="bg-gray-800 px-6 py-4 flex items-center justify-end gap-3">
+        <div v-if="isModal" class="bg-gray-800 px-6 py-4 flex items-center justify-end gap-3">
           <button
             @click="close"
             class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-colors"
@@ -270,14 +278,19 @@
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ArrowsPointingInIcon, ArrowsPointingOutIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { useRoute } from 'vue-router'
+import { useAiChatDock, type AiChatView } from '@/composables/useAiChatDock'
 import api, { API_URL } from '@/services/api'
 import ChatSessionPicker from '@/components/chat/ChatSessionPicker.vue'
 import { useChatSessions } from '@/composables/useChatSessions'
 import { useAgenticChat, type ToolActivity } from '@/composables/useAgenticChat'
+import AgentInteractionCard from '@/components/chat/AgentInteractionCard.vue'
 import { renderMarkdown } from '@/lib/markdown'
 
 const props = defineProps<{
@@ -293,6 +306,57 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
+const { view, hostEl } = useAiChatDock()
+const cardEl = ref<HTMLElement | null>(null)
+
+// Inline needs the dashboard's host element; away from it the chat docks
+// bottom-right instead, so a conversation survives navigation.
+const effectiveView = computed<AiChatView>(() => (view.value === 'inline' && !hostEl.value ? 'dock' : view.value))
+const isModal = computed(() => effectiveView.value === 'modal')
+// Untouched chats don't follow you around: away from the dashboard they stay hidden.
+const hasInteracted = computed(() => modeSelected.value || chat.messages.value.length > 0 || !!currentMessage.value.trim())
+const visible = computed(() => !(view.value === 'inline' && !hostEl.value && !hasInteracted.value))
+const canDockInline = computed(() => !!hostEl.value)
+const teleportTarget = computed<HTMLElement | string | null>(() =>
+  effectiveView.value === 'inline' ? hostEl.value : effectiveView.value === 'modal' ? null : 'body'
+)
+const cardClass = computed(() => ({
+  modal: 'w-full max-w-5xl rounded-lg shadow-xl transform transition-all',
+  inline: 'w-full rounded-[14px] h-[min(72vh,680px)] shadow-lg',
+  dock: 'fixed bottom-4 right-4 z-50 w-[400px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-2rem)] rounded-[14px] shadow-2xl ring-1 ring-white/10',
+  fullscreen: 'is-fullscreen fixed inset-0 z-[60] rounded-none'
+}[effectiveView.value]))
+const bubbleWidth = computed(() => (effectiveView.value === 'modal' ? 'max-w-xs sm:max-w-md' : effectiveView.value === 'dock' ? 'max-w-[85%]' : 'max-w-[85%] md:max-w-2xl'))
+
+// Morph between layouts (FLIP): measure before and after, then animate the
+// card from its old box to its new one.
+async function setView(next: AiChatView) {
+  const first = cardEl.value?.getBoundingClientRect()
+  view.value = next
+  await nextTick()
+  const card = cardEl.value
+  if (!first?.width || !card || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const last = card.getBoundingClientRect()
+  if (!last.width || !last.height) return
+  card.animate(
+    [
+      { transformOrigin: 'top left', transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${first.width / last.width}, ${first.height / last.height})` },
+      { transformOrigin: 'top left', transform: 'none' }
+    ],
+    { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }
+  )
+}
+
+// Changing pages never leaves a used chat covering the new page: it becomes the popout.
+const route = useRoute()
+watch(() => route.name, () => {
+  if (!isOpen.value || view.value === 'dock') return
+  // Only a chat you've actually used becomes the popout; an untouched one stays with the dashboard.
+  if (hasInteracted.value) void setView('dock')
+  else view.value = 'inline'
+})
+
+const restore = () => setView(hostEl.value ? 'inline' : 'modal')
 const modeSelected = ref(false)
 const selectedInteractionMode = ref<'text' | 'voice'>('text')
 const voiceAgentId = ref('')
@@ -381,7 +445,13 @@ async function loadVoiceConfig() {
 
 onMounted(loadVoiceConfig)
 
-const open = async () => {
+const open = async (initialView: AiChatView = 'modal') => {
+  if (isOpen.value) {
+    // Already running (e.g. inline on the dashboard): reveal it without losing the chat.
+    await setView(initialView)
+    return
+  }
+  view.value = initialView
   isOpen.value = true
   chat.reset()
   chatSessions.clearActive()
@@ -390,6 +460,11 @@ const open = async () => {
     if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
   })
 }
+
+// The dashboard hosts this chat inline; opening it there is automatic.
+watch([hostEl, isOpen], ([host, openNow]) => {
+  if (host && !openNow) void open('inline')
+}, { immediate: true })
 
 const newChat = () => {
   savedChatLoadId += 1
@@ -426,6 +501,7 @@ const close = () => {
   savedChatLoadId += 1
   loadingSavedChat.value = false
   isOpen.value = false
+  view.value = 'modal'
   modeSelected.value = false
   chat.reset()
   chatSessions.clearActive()
@@ -609,6 +685,20 @@ defineExpose({ open, close })
   max-height: calc(100vh - 2rem);
   display: flex;
   flex-direction: column;
+}
+.creator-card.is-fullscreen {
+  max-height: none;
+}
+.creator-ctl {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 8px;
+  color: rgb(255 255 255 / 0.85);
+  transition: background-color 160ms ease, color 160ms ease, transform 140ms var(--ease-out);
+}
+.creator-ctl:hover {
+  background: rgb(255 255 255 / 0.16);
+  color: #fff;
 }
 .creator-chat {
   display: flex;

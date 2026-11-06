@@ -132,6 +132,8 @@ router.post('/:id/members', [
       }
     });
 
+    await cache.del(`project:${projectId}:members`);
+
     // Clear project and user caches
     await cache.del(`project:${projectId}`);
     await cache.del(`user:projects:${user.id}`);

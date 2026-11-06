@@ -11,8 +11,12 @@ export default defineConfig({
     }
   })],
   resolve: {
+    dedupe: ['vue'],
     alias: {
       '@': resolve(__dirname, 'src'),
+      'marked': resolve(__dirname, 'node_modules/marked'),
+      'parse5': resolve(__dirname, 'node_modules/parse5'),
+      'mermaid': resolve(__dirname, 'node_modules/mermaid'),
     },
   },
   optimizeDeps: {

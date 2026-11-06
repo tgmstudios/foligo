@@ -5,6 +5,41 @@ const { cache } = require('../services/core/redis');
 
 const router = express.Router();
 
+// Private preferences: never included in public user responses.
+router.get('/me/writing-style', async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { writingStyle: true } });
+    res.json({ writingStyle: user?.writingStyle ?? null, questionnaire: require('../services/ai/writing-style-questionnaire') });
+  } catch (error) { next(error); }
+});
+
+router.post('/me/writing-style/preview', async (req, res) => {
+  try {
+    const { validateWritingStyle } = require('../services/ai/writing-style');
+    const writingStyle = validateWritingStyle(req.body.writingStyle);
+    if (!writingStyle) return res.status(400).json({ message: 'A valid writing profile is required.' });
+    const result = await require('../services/ai/manager').generateChat([
+      { role: 'user', content: 'Rewrite this portfolio update in my writing style. Keep these facts and add none: Our team tested a website. We found a navigation problem. We simplified the navigation. The next step is preparing for launch. Return only the rewritten update, under 120 words.' },
+    ], { userId: req.user.id, writingStyle, maxTokens: 600, systemInstruction: 'You help the user calibrate writing preferences. Preserve all supplied facts and apply the supplied writing profile to a portfolio post.' });
+    if (result.truncated) return res.status(502).json({ message: 'The test draft was cut off. Please try again.' });
+    if (!result.text?.trim()) return res.status(502).json({ message: 'The AI returned an empty preview. Please try again.' });
+    res.json({ text: result.text });
+  } catch (error) {
+    require('../services/ai/route-error').sendAiRouteError(res, error, { error: 'Writing preview failed' });
+  }
+});
+
+router.put('/me/writing-style', async (req, res, next) => {
+  try {
+    const { validateWritingStyle } = require('../services/ai/writing-style');
+    const writingStyle = validateWritingStyle(req.body.writingStyle);
+    if (writingStyle === undefined) return res.status(400).json({ message: 'Check your writing style choices and the text limits shown in the quiz.' });
+    const { Prisma } = require('@prisma/client');
+    await prisma.user.update({ where: { id: req.user.id }, data: { writingStyle: writingStyle === null ? Prisma.DbNull : writingStyle } });
+    res.json({ writingStyle });
+  } catch (error) { next(error); }
+});
+
 /**
  * @swagger
  * /api/users/{id}:

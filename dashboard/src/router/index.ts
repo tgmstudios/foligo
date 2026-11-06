@@ -97,6 +97,12 @@ const router = createRouter({
       redirect: (to) => ({ name: 'studio-resume', params: { id: to.params.id } })
     },
     {
+      path: '/site-builder/:id',
+      name: 'site-builder',
+      component: () => import('@/views/projects/SiteBuilderView.vue'),
+      meta: { title: 'Site Builder', requiresAuth: true }
+    },
+    {
       path: '/',
       component: DashboardLayout,
       meta: { requiresAuth: true },
@@ -124,6 +130,12 @@ const router = createRouter({
           name: 'experience',
           component: () => import('@/views/content/ContentListView.vue'),
           meta: { title: 'Experience' }
+        },
+        {
+          path: 'sites',
+          name: 'sites',
+          component: () => import('@/views/projects/SitesView.vue'),
+          meta: { title: 'Sites' }
         },
         {
           path: 'portfolios',

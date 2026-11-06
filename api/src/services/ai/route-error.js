@@ -7,7 +7,20 @@ function isUserModelAccessError(error) {
   return USER_MODEL_ACCESS_CODES.has(error?.code) || USER_MODEL_ACCESS_CODES.has(error?.cause?.code);
 }
 
+const POLICY_CODES = new Set(['AI_USAGE_LIMIT_EXCEEDED', 'AI_BILLING_RATES_REQUIRED', 'PERSONAL_AI_RECONNECT_REQUIRED']);
+function findPolicyError(error) {
+  if (!error) return null;
+  if (POLICY_CODES.has(error.code)) return error;
+  return findPolicyError(error.cause) || (Array.isArray(error.errors) ? error.errors.map(findPolicyError).find(Boolean) : null);
+}
+function isAiPolicyError(error) { return !!findPolicyError(error); }
+
 function sendAiRouteError(res, error, fallbackError) {
+  const policyError = findPolicyError(error);
+  if (policyError) {
+    res.status(policyError.code === 'AI_USAGE_LIMIT_EXCEEDED' ? 429 : 403).json({ error: policyError.message, message: policyError.message, code: policyError.code });
+    return true;
+  }
   const code = error?.code || error?.cause?.code;
   if (isUserModelAccessError(error)) {
     res.status(403).json({
@@ -41,4 +54,4 @@ async function preflightSSEModelAccess(req, res, ai, {
   }
 }
 
-module.exports = { isUserModelAccessError, sendAiRouteError, preflightSSEModelAccess };
+module.exports = { isAiPolicyError, isUserModelAccessError, sendAiRouteError, preflightSSEModelAccess };

@@ -31,6 +31,8 @@
       </div>
     </div>
 
+    <AdminAiBillingRates />
+
     <section class="mt-6 bg-gray-800 border border-gray-700 rounded-xl p-5">
       <div class="flex items-start justify-between gap-4 mb-4">
         <div><h2 class="text-lg font-semibold text-white">Voice</h2><p class="text-xs text-gray-400 mt-1">ElevenLabs powers voice interviews in the AI content generator.</p></div>
@@ -200,6 +202,7 @@
 </template>
 
 <script setup lang="ts">
+import AdminAiBillingRates from '@/components/AdminAiBillingRates.vue'
 import { onMounted, ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import api from '@/services/api'

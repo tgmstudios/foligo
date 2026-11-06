@@ -46,7 +46,7 @@
       <p class="eyebrow">{{ page.item.contentType.toLowerCase() }}</p>
       <h1>{{ page.item.title }}</h1><p class="lede">{{ page.item.excerpt }}</p>
       <img v-if="page.item.featuredImage" class="feature" :src="page.item.featuredImage" :alt="page.item.title">
-      <article v-html="renderMarkdown(page.item.content || '')" />
+      <SitesMarkdown :content="page.item.content || ''" />
     </main>
 
     <main v-else class="detail">
@@ -61,7 +61,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { renderMarkdown } from '~/utils/markdownRenderer'
+import SitesMarkdown from './SitesMarkdown.vue'
 import { resolvePortfolioPage, itemHref, archiveHref } from '~/utils/portfolio-routing.js'
 
 const props = defineProps({ siteData: { type: Object, required: true }, route: { type: Object, required: true } })

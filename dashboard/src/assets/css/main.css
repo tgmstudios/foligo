@@ -1,77 +1,157 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * OrgFlow design tokens, dark variant. Warm-ink canvas, translucent ring
+ * shadows instead of solid borders, an editorial serif for headlines and
+ * Geist for UI. Saturated color is reserved for the teal -> iris -> apricot
+ * "thread". The SiteBuilder view reads these variables directly.
+ */
+:root {
+  color-scheme: dark;
+  --canvas: #0f1619;
+  --canvas-2: #131c20;
+  --surface: #182227;
+  --surface-hover: #1e2a30;
+  --ink: #e8eeee;
+  --ink-2: #b8c5c9;
+  --muted: #8fa0a7;
+  --faint: #6c7c84;
+  --teal: #4faaa5;
+  --teal-strong: #3a8f8a;
+  --teal-ink: #8fd0cc;
+  --iris: #a99ae6;
+  --iris-strong: #8b78e0;
+  --primary: #7753ce;
+  --primary-hover: #6943c4;
+  --primary-ink: #b9a9ea;
+  --apricot: #f2aa88;
+  --pale-iris: rgb(139 120 224 / 0.16);
+  --hairline: #263339;
+  --hairline-soft: #1e292e;
+  --control-border: #3a4a51;
+  --danger: #e0776e;
+  --pale-danger: rgb(224 119 110 / 0.14);
+  --ring: 0 0 0 1px rgb(255 255 255 / 0.07);
+  --shadow-1: var(--ring), 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px -6px rgb(0 0 0 / 0.4);
+  --shadow-2: var(--ring), 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 28px -14px rgb(0 0 0 / 0.6);
+  --inner-light: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --focus-ring: 0 0 0 3px rgb(139 120 224 / 0.32);
+  --thread: linear-gradient(90deg, var(--teal), var(--iris) 55%, var(--apricot));
+  --font-display: 'Newsreader', ui-serif, Georgia, serif;
+  --font-text: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-text);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  h1, h2 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: rgb(139 120 224 / 0.35);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--iris-strong);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-[10px] focus:outline-none transition duration-150 active:scale-[0.97] disabled:opacity-50;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 1px 2px rgb(0 0 0 / 0.3);
   }
-  
+  .btn:focus-visible { box-shadow: var(--focus-ring); }
+
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-primary-600 text-white hover:bg-primary-700;
   }
-  
+
   .btn-secondary {
-    @apply btn bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500;
+    @apply btn bg-gray-700 text-gray-200 hover:bg-gray-750;
   }
-  
+
   .btn-success {
-    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+    @apply btn bg-teal-500 text-white hover:bg-teal-600;
   }
-  
+
   .btn-warning {
-    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+    @apply btn bg-apricot-500 text-white hover:bg-apricot-700;
   }
-  
+
   .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+    @apply btn text-white;
+    background: #b4483f;
   }
-  
+  .btn-danger:hover { background: #9d3b33; }
+
   .btn-outline {
-    @apply btn bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-primary-500;
+    @apply btn bg-transparent text-gray-300 hover:bg-gray-750;
+    box-shadow: inset 0 0 0 1px var(--control-border);
   }
-  
+
   .card {
-    @apply bg-gray-800 rounded-lg shadow-sm border border-gray-700;
+    @apply bg-gray-800 rounded-[14px];
+    box-shadow: var(--shadow-1), var(--inner-light);
   }
-  
+
   .input {
-    @apply block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
+    @apply block w-full rounded-[10px] border-0 bg-gray-900 text-gray-100 sm:text-sm placeholder:text-gray-500;
+    box-shadow: inset 0 0 0 1px var(--hairline);
+    transition: box-shadow 160ms ease;
   }
-  
+  .input:focus {
+    box-shadow: inset 0 0 0 1px var(--iris-strong), var(--focus-ring);
+  }
+
   .label {
-    @apply block text-sm font-medium text-gray-300 mb-1;
+    @apply block text-xs font-medium text-gray-400 mb-1 uppercase;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
   }
-  
+
   .sidebar-item {
-    @apply flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200;
+    @apply flex items-center px-3 py-2 text-sm font-medium rounded-[10px] transition duration-150 active:scale-[0.98];
   }
-  
+
   .sidebar-item-active {
-    @apply sidebar-item bg-primary-600 text-white;
+    @apply sidebar-item text-primary-300;
+    position: relative;
+    z-index: 1;
   }
-  
+
   .sidebar-item-inactive {
-    @apply sidebar-item text-gray-400 hover:bg-gray-700 hover:text-white;
+    @apply sidebar-item text-gray-400 hover:bg-gray-750 hover:text-white;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent;
+    background-image: var(--thread);
+    @apply bg-clip-text text-transparent;
   }
   
   .shadow-soft {
@@ -79,7 +159,7 @@
   }
   
   .glass {
-    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+    @apply bg-gray-800/70 backdrop-blur-md border border-white/10;
   }
 }
 
@@ -103,7 +183,7 @@
 .markdown-content h3,
 .markdown-content h4 {
   margin: 1rem 0 0.45rem;
-  color: #f9fafb;
+  color: var(--ink);
   font-weight: 600;
 }
 .markdown-content h1:first-child,
@@ -128,26 +208,26 @@
   display: list-item;
   margin: 0.2rem 0;
 }
-.markdown-content li::marker { color: #93c5fd; font-weight: 600; }
+.markdown-content li::marker { color: #b9a9ea; font-weight: 600; }
 .markdown-content li > p { margin: 0.2rem 0; }
 .markdown-content li > ul,
 .markdown-content li > ol { margin: 0.25rem 0; }
 .markdown-content a {
-  color: #60a5fa;
+  color: #a99ae6;
   text-decoration: underline;
 }
-.markdown-content a:hover { color: #93c5fd; text-decoration-color: currentColor; }
+.markdown-content a:hover { color: #b9a9ea; text-decoration-color: currentColor; }
 .markdown-content blockquote {
   margin: 0.75rem 0;
   padding: 0.4rem 0.75rem;
-  border-left: 3px solid #60a5fa;
-  background-color: rgb(96 165 250 / 0.08);
+  border-left: 3px solid #a99ae6;
+  background-color: rgb(139 120 224 / 0.1);
 }
 .markdown-content blockquote > :last-child { margin-bottom: 0; }
-.markdown-content hr { margin: 1rem 0; border: 0; border-top: 1px solid #4b5563; }
+.markdown-content hr { margin: 1rem 0; border: 0; border-top: 1px solid #3a4a51; }
 .markdown-content :not(pre) > code {
-  background-color: #374151;
-  color: #93c5fd;
+  background-color: #263339;
+  color: #b9a9ea;
   padding: 0.15em 0.4em;
   border-radius: 0.3em;
   font-size: 0.85em;
@@ -158,15 +238,15 @@
   overflow-x: auto;
   padding: 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid #374151;
-  background-color: #111827;
+  border: 1px solid #263339;
+  background-color: #121a1e;
 }
 .markdown-content pre code {
   display: block;
   min-width: 0;
   background: none;
   padding: 0;
-  color: #e5e7eb;
+  color: #dde5e6;
   font-size: 0.85em;
 }
 .markdown-content pre:first-child { margin-top: 0; }
@@ -178,23 +258,23 @@
   overflow-x: auto;
   margin: 0.75rem 0;
   border-collapse: collapse;
-  border: 1px solid #374151;
+  border: 1px solid #263339;
   border-radius: 0.4rem;
 }
 .markdown-content th,
 .markdown-content td {
   min-width: 7rem;
   padding: 0.55rem 0.7rem;
-  border-bottom: 1px solid #374151;
-  border-right: 1px solid #374151;
+  border-bottom: 1px solid #263339;
+  border-right: 1px solid #263339;
   text-align: left;
 }
 .markdown-content th {
-  background-color: #1f2937;
-  color: #f9fafb;
+  background-color: #182227;
+  color: var(--ink);
   font-weight: 600;
 }
-.markdown-content tbody tr:nth-child(even) td { background-color: rgb(31 41 55 / 0.45); }
+.markdown-content tbody tr:nth-child(even) td { background-color: rgb(24 34 39 / 0.6); }
 .markdown-content tr:last-child td { border-bottom: 0; }
 .markdown-content th:last-child,
 .markdown-content td:last-child { border-right: 0; }
@@ -204,11 +284,33 @@
 
 /* Variant for message bubbles on a solid/colored background (e.g. the
    user's own chat bubble) where the default palette above is too dim. */
-.markdown-content-user table { border-color: rgb(255 255 255 / 0.3); background-color: rgb(17 24 39 / 0.25); }
-.markdown-content-user th { background-color: rgb(17 24 39 / 0.45); }
+.markdown-content-user table { border-color: rgb(255 255 255 / 0.3); background-color: rgb(12 18 21 / 0.25); }
+.markdown-content-user th { background-color: rgb(12 18 21 / 0.45); }
 .markdown-content-user th,
 .markdown-content-user td { border-color: rgb(255 255 255 / 0.18); }
 .markdown-content-user li::marker { color: #fff; }
 .markdown-content-user a { color: #fff; text-decoration-color: rgb(255 255 255 / 0.65); }
-.markdown-content-user blockquote { border-left-color: rgb(255 255 255 / 0.7); background-color: rgb(17 24 39 / 0.2); color: #fff; }
-.markdown-content-user pre { border-color: rgb(255 255 255 / 0.25); background-color: rgb(17 24 39 / 0.75); }
+.markdown-content-user blockquote { border-left-color: rgb(255 255 255 / 0.7); background-color: rgb(12 18 21 / 0.2); color: #fff; }
+.markdown-content-user pre { border-color: rgb(255 255 255 / 0.25); background-color: rgb(12 18 21 / 0.75); }
+
+/* Sliding nav pill: positioned by DashboardLayout under the active item. */
+.nav-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 10px;
+  background: var(--pale-iris);
+  box-shadow: inset 0 0 0 1px rgb(139 120 224 / 0.25);
+  pointer-events: none;
+  opacity: 0;
+}
+.nav-pill.ready {
+  transition:
+    transform 300ms var(--ease-drawer),
+    width 300ms var(--ease-drawer),
+    height 300ms var(--ease-drawer),
+    opacity 160ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-pill.ready { transition: opacity 160ms ease; }
+}
