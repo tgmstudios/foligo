@@ -1,0 +1,27 @@
+# Private (LAN/VPN-only) ingress via the existing nginx-private class (VIP 192.168.103.30, source-range allow-list, *.i.tgm.one wildcard cert,
+# DNS auto-created by external-dns/pdns). No public (class nginx) ingress, no Cloudflare record.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foligo-staging
+  namespace: foligo-staging
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-body-size: 64m
+spec:
+  ingressClassName: nginx-private
+  tls:
+    - hosts: [fstg.i.tgm.one, app-fstg.i.tgm.one, api-fstg.i.tgm.one, aiden-fstg.i.tgm.one, watershedpa-fstg.i.tgm.one]
+  rules:
+    - host: fstg.i.tgm.one
+      http: {paths: [{path: /, pathType: Prefix, backend: {service: {name: sites, port: {number: 80}}}}]}
+    - host: app-fstg.i.tgm.one
+      http: {paths: [{path: /, pathType: Prefix, backend: {service: {name: dashboard, port: {number: 80}}}}]}
+    - host: api-fstg.i.tgm.one
+      http: {paths: [{path: /, pathType: Prefix, backend: {service: {name: api, port: {number: 3000}}}}]}
+    - host: aiden-fstg.i.tgm.one
+      http: {paths: [{path: /, pathType: Prefix, backend: {service: {name: sites, port: {number: 80}}}}]}
+    - host: watershedpa-fstg.i.tgm.one
+      http: {paths: [{path: /, pathType: Prefix, backend: {service: {name: sites, port: {number: 80}}}}]}

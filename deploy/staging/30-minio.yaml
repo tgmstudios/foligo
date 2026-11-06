@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: minio, namespace: foligo-staging}
+spec:
+  serviceName: minio
+  replicas: 1
+  selector: {matchLabels: {app: minio}}
+  template:
+    metadata: {labels: {app: minio}}
+    spec:
+      containers:
+        - name: minio
+          image: docker.io/openebs/minio@sha256:bb04e41fc1b876c5f752ea3c5957a73db73a1fb7df49ce6bb95f722f0abfb1ba
+          command: [/usr/bin/minio]
+          args: [server, /data, --console-address, ":9001"]
+          ports: [{name: s3, containerPort: 9000}, {name: console, containerPort: 9001}]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom: {secretKeyRef: {name: foligo-staging-minio, key: accessKey}}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom: {secretKeyRef: {name: foligo-staging-minio, key: secretKey}}
+          readinessProbe: {httpGet: {path: /minio/health/ready, port: s3}, periodSeconds: 5}
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 512Mi}}
+          volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+    - metadata: {name: data, labels: {app: minio}}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: proxmox-ssd-zfs
+        resources: {requests: {storage: 5Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: minio, namespace: foligo-staging}
+spec:
+  selector: {app: minio}
+  ports: [{name: s3, port: 9000, targetPort: s3}]

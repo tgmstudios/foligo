@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: dashboard, namespace: foligo-staging}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: dashboard}}
+  template:
+    metadata: {labels: {app: dashboard}}
+    spec:
+      containers:
+        - name: dashboard
+          image: 127.0.0.1:32551/foligo-staging/dashboard:TAG
+          imagePullPolicy: IfNotPresent
+          ports: [{name: web, containerPort: 80}]
+          env: [{name: VITE_API_URL, value: "https://api-fstg.i.tgm.one/api"}]
+          readinessProbe: {httpGet: {path: /, port: web}, periodSeconds: 5}
+          resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {memory: 256Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: dashboard, namespace: foligo-staging}
+spec:
+  selector: {app: dashboard}
+  ports: [{name: web, port: 80, targetPort: web}]

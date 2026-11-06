@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: sites, namespace: foligo-staging}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: sites}}
+  template:
+    metadata: {labels: {app: sites}}
+    spec:
+      containers:
+        - name: sites
+          image: 127.0.0.1:32551/foligo-staging/sites:TAG
+          imagePullPolicy: IfNotPresent
+          ports: [{name: web, containerPort: 3000}]
+          env:
+            - {name: API_BASE_URL, value: "https://api-fstg.i.tgm.one"}
+            - {name: DASHBOARD_URL, value: "https://app-fstg.i.tgm.one"}
+            - {name: NUXT_PUBLIC_STAGING_MARKETING_HOST, value: fstg.i.tgm.one}
+            - {name: NUXT_PUBLIC_STAGING_SITE_SUFFIX, value: "-fstg.i.tgm.one"}
+            # SSR calls the API in-cluster (nginx-private namespace NetworkPolicy blocks pod->ingress; shared infra not modified).
+            - {name: NUXT_API_INTERNAL_URL, value: "http://api:3000"}
+          readinessProbe: {httpGet: {path: /, port: web, httpHeaders: [{name: Host, value: fstg.i.tgm.one}]}, periodSeconds: 10, timeoutSeconds: 10}
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 512Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: sites, namespace: foligo-staging}
+spec:
+  selector: {app: sites}
+  ports: [{name: web, port: 80, targetPort: web}]
