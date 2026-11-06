@@ -22,6 +22,8 @@ model User {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
+  goapplyColumns Json?
+
   // Relationships
   projectsOwned      Project[]           @relation("ProjectOwner")
   projectAccess      ProjectAccess[]

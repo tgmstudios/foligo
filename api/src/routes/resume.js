@@ -41,7 +41,7 @@ function buildSystemPrompt({ content, jobDescription, portfolioContext, otherDoc
   let otherDocumentsSection = 'No other resume documents available.';
   if (otherDocuments.length > 0) {
     otherDocumentsSection = 'OTHER RESUME DOCUMENTS (use fetch_resume_document for the full LaTeX source):\n' +
-      otherDocuments.map((d) => `- [ID: ${d.id}] ${d.name}${d.linkedJob ? ` (tailored for ${d.linkedJob.position} @ ${d.linkedJob.company})` : ''}`).join('\n');
+      otherDocuments.map((d) => `- [ID: ${d.id}] ${d.name}${d.isDefault ? ' [BASE TEMPLATE]' : d.isTemplate ? ' [TEMPLATE]' : ''}${d.linkedJob ? ` (tailored for ${d.linkedJob.position} @ ${d.linkedJob.company})` : ''}`).join('\n');
   }
 
   return `You are an expert resume writer and LaTeX editor, working inside an agentic resume editor. You collaborate with the user to write and refine a LaTeX resume in real time.
@@ -58,6 +58,7 @@ ${portfolioSection}
 ${otherDocumentsSection}
 
 RULES:
+- Before adding or removing resume content, reference the user's base template as the comprehensive source of their information. If a document is labeled BASE TEMPLATE, use fetch_resume_document to read it before deciding what to add, retain, or remove; if the current document is the base template, reference its content directly. Use the template's facts to tailor the current resume without inventing information, and do not assume information omitted from a tailored resume is absent from the user's background. If no base template is available, use the supplied resume and portfolio information and ask for any missing facts.
 - Use the edit_resume_section tool for small, targeted changes (wording, a bullet, a date, a section tweak). The "search" text must match the current document verbatim and uniquely.
 - Use the write_resume tool only for the first draft or large restructures — it replaces the whole document, so always output a complete, valid, compilable .tex file.
 - Use fetch_portfolio_item when you need more detail about a specific project/experience than its excerpt gives you.
@@ -450,7 +451,7 @@ router.post('/documents/:id/chat', chatUpload.array('attachments', 5), (req, res
         where: { userId, id: { not: document.id } },
         orderBy: { updatedAt: 'desc' },
         select: {
-          id: true, name: true,
+          id: true, name: true, isTemplate: true, isDefault: true,
           linkedJob: { select: { company: true, position: true } },
         },
       }),

@@ -2,13 +2,79 @@ const express = require('express');
 const { prisma } = require('../../services/core/database');
 
 const router = express.Router();
-const JOB_STATUSES = new Set(['saved', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'archived']);
+const { randomUUID } = require('crypto');
+const { colors, getColumns } = require('../../services/goapply/columns');
 
-function normalizeJobStatus(status) {
+async function normalizeJobStatus(status, userId) {
   if (status === undefined || status === null || status === '') return undefined;
-  const normalized = String(status).trim().toLowerCase();
-  return JOB_STATUSES.has(normalized) ? normalized : null;
+  if (typeof status !== 'string') return null;
+  const normalized = status.trim().toLowerCase();
+  return (await getColumns(prisma, userId)).some(column => column.status === normalized) ? normalized : null;
 }
+
+// Serialize column changes per user, including job migration on deletion.
+async function changeColumns(userId, change) {
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+    const columns = await getColumns(tx, userId);
+    const result = await change(columns, tx);
+    await tx.user.update({ where: { id: userId }, data: { goapplyColumns: columns } });
+    return result;
+  });
+}
+
+router.get('/columns', async (req, res) => {
+  try { res.json(await getColumns(prisma, req.user.id)); }
+  catch (error) { res.status(500).json({ message: 'Unable to retrieve columns' }); }
+});
+
+function columnError(res, error) {
+  res.status(error.status || 500).json({ message: error.status ? error.message : 'Unable to save columns' });
+}
+function fail(status, message) { throw Object.assign(new Error(message), { status }); }
+function validateColumn(body) {
+  if (typeof body.label !== 'string' || !body.label.trim() || body.label.trim().length > 60) fail(400, 'Column name must contain 1–60 characters');
+  if (!colors.has(body.color)) fail(400, 'Choose a supported column color');
+  return { label: body.label.trim(), color: body.color };
+}
+router.post('/columns', async (req, res) => {
+  try {
+    const data = validateColumn(req.body);
+    const column = await changeColumns(req.user.id, async columns => {
+      if (columns.some(c => c.label.toLowerCase() === data.label.toLowerCase())) fail(409, 'A column with this name already exists');
+      const column = { status: randomUUID(), ...data };
+      columns.push(column);
+      return column;
+    });
+    res.status(201).json(column);
+  } catch (error) { columnError(res, error); }
+});
+router.put('/columns/:status', async (req, res) => {
+  try {
+    const data = validateColumn(req.body);
+    const column = await changeColumns(req.user.id, async columns => {
+      const column = columns.find(c => c.status === req.params.status);
+      if (!column) fail(404, 'Column not found');
+      if (columns.some(c => c.status !== column.status && c.label.toLowerCase() === data.label.toLowerCase())) fail(409, 'A column with this name already exists');
+      Object.assign(column, data);
+      return column;
+    });
+    res.json(column);
+  } catch (error) { columnError(res, error); }
+});
+router.delete('/columns/:status', async (req, res) => {
+  try {
+    await changeColumns(req.user.id, async (columns, tx) => {
+      const index = columns.findIndex(c => c.status === req.params.status);
+      if (index < 0) fail(404, 'Column not found');
+      if (columns.length === 1) fail(400, 'Keep at least one column');
+      if (!columns.some(c => c.status === req.body.moveTo && c.status !== req.params.status)) fail(400, 'Choose another column for existing jobs');
+      await tx.jobApplication.updateMany({ where: { userId: req.user.id, status: req.params.status }, data: { status: req.body.moveTo } });
+      columns.splice(index, 1);
+    });
+    res.json({ success: true });
+  } catch (error) { columnError(res, error); }
+});
 
 // =============================================================================
 // JOB APPLICATIONS
@@ -63,7 +129,7 @@ router.post('/jobs', async (req, res) => {
     }
     const normalizedTags = normalizeJobTags(tags);
     if (normalizedTags === null) return res.status(400).json({ error: 'Validation Error', message: 'Tags must be an array of strings' });
-    const normalizedStatus = normalizeJobStatus(status);
+    const normalizedStatus = await normalizeJobStatus(status, userId);
     if (normalizedStatus === null) return res.status(400).json({ error: 'Validation Error', message: 'Unsupported job status' });
 
     const job = await prisma.jobApplication.create({
@@ -72,7 +138,7 @@ router.post('/jobs', async (req, res) => {
         company,
         position,
         url: url || null,
-        status: normalizedStatus || 'saved',
+        status: normalizedStatus || (await getColumns(prisma, userId))[0].status,
         notes: notes || null,
         description: typeof description === 'string' ? description : null,
         category: typeof category === 'string' ? category.trim() || null : null,
@@ -107,12 +173,19 @@ router.put('/jobs/reorder', async (req, res) => {
       });
     }
 
+    for (const item of items) {
+      if (item.status !== undefined) {
+        const status = await normalizeJobStatus(item.status, userId);
+        if (!status) return res.status(400).json({ message: 'Unsupported job status' });
+        item.status = status;
+      }
+    }
     // Verify ownership and update each job in a transaction
     const results = await prisma.$transaction(
       items.map((item) => {
         const data = { sortOrder: item.sortOrder };
         if (item.status) {
-          const normalizedStatus = normalizeJobStatus(item.status);
+          const normalizedStatus = item.status;
           if (!normalizedStatus) throw new Error(`INVALID_JOB_STATUS:${item.status}`);
           data.status = normalizedStatus;
         }
@@ -156,7 +229,7 @@ router.put('/jobs/:id', async (req, res) => {
     }
     const normalizedTags = normalizeJobTags(tags);
     if (normalizedTags === null) return res.status(400).json({ error: 'Validation Error', message: 'Tags must be an array of strings' });
-    const normalizedStatus = normalizeJobStatus(status);
+    const normalizedStatus = await normalizeJobStatus(status, userId);
     if (normalizedStatus === null) return res.status(400).json({ error: 'Validation Error', message: 'Unsupported job status' });
 
     const data = {};
@@ -230,7 +303,7 @@ router.get('/kanban', async (req, res) => {
     });
 
     // Group by status
-    const statuses = ['saved', 'applied', 'screening', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn', 'archived'];
+    const statuses = (await getColumns(prisma, userId)).map(column => column.status);
     const kanban = {};
 
     for (const status of statuses) {

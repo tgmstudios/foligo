@@ -19,6 +19,7 @@
         <option value="company-asc">Company A–Z</option>
         <option value="category-asc">Category A–Z</option>
       </select>
+      <button @click="openColumn()" class="px-4 py-2 text-sm text-gray-200 rounded-lg bg-gray-700 hover:bg-gray-600">+ Add Column</button>
       <button
         @click="openCreateForm"
         class="ml-auto px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
@@ -53,6 +54,7 @@
               {{ column.label }}
             </h3>
           </div>
+          <button @click="openColumn(column)" :aria-label="`Edit ${column.label} column`" class="text-xs text-gray-400 hover:text-white">Edit</button>
           <span class="text-xs text-gray-500 bg-gray-700 rounded-full px-2 py-0.5">
             {{ column.jobs.length }}
           </span>
@@ -165,6 +167,32 @@
       </div>
     </div>
 
+    <div v-if="columnEditor" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @keydown.esc="columnEditor = null">
+      <form @submit.prevent="saveColumn" role="dialog" aria-modal="true" aria-labelledby="column-title" class="w-full max-w-md space-y-4 rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-200">
+        <h2 id="column-title" class="text-lg font-semibold">{{ columnEditor.status ? 'Edit Column' : 'Add Column' }}</h2>
+        <label class="block">Name
+          <input v-model="columnEditor.label" required maxlength="60" autofocus class="mt-1 w-full rounded-lg bg-gray-700 border-gray-600" />
+        </label>
+        <label class="block">Color
+          <select v-model="columnEditor.color" class="mt-1 w-full rounded-lg bg-gray-700 border-gray-600">
+            <option v-for="color in columnColors" :key="color.value" :value="color.value">{{ color.label }}</option>
+          </select>
+        </label>
+        <template v-if="columnEditor.status && store.columns.length > 1">
+          <label class="block">Move jobs to when deleting
+            <select v-model="moveTo" class="mt-1 w-full rounded-lg bg-gray-700 border-gray-600">
+              <option v-for="column in store.columns.filter(c => c.status !== columnEditor?.status)" :key="column.status" :value="column.status">{{ column.label }}</option>
+            </select>
+          </label>
+          <p class="text-sm text-gray-400">Deleting this column moves all its jobs to the selected column.</p>
+          <button type="button" :disabled="columnBusy || !moveTo" @click="deleteColumn" class="text-red-400 disabled:opacity-50">Delete Column</button>
+        </template>
+        <div class="flex justify-end gap-3">
+          <button type="button" :disabled="columnBusy" @click="columnEditor = null">Cancel</button>
+          <button :disabled="columnBusy || !columnEditor.label.trim()" class="rounded-lg bg-primary-600 px-4 py-2 disabled:opacity-50">{{ columnBusy ? 'Saving...' : 'Save' }}</button>
+        </div>
+      </form>
+    </div>
     <!-- Job Form Modal -->
     <JobForm
       v-if="showForm"
@@ -178,7 +206,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { useGoApplyStore, JOB_STATUSES, KANBAN_COLUMNS, type JobStatus, type GoApplyJob } from '@/stores/goapply'
+import { useGoApplyStore, type GoApplyColumn, type JobStatus, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
 import { marked } from 'marked'
 import { ArrowTopRightOnSquareIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
@@ -186,6 +214,39 @@ import JobForm from '@/views/goapply/JobForm.vue'
 import { clearPreferenceCookie, readPreferenceCookie, writePreferenceCookie } from '@/utils/goapplyJobPreferences'
 
 const store = useGoApplyStore()
+const columnEditor = ref<GoApplyColumn | null>(null)
+const columnBusy = ref(false)
+const moveTo = ref('')
+const columnColors = [
+  { value: 'bg-gray-500', label: 'Gray' }, { value: 'bg-blue-500', label: 'Blue' },
+  { value: 'bg-indigo-500', label: 'Indigo' }, { value: 'bg-purple-500', label: 'Purple' },
+  { value: 'bg-yellow-500', label: 'Yellow' }, { value: 'bg-green-500', label: 'Green' },
+  { value: 'bg-red-500', label: 'Red' }, { value: 'bg-orange-500', label: 'Orange' },
+  { value: 'bg-gray-700', label: 'Dark gray' },
+]
+function openColumn(column?: GoApplyColumn) {
+  columnEditor.value = column ? { ...column } : { status: '', label: '', color: 'bg-blue-500' }
+  moveTo.value = store.columns.find(c => c.status !== column?.status)?.status || ''
+}
+async function saveColumn() {
+  if (!columnEditor.value || columnBusy.value) return
+  columnBusy.value = true
+  try {
+    await store.saveColumn({ label: columnEditor.value.label, color: columnEditor.value.color }, columnEditor.value.status || undefined)
+    columnEditor.value = null
+  } catch { /* Store displays the error. */ }
+  finally { columnBusy.value = false }
+}
+async function deleteColumn() {
+  if (!columnEditor.value || columnBusy.value || !confirm('Delete this column and move its jobs to the selected column?')) return
+  columnBusy.value = true
+  try {
+    await store.deleteColumn(columnEditor.value.status, moveTo.value)
+    columnEditor.value = null
+  } catch { /* Store displays the error. */ }
+  finally { columnBusy.value = false }
+}
+
 const PREFERENCE_COOKIE = 'goapply-kanban-preferences'
 const PREFERENCE_VERSION = 1
 const SORT_OPTIONS = ['manual', 'updated-desc', 'created-desc', 'applied-desc', 'company-asc', 'category-asc'] as const
@@ -250,13 +311,13 @@ const showForm = ref(false)
 const editingJob = ref<GoApplyJob | null>(null)
 
 // Sync from store → local when jobs load
-watch(visibleJobs, (jobs) => {
+watch([visibleJobs, () => store.columns], ([jobs]) => {
   const map: Record<string, GoApplyJob[]> = {}
-  for (const s of JOB_STATUSES) map[s] = []
+  for (const s of store.columnStatuses) map[s] = []
   for (const job of jobs) {
     if (map[job.status]) map[job.status].push(job)
   }
-  localColumns.value = KANBAN_COLUMNS.map(col => ({
+  localColumns.value = store.columns.map(col => ({
     ...col,
     jobs: [...map[col.status]],  // shallow clone so VueDraggable can mutate
   }))

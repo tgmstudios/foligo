@@ -21,7 +21,7 @@
         class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
       >
         <option value="">All Statuses</option>
-        <option v-for="s in JOB_STATUSES" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
+        <option v-for="s in store.columnStatuses" :key="s" :value="s">{{ store.columnLabels[s] }}</option>
       </select>
 
       <select v-model="categoryFilter" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
@@ -91,9 +91,9 @@
               <td class="px-4 py-3">
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="STATUS_COLORS[job.status]"
+                  :class="store.columnColors[job.status] || 'bg-gray-100 text-gray-800'"
                 >
-                  {{ STATUS_LABELS[job.status] }}
+                  {{ store.columnLabels[job.status] || job.status }}
                 </span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-400">
@@ -150,7 +150,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useGoApplyStore, JOB_STATUSES, STATUS_LABELS, STATUS_COLORS, type GoApplyJob } from '@/stores/goapply'
+import { useGoApplyStore, type GoApplyJob } from '@/stores/goapply'
 import { format } from 'date-fns'
 import { marked } from 'marked'
 import { ArrowTopRightOnSquareIcon, PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
@@ -165,7 +165,7 @@ const SORT_OPTIONS = ['updated-desc', 'created-desc', 'applied-desc', 'company-a
 const savedPreferences = readPreferenceCookie<Partial<{ search: string; status: string; category: string; tag: string; sort: string }>>(PREFERENCE_COOKIE, PREFERENCE_VERSION)
 
 const search = ref(typeof savedPreferences?.search === 'string' ? savedPreferences.search : '')
-const statusFilter = ref(typeof savedPreferences?.status === 'string' && JOB_STATUSES.includes(savedPreferences.status as any) ? savedPreferences.status : '')
+const statusFilter = ref(typeof savedPreferences?.status === 'string' ? savedPreferences.status : '')
 const categoryFilter = ref(typeof savedPreferences?.category === 'string' ? savedPreferences.category : '')
 const tagFilter = ref(typeof savedPreferences?.tag === 'string' ? savedPreferences.tag : '')
 const sortBy = ref(typeof savedPreferences?.sort === 'string' && SORT_OPTIONS.includes(savedPreferences.sort as any) ? savedPreferences.sort : 'updated-desc')
@@ -177,7 +177,7 @@ const tags = computed(() => [...new Set(store.jobs.flatMap(job => job.tags))].so
 
 if (savedPreferences && (
   (savedPreferences.search !== undefined && typeof savedPreferences.search !== 'string') ||
-  (savedPreferences.status !== undefined && !JOB_STATUSES.includes(savedPreferences.status as any)) ||
+  (savedPreferences.status !== undefined && typeof savedPreferences.status !== 'string') ||
   (savedPreferences.category !== undefined && typeof savedPreferences.category !== 'string') ||
   (savedPreferences.tag !== undefined && typeof savedPreferences.tag !== 'string') ||
   (savedPreferences.sort !== undefined && !SORT_OPTIONS.includes(savedPreferences.sort as any))
@@ -189,6 +189,10 @@ watch([search, statusFilter, categoryFilter, tagFilter, sortBy], () => {
     tag: tagFilter.value, sort: sortBy.value,
   })
 }, { flush: 'sync' })
+
+watch(() => store.columnStatuses, (statuses) => {
+  if (statuses.length && statusFilter.value && !statuses.includes(statusFilter.value)) statusFilter.value = ''
+}, { immediate: true })
 
 const filteredJobs = computed(() => {
   let jobs = store.jobs
