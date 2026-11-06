@@ -128,3 +128,26 @@ test('database failure returns generic 500', async () => {
   expect(res.status).toBe(500);
   expect(JSON.stringify(res.body)).not.toMatch(/leak/);
 });
+
+test('no-store is set on 404 (unpublished, missing) and 500 as well as 200', async () => {
+  const url = `/api/projects/${PID}/content`;
+  const ok = await request(app).get(url);
+  expect([ok.status, ok.headers['cache-control']]).toEqual([200, 'no-store']);
+
+  prisma.project.findUnique.mockResolvedValue({ id: PID, isPublished: false });
+  const unpub = await request(app).get(url);
+  expect([unpub.status, unpub.headers['cache-control']]).toEqual([404, 'no-store']);
+
+  prisma.project.findUnique.mockResolvedValue(null);
+  const missing = await request(app).get(url);
+  expect([missing.status, missing.headers['cache-control']]).toEqual([404, 'no-store']);
+
+  prisma.project.findUnique.mockRejectedValue(new Error('boom'));
+  const err = await request(app).get(url);
+  expect([err.status, err.headers['cache-control']]).toEqual([500, 'no-store']);
+
+  prisma.project.findUnique.mockResolvedValue({ id: PID, isPublished: true });
+  prisma.content.findMany.mockRejectedValue(new Error('boom'));
+  const err2 = await request(app).get(url);
+  expect([err2.status, err2.headers['cache-control']]).toEqual([500, 'no-store']);
+});

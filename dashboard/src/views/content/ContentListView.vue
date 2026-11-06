@@ -99,7 +99,7 @@
           @click="navigateToItem(item)"
         >
           <div class="flex items-start justify-between">
-            <div class="flex items-start flex-1">
+            <div class="flex items-start flex-1 min-w-0">
               <div class="drag-handle mr-3 cursor-move opacity-0 group-hover:opacity-100 transition-opacity flex items-center h-12" @click.stop>
                 <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
@@ -109,8 +109,8 @@
                 <span class="text-xl">{{ getItemIcon(item) }}</span>
               </div>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center space-x-2 mb-2">
-                  <h3 class="text-lg font-semibold text-white">{{ getItemTitle(item) }}</h3>
+                <div class="flex flex-wrap items-center gap-2 mb-2 min-w-0">
+                  <h3 class="text-lg font-semibold text-white min-w-0 break-words">{{ getItemTitle(item) }}</h3>
                   <span
                     :class="getStatusClass(item.status)"
                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
@@ -120,7 +120,7 @@
                 </div>
                 <p v-if="getItemSubtitle(item)" class="text-sm text-gray-400 mb-2">{{ getItemSubtitle(item) }}</p>
                 <p v-if="item.excerpt" class="text-sm text-gray-300 line-clamp-2 mb-2">{{ item.excerpt }}</p>
-                <div class="flex items-center text-xs text-gray-400 mt-2 space-x-3">
+                <div class="flex flex-wrap items-center text-xs text-gray-400 mt-2 gap-x-3 gap-y-1 min-w-0">
                   <span>{{ formatDate(item.updatedAt) }}</span>
                   <span v-if="!isPortfoliosPage">•</span>
                   <span v-if="!isPortfoliosPage">{{ getPortfolioName(item.projectId) }}</span>
@@ -129,7 +129,7 @@
                 </div>
               </div>
             </div>
-            <div class="flex items-center space-x-2 ml-4" @click.stop>
+            <div class="flex items-center space-x-2 ml-4 flex-shrink-0" @click.stop>
               <div class="flex flex-col space-y-1 mr-2">
                 <button
                   @click.stop="moveItemUp(index)"
@@ -181,13 +181,13 @@
         @click="navigateToItem(item)"
       >
         <div class="flex items-start justify-between">
-          <div class="flex items-start flex-1">
+          <div class="flex items-start flex-1 min-w-0">
             <div class="h-12 w-12 bg-gray-700 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
               <span class="text-xl">{{ getItemIcon(item) }}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <div class="flex items-center space-x-2 mb-2">
-                <h3 class="text-lg font-semibold text-white">{{ getItemTitle(item) }}</h3>
+              <div class="flex flex-wrap items-center gap-2 mb-2 min-w-0">
+                <h3 class="text-lg font-semibold text-white min-w-0 break-words">{{ getItemTitle(item) }}</h3>
                 <span
                   v-if="!isPortfoliosPage"
                   :class="getStatusClass(getItemStatus(item))"
@@ -198,7 +198,7 @@
               </div>
               <p v-if="getItemSubtitle(item)" class="text-sm text-gray-400 mb-2">{{ getItemSubtitle(item) }}</p>
               <p v-if="getItemExcerpt(item)" class="text-sm text-gray-300 line-clamp-2 mb-2">{{ getItemExcerpt(item) }}</p>
-              <div class="flex items-center text-xs text-gray-400 mt-2 space-x-3">
+              <div class="flex flex-wrap items-center text-xs text-gray-400 mt-2 gap-x-3 gap-y-1 min-w-0">
                 <span>{{ formatDate(item.updatedAt) }}</span>
                 <span v-if="!isPortfoliosPage">•</span>
                 <span v-if="!isPortfoliosPage">{{ getPortfolioName(getItemProjectId(item)) }}</span>
@@ -207,7 +207,7 @@
               </div>
             </div>
           </div>
-          <div class="flex items-center space-x-2 ml-4" @click.stop>
+          <div class="flex items-center space-x-2 ml-4 flex-shrink-0" @click.stop>
             <router-link
               :to="getEditRoute(item)"
               class="p-1.5 text-primary-400 hover:text-primary-300 transition-colors"

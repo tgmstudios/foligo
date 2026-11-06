@@ -684,12 +684,13 @@
         class="sticky top-0 z-40 bg-gray-800 shadow-sm border-b border-gray-700"
       >
         <div
-          class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8"
+          class="flex items-center justify-between gap-2 sm:gap-4 h-16 px-4 sm:px-6 lg:px-8"
         >
-          <div class="flex items-center">
+          <div class="flex items-center min-w-0 shrink">
             <button
               @click="sidebarOpen = true"
-              class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700"
+              aria-label="Open navigation menu"
+              class="lg:hidden shrink-0 p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700"
             >
               <svg
                 class="h-6 w-6"
@@ -705,21 +706,27 @@
                 />
               </svg>
             </button>
-            <h2 class="ml-2 text-lg font-semibold text-white">
+            <h2
+              class="ml-2 text-lg font-semibold text-white truncate max-w-[6.5rem] sm:max-w-[9rem] lg:max-w-none"
+            >
               {{ pageTitle }}
             </h2>
           </div>
 
           <!-- Portfolio Selector -->
-          <div class="flex items-center space-x-4">
-            <div class="flex items-center space-x-2">
-              <label class="text-sm font-medium text-gray-300"
+          <div class="flex items-center flex-1 min-w-0 justify-end">
+            <div class="flex items-center space-x-2 min-w-[6.5rem] max-w-full">
+              <label
+                for="header-portfolio-select"
+                class="hidden sm:inline shrink-0 text-sm font-medium text-gray-300"
                 >Portfolio:</label
               >
               <select
+                id="header-portfolio-select"
+                aria-label="Portfolio"
                 v-model="selectedProjectId"
                 @change="onProjectChange"
-                class="px-3 py-1.5 text-sm border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-white"
+                class="min-w-0 w-full max-w-[16rem] sm:max-w-xs truncate px-3 py-1.5 text-sm border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-white"
               >
                 <option value="">All Portfolios</option>
                 <option
@@ -733,11 +740,12 @@
             </div>
           </div>
 
-          <div class="flex items-center space-x-4">
+          <div class="flex items-center shrink-0 space-x-2 sm:space-x-4">
             <!-- AI Content Creator -->
             <button
               @click="handleCreateContent"
               :disabled="!selectedProjectId"
+              aria-label="Create content with AI"
               class="p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed relative"
               title="Create content with AI"
             >

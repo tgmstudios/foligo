@@ -63,6 +63,8 @@ const PUBLIC_CONTENT_WHERE = (projectId) => ({
 });
 
 router.get('/projects/:projectId/content', async (req, res) => {
+  // Set before any early return so 404/500 responses are never cached either.
+  res.set('Cache-Control', 'no-store');
   try {
     const { projectId } = req.params;
 
@@ -87,7 +89,6 @@ router.get('/projects/:projectId/content', async (req, res) => {
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }]
     });
 
-    res.set('Cache-Control', 'no-store');
     res.json(content);
   } catch (error) {
     console.error('Get project content error:', error);

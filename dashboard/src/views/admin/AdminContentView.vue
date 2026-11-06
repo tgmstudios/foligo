@@ -1,11 +1,11 @@
 <template>
   <div class="p-6">
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-3xl font-bold text-white">Content Management</h1>
         <p class="text-gray-400 mt-2">Manage all content across portfolios</p>
       </div>
-      <div class="flex items-center space-x-4">
+      <div class="flex flex-wrap items-center gap-4 min-w-0">
         <select
           v-model="contentTypeFilter"
           @change="handleFilter"
@@ -32,7 +32,7 @@
           @input="handleSearch"
           type="text"
           placeholder="Search content..."
-          class="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          class="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 min-w-0 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
     </div>
@@ -49,6 +49,7 @@
       </div>
 
       <div v-else>
+        <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Scrollable table">
         <table class="w-full">
           <thead class="bg-gray-700 border-b border-gray-600">
             <tr>
@@ -128,6 +129,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <!-- Pagination -->
         <div v-if="pagination.pages > 1" class="px-6 py-4 border-t border-gray-700 flex items-center justify-between">

@@ -2,11 +2,11 @@
   <div class="p-6">
     <!-- Header -->
     <div class="mb-8">
-      <div class="flex items-center justify-between">
-        <div>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
           <h1 class="text-2xl font-bold text-white">Edit Content</h1>
         </div>
-        <div class="flex items-center space-x-3">
+        <div class="flex flex-wrap items-center gap-3">
           <button
             type="button"
             @click="deleteContent"
@@ -18,7 +18,7 @@
           <select
             v-model="editForm.status"
             :class="[
-              'px-4 py-2 rounded-md text-sm font-medium border min-w-[140px] transition-colors',
+              'px-4 py-2 rounded-md text-sm font-medium border min-w-[140px] max-w-full transition-colors',
               getStatusDropdownClass(editForm.status)
             ]"
           >

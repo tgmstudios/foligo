@@ -32,7 +32,7 @@
         v-model="searchQuery"
         type="text"
         placeholder="Search files..."
-        class="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400"
+        class="flex-1 min-w-0 px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400"
       />
     </div>
 

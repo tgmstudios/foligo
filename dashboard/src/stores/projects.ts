@@ -79,20 +79,15 @@ export const useProjectStore = defineStore('projects', () => {
       isLoading.value = true
       try {
         const response = await api.get('/projects')
-        projects.value = [...response.data.ownedProjects, ...response.data.memberProjects]
-
-        // Fetch content for each project in parallel via the dedicated content endpoint
-        const results = await Promise.allSettled(
-          projects.value.map(project => api.get(`/projects/${project.id}/content`))
+        // GET /projects already returns each project's authenticated, non-revision content
+        // (including DRAFT/HIDDEN). Never replace it with the public feed, which is
+        // PUBLISHED-only and 404s for unpublished projects.
+        projects.value = [...response.data.ownedProjects, ...response.data.memberProjects].map(
+          (project: Project) => ({
+            ...project,
+            content: Array.isArray(project.content) ? project.content : []
+          })
         )
-        results.forEach((result, index) => {
-          const project = projects.value[index]
-          if (result.status === 'fulfilled') {
-            project.content = result.value.data
-          } else {
-            console.error(`Failed to fetch content for project ${project.name}:`, result.reason)
-          }
-        })
 
         return response.data
       } finally {
