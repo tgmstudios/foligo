@@ -2,7 +2,8 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 NS=foligo-staging
-REGISTRY=registry.foligo-staging.svc.cluster.local:5000/foligo-staging
+PUBLISH_REGISTRY=registry.foligo-staging.svc.cluster.local:5000/foligo-staging
+PULL_REGISTRY=127.0.0.1:32551/foligo-staging
 SHA=${STAGING_SHA:-${GITHUB_SHA:-}}
 [[ ${1:-} != deploy || ${STAGING_TEST_MODE:-0} == 1 || -n ${STAGING_KUBECONFIG:-} ]] || { printf '%s\\n' 'REFUSING: STAGING_KUBECONFIG must point to an externally provisioned dedicated least-privilege staging kubeconfig' >&2; exit 2; }
 export KUBECONFIG=${STAGING_KUBECONFIG:-$HOME/.kube/config}
@@ -20,9 +21,9 @@ case ${1:-} in
   trap 'docker buildx rm "$builder" >/dev/null 2>&1 || true' EXIT
   docker buildx inspect --bootstrap "$builder" >/dev/null
   for component in api dashboard sites; do
-    docker buildx build --builder "$builder" --platform linux/amd64 --push -f "$ROOT/$component/.docker/Dockerfile" -t "$REGISTRY/$component:$SHA" "$ROOT"
+    docker buildx build --builder "$builder" --platform linux/amd64 --push -f "$ROOT/$component/.docker/Dockerfile" -t "$PUBLISH_REGISTRY/$component:$SHA" "$ROOT"
     registry_path="/v2/foligo-staging/$component/manifests/$SHA"
-    registry_url="http://$REGISTRY$registry_path"
+    registry_url="http://$PUBLISH_REGISTRY$registry_path"
     digest=$(curl --silent --show-error --fail --head --max-time 20 \
       -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
       "$registry_url" | awk 'tolower($1) == "docker-content-digest:" {gsub(sprintf("%c", 13), "", $2); print $2; exit}')
@@ -43,7 +44,7 @@ case ${1:-} in
   for component in api dashboard sites; do
     var=STAGING_${component^^}_DIGEST; digest=${!var:-}
     [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || fail "missing immutable digest for $component"
-    images+=("$component=$REGISTRY/$component@$digest")
+    images+=("$component=$PULL_REGISTRY/$component@$digest")
   done
   checkpoint=${STAGING_CHECKPOINT_DIR:-${RUNNER_TEMP:-/tmp}/foligo-staging-$SHA}
   mkdir -p "$checkpoint"

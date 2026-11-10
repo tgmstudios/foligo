@@ -19,7 +19,7 @@ cat >"$TMP/bin/kubectl" <<'MOCK'
 printf 'kubectl %s\n' "$*" >>"$CALLS"
 if [[ "$*" == *'create -f -'* ]]; then cat >>"$CALLS"; fi
 case "$*" in
-  *'get deployment api '*|*'get deployment dashboard '*|*'get deployment sites '*) printf '%s\n' 'registry.foligo-staging.svc.cluster.local:5000/foligo-staging/api@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';;
+  *'get deployment api '*|*'get deployment dashboard '*|*'get deployment sites '*) printf '%s\n' '127.0.0.1:32551/foligo-staging/api@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';;
   *'get job '*) exit 1;;
   *'get deployment '*) printf '%s\n' 'ok';;
   *'set image '*|*'rollout status '*|*'rollout undo '*|*'wait '*|*'delete job '*) exit 0;;
@@ -49,6 +49,7 @@ bash "$ROOT/deploy/staging/scripts/release.sh" publish
 # Verify the runner uses the scoped Service DNS endpoint and explicit HTTP BuildKit config.
 grep -q 'buildx create .*--config .*deploy/staging/buildkitd.toml' "$CALLS"
 grep -q 'registry.foligo-staging.svc.cluster.local:5000/foligo-staging' "$CALLS"
+grep -q 'http://registry.foligo-staging.svc.cluster.local:5000/foligo-staging/v2/foligo-staging/api/manifests/' "$CALLS"
 bash "$ROOT/deploy/staging/scripts/release.sh" deploy
 ! grep -q 'db push\|migrate resolve' "$CALLS"
 grep -q 'migrate deploy' "$CALLS"
