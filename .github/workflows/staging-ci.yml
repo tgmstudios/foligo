@@ -50,6 +50,7 @@ jobs:
           ! grep -R -E 'registry\.tgm\.one/foligo/(api|dashboard|sites):' deploy/staging/50-api.yaml deploy/staging/60-dashboard.yaml deploy/staging/70-sites.yaml
           ! grep -R -E 'kubectl apply|prisma (db push|migrate resolve)' deploy/staging/scripts/*.sh
       - name: Build API image (no publish during gated phase)
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -58,6 +59,7 @@ jobs:
           push: false
           tags: foligo-staging/api:${{ github.sha }}
       - name: Build dashboard image (no publish during gated phase)
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -66,6 +68,7 @@ jobs:
           push: false
           tags: foligo-staging/dashboard:${{ github.sha }}
       - name: Build sites image (no publish during gated phase)
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           context: .

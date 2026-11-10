@@ -49,7 +49,7 @@ bash "$ROOT/deploy/staging/scripts/release.sh" publish
 # Verify the runner uses the scoped Service DNS endpoint and explicit HTTP BuildKit config.
 grep -q 'buildx create .*--config .*deploy/staging/buildkitd.toml' "$CALLS"
 grep -q 'registry.foligo-staging.svc.cluster.local:5000/foligo-staging' "$CALLS"
-grep -q 'http://registry.foligo-staging.svc.cluster.local:5000/foligo-staging/v2/foligo-staging/api/manifests/' "$CALLS"
+grep -q 'http://registry.foligo-staging.svc.cluster.local:5000/v2/foligo-staging/api/manifests/' "$CALLS"
 bash "$ROOT/deploy/staging/scripts/release.sh" deploy
 ! grep -q 'db push\|migrate resolve' "$CALLS"
 grep -q 'migrate deploy' "$CALLS"
