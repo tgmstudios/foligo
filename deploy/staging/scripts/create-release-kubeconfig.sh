@@ -3,9 +3,8 @@ set -euo pipefail
 
 SA_DIR=/var/run/secrets/kubernetes.io/serviceaccount
 [[ -r "$SA_DIR/token" && -r "$SA_DIR/ca.crt" ]]
-[[ -n "$KUBERNETES_SERVICE_HOST" && -n "$KUBERNETES_SERVICE_PORT_HTTPS" ]]
+[[ -n "$KUBERNETES_API_HOST" ]] || { printf '%s\n' 'KUBERNETES_API_HOST must be an approved RKE2 control-plane endpoint' >&2; exit 2; }
 [[ -n "$RUNNER_TEMP" && -n "$GITHUB_RUN_ID" && -n "$GITHUB_RUN_ATTEMPT" ]]
-
 work=$(mktemp -d "$RUNNER_TEMP/foligo-staging-token.XXXXXX")
 chmod 700 "$work"
 trap 'rm -rf -- "$work"' EXIT
@@ -20,7 +19,7 @@ pathlib.Path(sys.argv[2]).write_text("header = " + json.dumps("Authorization: " 
 pathlib.Path(sys.argv[2]).chmod(0o600)
 PY
 
-api="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT_HTTPS"
+api="https://$KUBERNETES_API_HOST:6443"
 curl --silent --show-error --fail --max-time 15 \
   --cacert "$SA_DIR/ca.crt" --config "$work/curl.conf" \
   -H 'Content-Type: application/json' \
@@ -30,7 +29,7 @@ curl --silent --show-error --fail --max-time 15 \
   > "$work/token-response.json"
 
 out="$RUNNER_TEMP/foligo-staging-kubeconfig-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-python3 - "$work/token-response.json" "$SA_DIR/ca.crt" "$KUBERNETES_SERVICE_HOST" "$KUBERNETES_SERVICE_PORT_HTTPS" "$out" <<'PY'
+python3 - "$work/token-response.json" "$SA_DIR/ca.crt" "$KUBERNETES_API_HOST" 6443 "$out" <<'PY'
 import base64, datetime, json, pathlib, sys
 response_path, ca_path, host, port, output = sys.argv[1:]
 response = json.loads(pathlib.Path(response_path).read_text())
