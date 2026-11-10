@@ -1,5 +1,5 @@
-# Staging-only image registry (anonymous, holds only foligo-staging images).
-# Nodes pull via 127.0.0.1:32551 (containerd allows plain HTTP for loopback), so no TLS/ingress/DNS change is needed.
+# Staging-only image registry, reachable by the Foligo ARC release runner only.
+# Nodes pull via 127.0.0.1:32551 (containerd permits plain HTTP on loopback).
 apiVersion: apps/v1
 kind: StatefulSet
 metadata: {name: registry, namespace: foligo-staging}

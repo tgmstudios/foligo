@@ -1,0 +1,3 @@
+[registry."registry.foligo-staging.svc.cluster.local:5000"]
+  http = true
+  insecure = true

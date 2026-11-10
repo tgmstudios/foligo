@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 NS=foligo-staging
-REGISTRY=127.0.0.1:32551/foligo-staging
+REGISTRY=registry.foligo-staging.svc.cluster.local:5000/foligo-staging
 SHA=${STAGING_SHA:-${GITHUB_SHA:-}}
 [[ ${1:-} != deploy || ${STAGING_TEST_MODE:-0} == 1 || -n ${STAGING_KUBECONFIG:-} ]] || { printf '%s\\n' 'REFUSING: STAGING_KUBECONFIG must point to an externally provisioned dedicated least-privilege staging kubeconfig' >&2; exit 2; }
 export KUBECONFIG=${STAGING_KUBECONFIG:-$HOME/.kube/config}
@@ -15,12 +15,22 @@ fail() { printf 'REFUSING: %s\n' "$*" >&2; exit 2; }
 [[ $SHA =~ ^[0-9a-f]{40}$ ]] || fail 'STAGING_SHA/GITHUB_SHA must be a full commit SHA'
 case ${1:-} in
  publish)
+  builder="foligo-staging-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+  docker buildx create --name "$builder" --driver docker-container --config "$ROOT/deploy/staging/buildkitd.toml" --use >/dev/null
+  trap 'docker buildx rm "$builder" >/dev/null 2>&1 || true' EXIT
+  docker buildx inspect --bootstrap "$builder" >/dev/null
   for component in api dashboard sites; do
-    docker buildx build --platform linux/amd64 --push -f "$ROOT/$component/.docker/Dockerfile" -t "$REGISTRY/$component:$SHA" "$ROOT"
-    digest=$(docker buildx imagetools inspect "$REGISTRY/$component:$SHA" | awk '$1 == "Digest:" {print $2; exit}')
-    [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || fail "registry did not return immutable digest for $component"
+    docker buildx build --builder "$builder" --platform linux/amd64 --push -f "$ROOT/$component/.docker/Dockerfile" -t "$REGISTRY/$component:$SHA" "$ROOT"
+    registry_path="/v2/foligo-staging/$component/manifests/$SHA"
+    registry_url="http://$REGISTRY$registry_path"
+    digest=$(curl --silent --show-error --fail --head --max-time 20 \
+      -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+      "$registry_url" | awk 'tolower($1) == "docker-content-digest:" {gsub(sprintf("%c", 13), "", $2); print $2; exit}')
+    [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || fail "registry readback returned no immutable digest for $component"
     printf '%s=%s\n' "$component" "$digest"
   done
+  docker buildx rm "$builder" >/dev/null
+  trap - EXIT
   ;;
  deploy)
   [[ ${DB_REFRESH_ACCEPTED:-false} == true ]] || fail 'DB_REFRESH_ACCEPTED=true is required after explicit DB acceptance'

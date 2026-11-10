@@ -1,5 +1,5 @@
-# Default deny; allow intra-namespace, DNS, ingress-controller -> web pods, node->registry NodePort,
-# and sites/api egress only to the private ingress controller (SSR). Nothing can reach production dependencies or the internet.
+# Default deny; allow intra-namespace, DNS, ingress-controller -> web pods,
+# the exact Foligo ARC runner -> registry, and sites/api -> private ingress only.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: {name: default-deny, namespace: foligo-staging}
@@ -41,4 +41,7 @@ spec:
   podSelector: {matchLabels: {app: registry}}
   policyTypes: [Ingress]
   ingress:
-    - ports: [{protocol: TCP, port: 5000}]
+    - from:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: arc-runners-onprem}}
+          podSelector: {matchLabels: {actions.github.com/scale-set-name: tgmstudios-runners, actions.github.com/repository: foligo}}
+      ports: [{protocol: TCP, port: 5000}]

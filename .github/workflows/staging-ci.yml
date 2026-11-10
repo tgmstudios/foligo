@@ -94,6 +94,13 @@ jobs:
             [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
             echo "${component}_digest=$digest" >> "$GITHUB_OUTPUT"
           done
+      - name: Create dedicated short-lived staging deploy identity
+        shell: bash
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: deploy/staging/scripts/create-release-kubeconfig.sh
       - name: Deploy only after DB refresh and migration acceptance
         shell: bash
         env:
@@ -104,3 +111,7 @@ jobs:
           DB_REFRESH_ACCEPTED: ${{ inputs.db_refresh_accepted }}
           STAGING_DEPLOY_APPROVED: ${{ inputs.deploy }}
         run: deploy/staging/scripts/release.sh deploy
+      - name: Remove temporary staging release credential
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/foligo-staging-kubeconfig-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"

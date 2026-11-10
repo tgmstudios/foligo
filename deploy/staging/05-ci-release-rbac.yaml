@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: foligo-staging-release
+  namespace: foligo-staging
+  labels: {app.kubernetes.io/part-of: foligo-staging}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: foligo-staging-release
+  namespace: foligo-staging
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["api", "dashboard", "sites"]
+    verbs: ["get", "patch", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: foligo-staging-release
+  namespace: foligo-staging
+subjects:
+  - kind: ServiceAccount
+    name: foligo-staging-release
+    namespace: foligo-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: foligo-staging-release
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: foligo-staging-release-token-request
+  namespace: foligo-staging
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    resourceNames: ["foligo-staging-release"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: foligo-staging-release-token-request
+  namespace: foligo-staging
+subjects:
+  - kind: ServiceAccount
+    name: tgmstudios-runners-gha-rs-no-permission
+    namespace: arc-runners-onprem
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: foligo-staging-release-token-request
