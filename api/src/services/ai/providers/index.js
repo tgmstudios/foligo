@@ -35,6 +35,13 @@ const { createAnthropic } = require('@ai-sdk/anthropic');
 const { createOpenAICompatible } = require('@ai-sdk/openai-compatible');
 const { createOpenAI } = require('@ai-sdk/openai');
 const { catalogModelsFor } = require('../model-catalog');
+const { createAIProxyFetch } = require('./proxy-fetch');
+
+function providerFetch(config) {
+  // An explicitly supplied fetch is useful for tests and trusted integrations;
+  // when egress proxying is enabled, always enforce our guarded transport.
+  return process.env.AI_HTTPS_PROXY ? createAIProxyFetch() : (config.fetch || globalThis.fetch);
+}
 
 // Real OpenAI endpoints for codex (see codex-rs/model-provider-info/src/lib.rs):
 // ChatGPT-OAuth sessions call the ChatGPT backend; API-key sessions call the
@@ -132,7 +139,7 @@ function createProvider(type = 'gemini', overrides = {}) {
 
   switch (type) {
     case 'gemini': {
-      const google = createGoogleGenerativeAI({ apiKey: config.apiKey, baseURL: config.baseUrl });
+      const google = createGoogleGenerativeAI({ apiKey: config.apiKey, baseURL: config.baseUrl, fetch: providerFetch(config) });
       return {
         name: 'gemini',
         displayName: `Gemini (${config.model})`,
@@ -150,7 +157,7 @@ function createProvider(type = 'gemini', overrides = {}) {
     }
 
     case 'anthropic': {
-      const anthropic = createAnthropic({ apiKey: config.apiKey, baseURL: config.baseUrl });
+      const anthropic = createAnthropic({ apiKey: config.apiKey, baseURL: config.baseUrl, fetch: providerFetch(config) });
       const reasoning = config.model.includes('opus') || config.model.includes('sonnet');
       return {
         name: 'anthropic',
@@ -180,6 +187,7 @@ function createProvider(type = 'gemini', overrides = {}) {
         baseURL: config.endpoint,
         apiKey: config.apiKey || undefined,
         headers: config.headers,
+        fetch: providerFetch(config),
       });
       return {
         name: type,
@@ -219,7 +227,7 @@ function createProvider(type = 'gemini', overrides = {}) {
       const headers = { ...(config.headers || {}) };
       if (usingChatGptBackend) headers['chatgpt-account-id'] = config.chatgptAccountId;
 
-      const openai = createOpenAI({ apiKey: config.apiKey || undefined, baseURL, headers });
+      const openai = createOpenAI({ apiKey: config.apiKey || undefined, baseURL, headers, fetch: providerFetch(config) });
       const capabilities = {
         streaming: true,
         tools: true,
@@ -334,7 +342,7 @@ async function listAvailableModels(type, overrides = {}) {
 
   let response;
   try {
-    response = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+    response = await providerFetch(config)(url, { headers, signal: AbortSignal.timeout(10000) });
   } catch (error) {
     if (known.length) return known;
     throw new Error(`Could not reach ${url}: ${error.message}`);
@@ -355,4 +363,4 @@ async function listAvailableModels(type, overrides = {}) {
   return merged;
 }
 
-module.exports = { createProvider, listProviders, isProviderConfigured, listAvailableModels, DISCOVERABLE_TYPES, KNOWN_MODELS, PRESETS, SAFETY_SETTINGS };
+module.exports = { createProvider, listProviders, isProviderConfigured, listAvailableModels, DISCOVERABLE_TYPES, KNOWN_MODELS, PRESETS, SAFETY_SETTINGS, providerFetch };
