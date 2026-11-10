@@ -1,0 +1,212 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": "ai-egress-config",
+    "namespace": "foligo-staging"
+  },
+  "data": {
+    "squid.conf": "http_port 3128\nvisible_hostname foligo-staging-ai-egress\npid_filename none\ncache_log /dev/stderr\naccess_log none\ncache_store_log none\ncache deny all\ncoredump_dir /tmp\nacl CONNECT method CONNECT\nacl TLS_port port 443\nacl ai_hosts dstdomain generativelanguage.googleapis.com opencode.ai\nacl private_dst dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 ::1/128 fc00::/7 fe80::/10\nhttp_access deny !CONNECT\nhttp_access deny !TLS_port\nhttp_access deny !ai_hosts\nhttp_access deny private_dst\nhttp_access allow ai_hosts\nhttp_access deny all\nshutdown_lifetime 1 seconds\n"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "ai-egress",
+    "namespace": "foligo-staging"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "ai-egress"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "ai-egress"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "squid",
+            "image": "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029",
+            "command": [
+              "squid",
+              "-N",
+              "-f",
+              "/etc/squid/foligo.conf"
+            ],
+            "ports": [
+              {
+                "containerPort": 3128,
+                "name": "proxy"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "config",
+                "mountPath": "/etc/squid/foligo.conf",
+                "subPath": "squid.conf",
+                "readOnly": true
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              },
+              "limits": {
+                "cpu": "500m",
+                "memory": "256Mi"
+              }
+            },
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": 3128
+              },
+              "periodSeconds": 5
+            },
+            "securityContext": {
+              "runAsUser": 13,
+              "runAsGroup": 13,
+              "runAsNonRoot": true,
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "config",
+            "configMap": {
+              "name": "ai-egress-config"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "ai-egress",
+    "namespace": "foligo-staging"
+  },
+  "spec": {
+    "selector": {
+      "app": "ai-egress"
+    },
+    "ports": [
+      {
+        "name": "proxy",
+        "port": 3128,
+        "targetPort": 3128
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "networking.k8s.io/v1",
+  "kind": "NetworkPolicy",
+  "metadata": {
+    "name": "ai-egress-boundary",
+    "namespace": "foligo-staging"
+  },
+  "spec": {
+    "podSelector": {
+      "matchLabels": {
+        "app": "ai-egress"
+      }
+    },
+    "policyTypes": [
+      "Ingress",
+      "Egress"
+    ],
+    "ingress": [
+      {
+        "from": [
+          {
+            "podSelector": {
+              "matchLabels": {
+                "app": "api"
+              }
+            }
+          }
+        ],
+        "ports": [
+          {
+            "protocol": "TCP",
+            "port": 3128
+          }
+        ]
+      }
+    ],
+    "egress": [
+      {
+        "to": [
+          {
+            "namespaceSelector": {
+              "matchLabels": {
+                "kubernetes.io/metadata.name": "kube-system"
+              }
+            },
+            "podSelector": {
+              "matchLabels": {
+                "k8s-app": "kube-dns"
+              }
+            }
+          }
+        ],
+        "ports": [
+          {
+            "protocol": "UDP",
+            "port": 53
+          },
+          {
+            "protocol": "TCP",
+            "port": 53
+          }
+        ]
+      },
+      {
+        "to": [
+          {
+            "ipBlock": {
+              "cidr": "0.0.0.0/0",
+              "except": [
+                "0.0.0.0/8",
+                "10.0.0.0/8",
+                "100.64.0.0/10",
+                "127.0.0.0/8",
+                "169.254.0.0/16",
+                "172.16.0.0/12",
+                "192.168.0.0/16",
+                "224.0.0.0/4"
+              ]
+            }
+          }
+        ],
+        "ports": [
+          {
+            "port": 443,
+            "protocol": "TCP"
+          }
+        ]
+      }
+    ]
+  }
+}

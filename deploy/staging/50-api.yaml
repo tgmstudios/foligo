@@ -49,6 +49,7 @@ spec:
             - {name: API_DOMAIN, value: api-fstg.i.tgm.one}
             - {name: FRONTEND_DOMAIN, value: app-fstg.i.tgm.one}
             - {name: ADDITIONAL_CORS_ORIGINS, value: ""}
+            - {name: AI_HTTPS_PROXY, value: "http://ai-egress:3128"}
             - {name: AI_DEFAULT_PROVIDER, value: custom}
             - {name: AI_FALLBACK_CHAIN, value: ""}
             # Stripe test-only values in foligo-staging-api Secret.
