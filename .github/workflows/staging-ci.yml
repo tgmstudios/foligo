@@ -56,7 +56,7 @@ jobs:
           python3 deploy/staging/scripts/test-rollout.py
       - name: Preflight regression tests
         shell: bash
-        run: deploy/staging/scripts/test-preflight.sh
+        run: bash deploy/staging/scripts/test-preflight.sh
       - name: Build API image (no publish during gated phase)
         if: github.event_name == 'workflow_dispatch' && !inputs.deploy
         uses: docker/build-push-action@v6
@@ -121,7 +121,7 @@ jobs:
       - name: Live staging preflight and real node image pull
         shell: bash
         run: |
-          deploy/staging/scripts/preflight.sh
+          bash deploy/staging/scripts/preflight.sh
           KUBECONFIG="$STAGING_KUBECONFIG" python3 deploy/staging/scripts/pull-preflight.py
       - name: Publish immutable staging images
         id: publish
