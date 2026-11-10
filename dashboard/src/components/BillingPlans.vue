@@ -29,6 +29,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import api from '@/services/api'
+import { createCheckoutAttemptStore } from './checkoutAttempt.js'
+const checkoutAttempts = createCheckoutAttemptStore()
 const state = ref<any>(null)
 const loading = ref(true); const busy = ref(false); const error = ref('')
 const subscribed = computed(() => ['active', 'trialing', 'past_due'].includes(state.value?.subscription?.status))
@@ -38,11 +40,24 @@ const message = (e: any) => e.response?.data?.error || 'Billing request failed'
 async function load() {
   try { state.value = (await api.get('/billing/plans')).data } catch (e) { error.value = message(e) } finally { loading.value = false }
 }
-async function redirect(path: string, body?: object) {
+async function redirect(path: string, body?: object, onSuccess?: () => void, onFailure?: (e: any) => void) {
   busy.value = true; error.value = ''
-  try { window.location.assign((await api.post(path, body)).data.url) } catch (e) { error.value = message(e); busy.value = false }
+  try {
+    const url = (await api.post(path, body)).data.url
+    onSuccess?.()
+    window.location.assign(url)
+  } catch (e) {
+    onFailure?.(e)
+    error.value = message(e); busy.value = false
+  }
 }
-const checkout = (planKey: string) => redirect('/billing/checkout', { planKey, attemptId: crypto.randomUUID() })
+const checkout = (planKey: string) => {
+  const attemptId = checkoutAttempts.get(planKey)
+  return redirect('/billing/checkout', { planKey, attemptId },
+    () => checkoutAttempts.clear(planKey),
+    (e) => { if ([409, 410].includes(e.response?.status)) checkoutAttempts.clear(planKey) },
+  )
+}
 const portal = () => redirect('/billing/portal')
 onMounted(load)
 </script>
