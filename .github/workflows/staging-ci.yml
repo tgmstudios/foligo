@@ -105,6 +105,23 @@ jobs:
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           KUBERNETES_API_HOST: 192.168.102.11
         run: deploy/staging/scripts/create-release-kubeconfig.sh
+      - name: Install checksum-verified kubectl for RKE2
+        shell: bash
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          version=v1.32.9
+          binary="$RUNNER_TEMP/kubectl-$version"
+          curl --fail --silent --show-error --location --max-time 60 \
+            "https://dl.k8s.io/release/$version/bin/linux/amd64/kubectl" \
+            --output "$binary"
+          expected=$(curl --fail --silent --show-error --location --max-time 20 \
+            "https://dl.k8s.io/release/$version/bin/linux/amd64/kubectl.sha256")
+          printf '%s  %s\n' "$expected" "$binary" | sha256sum --check --status
+          chmod 0755 "$binary"
+          ln -sf "$binary" "$RUNNER_TEMP/kubectl"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
       - name: Deploy only after DB refresh and migration acceptance
         shell: bash
         env:

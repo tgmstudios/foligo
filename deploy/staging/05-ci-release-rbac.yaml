@@ -57,3 +57,26 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: foligo-staging-release-token-request
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: foligo-staging-release-namespace-read
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    resourceNames: ["foligo-staging"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: foligo-staging-release-namespace-read
+subjects:
+  - kind: ServiceAccount
+    name: foligo-staging-release
+    namespace: foligo-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: foligo-staging-release-namespace-read
