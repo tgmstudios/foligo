@@ -42,7 +42,7 @@ async function redirect(path: string, body?: object) {
   busy.value = true; error.value = ''
   try { window.location.assign((await api.post(path, body)).data.url) } catch (e) { error.value = message(e); busy.value = false }
 }
-const checkout = (planKey: string) => redirect('/billing/checkout', { planKey })
+const checkout = (planKey: string) => redirect('/billing/checkout', { planKey, attemptId: crypto.randomUUID() })
 const portal = () => redirect('/billing/portal')
 onMounted(load)
 </script>

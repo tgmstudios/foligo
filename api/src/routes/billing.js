@@ -26,7 +26,7 @@ router.get('/plans', async (req, res) => {
   } catch { res.status(500).json({ error: 'Unable to load billing' }); }
 });
 
-router.post('/checkout', [body('planKey').isString().isLength({ min: 1, max: 64 }), handleValidation], async (req, res) => {
+router.post('/checkout', [body('planKey').isString().isLength({ min: 1, max: 64 }), body('attemptId').isUUID(), handleValidation], async (req, res) => {
   try {
     const plan = billing.findPlan(req.body.planKey);
     if (!plan?.priceId) return res.status(400).json({ error: 'Unknown plan' });
@@ -39,7 +39,8 @@ router.post('/checkout', [body('planKey').isString().isLength({ min: 1, max: 64 
       mode: 'subscription', customer, line_items: [{ price: plan.priceId, quantity: 1 }],
       client_reference_id: req.user.id, subscription_data: { metadata: { userId: req.user.id } },
       success_url: `${frontend()}/settings?billing=success`, cancel_url: `${frontend()}/settings?billing=cancelled`,
-    }, { idempotencyKey: `checkout:${req.user.id}:${plan.key}` });
+    }, { idempotencyKey: `checkout:${req.user.id}:${plan.priceId}:${req.body.attemptId}` });
+    if (session.status && session.status !== 'open') return res.status(409).json({ error: 'This checkout attempt is no longer open. Start a new checkout.' });
     res.json({ url: session.url });
   } catch (error) { fail(res, error, 'Unable to start checkout'); }
 });

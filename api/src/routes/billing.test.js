@@ -20,12 +20,16 @@ jest.mock('stripe', () => jest.fn(() => mockStripe));
 const router = require('./billing');
 
 const PLANS = [{ key: 'pro', name: 'Pro', priceId: 'price_pro', monthlyRequests: 100, monthlyTokens: null, monthlyCostUsd: 5 }, { key: 'free', name: 'Free', monthlyRequests: 5 }];
+const attemptA = '9a95a824-8345-4d4b-98ea-2c1e708f6201';
+const attemptB = '913a2a84-9229-421e-8850-e6a6ab1a59fd';
+const stripeIdempotency = new Map();
 const app = () => express().use('/webhook', router.webhook).use(express.json()).use((req, _res, next) => { req.user = { id: 'u1', email: 'a@b.c', name: 'A' }; next(); }).use('/billing', router);
 const sub = (over = {}) => ({ id: 'sub_1', customer: 'cus_1', status: 'active', cancel_at_period_end: false, items: { data: [{ price: { id: 'price_pro' }, current_period_end: 1800000000 }] }, ...over });
 const post = () => request(app()).post('/webhook').set('stripe-signature', 'sig').set('content-type', 'application/json');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  stripeIdempotency.clear();
   Object.assign(process.env, { STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec', BILLING_PLANS: JSON.stringify(PLANS) });
   mockDb.userSubscription.findUnique.mockResolvedValue({ userId: 'u1', stripeCustomerId: 'cus_1', stripeSubscriptionId: null });
   mockDb.stripeEvent.findUnique.mockResolvedValue(null);
@@ -58,25 +62,46 @@ test('replayed events are not reprocessed', async () => {
   expect(mockDb.userAiUsagePolicy.upsert).not.toHaveBeenCalled();
 });
 
-test('checkout uses server-side price for a known plan only', async () => {
-  const response = await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(200);
+test('checkout uses server-side price and attempt-scoped idempotency', async () => {
+  const response = await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(200);
   expect(response.body.url).toBe('https://stripe/checkout');
-  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ customer: 'cus_1', line_items: [{ price: 'price_pro', quantity: 1 }] }), expect.objectContaining({ idempotencyKey: 'checkout:u1:pro' }));
-  await request(app()).post('/billing/checkout').send({ planKey: 'free' }).expect(400);
-  await request(app()).post('/billing/checkout').send({ planKey: 'nope' }).expect(400);
+  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ customer: 'cus_1', line_items: [{ price: 'price_pro', quantity: 1 }] }), { idempotencyKey: `checkout:u1:price_pro:${attemptA}` });
+  await request(app()).post('/billing/checkout').send({ planKey: 'free', attemptId: attemptA }).expect(400);
+  await request(app()).post('/billing/checkout').send({ planKey: 'nope', attemptId: attemptA }).expect(400);
 });
 
-test('checkout creation is idempotent per user and plan', async () => {
-  await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(200);
-  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
-    expect.any(Object), { idempotencyKey: 'checkout:u1:pro' },
-  );
+test('same attempt retries reuse key while a fresh attempt gets a distinct key', async () => {
+  for (const attemptId of [attemptA, attemptA, attemptB]) await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId }).expect(200);
+  expect(mockStripe.checkout.sessions.create.mock.calls.map(([, options]) => options.idempotencyKey)).toEqual([`checkout:u1:price_pro:${attemptA}`, `checkout:u1:price_pro:${attemptA}`, `checkout:u1:price_pro:${attemptB}`]);
+});
+
+test('checkout requires a UUID attempt ID', async () => {
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(400);
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: 'bad/id' }).expect(400);
+  expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
+});
+
+test('plan price drift creates a new price-scoped idempotency key', async () => {
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(200);
+  process.env.BILLING_PLANS = JSON.stringify([{ ...PLANS[0], priceId: 'price_pro_v2' }]);
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(200);
+  expect(mockStripe.checkout.sessions.create.mock.calls[0][0].line_items[0].price).toBe('price_pro');
+  expect(mockStripe.checkout.sessions.create.mock.calls[1][0].line_items[0].price).toBe('price_pro_v2');
+  expect(mockStripe.checkout.sessions.create.mock.calls[0][1].idempotencyKey).not.toBe(mockStripe.checkout.sessions.create.mock.calls[1][1].idempotencyKey);
+});
+
+test('a completed or expired session is not reused as an open checkout', async () => {
+  mockStripe.checkout.sessions.create.mockResolvedValueOnce({ id: 'cs_complete', status: 'complete', url: 'https://stripe/done' });
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(409);
+  mockStripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_expired', status: 'expired', url: 'https://stripe/expired' });
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptB }).expect(409);
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptB }).expect(409);
 });
 
 test('customer creation returns the persisted customer after a concurrent create race', async () => {
-  mockDb.userSubscription.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ userId: 'u1', stripeCustomerId: 'cus_existing' });
+  mockDb.userSubscription.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ userId: 'u1', stripeCustomerId: 'cus_existing', status: null });
   mockDb.userSubscription.upsert.mockResolvedValue({ userId: 'u1', stripeCustomerId: 'cus_existing' });
-  await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(200);
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(200);
   expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
     expect.objectContaining({ customer: 'cus_existing' }), expect.anything(),
   );
@@ -84,7 +109,7 @@ test('customer creation returns the persisted customer after a concurrent create
 
 test('checkout refuses a second active subscription', async () => {
   mockDb.userSubscription.findUnique.mockResolvedValue({ userId: 'u1', stripeCustomerId: 'cus_1', status: 'active' });
-  await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(409);
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(409);
 });
 
 test('503 when Stripe is not configured', async () => {
