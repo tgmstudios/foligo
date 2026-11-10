@@ -45,3 +45,10 @@ spec:
         - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: arc-runners-onprem}}
           podSelector: {matchLabels: {actions.github.com/scale-set-name: tgmstudios-runners, actions.github.com/repository: foligo}}
       ports: [{protocol: TCP, port: 5000}]
+    - from:
+        - ipBlock: {cidr: 192.168.102.21/32}
+        - ipBlock: {cidr: 192.168.102.22/32}
+        - ipBlock: {cidr: 192.168.102.23/32}
+        - ipBlock: {cidr: 192.168.102.24/32}
+        - ipBlock: {cidr: 192.168.102.25/32}
+      ports: [{protocol: TCP, port: 5000}]

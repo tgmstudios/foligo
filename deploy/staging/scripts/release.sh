@@ -4,7 +4,7 @@ ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 NS=foligo-staging
 PUBLISH_REGISTRY_HOST=registry.foligo-staging.svc.cluster.local:5000
 PUBLISH_REPOSITORY=foligo-staging
-PULL_REGISTRY=127.0.0.1:32551/foligo-staging
+PULL_REGISTRY=192.168.102.24:32551/foligo-staging
 SHA=${STAGING_SHA:-${GITHUB_SHA:-}}
 [[ ${1:-} != deploy || ${STAGING_TEST_MODE:-0} == 1 || -n ${STAGING_KUBECONFIG:-} ]] || { printf '%s\\n' 'REFUSING: STAGING_KUBECONFIG must point to an externally provisioned dedicated least-privilege staging kubeconfig' >&2; exit 2; }
 export KUBECONFIG=${STAGING_KUBECONFIG:-$HOME/.kube/config}
