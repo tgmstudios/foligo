@@ -1,0 +1,67 @@
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "api",
+            "env": [
+              {
+                "name": "AI_HTTPS_PROXY",
+                "value": "http://ai-egress:3128"
+              },
+              {
+                "name": "AI_DEFAULT_PROVIDER",
+                "value": "custom"
+              },
+              {
+                "name": "AI_FALLBACK_CHAIN",
+                "value": ""
+              },
+              {
+                "name": "STRIPE_SECRET_KEY",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "foligo-staging-api",
+                    "key": "STRIPE_SECRET_KEY"
+                  }
+                }
+              },
+              {
+                "name": "STRIPE_PUBLISHABLE_KEY",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "foligo-staging-api",
+                    "key": "STRIPE_PUBLISHABLE_KEY"
+                  }
+                }
+              },
+              {
+                "name": "STRIPE_WEBHOOK_SECRET",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "foligo-staging-api",
+                    "key": "STRIPE_WEBHOOK_SECRET",
+                    "optional": true
+                  }
+                }
+              },
+              {
+                "name": "BILLING_FREE_MONTHLY_REQUESTS",
+                "value": "10"
+              },
+              {
+                "name": "BILLING_FREE_MONTHLY_COST_USD",
+                "value": "0.10"
+              },
+              {
+                "name": "BILLING_PLANS",
+                "value": "[{\"key\":\"pro\",\"name\":\"Foligo Pro\",\"priceId\":\"price_1UYwjsJALC4njetQ5GqMm2gr\",\"monthlyRequests\":300,\"monthlyTokens\":null,\"monthlyCostUsd\":2},{\"key\":\"max\",\"name\":\"Foligo Max\",\"priceId\":\"price_1UYwjsJALC4njetQhOqk5yF0\",\"monthlyRequests\":1500,\"monthlyTokens\":null,\"monthlyCostUsd\":8}]"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,3 +1,3 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources: [00-namespace.yaml, 05-ci-release-rbac.yaml, 10-postgres.yaml, 20-redis.yaml, 30-minio.yaml, 40-registry.yaml, 50-api.yaml, 60-dashboard.yaml, 70-sites.yaml, 80-networkpolicy.yaml, 82-stripe-egress.yaml, 84-ai-egress.yaml, 85-runner-registry-egress.yaml, 90-ingress.yaml]
+resources: [00-namespace.yaml, 05-ci-release-rbac.yaml, 10-postgres.yaml, 20-redis.yaml, 30-minio.yaml, 40-registry.yaml, 50-api.yaml, 60-dashboard.yaml, 70-sites.yaml, 80-networkpolicy.yaml, 82-stripe-egress.yaml, 84-ai-egress.yaml, 85-runner-registry-egress.yaml, 90-ingress.yaml, 91-registry-tls.yaml, 92-registry-node-ingress.yaml]

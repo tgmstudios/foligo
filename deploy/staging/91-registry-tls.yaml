@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foligo-staging-registry-tls
+  namespace: foligo-staging
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/whitelist-source-range: "192.168.101.12/32,192.168.102.21/32,192.168.102.22/32,192.168.102.23/32,192.168.102.24/32,192.168.102.25/32,192.168.103.21/32,192.168.103.22/32,192.168.103.23/32,192.168.103.24/32,192.168.103.25/32,10.42.4.0/32,10.42.8.0/32,10.42.3.0/32,10.42.2.0/32,10.42.6.0/32"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx-private
+  tls:
+    - hosts: [api-fstg.i.tgm.one]
+  rules:
+    - host: api-fstg.i.tgm.one
+      http:
+        paths:
+          - path: /v2
+            pathType: Prefix
+            backend:
+              service:
+                name: registry
+                port: {number: 5000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-private-registry-tls
+  namespace: foligo-staging
+spec:
+  podSelector:
+    matchLabels: {app: registry}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: nginx-private}
+      ports: [{protocol: TCP, port: 5000}]

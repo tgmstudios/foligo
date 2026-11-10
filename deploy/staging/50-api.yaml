@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: 127.0.0.1:32551/foligo-staging/api@sha256:69f51b2915c8097d04f9d4822bb9fdb3602056e56fb31217d64d36b442708dfd
+          image: api-fstg.i.tgm.one/foligo-staging/api@sha256:69f51b2915c8097d04f9d4822bb9fdb3602056e56fb31217d64d36b442708dfd
           imagePullPolicy: IfNotPresent
           ports: [{name: web, containerPort: 3000}]
           env:

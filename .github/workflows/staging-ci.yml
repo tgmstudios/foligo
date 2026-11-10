@@ -44,9 +44,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(grep -c 'namespace: foligo-staging' deploy/staging/50-api.yaml)" -ge 1
-          grep -q '127.0.0.1:32551/foligo-staging/api@sha256:' deploy/staging/50-api.yaml
-          grep -q '127.0.0.1:32551/foligo-staging/dashboard@sha256:' deploy/staging/60-dashboard.yaml
-          grep -q '127.0.0.1:32551/foligo-staging/sites@sha256:' deploy/staging/70-sites.yaml
+          grep -q 'api-fstg.i.tgm.one/foligo-staging/api@sha256:' deploy/staging/50-api.yaml
+          grep -q 'api-fstg.i.tgm.one/foligo-staging/dashboard@sha256:' deploy/staging/60-dashboard.yaml
+          grep -q 'api-fstg.i.tgm.one/foligo-staging/sites@sha256:' deploy/staging/70-sites.yaml
           ! grep -R -E 'registry\.tgm\.one/foligo/(api|dashboard|sites):' deploy/staging/50-api.yaml deploy/staging/60-dashboard.yaml deploy/staging/70-sites.yaml
           ! grep -R -E 'kubectl apply|prisma (db push|migrate resolve)' deploy/staging/scripts/*.sh
       - name: Build API image (no publish during gated phase)
