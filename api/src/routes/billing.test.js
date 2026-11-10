@@ -30,6 +30,17 @@ const post = () => request(app()).post('/webhook').set('stripe-signature', 'sig'
 beforeEach(() => {
   jest.clearAllMocks();
   stripeIdempotency.clear();
+  mockStripe.checkout.sessions.create.mockReset().mockImplementation(async (params, options) => {
+    const key = options.idempotencyKey;
+    const existing = stripeIdempotency.get(key);
+    if (existing) {
+      if (existing.params !== JSON.stringify(params)) throw new Error('Idempotency parameter mismatch');
+      return existing.session;
+    }
+    const session = { id: `cs_${stripeIdempotency.size + 1}`, status: 'open', url: `https://stripe/checkout/${stripeIdempotency.size + 1}` };
+    stripeIdempotency.set(key, { params: JSON.stringify(params), session });
+    return session;
+  });
   Object.assign(process.env, { STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec', BILLING_PLANS: JSON.stringify(PLANS) });
   mockDb.userSubscription.findUnique.mockResolvedValue({ userId: 'u1', stripeCustomerId: 'cus_1', stripeSubscriptionId: null });
   mockDb.stripeEvent.findUnique.mockResolvedValue(null);
@@ -64,7 +75,7 @@ test('replayed events are not reprocessed', async () => {
 
 test('checkout uses server-side price and attempt-scoped idempotency', async () => {
   const response = await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(200);
-  expect(response.body.url).toBe('https://stripe/checkout');
+  expect(response.body.url).toBe('https://stripe/checkout/1');
   expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ customer: 'cus_1', line_items: [{ price: 'price_pro', quantity: 1 }] }), { idempotencyKey: `checkout:u1:price_pro:${attemptA}` });
   await request(app()).post('/billing/checkout').send({ planKey: 'free', attemptId: attemptA }).expect(400);
   await request(app()).post('/billing/checkout').send({ planKey: 'nope', attemptId: attemptA }).expect(400);
