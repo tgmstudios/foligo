@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import sys
+sys.dont_write_bytecode = True
 import importlib.util, pathlib, unittest
 from unittest.mock import patch
 p=pathlib.Path(__file__).with_name('wait-rollout.py')
