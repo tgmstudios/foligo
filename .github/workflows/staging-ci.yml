@@ -10,6 +10,11 @@ on:
         required: true
         type: boolean
         default: false
+      db_refresh_accepted:
+        description: Confirm DB refresh and exact migration rehearsal were accepted
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin staging
+          git fetch --no-tags origin +refs/heads/staging:refs/remotes/origin/staging
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "$(git rev-parse origin/staging)" = "${GITHUB_SHA}"
       - name: Validate staging manifest topology
@@ -43,7 +48,7 @@ jobs:
           grep -q '127.0.0.1:32551/foligo-staging/dashboard@sha256:' deploy/staging/60-dashboard.yaml
           grep -q '127.0.0.1:32551/foligo-staging/sites@sha256:' deploy/staging/70-sites.yaml
           ! grep -R -E 'registry\.tgm\.one/foligo/(api|dashboard|sites):' deploy/staging/50-api.yaml deploy/staging/60-dashboard.yaml deploy/staging/70-sites.yaml
-          ! grep -E 'kubectl (apply|delete)|prisma (db push|migrate resolve)' deploy/staging/scripts/*.sh
+          ! grep -R -E 'kubectl apply|prisma (db push|migrate resolve)' deploy/staging/scripts/*.sh
       - name: Build API image (no publish during gated phase)
         uses: docker/build-push-action@v6
         with:
@@ -70,12 +75,32 @@ jobs:
           tags: foligo-staging/sites:${{ github.sha }}
 
   deployment-gate:
-    if: github.ref == 'refs/heads/staging' && github.event_name == 'workflow_dispatch' && inputs.deploy
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'workflow_dispatch' && inputs.deploy && inputs.db_refresh_accepted
     needs: validate
     runs-on: tgmstudios-runners
     steps:
-      - name: Stop until release prerequisites are approved
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+      - name: Publish immutable staging images
+        id: publish
         shell: bash
         run: |
-          echo 'Deployment is intentionally disabled until DB refresh/migration acceptance, staging registry reachability/auth, and a narrowly scoped deployment credential are verified.'
-          exit 1
+          set -euo pipefail
+          output=$(deploy/staging/scripts/release.sh publish)
+          printf '%s\n' "$output"
+          for component in api dashboard sites; do
+            digest=$(printf '%s\n' "$output" | awk -F= -v key="$component" '$1 == key {print $2}')
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            echo "${component}_digest=$digest" >> "$GITHUB_OUTPUT"
+          done
+      - name: Deploy only after DB refresh and migration acceptance
+        shell: bash
+        env:
+          STAGING_SHA: ${{ github.sha }}
+          STAGING_API_DIGEST: ${{ steps.publish.outputs.api_digest }}
+          STAGING_DASHBOARD_DIGEST: ${{ steps.publish.outputs.dashboard_digest }}
+          STAGING_SITES_DIGEST: ${{ steps.publish.outputs.sites_digest }}
+          DB_REFRESH_ACCEPTED: ${{ inputs.db_refresh_accepted }}
+          STAGING_DEPLOY_APPROVED: ${{ inputs.deploy }}
+        run: deploy/staging/scripts/release.sh deploy
