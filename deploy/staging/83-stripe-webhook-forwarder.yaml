@@ -1,0 +1,33 @@
+# Stripe staging CLI API origin forwarding
+# Discover the genuine whsec_ value from this listener's startup output and store it in
+# foligo-staging-api/STRIPE_WEBHOOK_SECRET before deploying the API. Until then the
+# webhook route intentionally returns 503 and will not grant entitlements.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stripe-webhook-forwarder
+  namespace: foligo-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stripe-webhook-forwarder
+  template:
+    metadata:
+      labels:
+        app: stripe-webhook-forwarder
+    spec:
+      containers:
+        - name: stripe
+          image: stripe/stripe-cli:v1.35.0
+          command: ["/bin/sh", "-ec"]
+          args: ["stripe listen --api-key \"$STRIPE_SECRET_KEY\" --forward-to https://api-fstg.i.tgm.one/api/billing/webhook"]
+          env:
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: foligo-staging-api
+                  key: STRIPE_SECRET_KEY
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 100m, memory: 128Mi}

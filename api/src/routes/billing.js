@@ -14,9 +14,12 @@ const router = express.Router();
 router.get('/plans', async (req, res) => {
   try {
     const subscription = await prisma.userSubscription.findUnique({ where: { userId: req.user.id } });
+    const plans = billing.getPlans().filter(plan => plan.priceId);
+    const invalidPlan = plans.some(plan => plan.monthlyRequests == null || plan.monthlyCostUsd == null);
+    if (invalidPlan) return res.status(503).json({ error: 'Billing plan limits are not configured safely' });
     res.json({
       enabled: billing.billingEnabled(),
-      plans: billing.getPlans().filter(plan => plan.priceId).map(billing.publicPlan),
+      plans: plans.map(billing.publicPlan),
       subscription: subscription && {
         planKey: subscription.planKey, status: subscription.status,
         currentPeriodEnd: subscription.currentPeriodEnd, cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
@@ -30,6 +33,7 @@ router.post('/checkout', [body('planKey').isString().isLength({ min: 1, max: 64 
   try {
     const plan = billing.findPlan(req.body.planKey);
     if (!plan?.priceId) return res.status(400).json({ error: 'Unknown plan' });
+    if (plan.monthlyRequests == null || plan.monthlyCostUsd == null) return res.status(503).json({ error: 'Plan limits are not configured safely' });
     const existing = await prisma.userSubscription.findUnique({ where: { userId: req.user.id } });
     if (existing && ['active', 'trialing', 'past_due'].includes(existing.status)) {
       return res.status(409).json({ error: 'You already have a subscription. Use the billing portal to change plans.' });

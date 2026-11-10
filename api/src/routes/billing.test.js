@@ -19,7 +19,10 @@ const mockStripe = {
 jest.mock('stripe', () => jest.fn(() => mockStripe));
 const router = require('./billing');
 
-const PLANS = [{ key: 'pro', name: 'Pro', priceId: 'price_pro', monthlyRequests: 100, monthlyTokens: null, monthlyCostUsd: 5 }, { key: 'free', name: 'Free', monthlyRequests: 5 }];
+const PLANS = [
+  { key: 'pro', name: 'Pro', priceId: 'price_pro', monthlyRequests: 100, monthlyTokens: null, monthlyCostUsd: 5 },
+  { key: 'free', name: 'Free', monthlyRequests: 10, monthlyTokens: null, monthlyCostUsd: 0.10 },
+];
 const attemptA = '9a95a824-8345-4d4b-98ea-2c1e708f6201';
 const attemptB = '913a2a84-9229-421e-8850-e6a6ab1a59fd';
 const stripeIdempotency = new Map();
@@ -60,10 +63,34 @@ test('active subscription applies the plan limits to the usage policy', async ()
   expect(mockDb.stripeEvent.upsert).toHaveBeenCalled();
 });
 
-test('canceled subscription falls back to the free plan', async () => {
+test('free fallback uses approved environment limits', async () => {
+  process.env.BILLING_FREE_MONTHLY_REQUESTS = '10';
+  process.env.BILLING_FREE_MONTHLY_COST_USD = '0.10';
+  mockStripe.webhooks.constructEvent.mockReturnValue({ id: 'evt_free', type: 'customer.subscription.deleted', data: { object: sub({ status: 'canceled' }) } });
+  await post().send('{}').expect(200);
+  expect(mockDb.userAiUsagePolicy.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { unlimited: false, monthlyRequests: 10, monthlyTokens: null, monthlyCostUsd: 0.10 } }));
+});
+
+test('active subscription with missing Stripe price fails closed', async () => {
+  mockStripe.webhooks.constructEvent.mockReturnValue({ id: 'evt_no_price', type: 'customer.subscription.updated', data: { object: sub({ items: { data: [] } }) } });
+  await post().send('{}').expect(503);
+  expect(mockDb.userSubscription.update).not.toHaveBeenCalled();
+  expect(mockDb.userAiUsagePolicy.upsert).not.toHaveBeenCalled();
+  expect(mockDb.stripeEvent.upsert).not.toHaveBeenCalled();
+});
+
+test('canceled subscription falls back to finite free limits', async () => {
   mockStripe.webhooks.constructEvent.mockReturnValue({ id: 'evt_2', type: 'customer.subscription.deleted', data: { object: sub({ status: 'canceled' }) } });
   await post().send('{}').expect(200);
-  expect(mockDb.userAiUsagePolicy.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: expect.objectContaining({ unlimited: false, monthlyRequests: 5 }) }));
+  expect(mockDb.userAiUsagePolicy.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { unlimited: false, monthlyRequests: 10, monthlyTokens: null, monthlyCostUsd: 0.10 } }));
+});
+
+test('unknown active subscription price fails closed without granting a plan', async () => {
+  mockStripe.webhooks.constructEvent.mockReturnValue({ id: 'evt_unknown', type: 'customer.subscription.updated', data: { object: sub({ items: { data: [{ price: { id: 'price_unconfigured' } }] } }) } });
+  await post().send('{}').expect(503);
+  expect(mockDb.userSubscription.update).not.toHaveBeenCalled();
+  expect(mockDb.userAiUsagePolicy.upsert).not.toHaveBeenCalled();
+  expect(mockDb.stripeEvent.upsert).not.toHaveBeenCalled();
 });
 
 test('replayed events are not reprocessed', async () => {
@@ -71,6 +98,12 @@ test('replayed events are not reprocessed', async () => {
   mockDb.stripeEvent.findUnique.mockResolvedValue({ id: 'evt_1' });
   await post().send('{}').expect(200);
   expect(mockDb.userAiUsagePolicy.upsert).not.toHaveBeenCalled();
+});
+
+test('checkout fails closed when paid plan limits are missing', async () => {
+  process.env.BILLING_PLANS = JSON.stringify([{ key: 'pro', name: 'Pro', priceId: 'price_pro' }]);
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro', attemptId: attemptA }).expect(503);
+  expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
 });
 
 test('checkout uses server-side price and attempt-scoped idempotency', async () => {

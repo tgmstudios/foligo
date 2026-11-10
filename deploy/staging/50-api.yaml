@@ -58,8 +58,12 @@ spec:
               valueFrom: {secretKeyRef: {name: foligo-staging-api, key: STRIPE_PUBLISHABLE_KEY}}
             - name: STRIPE_WEBHOOK_SECRET
               valueFrom: {secretKeyRef: {name: foligo-staging-api, key: STRIPE_WEBHOOK_SECRET, optional: true}}
+            - name: BILLING_FREE_MONTHLY_REQUESTS
+              value: "10"
+            - name: BILLING_FREE_MONTHLY_COST_USD
+              value: "0.10"
             - name: BILLING_PLANS
-              value: '[{"key":"pro","name":"Foligo Pro","priceId":"price_1UYwjsJALC4njetQ5GqMm2gr","monthlyRequests":null,"monthlyTokens":null,"monthlyCostUsd":null},{"key":"max","name":"Foligo Max","priceId":"price_1UYwjsJALC4njetQhOqk5yF0","monthlyRequests":null,"monthlyTokens":null,"monthlyCostUsd":null}]'
+              value: '[{"key":"pro","name":"Foligo Pro","priceId":"price_1UYwjsJALC4njetQ5GqMm2gr","monthlyRequests":300,"monthlyTokens":null,"monthlyCostUsd":2},{"key":"max","name":"Foligo Max","priceId":"price_1UYwjsJALC4njetQhOqk5yF0","monthlyRequests":1500,"monthlyTokens":null,"monthlyCostUsd":8}]'
           readinessProbe: {httpGet: {path: /health, port: web}, periodSeconds: 5, failureThreshold: 30}
           resources: {requests: {cpu: 100m, memory: 384Mi}, limits: {memory: 1536Mi}}
 ---
