@@ -49,6 +49,12 @@ jobs:
           grep -q 'api-fstg.i.tgm.one/foligo-staging/sites@sha256:' deploy/staging/70-sites.yaml
           ! grep -R -E 'registry\.tgm\.one/foligo/(api|dashboard|sites):' deploy/staging/50-api.yaml deploy/staging/60-dashboard.yaml deploy/staging/70-sites.yaml
           ! grep -R -E 'kubectl apply|prisma (db push|migrate resolve)' deploy/staging/scripts/*.sh
+      - name: Real staging and registry preflight (read-only)
+        shell: bash
+        run: deploy/staging/scripts/preflight.sh
+      - name: Preflight regression tests
+        shell: bash
+        run: deploy/staging/scripts/test-preflight.sh
       - name: Build API image (no publish during gated phase)
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
