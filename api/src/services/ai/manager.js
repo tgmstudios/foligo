@@ -162,7 +162,7 @@ class AIManager {
       try {
         return await fn(provider);
       } catch (e) {
-        if (isAiPolicyError(e)) throw e;
+        if (isAiPolicyError(e) || e.code === 'AI_USAGE_SETTLEMENT_FAILED') throw e;
         lastError = e;
         this.logger.warn(`Provider "${type}" call failed, trying next in chain: ${e.message}`);
         this._providers.delete(provider?.cacheKey || type);

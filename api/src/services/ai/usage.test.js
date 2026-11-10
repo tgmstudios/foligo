@@ -89,3 +89,9 @@ test('each retry/tool-step call receives its own reservation', async () => {
   await wrapped.doGenerate(params); await wrapped.doGenerate(params);
   expect(mockTx.aiUsageEvent.create).toHaveBeenCalledTimes(2);
 });
+test('successful inference whose ledger settlement fails is not misreported as provider failure', async () => {
+  const provider = { doGenerate: jest.fn().mockResolvedValue({ usage, content: [] }) };
+  mockTx.aiUsageEvent.updateMany.mockRejectedValueOnce(new Error('ledger unavailable'));
+  await expect(meteredModel(provider, meta).doGenerate(params)).rejects.toMatchObject({ code: 'AI_USAGE_SETTLEMENT_FAILED' });
+  expect(provider.doGenerate).toHaveBeenCalledTimes(1);
+});
