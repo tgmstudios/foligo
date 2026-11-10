@@ -4,7 +4,7 @@ ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 NS=foligo-staging
 PUBLISH_REGISTRY_HOST=registry.foligo-staging.svc.cluster.local:5000
 PUBLISH_REPOSITORY=foligo-staging
-PULL_REGISTRY=192.168.102.24:32551/foligo-staging
+PULL_REGISTRY=127.0.0.1:32551/foligo-staging
 SHA=${STAGING_SHA:-${GITHUB_SHA:-}}
 [[ ${1:-} != deploy || ${STAGING_TEST_MODE:-0} == 1 || -n ${STAGING_KUBECONFIG:-} ]] || { printf '%s\\n' 'REFUSING: STAGING_KUBECONFIG must point to an externally provisioned dedicated least-privilege staging kubeconfig' >&2; exit 2; }
 export KUBECONFIG=${STAGING_KUBECONFIG:-$HOME/.kube/config}
@@ -71,6 +71,9 @@ PY
   kubectl -n "$NS" wait --for=condition=complete "job/$job" --timeout=600s
   for assignment in "${images[@]}"; do
     component=${assignment%%=*}; image=${assignment#*=}
+    if [[ $component == api ]]; then
+      kubectl -n "$NS" patch deployment api --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"api","env":[{"name":"STRIPE_SECRET_KEY","valueFrom":{"secretKeyRef":{"name":"foligo-staging-api","key":"STRIPE_SECRET_KEY"}}},{"name":"STRIPE_PUBLISHABLE_KEY","valueFrom":{"secretKeyRef":{"name":"foligo-staging-api","key":"STRIPE_PUBLISHABLE_KEY"}}},{"name":"STRIPE_WEBHOOK_SECRET","valueFrom":{"secretKeyRef":{"name":"foligo-staging-api","key":"STRIPE_WEBHOOK_SECRET","optional":true}}},{"name":"BILLING_FREE_MONTHLY_REQUESTS","value":"10"},{"name":"BILLING_FREE_MONTHLY_COST_USD","value":"0.10"},{"name":"BILLING_PLANS","value":"[{\\"key\\":\\"pro\\",\\"name\\":\\"Foligo Pro\\",\\"priceId\\":\\"price_1UYwjsJALC4njetQ5GqMm2gr\\",\\"monthlyRequests\\":300,\\"monthlyTokens\\":null,\\"monthlyCostUsd\\":2},{\\"key\\":\\"max\\",\\"name\\":\\"Foligo Max\\",\\"priceId\\":\\"price_1UYwjsJALC4njetQhOqk5yF0\\",\\"monthlyRequests\\":1500,\\"monthlyTokens\\":null,\\"monthlyCostUsd\\":8}]"}]}]}}}}'
+    fi
     kubectl -n "$NS" set image "deployment/$component" "$component=$image"
     kubectl -n "$NS" rollout status "deployment/$component" --timeout=300s
   done

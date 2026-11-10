@@ -1,7 +1,7 @@
-# Stripe staging CLI API origin forwarding
-# Discover the genuine whsec_ value from this listener's startup output and store it in
-# foligo-staging-api/STRIPE_WEBHOOK_SECRET before deploying the API. Until then the
-# webhook route intentionally returns 503 and will not grant entitlements.
+# NOT included by deploy/staging/kustomization.yaml: Stripe CLI listener startup generates a
+# per-listener signing secret. Use the operator-managed, verified listener whose matching
+# STRIPE_WEBHOOK_SECRET is stored in foligo-staging-api; do not deploy a second listener unless
+# its generated secret is synchronized to that API Secret through an approved secret workflow.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
