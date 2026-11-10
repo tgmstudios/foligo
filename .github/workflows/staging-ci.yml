@@ -49,14 +49,16 @@ jobs:
           grep -q 'api-fstg.i.tgm.one/foligo-staging/sites@sha256:' deploy/staging/70-sites.yaml
           ! grep -R -E 'registry\.tgm\.one/foligo/(api|dashboard|sites):' deploy/staging/50-api.yaml deploy/staging/60-dashboard.yaml deploy/staging/70-sites.yaml
           ! grep -R -E 'kubectl apply|prisma (db push|migrate resolve)' deploy/staging/scripts/*.sh
-      - name: Real staging and registry preflight (read-only)
+      - name: Offline runtime and rollout regressions
         shell: bash
-        run: deploy/staging/scripts/preflight.sh
+        run: |
+          python3 deploy/staging/scripts/validate-runtime.py
+          python3 deploy/staging/scripts/test-rollout.py
       - name: Preflight regression tests
         shell: bash
         run: deploy/staging/scripts/test-preflight.sh
       - name: Build API image (no publish during gated phase)
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch' && !inputs.deploy
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -65,7 +67,7 @@ jobs:
           push: false
           tags: foligo-staging/api:${{ github.sha }}
       - name: Build dashboard image (no publish during gated phase)
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch' && !inputs.deploy
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -74,7 +76,7 @@ jobs:
           push: false
           tags: foligo-staging/dashboard:${{ github.sha }}
       - name: Build sites image (no publish during gated phase)
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch' && !inputs.deploy
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -91,18 +93,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: staging
-      - name: Publish immutable staging images
-        id: publish
-        shell: bash
-        run: |
-          set -euo pipefail
-          output=$(deploy/staging/scripts/release.sh publish)
-          printf '%s\n' "$output"
-          for component in api dashboard sites; do
-            digest=$(printf '%s\n' "$output" | awk -F= -v key="$component" '$1 == key {print $2}')
-            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-            echo "${component}_digest=$digest" >> "$GITHUB_OUTPUT"
-          done
       - name: Create dedicated short-lived staging deploy identity
         shell: bash
         env:
@@ -128,6 +118,23 @@ jobs:
           chmod 0755 "$binary"
           ln -sf "$binary" "$RUNNER_TEMP/kubectl"
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Live staging preflight and real node image pull
+        shell: bash
+        run: |
+          deploy/staging/scripts/preflight.sh
+          KUBECONFIG="$STAGING_KUBECONFIG" python3 deploy/staging/scripts/pull-preflight.py
+      - name: Publish immutable staging images
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=$(deploy/staging/scripts/release.sh publish)
+          printf '%s\n' "$output"
+          for component in api dashboard sites; do
+            digest=$(printf '%s\n' "$output" | awk -F= -v key="$component" '$1 == key {print $2}')
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            echo "${component}_digest=$digest" >> "$GITHUB_OUTPUT"
+          done
       - name: Deploy only after DB refresh and migration acceptance
         shell: bash
         env:

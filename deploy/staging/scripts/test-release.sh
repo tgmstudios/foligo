@@ -17,8 +17,9 @@ MOCK
 cat >"$TMP/bin/kubectl" <<'MOCK'
 #!/usr/bin/env bash
 printf 'kubectl %s\n' "$*" >>"$CALLS"
-if [[ "$*" == *'create -f -'* ]]; then cat >>"$CALLS"; fi
+if [[ "$*" == *'create -f -'* || "$*" == *'--patch-file=/dev/stdin'* ]]; then cat >>"$CALLS"; fi
 case "$*" in
+  *'get deployment '*'-o json') printf '%s\n' '{"metadata":{"generation":1},"spec":{"replicas":1},"status":{"observedGeneration":1,"replicas":1,"updatedReplicas":1,"readyReplicas":1,"availableReplicas":1}}';;
   *'get deployment api '*|*'get deployment dashboard '*|*'get deployment sites '*) printf '%s\n' '127.0.0.1:32551/foligo-staging/api@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';;
   *'get job '*) exit 1;;
   *'get deployment '*) printf '%s\n' 'ok';;
@@ -61,5 +62,5 @@ if bash "$ROOT/deploy/staging/scripts/release.sh" deploy >/dev/null 2>&1; then
   printf '%s\n' 'unsafe: failed health check was accepted' >&2; exit 1
 fi
 rollback_count=$(grep -c 'kubectl .*set image deployment/' "$CALLS")
-test "$rollback_count" -eq 6
+test "$rollback_count" -eq 5
 printf '%s\n' 'release mock boundary and rollback tests passed'

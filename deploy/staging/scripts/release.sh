@@ -56,7 +56,7 @@ case ${1:-} in
     for component in api dashboard sites; do
       old=$(cat "$checkpoint/$component.image")
       kubectl -n "$NS" set image "deployment/$component" "$component=$old" || true
-      kubectl -n "$NS" rollout status "deployment/$component" --timeout=180s || true
+      python3 "$ROOT/deploy/staging/scripts/wait-rollout.py" "$component" --timeout 180 || true
     done
   }
   trap 'status=$?; if ((status != 0)); then rollback; fi' EXIT
@@ -72,10 +72,16 @@ PY
   for assignment in "${images[@]}"; do
     component=${assignment%%=*}; image=${assignment#*=}
     if [[ $component == api ]]; then
-      kubectl -n "$NS" patch deployment api --type=strategic --patch-file "$ROOT/deploy/staging/api-runtime-patch.json"
+      python3 - "$ROOT/deploy/staging/api-runtime-patch.json" "$image" <<'PY' | kubectl -n "$NS" patch deployment api --type=strategic --patch-file=/dev/stdin
+import json,sys
+with open(sys.argv[1]) as source: patch=json.load(source)
+patch['spec']['template']['spec']['containers'][0]['image']=sys.argv[2]
+print(json.dumps(patch))
+PY
+    else
+      kubectl -n "$NS" set image "deployment/$component" "$component=$image"
     fi
-    kubectl -n "$NS" set image "deployment/$component" "$component=$image"
-    kubectl -n "$NS" rollout status "deployment/$component" --timeout=300s
+    python3 "$ROOT/deploy/staging/scripts/wait-rollout.py" "$component" --timeout 300
   done
   for url in https://api-fstg.i.tgm.one/health https://app-fstg.i.tgm.one/ https://fstg.i.tgm.one/; do
     code=$(curl --silent --show-error --location --max-time 20 -o /dev/null -w '%{http_code}' "$url")
