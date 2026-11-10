@@ -106,6 +106,17 @@ async function settleUsage(event, usage, status) {
   });
 }
 
+async function settleSuccessfulUsage(event, usage, status) {
+  try {
+    await settleUsage(event, usage, status);
+  } catch (cause) {
+    const error = new Error('AI inference succeeded but usage could not be recorded');
+    error.code = 'AI_USAGE_SETTLEMENT_FAILED';
+    error.cause = cause;
+    throw error;
+  }
+}
+
 // Wrap the provider boundary so each SDK retry and each tool step is metered.
 // No prompts, generated content, or credentials are retained in the ledger.
 function meteredModel(model, meta) {
@@ -122,7 +133,7 @@ function meteredModel(model, meta) {
           throw error;
         }
         if (property === 'doGenerate') {
-          await settleUsage(event, result.usage, 'COMPLETED');
+          await settleSuccessfulUsage(event, result.usage, 'COMPLETED');
           return result;
         }
         const reader = result.stream.getReader();
@@ -137,9 +148,13 @@ function meteredModel(model, meta) {
             try {
               const { value, done } = await reader.read();
               if (done) { await settle(null, 'UNKNOWN'); controller.close(); return; }
-              if (value.type === 'finish') await settle(value.usage, value.finishReason?.unified === 'error' || value.finishReason === 'error' ? 'FAILED' : 'COMPLETED');
+              if (value.type === 'finish') {
+                await settleSuccessfulUsage(event, value.usage, value.finishReason?.unified === 'error' || value.finishReason === 'error' ? 'FAILED' : 'COMPLETED');
+                settled = true;
+              }
               controller.enqueue(value);
             } catch (error) {
+              if (error.code === 'AI_USAGE_SETTLEMENT_FAILED') { settled = true; controller.error(error); return; }
               try { await settle(error.usage, 'FAILED'); } catch (settleError) { controller.error(settleError); return; }
               controller.error(error);
             }
