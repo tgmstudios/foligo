@@ -104,6 +104,24 @@ describe('AIManager streaming fallback', () => {
     expect(humanInputCondition({ steps: [{ toolCalls: [{ toolName: 'get_post' }] }] })).toBe(false);
   });
 
+  test('does not fall back when a streamed successful response cannot settle usage', async () => {
+    const settlementError = Object.assign(new Error('ledger unavailable'), { code: 'AI_USAGE_SETTLEMENT_FAILED' });
+    streamText.mockReturnValue({ fullStream: { async *[Symbol.asyncIterator]() { throw settlementError; } } });
+    await expect((async () => {
+      for await (const part of manager.streamChat([{ role: 'user', content: 'hello' }])) { void part; }
+    })()).rejects.toBe(settlementError);
+    expect(streamText).toHaveBeenCalledTimes(1);
+  });
+
+  test('streamGenerate preserves settlement failure without retrying', async () => {
+    const settlementError = Object.assign(new Error('ledger unavailable'), { code: 'AI_USAGE_SETTLEMENT_FAILED' });
+    streamText.mockReturnValue(streamOf([{ type: 'error', error: settlementError }]));
+    await expect((async () => {
+      for await (const part of manager.streamGenerate('hello')) { void part; }
+    })()).rejects.toBe(settlementError);
+    expect(streamText).toHaveBeenCalledTimes(1);
+  });
+
   test('does not switch providers after visible output has started', async () => {
     streamText.mockReturnValue(streamOf([
       { type: 'start' },

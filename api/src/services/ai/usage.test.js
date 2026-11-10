@@ -89,6 +89,17 @@ test('each retry/tool-step call receives its own reservation', async () => {
   await wrapped.doGenerate(params); await wrapped.doGenerate(params);
   expect(mockTx.aiUsageEvent.create).toHaveBeenCalledTimes(2);
 });
+test('stream ledger failure is non-retryable and attempts settlement once', async () => {
+  mockTx.aiUsageEvent.updateMany.mockRejectedValueOnce(new Error('ledger unavailable'));
+  const provider = { doStream: jest.fn().mockResolvedValue({ stream: new ReadableStream({ start(c) {
+    c.enqueue({ type: 'finish', usage }); c.close();
+  } }) }) };
+  const result = await meteredModel(provider, meta).doStream(params);
+  await expect((async () => { for await (const part of result.stream) { void part; } })())
+    .rejects.toMatchObject({ code: 'AI_USAGE_SETTLEMENT_FAILED' });
+  expect(mockTx.aiUsageEvent.updateMany).toHaveBeenCalledTimes(1);
+});
+
 test('successful inference whose ledger settlement fails is not misreported as provider failure', async () => {
   const provider = { doGenerate: jest.fn().mockResolvedValue({ usage, content: [] }) };
   mockTx.aiUsageEvent.updateMany.mockRejectedValueOnce(new Error('ledger unavailable'));

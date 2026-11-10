@@ -278,6 +278,7 @@ class AIManager {
           const { value, done } = await iterator.next();
           if (done) break;
 
+          if (isAiPolicyError(value.error) || value.error?.code === 'AI_USAGE_SETTLEMENT_FAILED') throw value.error;
           if (!committed && (value?.type === 'error' || (value?.type === 'finish' && (value.finishReason === 'error' || value.finishReason === 'length')))) {
             if (isAiPolicyError(value.error)) throw value.error;
             lastError = value.error || new Error(
@@ -306,7 +307,7 @@ class AIManager {
           }
         }
       } catch (e) {
-        if (isAiPolicyError(e)) throw e;
+        if (isAiPolicyError(e) || e.code === 'AI_USAGE_SETTLEMENT_FAILED') throw e;
         lastError = e;
         if (!committed) {
           this.logger.warn(`Provider "${type}" stream failed before output, trying next: ${e.message}`);
@@ -352,14 +353,14 @@ class AIManager {
         for await (const part of result.fullStream) {
           if (part.type === 'text-delta' || part.type === 'reasoning-delta') yield part;
           else if (part.type === 'error') {
-            if (isAiPolicyError(part.error)) throw part.error;
+            if (isAiPolicyError(part.error) || part.error?.code === 'AI_USAGE_SETTLEMENT_FAILED') throw part.error;
             lastError = part.error;
             break;
           }
         }
         return;
       } catch (e) {
-        if (isAiPolicyError(e)) throw e;
+        if (isAiPolicyError(e) || e.code === 'AI_USAGE_SETTLEMENT_FAILED') throw e;
         lastError = e;
         this.logger.warn(`Provider "${type}" streamGenerate failed: ${e.message}`);
       }
