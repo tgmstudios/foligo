@@ -51,6 +51,15 @@ spec:
             - {name: ADDITIONAL_CORS_ORIGINS, value: ""}
             - {name: AI_DEFAULT_PROVIDER, value: custom}
             - {name: AI_FALLBACK_CHAIN, value: ""}
+            # Stripe test-only values in foligo-staging-api Secret.
+            - name: STRIPE_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: foligo-staging-api, key: STRIPE_SECRET_KEY}}
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom: {secretKeyRef: {name: foligo-staging-api, key: STRIPE_PUBLISHABLE_KEY}}
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom: {secretKeyRef: {name: foligo-staging-api, key: STRIPE_WEBHOOK_SECRET, optional: true}}
+            - name: BILLING_PLANS
+              value: '[{"key":"pro","name":"Foligo Pro","priceId":"price_1UYwjsJALC4njetQ5GqMm2gr","monthlyRequests":null,"monthlyTokens":null,"monthlyCostUsd":null},{"key":"max","name":"Foligo Max","priceId":"price_1UYwjsJALC4njetQhOqk5yF0","monthlyRequests":null,"monthlyTokens":null,"monthlyCostUsd":null}]'
           readinessProbe: {httpGet: {path: /health, port: web}, periodSeconds: 5, failureThreshold: 30}
           resources: {requests: {cpu: 100m, memory: 384Mi}, limits: {memory: 1536Mi}}
 ---
