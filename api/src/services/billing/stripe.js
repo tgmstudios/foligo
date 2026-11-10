@@ -39,6 +39,8 @@ async function getOrCreateCustomer(user) {
   const existing = await prisma.userSubscription.findUnique({ where: { userId: user.id } });
   if (existing) return existing.stripeCustomerId;
   const customer = await stripe().customers.create({ email: user.email, name: user.name, metadata: { userId: user.id } }, { idempotencyKey: `customer:${user.id}` });
+  // Stripe creates the customer before the unique userId row exists. If two
+  // requests race, the upsert's readback may contain the winning customer's ID.
   const row = await prisma.userSubscription.upsert({
     where: { userId: user.id }, create: { userId: user.id, stripeCustomerId: customer.id }, update: {},
   });

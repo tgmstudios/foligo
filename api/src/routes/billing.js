@@ -39,7 +39,7 @@ router.post('/checkout', [body('planKey').isString().isLength({ min: 1, max: 64 
       mode: 'subscription', customer, line_items: [{ price: plan.priceId, quantity: 1 }],
       client_reference_id: req.user.id, subscription_data: { metadata: { userId: req.user.id } },
       success_url: `${frontend()}/settings?billing=success`, cancel_url: `${frontend()}/settings?billing=cancelled`,
-    });
+    }, { idempotencyKey: `checkout:${req.user.id}:${plan.key}` });
     res.json({ url: session.url });
   } catch (error) { fail(res, error, 'Unable to start checkout'); }
 });

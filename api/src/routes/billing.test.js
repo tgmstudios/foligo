@@ -61,9 +61,25 @@ test('replayed events are not reprocessed', async () => {
 test('checkout uses server-side price for a known plan only', async () => {
   const response = await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(200);
   expect(response.body.url).toBe('https://stripe/checkout');
-  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ customer: 'cus_1', line_items: [{ price: 'price_pro', quantity: 1 }] }));
+  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ customer: 'cus_1', line_items: [{ price: 'price_pro', quantity: 1 }] }), expect.objectContaining({ idempotencyKey: 'checkout:u1:pro' }));
   await request(app()).post('/billing/checkout').send({ planKey: 'free' }).expect(400);
   await request(app()).post('/billing/checkout').send({ planKey: 'nope' }).expect(400);
+});
+
+test('checkout creation is idempotent per user and plan', async () => {
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(200);
+  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+    expect.any(Object), { idempotencyKey: 'checkout:u1:pro' },
+  );
+});
+
+test('customer creation returns the persisted customer after a concurrent create race', async () => {
+  mockDb.userSubscription.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ userId: 'u1', stripeCustomerId: 'cus_existing' });
+  mockDb.userSubscription.upsert.mockResolvedValue({ userId: 'u1', stripeCustomerId: 'cus_existing' });
+  await request(app()).post('/billing/checkout').send({ planKey: 'pro' }).expect(200);
+  expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+    expect.objectContaining({ customer: 'cus_existing' }), expect.anything(),
+  );
 });
 
 test('checkout refuses a second active subscription', async () => {

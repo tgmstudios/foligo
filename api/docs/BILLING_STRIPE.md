@@ -5,8 +5,9 @@ Subscriptions map to the existing per-user server AI allowance (`UserAiUsagePoli
 ## Setup
 1. Create a recurring Price per plan in Stripe, and enable the Customer Portal (Settings → Billing → Customer portal).
 2. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `BILLING_PLANS` (see `.env.example`). Each plan: `key`, `name`, `priceId`, and optional `monthlyRequests` / `monthlyTokens` / `monthlyCostUsd` (omit or null = no cap).
-3. Add a webhook endpoint `https://<api>/api/billing/webhook` for `checkout.session.completed` and `customer.subscription.created|updated|deleted`.
-4. Run `db:migrate:deploy` and `db:generate`.
+3. For an isolated staging/test deployment, configure only Stripe sandbox values: `STRIPE_SECRET_KEY` must begin `sk_test_`, webhook secret must be from a test-mode endpoint/CLI listener (`whsec_...`), and every configured `priceId` must belong to the same Stripe test account. Never enable billing with an `sk_live_` key in staging. Do not expose the test secret in logs or manifests; inject it using the staging secret manager. The staging deployment must have an explicitly approved egress path to Stripe before API calls/webhooks can work; do not weaken default-deny policy just for this integration.
+4. Add a webhook endpoint `https://<api>/api/billing/webhook` for `checkout.session.completed` and `customer.subscription.created|updated|deleted`.
+5. Run `db:migrate:deploy` and `db:generate`.
 
 ## Behavior
 - `GET /api/billing/plans`, `POST /api/billing/checkout {planKey}`, `POST /api/billing/portal` (authenticated). Prices are resolved server-side from `BILLING_PLANS`.
