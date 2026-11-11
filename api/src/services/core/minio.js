@@ -6,7 +6,10 @@ const minioClient = new Minio.Client({
   port: parseInt(process.env.MINIO_PORT) || 9000,
   useSSL: process.env.MINIO_USE_SSL === 'true',
   accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin'
+  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+  // S3-compatible providers outside us-east-1 (e.g. OCI Object Storage) require an
+  // explicit signing region. Unset keeps the previous MinIO behaviour.
+  ...(process.env.MINIO_REGION ? { region: process.env.MINIO_REGION } : {})
 });
 
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'foligo';
