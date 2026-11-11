@@ -7,6 +7,8 @@ const { prisma } = require('../../services/core/database');
 const { uploadFile, deleteFile, getFileUrl, minioClient, BUCKET_NAME } = require('../../services/core/minio');
 const { authenticateToken, authorizeProjectAccess } = require('../../middleware/auth');
 
+const { canonicalMediaUrl } = require('./media-file');
+
 const router = express.Router();
 
 // Note: Public routes /media/:id/file and /media/:id/view are registered directly in index.js
@@ -127,13 +129,13 @@ router.post('/projects/:projectId/media',
           mimeType: req.file.mimetype,
           size: req.file.size,
           objectName,
-          publicUrl: `${API_URL}/api/media/PLACEHOLDER/file`,
+          publicUrl: canonicalMediaUrl('PLACEHOLDER', API_URL),
           altText: altText || null
         }
       });
 
       // Update with correct URL
-      const correctPublicUrl = `${API_URL}/api/media/${media.id}/file`;
+      const correctPublicUrl = canonicalMediaUrl(media.id, API_URL);
       const updatedMedia = await prisma.media.update({
         where: { id: media.id },
         data: { publicUrl: correctPublicUrl }
@@ -212,13 +214,13 @@ router.post('/media',
           mimeType: req.file.mimetype,
           size: req.file.size,
           objectName,
-          publicUrl: `${API_URL}/api/media/PLACEHOLDER/file`,
+          publicUrl: canonicalMediaUrl('PLACEHOLDER', API_URL),
           altText: altText || null
         }
       });
 
       // Update with correct URL
-      const correctPublicUrl = `${API_URL}/api/media/${media.id}/file`;
+      const correctPublicUrl = canonicalMediaUrl(media.id, API_URL);
       const updatedMedia = await prisma.media.update({
         where: { id: media.id },
         data: { publicUrl: correctPublicUrl }
@@ -284,7 +286,7 @@ router.get('/projects/:projectId/media',
       const API_URL = process.env.API_URL || req.protocol + '://' + req.get('host');
       const mediaWithProxiedUrls = media.map(m => ({
         ...m,
-        publicUrl: `${API_URL}/api/media/${m.id}/file`
+        publicUrl: canonicalMediaUrl(m.id, API_URL)
       }));
 
       res.json({
@@ -353,7 +355,7 @@ router.get('/media', authenticateToken, async (req, res) => {
       const API_URL = process.env.API_URL || req.protocol + '://' + req.get('host');
       const mediaWithProxiedUrls = media.map(m => ({
         ...m,
-        publicUrl: `${API_URL}/api/media/${m.id}/file`
+        publicUrl: canonicalMediaUrl(m.id, API_URL)
       }));
 
       res.json({
@@ -447,7 +449,7 @@ router.get('/media/:id', authenticateToken, async (req, res) => {
     const API_URL = process.env.API_URL || req.protocol + '://' + req.get('host');
     const mediaWithProxiedUrl = {
       ...media,
-      publicUrl: `${API_URL}/api/media/${media.id}/file`
+      publicUrl: canonicalMediaUrl(media.id, API_URL)
     };
 
     res.json(mediaWithProxiedUrl);
@@ -516,7 +518,7 @@ router.put('/media/:id', authenticateToken, [
     const API_URL = process.env.API_URL || req.protocol + '://' + req.get('host');
     const mediaWithProxiedUrl = {
       ...updatedMedia,
-      publicUrl: `${API_URL}/api/media/${updatedMedia.id}/file`
+      publicUrl: canonicalMediaUrl(updatedMedia.id, API_URL)
     };
 
     res.json(mediaWithProxiedUrl);
