@@ -31,6 +31,7 @@ const skillsRoutes = require('./routes/content/skills');
 const experienceRolesRoutes = require('./routes/content/experience-roles');
 const revisionsRoutes = require('./routes/content/revisions');
 const mediaRoutes = require('./routes/media/media');
+const { createMediaFileHandler } = require('./routes/media/media-file');
 const adminUsersRoutes = require('./routes/admin/admin-users');
 const adminProjectsRoutes = require('./routes/admin/admin-projects');
 const adminContentRoutes = require('./routes/admin/admin-content');
@@ -191,47 +192,7 @@ app.options('/api/media/:id/file', mediaCorsWithMethods, (req, res) => {
   res.status(204).send();
 });
 
-app.get('/api/media/:id/file', mediaCorsWithMethods, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const media = await prisma.media.findUnique({
-      where: { id }
-    });
-
-    if (!media) {
-      return res.status(404).json({
-        error: 'Media Not Found',
-        message: 'The requested media file does not exist'
-      });
-    }
-
-    // Get file from MinIO and stream it
-    try {
-      const dataStream = await minioClient.getObject(BUCKET_NAME, media.objectName);
-      
-      // Set appropriate headers
-      res.setHeader('Content-Type', media.mimeType);
-      res.setHeader('Content-Disposition', `inline; filename="${media.filename}"`);
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-      
-      // Stream the file
-      dataStream.pipe(res);
-    } catch (minioError) {
-      console.error('Error fetching file from MinIO:', minioError);
-      return res.status(500).json({
-        error: 'File Retrieval Failed',
-        message: 'Unable to retrieve file from storage'
-      });
-    }
-  } catch (error) {
-    console.error('Get media file error:', error);
-    res.status(500).json({
-      error: 'Media Retrieval Failed',
-      message: 'Unable to retrieve media file'
-    });
-  }
-});
+app.get('/api/media/:id/file', mediaCorsWithMethods, createMediaFileHandler({ prisma, minioClient, bucketName: BUCKET_NAME }));
 
 app.get('/api/media/:id/view', mediaCorsWithMethods, async (req, res) => {
   try {
