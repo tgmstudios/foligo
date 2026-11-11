@@ -13,10 +13,10 @@
           <a v-for="n in navigation" :key="n[1]" :href="`#${n[1]}`">{{ n[0] }}</a>
         </nav>
         <div class="nav-actions">
-          <NuxtLink class="sign-in" to="/login">Sign in</NuxtLink>
-          <NuxtLink class="button button-primary button-small" to="/signup">
+          <a class="sign-in" :href="loginHref">Sign in</a>
+          <a class="button button-primary button-small" :href="signupHref">
             Open Foligo <ArrowUpRightIcon class="ico-sm" aria-hidden="true" />
-          </NuxtLink>
+          </a>
         </div>
         <button
           class="menu-toggle"
@@ -32,10 +32,10 @@
       </div>
       <nav v-if="menuOpen" id="mobile-navigation" class="mobile-nav" aria-label="Mobile navigation">
         <a v-for="n in navigation" :key="n[1]" :href="`#${n[1]}`" @click="menuOpen = false">{{ n[0] }}</a>
-        <NuxtLink to="/login">Sign in</NuxtLink>
-        <NuxtLink class="button button-primary" to="/signup">
+        <a :href="loginHref">Sign in</a>
+        <a class="button button-primary" :href="signupHref">
           Open Foligo <ArrowUpRightIcon class="ico-sm" aria-hidden="true" />
-        </NuxtLink>
+        </a>
       </nav>
     </header>
 
@@ -55,9 +55,9 @@
             work never made it onto the page.
           </p>
           <div class="hero-actions hero-in" style="--d: 3">
-            <NuxtLink class="button button-primary" to="/signup">
+            <a class="button button-primary" :href="signupHref">
               Start your portfolio <ArrowUpRightIcon class="ico-sm" aria-hidden="true" />
-            </NuxtLink>
+            </a>
             <a class="button button-ghost" href="#service">
               See how it works <ArrowDownIcon class="ico-sm" aria-hidden="true" />
             </a>
@@ -530,9 +530,9 @@
           <span class="final-knot"><img :src="logo" alt="" width="64" height="64" /></span>
           <h2 id="final-title">Your best work deserves<br /><em>a place to live.</em></h2>
           <p>Start with one project and one conversation.</p>
-          <NuxtLink class="button button-light" to="/signup">
+          <a class="button button-light" :href="signupHref">
             Open Foligo <ArrowUpRightIcon class="ico-sm" aria-hidden="true" />
-          </NuxtLink>
+          </a>
         </div>
       </section>
     </main>
@@ -545,7 +545,7 @@
         </a>
         <nav aria-label="Footer navigation">
           <a v-for="n in navigation" :key="n[1]" :href="`#${n[1]}`">{{ n[0] }}</a>
-          <NuxtLink to="/login">Sign in <ArrowUpRightIcon class="ico-xs" aria-hidden="true" /></NuxtLink>
+          <a :href="loginHref">Sign in <ArrowUpRightIcon class="ico-xs" aria-hidden="true" /></a>
         </nav>
         <p>&copy; {{ year }} Foligo</p>
       </div>
@@ -569,6 +569,7 @@ import {
   XMarkIcon
 } from '@heroicons/vue/24/outline'
 const logo = '/squiggle.svg'
+import { getDashboardCtaHref } from '~/utils/marketing-cta.js'
 import phoneHome from '~/assets/landing/phone-home-v2.webp'
 import phoneVoice from '~/assets/landing/phone-voice-v2.webp'
 import phoneDraft from '~/assets/landing/phone-draft-v2.webp'
@@ -597,6 +598,12 @@ const navigation = [
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+// ---- Dashboard CTAs: link straight to the canonical workspace host ----
+const runtimeConfig = useRuntimeConfig()
+const route = useRoute()
+const loginHref = computed(() => getDashboardCtaHref('login', runtimeConfig.public.dashboardUrl, route.query))
+const signupHref = computed(() => getDashboardCtaHref('signup', runtimeConfig.public.dashboardUrl, route.query))
 
 // ---- Header ----
 const scrolled = ref(false)
