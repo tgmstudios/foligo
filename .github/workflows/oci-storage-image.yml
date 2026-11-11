@@ -1,6 +1,7 @@
 name: OCI storage derived API image
 # Scoped one-off build: runs only on pushes to this branch; never touches latest.
 on:
+  workflow_dispatch:
   push:
     branches: ["agent/oci-storage-image-20261111"]
 jobs:
