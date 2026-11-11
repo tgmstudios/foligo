@@ -1,0 +1,4 @@
+FROM registry.tgm.one/foligo/api@sha256:a5f1b620c42a62c494e91b66ab55918fbd4031aee064f0b1d666d58f343e0067
+COPY api/src/index.js /usr/src/app/api/src/index.js
+COPY api/src/routes/media/media.js api/src/routes/media/media-file.js api/src/routes/media/media-file.test.js /usr/src/app/api/src/routes/media/
+COPY api/src/services/core/minio.js api/src/services/core/minio.test.js /usr/src/app/api/src/services/core/

@@ -1,0 +1,25 @@
+name: OCI storage derived API image
+# Scoped one-off build: runs only on pushes to this branch; never touches latest.
+on:
+  push:
+    branches: ["agent/oci-storage-image-20261111"]
+jobs:
+  build:
+    runs-on: tgmstudios-runners
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: registry.tgm.one
+          username: robot$foligo+github
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          file: ./api/.docker/Dockerfile.oci-storage
+          push: true
+          tags: registry.tgm.one/foligo/api:oci-storage-${{ github.sha }}
+      - run: echo "digest=${{ steps.build.outputs.digest }}"
