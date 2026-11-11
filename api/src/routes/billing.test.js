@@ -3,7 +3,7 @@ const request = require('supertest');
 const mockDb = {
   $executeRaw: jest.fn(),
   userSubscription: { findUnique: jest.fn(), upsert: jest.fn(), update: jest.fn() },
-  userAiUsagePolicy: { upsert: jest.fn() },
+  userAiUsagePolicy: { upsert: jest.fn(), findUnique: jest.fn() },
   stripeEvent: { findUnique: jest.fn(), upsert: jest.fn() },
 };
 mockDb.$transaction = jest.fn(fn => fn(mockDb));
@@ -47,6 +47,7 @@ beforeEach(() => {
   Object.assign(process.env, { STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec', BILLING_PLANS: JSON.stringify(PLANS) });
   mockDb.userSubscription.findUnique.mockResolvedValue({ userId: 'u1', stripeCustomerId: 'cus_1', stripeSubscriptionId: null });
   mockDb.stripeEvent.findUnique.mockResolvedValue(null);
+  mockDb.userAiUsagePolicy.findUnique.mockResolvedValue(null);
 });
 
 test('webhook rejects bad signatures and missing signature', async () => {
@@ -160,4 +161,20 @@ test('503 when Stripe is not configured', async () => {
   delete process.env.STRIPE_SECRET_KEY;
   jest.resetModules();
   await request(express().use(express.json()).use((req, _r, n) => { req.user = { id: 'u1' }; n(); }).use('/billing', require('./billing'))).post('/billing/portal').expect(503);
+});
+
+test('stripe sync never overwrites an administrator usage exemption', async () => {
+  mockDb.userAiUsagePolicy.findUnique.mockResolvedValue({ userId: 'u1', unlimited: true });
+  for (const [id, type, object] of [['evt_ex1', 'customer.subscription.updated', sub()], ['evt_ex2', 'customer.subscription.deleted', sub({ status: 'canceled' })]]) {
+    mockStripe.webhooks.constructEvent.mockReturnValue({ id, type, data: { object } });
+    await post().send('{}').expect(200);
+  }
+  expect(mockDb.userAiUsagePolicy.upsert).not.toHaveBeenCalled();
+});
+
+test('stripe sync still applies finite limits to non-exempt accounts', async () => {
+  mockDb.userAiUsagePolicy.findUnique.mockResolvedValue({ userId: 'u1', unlimited: false });
+  mockStripe.webhooks.constructEvent.mockReturnValue({ id: 'evt_ne1', type: 'customer.subscription.deleted', data: { object: sub({ status: 'canceled' }) } });
+  await post().send('{}').expect(200);
+  expect(mockDb.userAiUsagePolicy.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { unlimited: false, monthlyRequests: 10, monthlyTokens: null, monthlyCostUsd: 0.10 } }));
 });

@@ -36,6 +36,10 @@ async function applyPolicy(tx, userId, plan) {
     ? { unlimited: false, monthlyRequests: plan.monthlyRequests ?? null, monthlyTokens: plan.monthlyTokens ?? null, monthlyCostUsd: plan.monthlyCostUsd ?? null }
     : { unlimited: false, monthlyRequests: Number(process.env.BILLING_FREE_MONTHLY_REQUESTS || 10), monthlyTokens: null, monthlyCostUsd: Number(process.env.BILLING_FREE_MONTHLY_COST_USD || 0.10) };
   await userLock(tx, userId);
+  // An administrator-granted usage exemption (explicit row with unlimited=true)
+  // must survive Stripe sync; subscription events never revoke it.
+  const existing = await tx.userAiUsagePolicy.findUnique({ where: { userId } });
+  if (existing?.unlimited === true) return;
   await tx.userAiUsagePolicy.upsert({ where: { userId }, create: { userId, ...limits }, update: limits });
 }
 
