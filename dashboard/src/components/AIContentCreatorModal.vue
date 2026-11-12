@@ -229,7 +229,12 @@
                 </button>
               </div>
             </div>
+            <div v-if="pendingFiles.length" class="mb-2 flex flex-wrap gap-2">
+              <span v-for="(file, index) in pendingFiles" :key="`${file.name}-${index}`" class="rounded border border-gray-600 px-2 py-1 text-xs text-gray-200">📎 {{ file.name }} <button type="button" :aria-label="`Remove ${file.name}`" @click="pendingFiles.splice(index, 1)">×</button></span>
+            </div>
             <div class="flex items-end space-x-3">
+              <input ref="attachmentInput" type="file" multiple class="hidden" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt,.md,.csv,.json,.html,.htm,.xml,.rtf" @change="selectAttachments" />
+              <button type="button" :disabled="pendingFiles.length >= 5" class="h-[44px] rounded-md border border-gray-600 px-3 text-gray-300 disabled:opacity-50" title="Attach files" aria-label="Attach files" @click="attachmentInput?.click()">📎</button>
               <textarea
                 ref="messageTextarea"
                 v-model="currentMessage"
@@ -256,7 +261,7 @@
               </button>
               <button
                 @click="sendMessage"
-                :disabled="!canRespond || !currentMessage.trim()"
+                :disabled="!canRespond || (!currentMessage.trim() && !pendingFiles.length)"
                 :title="chat.streaming.value ? 'Queue message' : 'Send'"
                 class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed h-[44px]"
               >
@@ -539,12 +544,22 @@ const adjustTextareaHeight = () => {
 
 const handleShiftEnter = () => adjustTextareaHeight()
 
+const attachmentInput = ref<HTMLInputElement | null>(null)
+const pendingFiles = ref<File[]>([])
+const selectAttachments = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  pendingFiles.value = [...pendingFiles.value, ...Array.from(input.files || [])].slice(0, 5)
+  input.value = ''
+}
+
 const sendMessage = async () => {
-  if (!currentMessage.value.trim()) return
+  if (!currentMessage.value.trim() && !pendingFiles.value.length) return
   const text = currentMessage.value.trim()
+  const files = pendingFiles.value
   currentMessage.value = ''
+  pendingFiles.value = []
   if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
-  await chat.sendMessage(text)
+  await chat.sendMessage(text, files)
 }
 
 watch(() => chat.messages.value, followChatIfNeeded, { deep: true })
