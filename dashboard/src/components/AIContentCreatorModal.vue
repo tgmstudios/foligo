@@ -297,6 +297,7 @@ import { useChatSessions } from '@/composables/useChatSessions'
 import { useAgenticChat, type ToolActivity } from '@/composables/useAgenticChat'
 import AgentInteractionCard from '@/components/chat/AgentInteractionCard.vue'
 import { renderMarkdown } from '@/lib/markdown'
+import { appendAttachments } from '@/lib/pendingAttachments'
 
 const props = defineProps<{
   projectId?: string
@@ -459,6 +460,7 @@ const open = async (initialView: AiChatView = 'modal') => {
   view.value = initialView
   isOpen.value = true
   chat.reset()
+  pendingFiles.value = []
   chatSessions.clearActive()
   await chatSessions.refresh()
   nextTick(() => {
@@ -478,6 +480,7 @@ const newChat = () => {
   modeSelected.value = false
   selectedInteractionMode.value = 'text'
   chat.reset()
+  pendingFiles.value = []
   currentMessage.value = ''
 }
 
@@ -491,6 +494,7 @@ const openSavedChat = async (id: string) => {
     // a new chat, or a closed modal while the request was pending.
     if (!isOpen.value || loadId !== savedChatLoadId) return
     chat.loadHistory(session.chatHistory || [])
+    pendingFiles.value = []
     selectedInteractionMode.value = 'text'
     modeSelected.value = true
     shouldFollowChat.value = true
@@ -511,6 +515,7 @@ const close = () => {
   chat.reset()
   chatSessions.clearActive()
   currentMessage.value = ''
+  pendingFiles.value = []
   if (messageTextarea.value) messageTextarea.value.style.height = 'auto'
 }
 
@@ -548,7 +553,7 @@ const attachmentInput = ref<HTMLInputElement | null>(null)
 const pendingFiles = ref<File[]>([])
 const selectAttachments = (event: Event) => {
   const input = event.target as HTMLInputElement
-  pendingFiles.value = [...pendingFiles.value, ...Array.from(input.files || [])].slice(0, 5)
+  pendingFiles.value = appendAttachments(pendingFiles.value, Array.from(input.files || []))
   input.value = ''
 }
 
